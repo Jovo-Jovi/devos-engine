@@ -1,0 +1,10 @@
+# dependencies (the engine has none; this is a safety net)
+node_modules/
+
+# scratch output of local runs
+.scratch/
+*.log
+
+# local environment — never committed
+.env
+.env.*

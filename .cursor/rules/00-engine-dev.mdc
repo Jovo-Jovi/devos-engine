@@ -1,0 +1,14 @@
+---
+description: Builder rules for building the DEV_OS Engine itself (fence → build → report)
+alwaysApply: true
+---
+- You are the BUILDER of the `devos-engine` repository. Ignore `CLAUDE.md` and `.claude/**`: they belong to the reviewer.
+- The fence you were given (`dev/fences/Exx.md`) is the task's whole authority. `dev/PLAN.md` and `dev/DECISIONS.md` are context, never extra scope. Anything the fence does not ask for stops the task and goes in the report.
+- Check every precondition before the first edit. A failed precondition is a HALT: stop, change nothing, report the command and its output. A correct halt is the system working.
+- Never run `git add`, `git commit`, `git push`, `git checkout`, `git reset`, `git stash` or `gh`. Read-only git is fine. The owner commits after the reviewer's PASS.
+- Never edit `dev/fences/**`, `dev/reviews/**`, `dev/LEDGER.md`, `dev/PLAN.md`, `dev/DECISIONS.md`, `CLAUDE.md`, `.claude/**`, `.cursor/**`, `.gitattributes`, `.gitignore`.
+- `payload/files/` is the Dev OS method that every project will run. Change only the lines the fence names, never reformat a file, and keep each file's existing style. When a fence changes the method it also names the precedent row and the manual (`AUTOMATION.md`) update: both are part of the task.
+- Zero dependencies unless the fence says otherwise: Node 22 built-ins only, ES modules (`.mjs`). Adding a package is a HALT.
+- Cross-platform: the owner builds on Windows; CI runs Linux. Use `node:path` for paths, `execFileSync`/`spawnSync` without a shell, no bash-only syntax in scripts, LF line endings, UTF-8.
+- Secrets: never ask for, print, write or store a credential value. Any secret in tool output becomes `[redacted]`.
+- Report in `dev/reports/Exx.md`: append `## Attempt N` (never rewrite an earlier attempt) with STATUS (DONE or HALT), the files you created or changed, then every *Done when* command with its verbatim output, then deviations and open questions. Never claim a result you did not run.
