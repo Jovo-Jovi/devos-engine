@@ -25,7 +25,9 @@
       "Bash(node --test *)",
       "Bash(node tools/*)",
       "Bash(node bin/devos.mjs *)",
-      "Bash(node -e *)"
+      "Bash(node -e *)",
+      "Bash(git branch --show-current)",
+      "Bash(git merge-base *)"
     ],
     "deny": [
       "Edit(/payload/**)",

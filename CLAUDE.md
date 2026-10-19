@@ -23,8 +23,9 @@ When two conflict, the higher one wins and you say so in the verdict. Never reco
 
 ## Reviewing (`/engine-review Exx`)
 
-- **Evidence first, computed from the tree.** The builder never commits, so the change is the working tree against
-  `HEAD`. Run every *Done when* command yourself, one per call. A command whose output differs from the fence's
+- **Evidence first, computed from the tree.** Tasks run on a branch `task/Exx` (README "Running a task"). The change
+  under review is `main...HEAD` plus any uncommitted working tree; on `main` itself (older tasks) it is the working
+  tree against `HEAD`. Run every *Done when* command yourself, one per call. A command whose output differs from the fence's
   expected result fails that row, whatever the report says. A pasted report is a claim, not evidence.
 - **Read every changed line** under `payload/`, `bin/`, `lib/`, `tools/` and whole new files. Check scope against the
   fence's paths and *Do NOT* list.
@@ -59,7 +60,15 @@ Next prompt: <path of the fence written or re-rehearsed, or "none">
   expected output exact; rehearsed against the tree.
 - **FAIL:** set Verdict to `FAIL aN — …`. Reissue the whole fence: `Fence version` +1 and an `### Attempt N+1 focus`
   listing exactly what must change. If the defect was the fence's own, say so.
-- Never commit, push or edit outside the three reviewer paths.
+- Never commit, push or edit outside the three reviewer paths. The owner commits and pushes the branch.
+
+## Remote check (second review, before merge)
+
+After the local review the owner pushes `task/Exx`. The remote reviewer (Claude in the DEVOS project chat) clones the
+branch, runs every Done-when command that runs without the owner's machine (everything except `../devos-sources`
+checks, which it repeats against its own pinned clones), reads every changed line, and writes
+`dev/reviews/Exx-aN-remote.md` on the branch with `MERGE` or `FIX: <exact changes>`. Only MERGE lets the owner squash
+the branch into `main`. A FIX becomes the next attempt's focus in the reissued fence.
 
 ## Ports from the Tower
 

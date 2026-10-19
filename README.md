@@ -40,14 +40,30 @@ git commit -m "B0: engine bootstrap"
 Optional: create a **private** GitHub repository `devos-engine` and push after each accepted task, as a backup. It
 becomes public at launch (E10).
 
-## Running a task
+## Running a task (branch flow — from E03 attempt 2 on)
 
-1. **Build — Cursor.** Open `devos-engine` in Cursor. New Agent chat, model Grok 4.7 (the effort is in the fence
-   header). Prompt: `Execute dev/fences/E01.md exactly.` The rule `.cursor/rules/00-engine-dev.mdc` binds it.
-2. **Review — Claude Code.** In a terminal in `devos-engine`: `claude`, then `/model` (Opus for risk 3, Sonnet for
-   risk 1–2), then `/engine-review E01`. It re-runs every check, writes `dev/reviews/E01-a1.md`, updates the ledger and
-   prepares the next fence (or reissues this one on FAIL).
-3. **Accept — you.** On PASS: `git add -A` and `git commit -m "<the message the review gives you>"`. On FAIL: back to
-   step 1 with the reissued fence (`Execute dev/fences/E01.md exactly — attempt 2.`).
+Every task is built and reviewed on its own branch and reaches `main` only after the remote check.
+
+1. **Branch — you.** `git switch main`, `git pull`, `git switch -c task/E04` (the task id).
+2. **Build — Cursor.** Open `devos-engine` in Cursor. New Agent chat, model as the fence header says. Prompt:
+   `Execute dev/fences/E04.md exactly — attempt 1.` The rule `.cursor/rules/00-engine-dev.mdc` binds it (no git).
+3. **Review — Claude Code.** In a terminal in `devos-engine`: `claude`, `/model` (Opus for risk 3, Sonnet for 1–2),
+   `/engine-review E04`. It reviews `main...HEAD` plus the working tree, writes `dev/reviews/E04-a1.md`, updates the
+   ledger and writes or reissues the fence.
+4. **Push the branch — you.** `git add -A`, `git commit -m "E04 a1: build + local review"`, `git push -u origin task/E04`.
+   Then tell the remote reviewer (Claude in the DEVOS chat) "check task/E04". It reads the branch on GitHub, writes
+   `dev/reviews/E04-a1-remote.md` on the branch, and says MERGE or FIX.
+5. **On FAIL or FIX:** stay on the branch, pull, run the next attempt in Cursor, then steps 3–4 again (`a2`, …).
+6. **Merge — you, only after both reviews pass:**
+   ```
+   git switch main
+   git pull
+   git merge --squash task/E04
+   git commit -m "<the PASS message from the review>"
+   git push
+   git push origin --delete task/E04
+   git branch -D task/E04
+   ```
+   `main` keeps one commit per accepted task.
 
 If Cursor halts, that is the system working: send its report to the review step as is.
