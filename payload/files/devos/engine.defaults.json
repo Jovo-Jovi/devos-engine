@@ -317,5 +317,27 @@
     ],
     "bypass": false,
     "production_url_fallback": ""
+  },
+  "agents": {
+    "reviewer": {
+      "id": "claude-deep",
+      "tool": "claude",
+      "model": "claude-opus-5-5"
+    },
+    "reviewer_light": {
+      "id": "claude-light",
+      "tool": "claude",
+      "model": "claude-sonnet-5-5"
+    },
+    "pool": [
+      {
+        "id": "cursor-grok",
+        "tool": "cursor",
+        "model": "grok-4.7",
+        "default": true,
+        "note": "default builder"
+      }
+    ],
+    "policy": "reviewer-picks"
   }
 }

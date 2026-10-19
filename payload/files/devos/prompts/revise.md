@@ -15,5 +15,7 @@ tell the human to file it as a change request issue instead.
    still true, and add a section `### Attempt {{ATTEMPT}} focus (human revision)` that lists exactly
    what must change, in the builder's terms (files, components, tokens, checks). Add Done-when lines
    that prove each requested change. Keep or adjust the builder line
-   `- Builder: grok-4.7 · Effort: <…> · Fast: <…>` for this revision.
+   `- Builder: <pool id> · Effort: <…> · Fast: <…>` for this revision.
+   Choose the pool id from this list by the task's kind, risk and size (any id not listed falls back to the default):
+   {{BUILDER_POOL}}
 3. Change nothing else. One plain command per Bash call. Your final answer is the structured object.

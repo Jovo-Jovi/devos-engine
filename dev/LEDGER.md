@@ -9,8 +9,8 @@ review (Opus) and the owner reads the verdict before committing. Plan: `dev/PLAN
 | E02 | Config split: engine defaults + project file → generated config; `guard:config` | 3 | owner | v3 | [x] | PASS a1 — dev/reviews/E02-a1.md |
 | E03 | Generalize the Tower-specific lines into project settings; module setup items from the pilot | 3 | owner | v4 | [x] | PASS a3 — dev/reviews/E03-a3.md · remote MERGE — dev/reviews/E03-a3-remote.md |
 | E04 | `devos` command: doctor, status, developer profile, version, agent roster (PLAN §7a) | 2 | — | v4 | [x] | PASS a1 — dev/reviews/E04-a1.md |
-| E11 | Agents in the runner: project `agents` config, reviewer picks the builder from the pool, any model per role (same tool per role) (PLAN §7a) | 3 | owner | v2 issued | [ ] | — |
-| E12 | Cross-role agents: Claude Code as builder, Cursor as reviewer (verdict from the review file, PR-21) (PLAN §7a) | 3 | owner | fence on PASS of E11 | [ ] | — |
+| E11 | Agents in the runner: project `agents` config, reviewer picks the builder from the pool, any model per role (same tool per role) (PLAN §7a) | 3 | owner | v2 | [x] | PASS a1 — dev/reviews/E11-a1.md · remote MERGE — dev/reviews/E11-a1-remote.md |
+| E12 | Cross-role agents: Claude Code as builder, Cursor as reviewer (verdict from the review file, PR-21) (PLAN §7a) | 3 | owner | v2 issued | [ ] | — |
 | E05 | `install` and `upgrade` (three-way, branch + PR, conflicts listed) | 3 | owner | fence on PASS of E12 | [ ] | — |
 | E06 | `init` part 1: contract, questions, blueprint through Claude Code, doc templates | 2 | owner | fence on PASS of E05 | [ ] | — |
 | E07 | `init` part 2: repository, secrets by name, variables, `SETUP.md`, first cycle | 3 | owner | fence on PASS of E06 | [ ] | — |
@@ -41,3 +41,5 @@ review (Opus) and the owner reads the verdict before committing. Plan: `dev/PLAN
 | E03 a3 remote | `devos-new-project.md` reads "Copy the copied `.claude/settings.json` last" (fence wording) | E06 |
 | E03 a3 remote | PRECEDENTS PR-26 Born-from still says "the reference project" — sweep with the release wording check | E10 |
 | E04 a1 remote | `run()` passes a `.cmd` path to the shell unquoted; a path with a space breaks on Windows — quote it when `viaShell` | E12 (the runner relies on it there) |
+| E11 a1 remote | Reviewer-tool stop runs after the heartbeat starts | E12 (the stop is removed) |
+| E11 a1 remote | AUTOMATION §4 calls `builder-model.mjs` "Grok model id" | E12 |

@@ -9,7 +9,13 @@ function option(argv, name) {
 }
 
 function taskLabel(entries, table) {
-  return [...new Set(entries.map((filePath) => table[filePath]))].join(", ");
+  const labels = [];
+  for (const filePath of entries) {
+    for (const label of String(table[filePath]).split(",").map((part) => part.trim()).filter(Boolean)) {
+      if (!labels.includes(label)) labels.push(label);
+    }
+  }
+  return labels.join(", ");
 }
 
 const towerDir = option(process.argv, "--tower");

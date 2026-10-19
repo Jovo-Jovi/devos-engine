@@ -222,12 +222,22 @@ jobs:
             fi
           fi
 
+      - name: Choose the builder from the pool
+        id: ag
+        run: node scripts/devos/agents.mjs pick --task "$TASK"
+
       - name: Resolve the builder model (fence effort/fast, checked against `agent models`)
         id: bm
         env:
           CURSOR_KEY_1: ${{ secrets.CURSOR_API_KEY }}
           CURSOR_KEY_2: ${{ secrets.CURSOR_API_KEY_2 }}
         run: |
+          if [ "${{ steps.ag.outputs.builder_tool }}" != "cursor" ]; then
+            echo "::error::builder ${{ steps.ag.outputs.builder_id }} uses ${{ steps.ag.outputs.builder_tool }}; Claude Code as builder arrives in E12"
+            exit 1
+          fi
+          if [ -n "${{ steps.ag.outputs.builder_note }}" ]; then echo "${{ steps.ag.outputs.builder_note }}"; fi
+          export DEVOS_BUILDER_FAMILY="${{ steps.ag.outputs.builder_model }}"
           . scripts/devos/accounts.sh
           first=$(devos_accounts cursor | cut -d' ' -f1)
           if [ -n "$first" ]; then devos_use_cursor "$first"; agent models > .devos/models.txt 2>&1 || true; fi
@@ -587,6 +597,11 @@ jobs:
             done ) &
           hb=$!
           # PR-29: on a usage limit the review starts again at once on the other Claude account.
+          rev_tool=$(node scripts/devos/agents.mjs reviewer --mode "$DEVOS_REVIEW_MODE" | sed -n 's/^reviewer_tool=//p')
+          if [ "$rev_tool" != "claude" ]; then
+            echo "::error::reviewer uses $rev_tool; Cursor as reviewer arrives in E12"
+            exit 1
+          fi
           used=""
           for acc in $accounts; do
             devos_use_claude "$acc"; used="$acc"

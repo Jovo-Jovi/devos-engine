@@ -6,6 +6,7 @@
 // DEVOS_PREVIEW_URL, DEVOS_ISSUE, DEVOS_INTAKE_RESUME, DEVOS_REVIEW_MODE, DEVOS_REVIEW_REASONS, DEVOS_REVIEW_CRITICAL.
 import { readFileSync, writeFileSync, existsSync, readdirSync } from "node:fs";
 import { P, parsePhases, isHumanGate, taskAfter, config, fail } from "./lib.mjs";
+import { poolText } from "./agents.mjs";
 import { motionCounts } from "./screens.mjs";
 
 function screensLine(screens) {
@@ -37,6 +38,7 @@ function commonVars(cfg, rows) {
     BUILDER_EFFORT: env.DEVOS_BUILDER_EFFORT || cfg.builder.default_effort || "high",
     BUILDER_FAST: env.DEVOS_BUILDER_FAST || "no",
     PROJECT_KEY: cfg.project ?? "",
+    BUILDER_POOL: poolText(),
     PREVIEW_LINE: env.DEVOS_PREVIEW_URL
       ? `- Preview deployment of this branch: ${env.DEVOS_PREVIEW_URL} (check it with \`node scripts/devos/probe.mjs --base ${env.DEVOS_PREVIEW_URL} /\`; previews sit behind the Vercel login unless the project sets a protection bypass).\n`
       : "",

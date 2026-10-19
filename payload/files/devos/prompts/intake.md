@@ -28,7 +28,9 @@ Exactly one of three outcomes, then the structured answer the output schema requ
    `- Stages: N` when its fence would not fit one builder run.
 5. Write the complete, self-contained fence for the **first** new task in `docs/fences/{{NEXT_ID}}.md`
    in the format of `docs/fences/T01.md`, including the builder line
-   `- Builder: grok-4.7 · Effort: <low|medium|high|xhigh> · Fast: <yes|no>` chosen for the work.
+   `- Builder: <pool id> · Effort: <low|medium|high|xhigh> · Fast: <yes|no>` chosen for the work.
+   Choose the pool id from this list by the task's kind, risk and size (any id not listed falls back to the default):
+   {{BUILDER_POOL}}
    Rehearse it against the current tree: every path, script and component name it cites must exist
    or be created by its own steps.
    A UI task's first fence carries `- Screens: \`<name> <path>[ click|hover|focus <selector>]\` · …` in its header, naming every page, state and interaction to capture.

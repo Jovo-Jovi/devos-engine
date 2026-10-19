@@ -32,7 +32,7 @@ export function readFenceChoice(task) {
 }
 
 export function candidates(effort, fast) {
-  const base = b.model_family ?? "grok-4.7";
+  const base = process.env.DEVOS_BUILDER_FAMILY || b.model_family || "grok-4.7";
   if (!fast) return [`${base}-${effort}`, ...(effort === (b.default_effort ?? "high") ? [base] : [])];
   return [`${base}-${effort}-fast`, `${base}-fast-${effort}`, `${base}-${effort}`];
 }
@@ -63,7 +63,9 @@ export function resolve({ task, effortIn = "fence", fastIn = "fence", modelsText
       if (fast && !/fast/i.test(hit)) notes.push(`no Fast variant of ${effort} is listed; running ${hit} at normal speed`);
     }
     else {
-      const fallback = b.model;
+      const family = b.model_family || "grok-4.7";
+      const base = process.env.DEVOS_BUILDER_FAMILY || family;
+      const fallback = base === family ? b.model : base;
       notes.push(`none of ${cands.join(", ")} is listed by \`agent models\`; using ${fallback}`);
       model = fallback;
       if (fast) notes.push("fast mode was requested but no fast id was found");

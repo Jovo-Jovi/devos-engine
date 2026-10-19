@@ -27,5 +27,6 @@ test("config-equivalence.test.mjs regenerates the Tower config", () => {
   const merged = merge(defaults, project);
   delete merged.guards;
   delete merged.deploy;
+  delete merged.agents;
   assert.deepEqual(stripDollar(merged), stripDollar(tower));
 });

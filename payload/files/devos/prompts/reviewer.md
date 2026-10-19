@@ -90,7 +90,9 @@ part: a red required check fails the verdict whatever you write (PR-08), and the
    `fence-auditor` on every fence you write. Cite what they found in the verdict. Use any other skill
    that helps (`/devos-review` steps, `devos-fence-writing`).
 5. Then exactly one of:
-   - Every fence you write carries the builder line `- Builder: grok-4.7 · Effort: <low|medium|high|xhigh> · Fast: <yes|no>`:
+   - Every fence you write carries the builder line `- Builder: <pool id> · Effort: <low|medium|high|xhigh> · Fast: <yes|no>`:
+     Choose the pool id from this list by the task's kind, risk and size (any id not listed falls back to the default):
+     {{BUILDER_POOL}}
      **low** for copy and one-line fixes, **medium** for small contained code, **high** (default) for
      features and tests, **xhigh** for risk 3, cross-cutting work, and a reissue after high failed.
      **Fast: yes** only for low/medium mechanical work.

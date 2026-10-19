@@ -10,7 +10,8 @@
 // Usage: node scripts/devos/review-mode.mjs --task T12 --attempt 1
 // Emits: mode, model, effort, max_turns, fallback, reasons, critical (comma-separated paths)
 import { execFileSync } from "node:child_process";
-import { P, config, parsePhases, globToRegExp, emit, fail } from "./lib.mjs";
+import { P, config, parsePhases, globToRegExp, emit, fail, isMethodRow } from "./lib.mjs";
+import { reviewerFor } from "./agents.mjs";
 
 const arg = (n) => { const i = process.argv.indexOf(`--${n}`); return i >= 0 ? (process.argv[i + 1] ?? "") : ""; };
 const EFFORTS = ["low", "medium", "high", "xhigh"];
@@ -33,7 +34,8 @@ export function reviewPlan(row, changed = [], attempt = 1, cfg = config()) {
     if (EFFORTS[i] !== effort) reasons.push(`retry: effort raised to ${EFFORTS[i]}`);
     effort = EFFORTS[i];
   }
-  const model = hasGate(row) ? r.gate_model : m.model;
+  const gateOrMethod = hasGate(row) || isMethodRow(row);
+  const model = gateOrMethod ? r.gate_model : (cfg.agents ? reviewerFor(mode, cfg.agents).model : m.model);
   return {
     mode, model, effort, max_turns: m.max_turns ?? r.max_turns ?? 80,
     fallback: r.fallback_model && r.fallback_model !== model ? r.fallback_model : "",
