@@ -1,0 +1,8 @@
+---
+description: MCP and cloud tool use (OD-06)
+alwaysApply: true
+---
+- A connected MCP server is not permission. Context7 read-only documentation lookups are allowed in every task; any other MCP call must be named by the fence.
+- Playwright MCP is for local, manual rendered evidence only (IDE). CI runs Playwright as tests, not as MCP.
+- Never change DNS, billing, account membership, keys, secrets or repository settings through any tool.
+- No marketplace automation or plugin acts on this repository without an OD (see `docs/method/DEVOS_FIT.md` §7a).

@@ -1,0 +1,3 @@
+# Append-only ledgers: when main and a task branch both add entries, keep both instead of
+# conflicting (sync-main.sh merges main into the task branch right before the runner pushes).
+docs/DEVELOPMENT_JOURNAL.md merge=union

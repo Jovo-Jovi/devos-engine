@@ -1,0 +1,13 @@
+---
+description: Firebase module — Cloud Firestore read on the server, seeded from the repo (PR-26)
+globs: firebase.json, firestore.rules, firebase/**, src/lib/firebase/**
+alwaysApply: false
+---
+- The collections, their fields and who reads them are in `docs/DATA_MODEL.md` (Firestore section). Anything not there is out of scope: HALT.
+- Firestore is read **on the server only**, with `firebase-admin`, in `src/lib/firebase/`; every file there starts with `import "server-only";`. Initialise once (`getApps()`): when `FIRESTORE_EMULATOR_HOST` is set, `initializeApp({ projectId: FIREBASE_PROJECT_ID })` with no credentials; otherwise `credential: cert(JSON.parse(FIREBASE_SERVICE_ACCOUNT))`. Never read the service account anywhere else, never through a `NEXT_PUBLIC_` name.
+- No Firebase web SDK (`firebase/*`) in the app, and never analytics, performance or messaging (trackers: Boundary). `guard:services` fails the task otherwise.
+- Validate every document you read with a Zod schema; skip (and count) a document that does not parse instead of crashing the page. Pages that read Firestore are cached the way the data model says.
+- The data comes from `firebase/seed/<collection>.json`: an array of documents, each with a string `"id"` (letters, digits, `-`, `_`); every other key is a field. It is synthetic, and it is the source of truth: `devos-deploy` writes it after the human's merge and removes documents the file no longer has. The app never writes to Firestore unless the data model says so.
+- Rules: `firestore.rules` (the path `firebase.json` names) denies every client: `allow read, write: if false;`. Prove it in `*.rules.test.ts` with `@firebase/rules-unit-testing` against the emulator (project `demo-devos`, host and port from `FIRESTORE_EMULATOR_HOST`): an unauthenticated and an authenticated client can neither read nor write. The `test:rules` package script runs them (the `firestore-rules` check).
+- `firebase.json` holds the rules path and `"emulators": { "firestore": { "port": 8080 }, "ui": { "enabled": false }, "singleProjectMode": true }`. No `.firebaserc` with a real project id, no hosting or functions config.
+- The emulator is already running in the automated cycle (`.devos/firebase.env`), seeded from `firebase/seed/`. Locally: `node scripts/devos/firebase.mjs start` then `node scripts/devos/firebase.mjs seed --local` (needs `firebase-tools` and Java 21). Never run `firebase login`, `firebase deploy` or anything against a real project: production changes only in `devos-deploy`.

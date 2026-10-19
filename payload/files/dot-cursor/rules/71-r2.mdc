@@ -1,0 +1,12 @@
+---
+description: Storage module — Cloudflare R2 object storage through the S3 API (PR-26)
+globs: src/lib/r2/**, src/**/*actions.ts, src/**/staff/**, next.config.ts
+alwaysApply: false
+---
+- What may be stored, under which keys, who may write and the size and type limits are in `docs/DATA_MODEL.md` (storage section). Anything not there is out of scope: HALT.
+- All storage code lives in `src/lib/r2/`, and every file there starts with `import "server-only";`. The client is `S3Client` from `@aws-sdk/client-s3` with `endpoint: R2_ENDPOINT`, `region: "auto"`, `forcePathStyle: true`, `requestChecksumCalculation: "WHEN_REQUIRED"`, `responseChecksumValidation: "WHEN_REQUIRED"`, and the keys from `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY`. Never read those names anywhere else, never through a `NEXT_PUBLIC_` name (`guard:services`).
+- Uploads happen only in a staff-zone server action, after the server checks the staff claim and AAL2 (the same check as every staff write). Visitors never upload (Boundary). No presigned browser uploads unless the data model says so: they need a CSP `connect-src` change.
+- Every upload is validated on the server: the type from the file's first bytes (JPEG, PNG or WebP only), the size limit from the data model, then re-encoded with `sharp` (resize to the data model's maximum, WebP, **all metadata stripped**: EXIF can carry GPS and device data). Store it under a new immutable key (`<prefix>/<id>/<uuid>.webp`); after the database points at the new key, delete the old object.
+- Public URLs are `${R2_PUBLIC_BASE_URL}/${key}`. Showing them needs the R2 public origin in the CSP `img-src` (read from the environment at build time). That is a security-header change: only when the fence says so, following `docs/SECURITY_MODEL.md`.
+- Tests: unit tests for validation and key naming; integration tests that upload, read through the public URL and delete against the local store, run by the `test:storage` package script (the `storage` check runs it). They read `R2_*` from the environment; never hard-code a value.
+- The local store is already running in the automated cycle (`.devos/r2.env` holds its names). Locally: `node scripts/devos/r2.mjs start` (Docker). Never use or ask for the production keys, never call the hosted bucket: production is proven only by `devos-deploy`'s storage preflight after the human's merge.

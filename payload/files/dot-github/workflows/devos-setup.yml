@@ -1,0 +1,94 @@
+# Setup check (PR-27): what only the human can add outside the repository, kept in one issue.
+#
+# Runs on every push to main, when devos-resume finds the issue open (every two hours), when a run
+# stops for lack of a setting (scripts/devos/setup-issue.mjs wait), and when an owner, member or
+# collaborator comments `/devos setup` on the issue or on a waiting PR.
+#
+# It checks NAMES only: GitHub secrets and variables (from toJSON, never printed) and the app's
+# Vercel Production variables (Vercel API). When something is missing it opens or updates the issue
+# "Dev OS: setup needed" with the exact steps. When everything is in place it closes the issue,
+# resumes every run that waited for it, and re-runs a production deploy that failed.
+name: devos-setup
+
+on:
+  push:
+    branches: [main]
+  issue_comment:
+    types: [created]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+  actions: write
+
+concurrency:
+  group: devos-setup
+  cancel-in-progress: false
+
+jobs:
+  setup:
+    if: >-
+      vars.DEVOS_PAUSED != 'true' && (
+        github.event_name != 'issue_comment' || (
+          startsWith(github.event.comment.body, '/devos setup') &&
+          contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
+        )
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check names (never values)
+        env:
+          # PR-32: whether each secret is set ("1" or empty), never a value. guard:secrets keeps this list
+          # equal to the secret names in devos/setup.json; product secrets (docs/setup-items.json) are
+          # listed for the human to confirm, since no workflow receives every secret.
+          SECRETS_JSON: >-
+            {
+              "CURSOR_API_KEY":"${{ secrets.CURSOR_API_KEY != '' && '1' || '' }}",
+              "CURSOR_API_KEY_2":"${{ secrets.CURSOR_API_KEY_2 != '' && '1' || '' }}",
+              "CLAUDE_CODE_OAUTH_TOKEN":"${{ secrets.CLAUDE_CODE_OAUTH_TOKEN != '' && '1' || '' }}",
+              "ANTHROPIC_API_KEY":"${{ secrets.ANTHROPIC_API_KEY != '' && '1' || '' }}",
+              "CLAUDE_CODE_OAUTH_TOKEN_2":"${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 != '' && '1' || '' }}",
+              "ANTHROPIC_API_KEY_2":"${{ secrets.ANTHROPIC_API_KEY_2 != '' && '1' || '' }}",
+              "DEVOS_PAT":"${{ secrets.DEVOS_PAT != '' && '1' || '' }}",
+              "VERCEL_TOKEN":"${{ secrets.VERCEL_TOKEN != '' && '1' || '' }}",
+              "VERCEL_ORG_ID":"${{ secrets.VERCEL_ORG_ID != '' && '1' || '' }}",
+              "VERCEL_PROJECT_ID":"${{ secrets.VERCEL_PROJECT_ID != '' && '1' || '' }}",
+              "VERCEL_AUTOMATION_BYPASS_SECRET":"${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET != '' && '1' || '' }}",
+              "SUPABASE_ACCESS_TOKEN":"${{ secrets.SUPABASE_ACCESS_TOKEN != '' && '1' || '' }}",
+              "SUPABASE_PROJECT_REF":"${{ secrets.SUPABASE_PROJECT_REF != '' && '1' || '' }}",
+              "SUPABASE_DB_PASSWORD":"${{ secrets.SUPABASE_DB_PASSWORD != '' && '1' || '' }}",
+              "DEVOS_BACKUP_PASSPHRASE":"${{ secrets.DEVOS_BACKUP_PASSPHRASE != '' && '1' || '' }}",
+              "R2_ENDPOINT":"${{ secrets.R2_ENDPOINT != '' && '1' || '' }}",
+              "R2_ACCESS_KEY_ID":"${{ secrets.R2_ACCESS_KEY_ID != '' && '1' || '' }}",
+              "R2_SECRET_ACCESS_KEY":"${{ secrets.R2_SECRET_ACCESS_KEY != '' && '1' || '' }}",
+              "R2_BUCKET":"${{ secrets.R2_BUCKET != '' && '1' || '' }}",
+              "R2_PUBLIC_BASE_URL":"${{ secrets.R2_PUBLIC_BASE_URL != '' && '1' || '' }}",
+              "FIREBASE_PROJECT_ID":"${{ secrets.FIREBASE_PROJECT_ID != '' && '1' || '' }}",
+              "FIREBASE_DEPLOY_SERVICE_ACCOUNT":"${{ secrets.FIREBASE_DEPLOY_SERVICE_ACCOUNT != '' && '1' || '' }}"
+            }
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VARS_JSON: ${{ toJSON(vars) }}
+        run: node scripts/devos/setup-check.mjs
+      - name: Update or close the issue; resume what waited
+        env:
+          GH_TOKEN: ${{ secrets.DEVOS_PAT || github.token }}
+          REPO: ${{ github.repository }}
+          CONFIRMED: ${{ github.event_name == 'issue_comment' && 'true' || 'false' }}
+        run: |
+          if [ "$CONFIRMED" = "true" ]; then
+            node scripts/devos/setup-issue.mjs sync --confirmed
+          else
+            node scripts/devos/setup-issue.mjs sync
+          fi

@@ -1,0 +1,77 @@
+# Restart the cycle after the HUMAN merges a gated task PR (OD-03 §4) or an intake PR (OD-08 §3).
+# Runner auto-merges carry the devos:auto-merged label and are skipped here, because the cycle
+# already dispatched the next task itself (this also prevents a double dispatch when DEVOS_PAT is used).
+# PR-28: after a method fix merges, the product task the problem stopped is restarted the way its
+# fence says ("Resume after merge"), then the cycle carries on from there.
+name: devos-advance
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  actions: write
+  contents: read
+  pull-requests: write
+
+jobs:
+  advance:
+    if: >-
+      github.event.pull_request.merged == true &&
+      (startsWith(github.event.pull_request.head.ref, 'task/') || startsWith(github.event.pull_request.head.ref, 'intake/')) &&
+      contains(github.event.pull_request.labels.*.name, 'devos') &&
+      !contains(github.event.pull_request.labels.*.name, 'devos:auto-merged') &&
+      vars.DEVOS_PAUSED != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          persist-credentials: false
+          sparse-checkout: |
+            docs/fences
+            docs/PHASES.md
+            scripts/devos
+            devos.config.json
+      - name: Dispatch the next task (or resume the task a method fix unblocked)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          HEAD: ${{ github.event.pull_request.head.ref }}
+          METHOD: ${{ contains(github.event.pull_request.labels.*.name, 'devos:method') }}
+        run: |
+          task="${HEAD#task/}"
+          if [ "$METHOD" = "true" ] && [ "$task" != "$HEAD" ] && [ -f "docs/fences/$task.md" ]; then
+            line=$(grep -m1 -E '^- Resume after merge:' "docs/fences/$task.md" || true)
+            if echo "$line" | grep -qE 'T[0-9]{2} attempt [0-9]+'; then
+              rt=$(echo "$line" | grep -oE 'T[0-9]{2}' | head -1)
+              ra=$(echo "$line" | grep -oE 'attempt [0-9]+' | grep -oE '[0-9]+')
+              ro=$(echo "$line" | grep -oE 'review_only=(true|false)' | cut -d= -f2); ro=${ro:-false}
+              pr=$(gh pr list --repo "$REPO" --head "task/$rt" --state open --json number --jq '.[0].number // empty')
+              if [ -n "$pr" ]; then
+                gh pr edit "$pr" --repo "$REPO" --remove-label "devos:halted" >/dev/null 2>&1 || true
+                gh pr comment "$pr" --repo "$REPO" --body "Dev OS: method fix $task is merged; restarting $rt attempt $ra (review_only=$ro)."
+              fi
+              gh workflow run devos-cycle.yml --repo "$REPO" --ref main -f task="$rt" -f attempt="$ra" -f review_only="$ro" -f revision=true
+              echo "::notice title=Dev OS::Method fix $task merged; $rt attempt $ra restarted (review_only=$ro)."
+              exit 0
+            fi
+          fi
+          # Name the next task in the dispatch so the run is titled "devos Tnn · attempt 1", not "devos next".
+          next=$(node scripts/devos/next-task.mjs 2>/dev/null | sed -n 's/^task=//p' | head -1 || true)
+          if [ -n "$next" ]; then
+            # Never start a second cycle for a task that already has one: a run queued or in
+            # progress for it (devos-setup or devos-resume may have resumed it), or an open PR on
+            # its branch (it is at a gate or mid-attempt). Two cycles on one branch collide.
+            active=$(gh run list --repo "$REPO" --workflow devos-cycle.yml --limit 30 --json displayTitle,status \
+              --jq "[.[] | select(.status != \"completed\") | select(.displayTitle | startswith(\"devos $next \"))] | length" 2>/dev/null || echo 0)
+            open_pr=$(gh pr list --repo "$REPO" --head "task/$next" --state open --json number --jq 'length' 2>/dev/null || echo 0)
+            if [ "${active:-0}" != "0" ] || [ "${open_pr:-0}" != "0" ]; then
+              echo "::notice title=Dev OS::$next already has a cycle running or an open PR; not dispatching a second one."
+              exit 0
+            fi
+            gh workflow run devos-cycle.yml --repo "$REPO" --ref main -f task="$next" -f attempt=1
+          else
+            gh workflow run devos-cycle.yml --repo "$REPO" --ref main
+          fi
+          echo "::notice title=Dev OS::Gate signed by merge of #${{ github.event.pull_request.number }}; next task dispatched."

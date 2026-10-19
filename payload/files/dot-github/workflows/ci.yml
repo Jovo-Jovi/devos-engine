@@ -1,0 +1,51 @@
+# Plain CI on main (PR-25). Pull requests are checked before merge by devos-cycle itself: it posts the
+# result as the commit status devos/checks on the PR's head, and re-checks after merging the latest
+# main into the branch. ci does not run on pull requests, because on a public repository GitHub holds
+# bot-opened PR runs for an approval nobody gives, and they expire as meaningless red "failures".
+name: ci
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install -g pnpm@10
+      - name: Supabase CLI (backend module, PR-17)
+        if: hashFiles('supabase/config.toml') != ''
+        uses: supabase/setup-cli@v1
+        with:
+          # Pinned (PR-33): "latest" asks GitHub's API, which rate-limits shared runners.
+          version: ${{ vars.DEVOS_SUPABASE_CLI_VERSION || '2.120.0' }}
+      - name: Firebase CLI and Java 21 (Firebase module, PR-26)
+        if: hashFiles('firebase.json') != ''
+        run: |
+          if [ -n "$JAVA_HOME_21_X64" ]; then echo "JAVA_HOME=$JAVA_HOME_21_X64" >> "$GITHUB_ENV"; echo "$JAVA_HOME_21_X64/bin" >> "$GITHUB_PATH"; fi
+          npm install -g firebase-tools
+      - name: Install
+        run: if [ -f package.json ]; then pnpm install --frozen-lockfile; fi
+      - name: Guards, typecheck, lint, test, build (+ e2e when present)
+        run: node scripts/devos/run-checks.mjs --strict
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-evidence
+          path: .devos/
+          include-hidden-files: true
+          if-no-files-found: ignore

@@ -1,0 +1,13 @@
+---
+description: Authority, session opener, git and ledger rules for every task
+alwaysApply: true
+---
+- You are the BUILDER surface. Ignore `CLAUDE.md` and `.claude/**`: they belong to the reviewer.
+- The repository outranks memory. Start every task by reading `docs/SESSION_CONTEXT.md` and `docs/method/PRECEDENTS.md`.
+- The fence you were given (`docs/fences/Tnn.md`) is the task's whole authority. A reviewer ruling exists only if it is quoted in the fence or listed in `PRECEDENTS.md`.
+- Never invent scope. Anything not in `docs/SCOPE.md`, `docs/DECISIONS.md` or the fence stops the task and is reported.
+- One task per branch (`task/Tnn`). **Automated runs** (`DEVOS_AUTOMATED=1`, the default in CI): never run `git add/commit/push` or `gh`, never open or merge a PR — the runner does (PR-04). **Manual IDE runs**: push only to the fence's branch with an explicit refspec; never push to `main`; never open or merge a PR.
+- Never tick `docs/PHASES.md`; the runner records verdicts. Update `docs/SESSION_CONTEXT.md` and `docs/DEVELOPMENT_JOURNAL.md` only as the fence says.
+- Never edit the method surfaces: `.github/workflows/devos-*.yml`, `scripts/devos/**`, `scripts/guards/**`, `devos/**`, `devos.config.json`, `docs/fences/**`, `docs/reviews/**`, `docs/DECISIONS.md`, `docs/method/DEVOS_FIT.md`, `CLAUDE.md`, `.claude/**`, `.cursor/cli.json`, `.cursor/hooks*`, `content/**`. The runner's surface guard fails the task if you do.
+- Allocate CF, PR and OD ids from the live maximum and report them. State every count with the command that produced it.
+- Where two documents conflict, the one earlier in the precedence list wins; report the conflict, never reconcile it silently.

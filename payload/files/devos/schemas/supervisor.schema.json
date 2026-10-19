@@ -1,0 +1,25 @@
+{
+  "type": "object",
+  "required": ["incidents"],
+  "additionalProperties": false,
+  "properties": {
+    "incidents": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "cause", "explanation", "action"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string" },
+          "cause": { "type": "string" },
+          "explanation": { "type": "string" },
+          "action": { "enum": ["redispatch", "rerun-failed", "revise-continue", "revise-with-note", "method-issue", "request-issue", "setup", "none"] },
+          "note": { "type": "string" },
+          "owner_steps": { "type": "string" },
+          "issue_title": { "type": "string" },
+          "issue_body": { "type": "string" }
+        }
+      }
+    }
+  }
+}

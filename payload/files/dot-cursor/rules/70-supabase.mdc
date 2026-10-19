@@ -1,0 +1,18 @@
+---
+description: Backend module — Supabase data layer conventions (PR-17, PR-18)
+globs: supabase/**, src/lib/supabase/**, src/proxy.ts, src/middleware.ts, **/*.sql
+alwaysApply: false
+---
+- The data model is `docs/DATA_MODEL.md`. A table, column or policy that is not there is out of scope: HALT.
+- Schema changes are migrations only: `supabase migration new <snake_name>`, then edit that new file. Never edit, rename or delete a migration that exists on `main` (`guard:data` fails the task). Never change the schema through the dashboard or an MCP tool.
+- Every table you create gets `alter table <name> enable row level security;` in the same migration, and its policies there too. Anonymous visitors read published rows only. Writes require the staff claim (and AAL2 when the data model says so), checked in the policy, not only in the app.
+- A `security definer` function sets `search_path = ''` and names schemas explicitly. Never grant insert, update or delete to `anon`.
+- Prove each policy in `supabase/tests/*.sql` with pgTAP (`supabase test db`): who can and who cannot read and write each table.
+- `supabase/seed.sql` is synthetic: reserved email domains (example.com, example.org, .test), invented names. Never a real person's data.
+- After any migration, regenerate the types: `supabase gen types typescript --local > src/lib/supabase/database.types.ts`. The `types` check fails if they drift.
+- Clients live in `src/lib/supabase/`, and only the clients `docs/DATA_MODEL.md` lists (it may forbid a browser client or a secret-key client). A server client uses `@supabase/ssr` with the publishable key; a secret-key client, where the data model allows one, sits in a file that starts with `import "server-only";`. Never read `SUPABASE_SECRET_KEY` anywhere else, never through a `NEXT_PUBLIC_` name.
+- Public pages read without a session (no cookies), so they stay cacheable; session refresh runs in `src/proxy.ts` with a matcher limited to the zones named in `docs/BOUNDARY_MODEL.md`.
+- A browser client needs the Supabase URL in the CSP `connect-src`. That is a security-header change: only when the fence says so, and it follows `docs/SECURITY_MODEL.md`.
+- Mutations are server actions that validate input with a shared Zod schema, check the user on the server, and revalidate the cache tag of what they change.
+- The local stack is already running in the automated cycle (`.devos/supabase.env` holds its names). Locally: `supabase start`, then `supabase db reset` to rebuild from the migrations and seed. Magic-link and invite emails land in the local mail server (`SUPABASE_MAIL_URL`); e2e tests read them there.
+- Never run `supabase link`, `db push`, `config push` or anything against a hosted project. Production changes happen only in `devos-deploy` after the human's merge.

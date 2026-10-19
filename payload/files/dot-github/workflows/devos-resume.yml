@@ -1,0 +1,80 @@
+# Backstop for tasks parked by a usage or rate limit (PR-12, OD-08 §4). The cycle's own
+# wait-and-resume job handles waits up to ~5.5 h; this covers longer ones (weekly limits) and any
+# case where that job was cancelled. GitHub runs schedules on a best-effort basis (they can start
+# late or be skipped), so you can always run this by hand. It takes the oldest open PR labelled
+# devos:quota-wait whose not_before time has passed, and re-dispatches that exact task and attempt.
+name: devos-resume
+
+on:
+  schedule:
+    - cron: "17 */2 * * *"
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  pull-requests: write
+  issues: write
+  contents: read
+
+jobs:
+  resume:
+    if: vars.DEVOS_PAUSED != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      # PR-27: while the setup issue is open, check again every two hours, so the work resumes soon
+      # after the human adds what was missing (adding a secret starts no workflow by itself).
+      - name: Re-check the setup issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          n=$(gh issue list --repo "$REPO" --state open --label "devos:setup" --json number --jq '.[0].number // empty')
+          if [ -n "$n" ]; then gh workflow run devos-setup.yml --repo "$REPO" --ref main; echo "setup issue #$n is open: devos-setup dispatched"; fi
+      - name: Re-dispatch the oldest parked task
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          busy=$(gh run list --repo "$REPO" --workflow devos-cycle.yml --limit 20 --json status \
+            --jq '[.[] | select(.status != "completed")] | length')
+          if [ "$busy" != "0" ]; then echo "devos-cycle is running or queued; try next hour."; exit 0; fi
+
+          pr=$(gh pr list --repo "$REPO" --state open --label "devos:quota-wait" --json number \
+            --jq 'sort_by(.number) | .[0].number // empty')
+          if [ -z "$pr" ]; then
+            # PR-20: a planning run parked on an issue (change request).
+            issue=$(gh issue list --repo "$REPO" --state open --label "devos:quota-wait" --json number \
+              --jq 'sort_by(.number) | .[0].number // empty')
+            if [ -z "$issue" ]; then echo "Nothing is parked."; exit 0; fi
+            nb=$(gh issue view "$issue" --repo "$REPO" --json comments \
+              --jq '[.comments[].body | select(contains("<!-- devos-intake-resume "))] | last // ""' \
+              | sed -n 's/.*not_before=\([0-9TZ:-]*\).*/\1/p' | tail -1)
+            if [ -n "$nb" ] && [ "$(date -u +%s)" -lt "$(date -u -d "$nb" +%s)" ]; then
+              echo "Issue #$issue waits until $nb UTC; not yet."; exit 0
+            fi
+            gh issue edit "$issue" --repo "$REPO" --remove-label "devos:quota-wait"
+            gh workflow run devos-intake.yml --repo "$REPO" --ref main -f issue="$issue" -f resume=true
+            echo "::notice title=Dev OS::Resumed the planning of issue #$issue."
+            exit 0
+          fi
+
+          marker=$(gh pr view "$pr" --repo "$REPO" --json comments \
+            --jq '[.comments[].body | select(contains("<!-- devos-resume "))] | last // ""' \
+            | grep -o 'devos-resume task=T[0-9]* attempt=[0-9]* review_only=[a-z]*\( not_before=[0-9TZ:-]*\)\?' | tail -1)
+          if [ -z "$marker" ]; then
+            echo "::error::PR #$pr is parked but has no resume marker; resume it by hand."
+            exit 1
+          fi
+          task=$(echo "$marker" | sed 's/.*task=\(T[0-9]*\).*/\1/')
+          attempt=$(echo "$marker" | sed 's/.*attempt=\([0-9]*\).*/\1/')
+          review_only=$(echo "$marker" | sed 's/.*review_only=\([a-z]*\).*/\1/')
+          not_before=$(echo "$marker" | sed -n 's/.*not_before=\([0-9TZ:-]*\).*/\1/p')
+          if [ -n "$not_before" ] && [ "$(date -u +%s)" -lt "$(date -u -d "$not_before" +%s)" ]; then
+            echo "PR #$pr ($task) waits until $not_before UTC; not yet."
+            exit 0
+          fi
+
+          gh pr edit "$pr" --repo "$REPO" --remove-label "devos:quota-wait"
+          gh workflow run devos-cycle.yml --repo "$REPO" --ref main \
+            -f task="$task" -f attempt="$attempt" -f review_only="$review_only" -f go=true
+          echo "::notice title=Dev OS::Resumed $task attempt $attempt (review_only=$review_only) from PR #$pr."

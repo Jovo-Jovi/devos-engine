@@ -1,0 +1,12 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["category", "cause", "evidence", "revise_note", "human_action"],
+  "properties": {
+    "category": { "type": "string", "enum": ["code", "environment", "flaky-test", "config", "unknown"] },
+    "cause": { "type": "string" },
+    "evidence": { "type": "string" },
+    "revise_note": { "type": "string" },
+    "human_action": { "type": "string" }
+  }
+}

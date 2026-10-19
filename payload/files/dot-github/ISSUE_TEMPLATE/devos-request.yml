@@ -1,0 +1,35 @@
+name: Dev OS change request
+description: Ask the reviewer to plan new work. It drafts the decision, the tasks and the first fence in a pull request you approve.
+title: "Request: "
+labels: ["devos:request"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What should change
+      description: Describe the outcome you want, in plain words. Screens, pages, behaviour.
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why
+      description: The problem this solves, or who it is for.
+  - type: textarea
+    id: done
+    attributes:
+      label: How you will judge it done
+      description: What you will check on the preview before you sign it off.
+  - type: dropdown
+    id: size
+    attributes:
+      label: How big is it?
+      description: A small change is planned at high effort; anything bigger at extra-high, which uses more of your Claude plan (PR-20).
+      options: ["Small change (one or two tasks)", "Feature (several tasks)", "Large or cross-cutting"]
+      default: 1
+  - type: dropdown
+    id: urgency
+    attributes:
+      label: Priority
+      options: ["Next up", "After current tasks", "Whenever"]
+      default: 0

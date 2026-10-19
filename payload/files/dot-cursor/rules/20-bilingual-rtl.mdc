@@ -1,0 +1,11 @@
+---
+description: Locale, direction and styling rules for application code (one locale, docs/I18N_MODEL.md)
+globs: src/**
+alwaysApply: false
+---
+- One locale, `en` (`docs/I18N_MODEL.md` §1–§2): `src/i18n/config.ts` exports `locales = ["en"] as const`, `defaultLocale = "en"` and `directionOf()`; the root layout derives `lang` and `dir` from it, never a literal. No `[locale]` route segment, no `Accept-Language`, no cookie; nothing about the visitor is inferred or stored.
+- Logical CSS properties only (`margin-inline-start`, `padding-block`, `inset-inline-end`, `text-align: start`), never `left`/`right`, so an `rtl` locale later needs no style change. Colours, spacing, radii and type come from `src/styles/tokens.css`; raw values anywhere else fail `guard:design`.
+- Every user-facing string exists in `src/i18n/messages/en.json` (typed by `src/i18n/messages.ts`); a second catalogue, if ever added, carries identical keys (`guard:i18n`). No hardcoded interface text, no hardcoded `lang`. Data from the database (keys, repos, shas, model ids, contract values) is rendered as data, never translated.
+- Bidi isolation: repo names, logins and evidence paths are wrapped in `<bdi>`.
+- Compose the approved design direction in `docs/DESIGN_SYSTEM.md` and the fence's Design specification; never restyle a shared component inside a feature. A gap is reported in the report, not improvised.
+- No third-party host in source except the three GitHub origins `guard:design` allow-lists (`github.com` evidence links, `avatars.githubusercontent.com` in the CSP, `token.actions.githubusercontent.com` for OIDC); fonts come from `next/font`, self-hosted at build.

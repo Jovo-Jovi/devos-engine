@@ -2,7 +2,7 @@
 
 DEV_OS Engine — guided onboarding and an automated Cursor ⇄ Claude development cycle for new projects.
 
-Status: B0 — bootstrap only, nothing built yet
+Status: E01 — method extracted verbatim (103 files) · engine 0.1.0
 
 This repository is being built locally, task by task, with the Dev OS method itself: a fence for each task in
 `dev/fences/`, Cursor builds it, Claude reviews it, the owner commits. The plan is `dev/PLAN.md`; the task list is

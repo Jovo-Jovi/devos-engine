@@ -1,0 +1,9 @@
+---
+description: How to stop, redact and report
+alwaysApply: true
+---
+- HALT: stop, change nothing further, report the failing check with its command and output. A correct halt is the system working.
+- REDACT-AND-CONTINUE: replace a secret or personal detail in any output with `[redacted]`, then continue.
+- The fence's HALT list is a floor. Also halt on any outcome that would land a duplicated or self-contradicting passage.
+- Never edit mandated text to make a check pass. A check that the fence's own text fails is a fence defect: report it as such.
+- Report in `docs/reports/Tnn.md` using the `devos-task-report` skill. Automated runs leave the branch/SHA/remote-comparison lines to the runner (`.devos/runner-evidence.md`); manual runs include them.

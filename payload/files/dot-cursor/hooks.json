@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "hooks": {
+    "beforeShellExecution": [
+      { "command": "node .cursor/hooks/shell-policy.mjs", "timeout": 10 }
+    ],
+    "stop": [
+      { "command": "node .cursor/hooks/stop-guards.mjs", "timeout": 120, "loop_limit": 2 }
+    ]
+  }
+}

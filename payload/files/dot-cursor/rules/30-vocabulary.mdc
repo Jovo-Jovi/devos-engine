@@ -1,0 +1,8 @@
+---
+description: Enforced vocabulary for identifiers (from docs/GLOSSARY.md §3)
+alwaysApply: true
+---
+- Forbidden bare nouns in type, interface, class, enum, route-segment and content-field names: `event events item items data info user users log logs record records status`.
+- Use the qualified names: event → `StepEvent` (type), `stepEvents` (collection); log → `WebhookDelivery` or `Observation`; status as a type → `StepStatus` (the contract's six values) or `CommitStatus` (GitHub's observed state) — the contract *field* `status` inside `StepEvent` is a field, not a type, and is permitted; user → forbidden (the Tower has an **owner**, `Owner` / `isOwner`, and **projects**); item, info, data, record → forbidden, name the entity.
+- Route segments in use: `projects`, `new`, `usage`, `import`, `api`, `ingest`, `github`, `webhook`, `sign-in` (and `keys`, `scope`, `reconcile` later) — none is a forbidden noun; there is no permitted exception.
+- PascalCase entity names are permitted only as the exact entity names in `docs/GLOSSARY.md` §1 plus the qualified type names above. A bare forbidden noun is a defect; `guard:naming` fails the build on it. Local variable names are outside this rule.

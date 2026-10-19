@@ -1,0 +1,230 @@
+# Vercel production deploys (OD-08 §2). Previews are made per task attempt inside devos-cycle.
+# Production deploys run:
+#   - on a push to main that a person makes (your gate merges, your own pushes). The runner's own
+#     auto-merges use the default GITHUB_TOKEN, which GitHub does not let trigger workflows, so
+#     production moves at the gates you sign rather than after every task;
+#   - or by hand: Actions → devos-deploy → Run workflow.
+# Git deploys are off in vercel.json so Vercel never deploys behind the method's back.
+# Needs: repository variable DEVOS_VERCEL=true and secrets VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID.
+# Backend module (PR-18): with supabase/ in the tree and DEVOS_SUPABASE=true, a production deploy first
+# takes an encrypted backup and applies the migrations (secrets SUPABASE_ACCESS_TOKEN, SUPABASE_DB_PASSWORD,
+# SUPABASE_PROJECT_REF, DEVOS_BACKUP_PASSPHRASE). The app's own Supabase variables live in Vercel.
+# Storage and Firebase modules (PR-26): with DEVOS_R2=true a storage preflight runs first (secrets R2_*);
+# with DEVOS_FIREBASE=true the Firestore rules and the seed are applied before the app (secrets
+# FIREBASE_PROJECT_ID, FIREBASE_DEPLOY_SERVICE_ACCOUNT). The app's own values live in Vercel.
+name: devos-deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Where to deploy main"
+        type: choice
+        options: [production, preview]
+        default: production
+
+concurrency:
+  group: devos-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  # Production moves at the gates the human signs. With DEVOS_PAT set, the runner's own auto-merges
+  # (label devos:auto-merged) are pushes that start this workflow too; they are skipped here, so
+  # adding the token for method fixes (PR-28) does not change when production deploys.
+  which:
+    if: vars.DEVOS_VERCEL == 'true' && vars.DEVOS_PAUSED != 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      skip: ${{ steps.w.outputs.skip }}
+    steps:
+      - id: w
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          skip=false
+          if [ "${{ github.event_name }}" = "push" ]; then
+            labels=$(gh api "repos/$REPO/commits/${{ github.sha }}/pulls" --jq '[.[].labels[].name] | join(",")' 2>/dev/null || echo "")
+            case ",$labels," in *",devos:auto-merged,"*) skip=true; echo "::notice title=Dev OS::Runner auto-merge: production waits for the next gate you sign." ;; esac
+          fi
+          echo "skip=$skip" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    needs: which
+    if: needs.which.outputs.skip != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install -g pnpm@10
+      # PR-27: every setting the deploy needs, checked by name before anything moves. If one is missing
+      # the deploy stops here with the full list; the setup issue has the steps, and once they are done
+      # devos-setup re-runs this deploy by itself.
+      - name: Settings the deploy needs (PR-27)
+        if: (inputs.target || 'production') == 'production'
+        env:
+          # PR-32: only whether each credential is set ("1" or empty), never its value. Handing every
+          # secret to a step (toJSON(secrets)) made GitHub hold the cycle as possibly malicious.
+          SECRETS_JSON: >-
+            {
+              "VERCEL_TOKEN":"${{ secrets.VERCEL_TOKEN != '' && '1' || '' }}",
+              "VERCEL_ORG_ID":"${{ secrets.VERCEL_ORG_ID != '' && '1' || '' }}",
+              "VERCEL_PROJECT_ID":"${{ secrets.VERCEL_PROJECT_ID != '' && '1' || '' }}",
+              "VERCEL_AUTOMATION_BYPASS_SECRET":"${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET != '' && '1' || '' }}",
+              "SUPABASE_ACCESS_TOKEN":"${{ secrets.SUPABASE_ACCESS_TOKEN != '' && '1' || '' }}",
+              "SUPABASE_PROJECT_REF":"${{ secrets.SUPABASE_PROJECT_REF != '' && '1' || '' }}",
+              "SUPABASE_DB_PASSWORD":"${{ secrets.SUPABASE_DB_PASSWORD != '' && '1' || '' }}",
+              "DEVOS_BACKUP_PASSPHRASE":"${{ secrets.DEVOS_BACKUP_PASSPHRASE != '' && '1' || '' }}",
+              "R2_ENDPOINT":"${{ secrets.R2_ENDPOINT != '' && '1' || '' }}",
+              "R2_ACCESS_KEY_ID":"${{ secrets.R2_ACCESS_KEY_ID != '' && '1' || '' }}",
+              "R2_SECRET_ACCESS_KEY":"${{ secrets.R2_SECRET_ACCESS_KEY != '' && '1' || '' }}",
+              "R2_BUCKET":"${{ secrets.R2_BUCKET != '' && '1' || '' }}",
+              "R2_PUBLIC_BASE_URL":"${{ secrets.R2_PUBLIC_BASE_URL != '' && '1' || '' }}",
+              "FIREBASE_PROJECT_ID":"${{ secrets.FIREBASE_PROJECT_ID != '' && '1' || '' }}",
+              "FIREBASE_DEPLOY_SERVICE_ACCOUNT":"${{ secrets.FIREBASE_DEPLOY_SERVICE_ACCOUNT != '' && '1' || '' }}"
+            }
+          VARS_JSON: ${{ toJSON(vars) }}
+        run: node scripts/devos/setup-check.mjs --for deploy
+      - name: Gate check — the guards must pass on what ships
+        run: |
+          pnpm install --frozen-lockfile
+          node scripts/guards/run-all.mjs
+      # Storage module (PR-26): before anything moves, prove the production bucket with the production
+      # keys: write a probe object, read it back from the public URL, delete it. Nothing is kept.
+      - name: Storage preflight — R2 keys, bucket and public URL
+        if: hashFiles('src/lib/r2/**') != '' && vars.DEVOS_R2 == 'true' && (inputs.target || 'production') == 'production'
+        timeout-minutes: 5
+        env:
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          R2_PUBLIC_BASE_URL: ${{ secrets.R2_PUBLIC_BASE_URL }}
+        run: |
+          for v in R2_ENDPOINT R2_ACCESS_KEY_ID R2_SECRET_ACCESS_KEY R2_BUCKET R2_PUBLIC_BASE_URL; do
+            [ -n "${!v}" ] || { echo "::error title=Dev OS::secret $v is not set; nothing was deployed"; exit 1; }
+          done
+          export AWS_ACCESS_KEY_ID="$R2_ACCESS_KEY_ID" AWS_SECRET_ACCESS_KEY="$R2_SECRET_ACCESS_KEY" AWS_DEFAULT_REGION=auto
+          export AWS_REQUEST_CHECKSUM_CALCULATION=when_required AWS_RESPONSE_CHECKSUM_VALIDATION=when_required
+          key="devos-probe/${GITHUB_SHA}.txt"
+          printf 'devos' > "$RUNNER_TEMP/probe.txt"
+          aws s3api put-object --endpoint-url "$R2_ENDPOINT" --bucket "$R2_BUCKET" --key "$key" --body "$RUNNER_TEMP/probe.txt" --content-type text/plain > /dev/null \
+            || { echo "::error title=Dev OS::could not write to the R2 bucket with the production keys (endpoint, bucket name or key permissions)"; exit 1; }
+          body=$(curl -fsS --retry 3 --retry-delay 2 "$R2_PUBLIC_BASE_URL/$key" || true)
+          aws s3api delete-object --endpoint-url "$R2_ENDPOINT" --bucket "$R2_BUCKET" --key "$key" > /dev/null || true
+          [ "$body" = "devos" ] || { echo "::error title=Dev OS::the probe object was written but R2_PUBLIC_BASE_URL did not serve it: turn on public access for the bucket (r2.dev or a custom domain)"; exit 1; }
+          echo "::notice title=Dev OS::R2 bucket writable with the production keys and readable at its public URL."
+      # Backend module (PR-18): the database moves before the app, and only after an encrypted backup.
+      # A failure here stops the job: the old app keeps running against the old schema.
+      - name: Supabase CLI
+        if: hashFiles('supabase/config.toml') != '' && vars.DEVOS_SUPABASE == 'true' && (inputs.target || 'production') == 'production'
+        uses: supabase/setup-cli@v1
+        with:
+          # Pinned (PR-33): "latest" asks GitHub's API, which rate-limits shared runners.
+          version: ${{ vars.DEVOS_SUPABASE_CLI_VERSION || '2.120.0' }}
+      - name: Database — encrypted backup, then migrations
+        if: hashFiles('supabase/config.toml') != '' && vars.DEVOS_SUPABASE == 'true' && (inputs.target || 'production') == 'production'
+        timeout-minutes: 15
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          DEVOS_BACKUP_PASSPHRASE: ${{ secrets.DEVOS_BACKUP_PASSPHRASE }}
+        run: |
+          for v in SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD SUPABASE_PROJECT_REF DEVOS_BACKUP_PASSPHRASE; do
+            [ -n "${!v}" ] || { echo "::error title=Dev OS::secret $v is not set; the database was not touched and nothing was deployed"; exit 1; }
+          done
+          hint="If the project is paused (free plan, a week without activity), restore it in the Supabase dashboard and re-run this workflow."
+          supabase link --project-ref "$SUPABASE_PROJECT_REF" -p "$SUPABASE_DB_PASSWORD" || { echo "::error title=Dev OS::supabase link failed. $hint"; exit 1; }
+          mkdir -p "$RUNNER_TEMP/backup"
+          supabase db dump --linked -p "$SUPABASE_DB_PASSWORD" -f "$RUNNER_TEMP/backup/schema.sql"
+          supabase db dump --linked -p "$SUPABASE_DB_PASSWORD" --data-only -f "$RUNNER_TEMP/backup/data.sql"
+          # Data leaves the runner only encrypted (handbook §10.3: backups are encrypted).
+          gpg --batch --yes --pinentry-mode loopback --passphrase "$DEVOS_BACKUP_PASSPHRASE" \
+            --symmetric --cipher-algo AES256 -o "$RUNNER_TEMP/backup/data.sql.gpg" "$RUNNER_TEMP/backup/data.sql"
+          shred -u "$RUNNER_TEMP/backup/data.sql"
+          echo "Pending migrations:"
+          supabase db push --linked -p "$SUPABASE_DB_PASSWORD" --dry-run
+          supabase db push --linked -p "$SUPABASE_DB_PASSWORD" --yes
+          echo "::notice title=Dev OS::Backup taken and migrations applied to $SUPABASE_PROJECT_REF before the app deploy."
+      - name: Keep the backup (encrypted data, plain schema; 30 days)
+        if: hashFiles('supabase/config.toml') != '' && vars.DEVOS_SUPABASE == 'true' && (inputs.target || 'production') == 'production'
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-backup-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/backup/schema.sql
+            ${{ runner.temp }}/backup/data.sql.gpg
+          retention-days: 30
+          if-no-files-found: error
+      # Firebase module (PR-26): the security rules move first, then the seed (the repo is the source of
+      # truth for the seeded collections, so git history is their backup). Then the app.
+      - name: Firestore — rules, then the seed
+        if: hashFiles('firebase.json') != '' && vars.DEVOS_FIREBASE == 'true' && (inputs.target || 'production') == 'production'
+        timeout-minutes: 10
+        env:
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_DEPLOY_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_DEPLOY_SERVICE_ACCOUNT }}
+        run: |
+          for v in FIREBASE_PROJECT_ID FIREBASE_DEPLOY_SERVICE_ACCOUNT; do
+            [ -n "${!v}" ] || { echo "::error title=Dev OS::secret $v is not set; Firestore was not touched and nothing was deployed"; exit 1; }
+          done
+          umask 077
+          sa="$RUNNER_TEMP/firebase-deploy.json"
+          printf '%s' "$FIREBASE_DEPLOY_SERVICE_ACCOUNT" > "$sa"
+          trap 'shred -u "$sa" 2>/dev/null || rm -f "$sa"' EXIT
+          npm install -g firebase-tools > "$RUNNER_TEMP/firebase-tools.log" 2>&1 || { tail -n 20 "$RUNNER_TEMP/firebase-tools.log"; exit 1; }
+          GOOGLE_APPLICATION_CREDENTIALS="$sa" firebase deploy --only firestore:rules --project "$FIREBASE_PROJECT_ID" --non-interactive \
+            || { echo "::error title=Dev OS::the Firestore rules did not deploy (is the Firestore database created, and does the deploy key have the Firebase Admin role?)"; exit 1; }
+          node scripts/devos/firebase.mjs validate
+          FIREBASE_SERVICE_ACCOUNT="$FIREBASE_DEPLOY_SERVICE_ACCOUNT" node scripts/devos/firebase.mjs seed --production \
+            || { echo "::error title=Dev OS::the Firestore seed failed after the rules deployed; the app was not deployed"; exit 1; }
+          echo "::notice title=Dev OS::Firestore rules and seed applied to $FIREBASE_PROJECT_ID before the app deploy."
+      - name: Deploy
+        id: d
+        env:
+          TARGET: ${{ inputs.target || 'production' }}
+        run: |
+          if [ "$TARGET" = "production" ]; then ENV=production; FLAG=--prod; else ENV=preview; FLAG=; fi
+          npx --yes vercel@latest pull --yes --environment="$ENV" --token="$VERCEL_TOKEN"
+          # PR-24: next/font downloads the Google Fonts during the build, and that download sometimes fails
+          # (Turbopack "next/font/google queries have exactly one entry"). Retry that failure, and only that.
+          set -o pipefail
+          built=0
+          for i in 1 2 3; do
+            if npx --yes vercel@latest build $FLAG --token="$VERCEL_TOKEN" 2>&1 | tee "$RUNNER_TEMP/build.log"; then built=1; break; fi
+            grep -qiE "$(node -e 'console.log(require("./devos.config.json").retry_build_on)')" "$RUNNER_TEMP/build.log" || break
+            echo "::warning title=Dev OS::the build could not download the Google Fonts (try $i of 3); retrying in 30 seconds"
+            sleep 30
+          done
+          [ "$built" = 1 ] || { echo "::error title=Dev OS::the build failed; the database step above already ran, the site was not deployed"; exit 1; }
+          # Uploads from this directory with .git moved aside, and fails unless Vercel returns a URL (PR-16).
+          url=$(bash scripts/devos/vercel-deploy.sh main $FLAG)
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "::notice title=Dev OS::Deployed $(git rev-parse --short HEAD) to $TARGET: $url"
+      - name: Smoke test the deployment
+        env:
+          # Tower ADR-004: no bypass secret. Generated deployment URLs sit behind Vercel
+          # Authentication (Standard), so production is probed on its own domain: vars.TOWER_URL when
+          # set, else the production hostname (public, not a secret; devos/setup.json tower-url).
+          URL: ${{ (inputs.target || 'production') == 'production' && (vars.TOWER_URL || 'https://devos-control-tower.vercel.app') || steps.d.outputs.url }}
+        run: |
+          # Probe the deployment itself, never a local server: an empty URL is a failure (PR-16).
+          case "$URL" in https://*) ;; *) echo "::error title=Dev OS::No deployment URL to smoke test"; exit 1 ;; esac
+          node scripts/devos/probe.mjs --base "$URL" --strict /

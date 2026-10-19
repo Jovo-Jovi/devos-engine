@@ -1,0 +1,112 @@
+# Long waits for a usage limit (PR-31). A job can sleep at most ~6 hours, and GitHub runs scheduled
+# workflows late or not at all, so a wait longer than resume.inline_wait_max_minutes is handed to this
+# workflow: it sleeps as long as one job may, then starts itself again, until the reset time; then it
+# resumes the parked planning (kind=intake) or task (kind=task). Removing the devos:quota-wait label
+# cancels it at the next hand-over.
+#
+# Sleeping costs runner minutes on a private repository, so resume.relay decides when it relays:
+# "public" (default: only on public repositories, where minutes are free), "always" or "never".
+# Without a relay, devos-resume (scheduled, best effort) picks the run up.
+name: devos-wait
+run-name: "wait · ${{ inputs.kind }} ${{ inputs.task || format('#{0}', inputs.issue) }} until ${{ inputs.not_before }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      kind:
+        description: "intake (a parked planning run) or task (a parked task attempt)"
+        type: choice
+        options: [intake, task]
+        required: true
+      not_before:
+        description: "Resume at or after this time (UTC, ISO 8601)"
+        required: true
+      issue:
+        description: "kind=intake: the request issue number"
+        required: false
+        default: ""
+      task:
+        description: "kind=task: the task id"
+        required: false
+        default: ""
+      attempt:
+        description: "kind=task: the attempt number"
+        required: false
+        default: "1"
+      review_only:
+        description: "kind=task: resume as a review-only run"
+        required: false
+        default: "false"
+      revision:
+        description: "kind=task: the parked attempt is a human revision (may go past max_attempts)"
+        required: false
+        default: "false"
+      pr:
+        description: "kind=task: the PR number (or branch) carrying the devos:quota-wait label"
+        required: false
+        default: ""
+
+permissions:
+  actions: write
+  issues: write
+  pull-requests: write
+  contents: read
+
+jobs:
+  wait:
+    if: vars.DEVOS_PAUSED != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 345
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+          sparse-checkout: devos.config.json
+      - name: Sleep, then relay or resume
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          KIND: ${{ inputs.kind }}
+          NOT_BEFORE: ${{ inputs.not_before }}
+          ISSUE: ${{ inputs.issue }}
+          TASK: ${{ inputs.task }}
+          ATTEMPT: ${{ inputs.attempt }}
+          REVIEW_ONLY: ${{ inputs.review_only }}
+          REVISION: ${{ inputs.revision || 'false' }}
+          PR: ${{ inputs.pr }}
+        run: |
+          # Still wanted? The human cancels a wait by removing the label.
+          still_parked() {
+            if [ "$KIND" = "intake" ]; then
+              l=$(gh issue view "$ISSUE" --repo "$REPO" --json labels --jq '[.labels[].name] | join(",")' 2>/dev/null || echo "")
+            else
+              l=$(gh pr view "$PR" --repo "$REPO" --json labels --jq '[.labels[].name] | join(",")' 2>/dev/null || echo "")
+            fi
+            case ",$l," in *",devos:quota-wait,"*) return 0 ;; *) return 1 ;; esac
+          }
+          still_parked || { echo "The devos:quota-wait label is gone; the wait is cancelled."; exit 0; }
+          max_min=$(node -e 'console.log(require("./devos.config.json").resume?.inline_wait_max_minutes ?? 330)')
+          now=$(date -u +%s)
+          target=$(date -u -d "$NOT_BEFORE" +%s 2>/dev/null || echo "$now")
+          wait=$(( target - now ))
+          if [ "$wait" -gt $(( max_min * 60 )) ]; then
+            echo "Sleeping $max_min minutes, then handing over (reset at $NOT_BEFORE UTC)."
+            sleep $(( max_min * 60 ))
+            still_parked || { echo "The devos:quota-wait label is gone; the wait is cancelled."; exit 0; }
+            gh workflow run devos-wait.yml --repo "$REPO" --ref main -f kind="$KIND" -f not_before="$NOT_BEFORE" \
+              -f issue="$ISSUE" -f task="$TASK" -f attempt="$ATTEMPT" -f review_only="$REVIEW_ONLY" -f revision="$REVISION" -f pr="$PR"
+            echo "::notice title=Dev OS::Still before $NOT_BEFORE: the wait continues in a new devos-wait run."
+            exit 0
+          fi
+          if [ "$wait" -gt 0 ]; then echo "Sleeping $(( wait / 60 )) minutes, until $NOT_BEFORE (UTC)."; sleep "$wait"; fi
+          still_parked || { echo "The devos:quota-wait label is gone; the wait is cancelled."; exit 0; }
+          if [ "$KIND" = "intake" ]; then
+            gh issue edit "$ISSUE" --repo "$REPO" --remove-label "devos:quota-wait"
+            gh workflow run devos-intake.yml --repo "$REPO" --ref main -f issue="$ISSUE" -f resume=true
+            echo "::notice title=Dev OS::Resumed the planning of issue #$ISSUE."
+          else
+            gh pr edit "$PR" --repo "$REPO" --remove-label "devos:quota-wait"
+            gh workflow run devos-cycle.yml --repo "$REPO" --ref main \
+              -f task="$TASK" -f attempt="$ATTEMPT" -f review_only="$REVIEW_ONLY" -f revision="$REVISION" -f go=true
+            echo "::notice title=Dev OS::Resumed $TASK attempt $ATTEMPT (review_only=$REVIEW_ONLY)."
+          fi
