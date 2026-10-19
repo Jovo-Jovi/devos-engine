@@ -163,3 +163,24 @@ test("command.test.mjs run quotes a shell path that contains a space", () => {
     rmSync(parent, { recursive: true, force: true });
   }
 });
+
+test("command.test.mjs run keeps one cmd argument that contains a space", () => {
+  const dir = tempDir("devos-arg-");
+  const previous = process.env.PATH;
+  try {
+    if (windows) writeFileSync(path.join(dir, "sample.cmd"), "@echo off\r\necho %~1\r\n");
+    else {
+      const stub = path.join(dir, "sample");
+      writeFileSync(stub, "#!/bin/sh\nexit 0\n");
+      chmodSync(stub, 0o755);
+    }
+    process.env.PATH = dir;
+    const result = run("sample", ["a b"]);
+    assert.ok(result);
+    assert.equal(result.status, 0, result.stderr);
+    if (windows) assert.equal(result.stdout.includes("a b"), true, result.stdout);
+  } finally {
+    process.env.PATH = previous;
+    rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+  }
+});

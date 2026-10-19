@@ -21,11 +21,14 @@ test("role-env.test.mjs swaps a role kit and restores the original bytes", () =>
     });
     assert.equal(staged.status, 0, staged.stderr);
     assert.equal(git(["init"], dir).status, 0);
+    assert.equal(git(["config", "maintenance.auto", "false"], dir).status, 0);
+    assert.equal(git(["config", "gc.auto", "0"], dir).status, 0);
     assert.equal(git(["config", "user.email", "devos@example.com"], dir).status, 0);
     assert.equal(git(["config", "user.name", "devos"], dir).status, 0);
     assert.equal(git(["config", "core.autocrlf", "false"], dir).status, 0);
     assert.equal(git(["add", "-A"], dir).status, 0);
-    assert.equal(git(["commit", "-m", "init"], dir).status, 0, git(["commit", "-m", "init"], dir).stderr);
+    const committed = git(["commit", "-m", "init"], dir);
+    assert.equal(committed.status, 0, committed.stderr);
     const role = path.join(dir, "scripts", "devos", "role-env.mjs");
     const run = (args) => spawnSync(process.execPath, [role, ...args], { cwd: dir, encoding: "utf8", windowsHide: true });
 
@@ -59,6 +62,6 @@ test("role-env.test.mjs swaps a role kit and restores the original bytes", () =>
     assert.equal(failed.stderr.includes("role-env: restore left changes in"), true, failed.stderr);
     assert.equal(originalCli.equals(readFileSync(path.join(dir, ".cursor", "cli.json"))), false);
   } finally {
-    rmSync(dir, { recursive: true, force: true });
+    rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });

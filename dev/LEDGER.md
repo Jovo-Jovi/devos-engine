@@ -12,8 +12,8 @@ review (Opus) and the owner reads the verdict before committing. Plan: `dev/PLAN
 | E11 | Agents in the runner: project `agents` config, reviewer picks the builder from the pool, any model per role (same tool per role) (PLAN §7a) | 3 | owner | v2 | [x] | PASS a1 — dev/reviews/E11-a1.md · remote MERGE — dev/reviews/E11-a1-remote.md |
 | E12 | Cross-role agents: Claude Code as builder, Cursor as reviewer (verdict from the review file, PR-21) (PLAN §7a) | 3 | owner | v8 | [x] | PASS a3 — remote review of record (no local review: session limit) — dev/reviews/E12-a3-remote.md · FAIL a2 — dev/reviews/E12-a2.md · FAIL a1 — dev/reviews/E12-a1.md |
 | E13 | Engine CI: on every push of `main` and `task/*` run `node --test`, parse every payload workflow with a real YAML parser, run actionlint (engine root `.github/`, not shipped) | 2 | — | v1 | [x] | PASS a1 — remote review of record (no local review: session limit) — dev/reviews/E13-a1-remote.md |
-| E05 | `install` and `upgrade` (three-way, branch + PR, conflicts listed) | 3 | owner | v1 issued | [ ] | — |
-| E06 | `init` part 1: contract, questions, blueprint through Claude Code, doc templates | 2 | owner | fence on PASS of E05 | [ ] | — |
+| E05 | `install` and `upgrade` (three-way, branch + PR, conflicts listed) | 3 | owner | v2 | [x] | PASS a2 — dev/reviews/E05-a2.md · remote MERGE — dev/reviews/E05-a2-remote.md · remote FIX a1 — dev/reviews/E05-a1-remote.md |
+| E06 | `init` part 1: contract (typed accept), questions, install, blueprint through Claude Code, approval; OD citations out of the payload (PR-43) | 3 | owner | v2 issued (v1 not issuable — E05-a2-remote.md) | [ ] | — |
 | E07 | `init` part 2: repository, secrets by name, variables, `SETUP.md`, first cycle | 3 | owner | fence on PASS of E06 | [ ] | — |
 | E08 | UI/UX gate: design contract, required spec, axe check, missing evidence = FAIL, pinned design skills, resource catalogue (PLAN §10) | 3 | owner | fence on PASS of E05 | [ ] | — |
 | E09 | Registry link: `report.mjs`, report steps, registration, cycle preflight | 3 | owner | fence on PASS of E07 and E08, after Tower TR1–TR2 | [ ] | — |
@@ -45,7 +45,10 @@ review (Opus) and the owner reads the verdict before committing. Plan: `dev/PLAN
 | E11 a1 remote | Reviewer-tool stop runs after the heartbeat starts | done in E12 (the stop is gone) |
 | E11 a1 remote | AUTOMATION §4 calls `builder-model.mjs` "Grok model id" | done in E12 a3 |
 | E12 a1 remote | Claude builder progress judged by tree/CPU only (json output); move to `stream-json --verbose` and adjust the usage parser | after E12 (v1.1 candidate) |
-| E12 a3 remote | `which.run` quotes a `.cmd` path but not its arguments under `shell: true`; a spaced argument breaks on Windows | E05 S1 |
-| E13 a1 remote | `role-env.test.mjs` cleanup flakes on git ≥ 2.47 (detached auto-maintenance → `ENOTEMPTY`); duplicate `git commit` in an assertion message | E05 S0 |
+| E12 a3 remote | `which.run` quotes a `.cmd` path but not its arguments under `shell: true`; a spaced argument breaks on Windows | done in E05 a1 (S1) |
+| E13 a1 remote | `role-env.test.mjs` cleanup flakes on git ≥ 2.47 (detached auto-maintenance → `ENOTEMPTY`); duplicate `git commit` in an assertion message | done in E05 a1 (S0) |
 | E13 a1 remote | `dev/RELEASE.md` does not say whether the engine root `.github/` (engine CI) ships | E10 (owner) |
 | E05 v1 fence | Installed projects get `devos/engine.lock.json`; neither the shipped README nor AUTOMATION §8 explains it yet | E10 (README) |
+| E05 a1 remote | `compareSemver` throws on a pre-release version (`1.0.0-beta`): uncaught stack trace | E10 (release versions) |
+| E05 a2 remote | `rollback()` restores all paths in one `git restore`; one path untracked in HEAD (an engine file the project ignores) makes git reject the whole list, so nothing is restored | E10 (clean-machine run) |
+| E06 v2 fence | The contract is a draft (`0-draft`); the deletion channel ("open an issue in the DEV_OS Engine repository") needs the owner's confirmation; legal review before v1.0.0 | E10 (owner) |
