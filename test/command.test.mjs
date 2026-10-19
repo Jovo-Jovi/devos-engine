@@ -1,11 +1,11 @@
 import { spawnSync } from "node:child_process";
-import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
-import { which } from "../lib/which.mjs";
+import { run, which } from "../lib/which.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const bin = path.join(root, "bin", "devos.mjs");
@@ -135,5 +135,31 @@ test("command.test.mjs which marks a cmd stub and misses a command", () => {
   } finally {
     process.env.PATH = previous;
     rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("command.test.mjs run quotes a shell path that contains a space", () => {
+  const parent = tempDir("devos-quote-");
+  const previous = process.env.PATH;
+  try {
+    const dir = windows ? path.join(parent, "with space") : parent;
+    if (windows) mkdirSync(dir);
+    if (windows) writeFileSync(path.join(dir, "sample.cmd"), "@echo quoted-ok\r\n");
+    else {
+      const stub = path.join(dir, "sample");
+      writeFileSync(stub, "#!/bin/sh\necho quoted-ok\n");
+      chmodSync(stub, 0o755);
+    }
+    process.env.PATH = dir;
+    const result = run("sample", []);
+    assert.ok(result);
+    assert.equal(result.status, 0);
+    if (windows) {
+      assert.equal(result.stdout.includes("quoted-ok"), true, result.stdout);
+      console.log('run("sample", []) exited 0; stdout contained quoted-ok');
+    }
+  } finally {
+    process.env.PATH = previous;
+    rmSync(parent, { recursive: true, force: true });
   }
 });

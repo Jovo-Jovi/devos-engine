@@ -188,7 +188,7 @@
     {
       "path": ".github/workflows/devos-cycle.yml",
       "stored": "dot-github/workflows/devos-cycle.yml",
-      "sha256": "defa0c9acae25f24ef52480c84d08e96c3f821929f841fb399a05186466bda52",
+      "sha256": "e43a966a7a917e709945f86e74628f96a302e7792ac10343938c91e2be3822fc",
       "owner": "engine"
     },
     {
@@ -294,6 +294,30 @@
       "owner": "engine"
     },
     {
+      "path": "devos/roles/claude-builder/CLAUDE.md",
+      "stored": "devos/roles/claude-builder/CLAUDE.md",
+      "sha256": "72b408e966760a666ce9ad8ff10a35c201d5ca94483631496b795e0a4b2347a2",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/roles/claude-builder/settings.json",
+      "stored": "devos/roles/claude-builder/settings.json",
+      "sha256": "ccd4ed11745a0624f4cfb7633177e123b6533bdedf6cb3735eeb3c24c0e8e58d",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/roles/cursor-reviewer/cli.json",
+      "stored": "devos/roles/cursor-reviewer/cli.json",
+      "sha256": "f1e495ef50f24370728a7a7cddbf4ff82d688f66e68843d243220a0cdcb1fd15",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/roles/cursor-reviewer/rules/00-reviewer.mdc",
+      "stored": "devos/roles/cursor-reviewer/rules/00-reviewer.mdc",
+      "sha256": "94187326af495960d0a309c0934e9ad0f507c1c69d5f407755092c5737745b46",
+      "owner": "engine"
+    },
+    {
       "path": "devos/schemas/doctor.schema.json",
       "stored": "devos/schemas/doctor.schema.json",
       "sha256": "6ed21854595b8cbdf90cfef6e514e824b3a7565f288557b9c8e936090a7500b8",
@@ -326,7 +350,7 @@
     {
       "path": "docs/method/AUTOMATION.md",
       "stored": "docs/method/AUTOMATION.md",
-      "sha256": "33655eaab686c7181533c22064941a3261fca775c60b90d844419959e5441eef",
+      "sha256": "a60daea484287d54ea1a345ed00d4d9ec624a64f30f846b11bf60d0791d4b3c5",
       "owner": "engine"
     },
     {
@@ -344,7 +368,7 @@
     {
       "path": "docs/method/PRECEDENTS.md",
       "stored": "docs/method/PRECEDENTS.md",
-      "sha256": "415e7d65345746e1e73d1285f2ddcf91cf202df2e0b680c9d147c648e670a648",
+      "sha256": "ea63e498ae9cf5a31ff11e0626132127ff2853825870f1a9a5af4fbdcf79376c",
       "owner": "engine"
     },
     {
@@ -362,7 +386,7 @@
     {
       "path": "scripts/devos/agents.mjs",
       "stored": "scripts/devos/agents.mjs",
-      "sha256": "964f7cd0be695146336b7e866b1aab3a707b8558eb0d6e8601f306876939349b",
+      "sha256": "61e6f588f997d8511dc7b564e2a4f2acb999fee3e13c059c3cb5a9b5a2cf6a7b",
       "owner": "engine"
     },
     {
@@ -495,6 +519,12 @@
       "path": "scripts/devos/review-mode.mjs",
       "stored": "scripts/devos/review-mode.mjs",
       "sha256": "59729854e5e04c29b0ab9db2049d0bcff21347e3189ca8fb7f8a8108c6ec62f5",
+      "owner": "engine"
+    },
+    {
+      "path": "scripts/devos/role-env.mjs",
+      "stored": "scripts/devos/role-env.mjs",
+      "sha256": "f3b2eddbbd012b3d3b802ddc430c86f242af9913171507076c4e2182bb2f2e82",
       "owner": "engine"
     },
     {

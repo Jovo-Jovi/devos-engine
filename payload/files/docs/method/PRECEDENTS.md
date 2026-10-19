@@ -1,7 +1,7 @@
 # DEV_OS — Precedents
 
 Binding procedural rulings. A ruling is authority only if it is listed here or quoted in a fence.
-Ids are allocated from the live maximum by the task that lands them. **Live maximum: PR-41.**
+Ids are allocated from the live maximum by the task that lands them. **Live maximum: PR-42.**
 PR-01…PR-33 are the rulings of the method's first project, kept because the runner implements
 them and `AUTOMATION.md` cites them; PR-01 is rewritten for each project (`AUTOMATION.md` §11).
 
@@ -48,3 +48,4 @@ them and `AUTOMATION.md` cites them; PR-01 is rewritten for each project (`AUTOM
 | PR-39 | **One configuration, two owners.** Plain objects merge recursively, and a project scalar or array replaces the default. A project key whose name ends in `_extra` and whose value is an array appends to the merged array of that name; merge throws `config: <path>_extra needs an array <path>` when that name is not an array. A project value `null` removes the key. Project keys that start with `$` are never merged. Output key order is `$generated` first, then the defaults' order, then keys only the project has. The workflows keep reading devos.config.json; nobody edits it by hand; guard:config enforces it, N/A while devos/project.json does not exist. | Engine E02 (config split) |
 | PR-40 | **Project settings, not a reference product.** Hosts, catalogues and route exceptions come from `devos.config.json` `guards`. Probe mode, probe paths, the bypass flag and the production URL fallback come from `deploy`. A project sets them in `devos/project.json`. The production URL variable is `DEVOS_PRODUCTION_URL`. R2, Firebase and the Vercel bypass are setup items and apply only when their `when` says so. | Engine E03 (project settings) |
 | PR-41 | **The builder and the reviewer come from `agents`.** The reviewer names a pool id in `- Builder:`; the runner uses that item's model, falls back to the default with a recorded note, and keeps every flag, account switch and limit rule of the cycle; a choice that needs the other tool stops until cross-role support exists. | Engine E11 (project agents) |
+| PR-42 | **Either tool may take either role.** Claude Code may build and Cursor may review; before that run the runner installs the role's kit and restores the tool's own config afterwards. The review file is the verdict; a builder's usage limit, after that agent's accounts are exhausted, runs the next pool agent once; a reviewer never falls back into the pool. A method fix is always reviewed by Claude Code with the gate model (PR-28). | Engine E12 (cross-role agents) |

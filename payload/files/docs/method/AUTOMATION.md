@@ -125,10 +125,11 @@ workflow may start late.
 |---|---|
 | `lib.mjs` | shared: config, PHASES parsing (`nextOpenTask`, `taskAfter`, method rows), globs, outputs, `.devos/*.env` |
 | `config.mjs` | builds `devos.config.json` from `devos/engine.defaults.json` and `devos/project.json`; `--write`, `--check`, `--print`; PR-39 |
-| `agents.mjs` | resolves the builder pool id and the reviewer model from `devos.config.json` `agents` (PR-41) |
+| `agents.mjs` | resolves the builder pool id, the reviewer model and `next --after` from `devos.config.json` `agents` (PR-41, PR-42) |
+| `role-env.mjs` | installs a role kit for a tool in the other role and restores the tool's own config (PR-42) |
 | `next-task.mjs` | which task and attempt; refuses out-of-order product tasks |
 | `heavy.mjs` | heavy-run notice or hold (`DEVOS_HEAVY`) |
-| `builder-model.mjs` | Grok model id from the fence's Effort/Fast, checked against `agent models` |
+| `builder-model.mjs` | the builder model id from the pool item's family, checked against `agent models` |
 | `modules.mjs` | starts every needed module (`supabase.mjs`, `r2.mjs`, `firebase.mjs`); `plannedModules()` |
 | `supabase.mjs` · `r2.mjs` · `firebase.mjs` | each module's local service, env file and checks (PR-17, PR-26) |
 | `accounts.sh` · `limit-check.mjs` | account order, credential export, limit detection (PR-29) |
@@ -239,7 +240,7 @@ A UI fence carries a header line `- Screens: \`<name> <path>[ click|hover|focus 
   run, the `cursor_account` / `claude_account` choices in devos-cycle's run form. A second account
   exists only if its `_2` secret is set.
 - **`devos.config.json`:** generated — edit `devos/project.json`; engine defaults in `devos/engine.defaults.json`. `max_attempts`; `builder` (model family, effort by risk); `reviewer`
-  (models and efforts by risk and gate, `modes.light/deep`, `deep_paths`, intake and method efforts); `agents` (reviewer, reviewer_light, pool, policy);
+  (models and efforts by risk and gate, `modes.light/deep`, `deep_paths`, intake and method efforts); `agents` (reviewer, reviewer_light, pool, policy; either tool may take either role; one next-agent fallback on a builder usage limit);
   `required_checks` / `optional_checks`; `screens` (`pages`, `filmstrip_ms`, `settle_max_ms`; a fence `- Screens:` line overrides `pages`); `surfaces` (builder, builder_method, reviewer, intake,
   revise); `resume` (inline wait, relay, back-off, `stall_wait_minutes`); `modules` (supabase, r2, firebase); `heavy`; `retry_build_on`;
   `builder.max_time_slices` (4) and `builder.idle_stop_minutes` (30) for the watchdog; `supervisor`

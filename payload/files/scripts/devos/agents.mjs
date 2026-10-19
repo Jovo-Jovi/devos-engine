@@ -88,6 +88,17 @@ export function poolText(agents = config().agents) {
   }).join("\n");
 }
 
+export function nextAfter(id, agents = config().agents) {
+  const items = pool(agents);
+  const index = items.findIndex((item) => item.id === id);
+  if (index < 0 || items.length < 2) return null;
+  for (let step = 1; step < items.length; step += 1) {
+    const item = items[(index + step) % items.length];
+    if (item.id !== id) return item;
+  }
+  return null;
+}
+
 export function pick(task, agents = config().agents) {
   const value = validate(agents);
   const chosen = defaultItem(value);
@@ -117,11 +128,14 @@ if (process.argv[1]?.endsWith("agents.mjs")) {
       emit({ builder_id: item.id, builder_tool: item.tool, builder_model: item.model, builder_note: note });
     } else if (command === "reviewer") {
       const item = reviewerFor(arg("mode"));
-      emit({ reviewer_tool: item.tool, reviewer_model: item.model });
+      emit({ reviewer_id: item.id, reviewer_tool: item.tool, reviewer_model: item.model });
     } else if (command === "pool") {
       console.log(poolText());
+    } else if (command === "next") {
+      const item = nextAfter(arg("after"));
+      emit({ next_id: item?.id ?? "", next_tool: item?.tool ?? "", next_model: item?.model ?? "" });
     } else {
-      fail("usage: agents.mjs pick --task Tnn | reviewer --mode light|deep | pool", 2);
+      fail("usage: agents.mjs pick --task Tnn | reviewer --mode light|deep | pool | next --after <id>", 2);
     }
   } catch (error) {
     console.error(error.message);

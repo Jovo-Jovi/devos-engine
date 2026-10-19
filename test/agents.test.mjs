@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -74,6 +74,12 @@ test("agents.test.mjs pool choice, reviewer model, builder family and workflow l
     assert.equal(namedFields.builder_id, "cursor-sonnet");
     assert.equal(namedFields.builder_model, "claude-4.5-sonnet");
     assert.equal(namedFields.builder_note, "");
+    const next = run(agents, ["next", "--after", "cursor-grok"], dir);
+    assert.equal(next.status, 0, next.stderr);
+    const nextFields = fields(next.stdout);
+    assert.equal(nextFields.next_id, "cursor-sonnet");
+    assert.equal(nextFields.next_tool, "cursor");
+    assert.equal(nextFields.next_model, "claude-4.5-sonnet");
 
     writeProject({ agents: { policy: "always-default" } });
     const forced = run(agents, ["pick", "--task", "T02"], dir);
@@ -81,6 +87,11 @@ test("agents.test.mjs pool choice, reviewer model, builder family and workflow l
     const forcedFields = fields(forced.stdout);
     assert.equal(forcedFields.builder_id, "cursor-grok");
     assert.equal(forcedFields.builder_note, "");
+    const only = run(agents, ["next", "--after", "cursor-grok"], dir);
+    assert.equal(only.status, 0, only.stderr);
+    assert.equal(fields(only.stdout).next_id, "");
+    assert.equal(fields(only.stdout).next_tool, "");
+    assert.equal(fields(only.stdout).next_model, "");
 
     writeProject({});
     const configPath = path.join(dir, "devos.config.json");
@@ -116,6 +127,26 @@ test("agents.test.mjs pool choice, reviewer model, builder family and workflow l
     const workflow = readFileSync(path.join(root, "payload", "files", "dot-github", "workflows", "devos-cycle.yml"), "utf8");
     assert.equal(workflow.includes('agent -p --force --trust --approve-mcps --model "$MODEL" --output-format stream-json'), true);
     assert.equal(workflow.includes("claude -p"), true);
+    assert.equal(workflow.includes("arrives in E12"), false);
+    assert.equal(workflow.includes("VERDICT:"), false);
+    assert.equal(workflow.split('next --after "$builder_id"').length - 1, 1);
+    assert.equal(workflow.includes('next --after "$rev_id"'), false);
+    assert.equal(workflow.includes('MODEL="$rev_model"'), true);
+    const restoreAt = workflow.indexOf("role-env.mjs restore || exit 1; trap - EXIT");
+    const changedAt = workflow.indexOf('echo "changed=$(git status --porcelain');
+    assert.equal(restoreAt >= 0 && changedAt > restoreAt, true);
+    const methodAt = workflow.indexOf("a method fix is reviewed by Claude Code with the gate model (PR-28)");
+    const choiceAt = workflow.indexOf("node scripts/devos/role-env.mjs swap cursor-reviewer");
+    assert.equal(methodAt >= 0 && choiceAt > methodAt, true);
+    assert.equal(workflow.includes('rev_tool=claude'), true);
+    const workflows = path.join(root, "payload", "files", "dot-github", "workflows");
+    for (const name of readdirSync(workflows)) {
+      if (!name.endsWith(".yml")) continue;
+      for (const line of readFileSync(path.join(workflows, name), "utf8").split(/\r?\n/)) {
+        if (line === "" || line[0] === " " || line[0] === "#") continue;
+        assert.match(line, /^(name|run-name|on|concurrency|permissions|jobs):/, name);
+      }
+    }
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

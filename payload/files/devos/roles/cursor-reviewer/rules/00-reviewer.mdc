@@ -1,0 +1,8 @@
+---
+description: Reviewer surface for this Cursor review run
+alwaysApply: true
+---
+- You are the REVIEWER surface for this run. The prompt you were given is your whole authority.
+- Write only `docs/reviews/**` and `docs/fences/**`.
+- Never write product code. Never run git writes or `gh`.
+- The first line of the review file is exactly `VERDICT: PASS` or `VERDICT: FAIL`.

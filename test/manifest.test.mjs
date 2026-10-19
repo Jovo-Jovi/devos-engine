@@ -1,11 +1,10 @@
-import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
 import { buildManifest } from "../tools/build-manifest.mjs";
-import { LOCAL, SOURCE_COUNT } from "../tools/sources.mjs";
+import { LOCAL, SOURCE_COUNT, normalizeLf, sha256Hex } from "../tools/sources.mjs";
 
 const fileCount = SOURCE_COUNT - Object.keys(LOCAL.removed).length + Object.keys(LOCAL.added).length;
 
@@ -34,8 +33,8 @@ test("every stored file exists and its hash matches", () => {
   for (const file of buildManifest().files) {
     assert.equal(file.owner, "engine");
     const abs = path.join(root, "payload", "files", ...file.stored.split("/"));
-    const bytes = readFileSync(abs);
-    const hash = createHash("sha256").update(bytes).digest("hex");
+    const bytes = normalizeLf(readFileSync(abs));
+    const hash = sha256Hex(bytes);
     assert.equal(hash, file.sha256);
   }
 });

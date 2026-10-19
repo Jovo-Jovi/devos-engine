@@ -232,16 +232,33 @@ jobs:
           CURSOR_KEY_1: ${{ secrets.CURSOR_API_KEY }}
           CURSOR_KEY_2: ${{ secrets.CURSOR_API_KEY_2 }}
         run: |
-          if [ "${{ steps.ag.outputs.builder_tool }}" != "cursor" ]; then
-            echo "::error::builder ${{ steps.ag.outputs.builder_id }} uses ${{ steps.ag.outputs.builder_tool }}; Claude Code as builder arrives in E12"
-            exit 1
-          fi
           if [ -n "${{ steps.ag.outputs.builder_note }}" ]; then echo "${{ steps.ag.outputs.builder_note }}"; fi
-          export DEVOS_BUILDER_FAMILY="${{ steps.ag.outputs.builder_model }}"
-          . scripts/devos/accounts.sh
-          first=$(devos_accounts cursor | cut -d' ' -f1)
-          if [ -n "$first" ]; then devos_use_cursor "$first"; agent models > .devos/models.txt 2>&1 || true; fi
-          node scripts/devos/builder-model.mjs --task "$TASK" --effort "${{ inputs.effort || 'fence' }}" --fast "${{ inputs.fast || 'fence' }}"
+          if [ "${{ steps.ag.outputs.builder_tool }}" = "claude" ]; then
+            POOL_MODEL="${{ steps.ag.outputs.builder_model }}" EFFORT_IN="${{ inputs.effort || 'fence' }}" node --input-type=module - >> "$GITHUB_OUTPUT" <<'EOF'
+          import { existsSync, readFileSync } from "node:fs";
+          import { parsePhases } from "./scripts/devos/lib.mjs";
+          const task = process.env.TASK;
+          const cfg = JSON.parse(readFileSync("devos.config.json", "utf8"));
+          let risk = 2;
+          try {
+            const row = parsePhases().rows.find((item) => item.task === task);
+            if (row) risk = row.risk;
+          } catch { /* a missing table uses the risk default */ }
+          const fence = existsSync(`docs/fences/${task}.md`) ? readFileSync(`docs/fences/${task}.md`, "utf8").split(/\r?\n/).slice(0, 30).join("\n") : "";
+          const raw = (/Effort:\s*([A-Za-z -]+?)(?:\s*[·|,]|\s*$|\s*\()/m.exec(fence)?.[1] || "").toLowerCase().replace(/[\s_-]+/g, "");
+          let effort = raw === "extrahigh" || raw === "xhigh" ? "xhigh" : ["low", "medium", "high", "xhigh"].includes(raw) ? raw : "";
+          const input = (process.env.EFFORT_IN || "").toLowerCase();
+          if (["low", "medium", "high", "xhigh"].includes(input)) effort = input;
+          if (!effort) effort = cfg.builder?.effort_by_risk?.[String(risk)] ?? cfg.builder?.default_effort ?? "high";
+          process.stdout.write(`model=${process.env.POOL_MODEL}\neffort=${effort}\nfast=no\nsource=pool\nnote=\n`);
+          EOF
+          else
+            export DEVOS_BUILDER_FAMILY="${{ steps.ag.outputs.builder_model }}"
+            . scripts/devos/accounts.sh
+            first=$(devos_accounts cursor | cut -d' ' -f1)
+            if [ -n "$first" ]; then devos_use_cursor "$first"; agent models > .devos/models.txt 2>&1 || true; fi
+            node scripts/devos/builder-model.mjs --task "$TASK" --effort "${{ inputs.effort || 'fence' }}" --fast "${{ inputs.fast || 'fence' }}"
+          fi
 
       - name: Firebase CLI and Java 21 (Firebase module, PR-26)
         timeout-minutes: 8
@@ -272,6 +289,10 @@ jobs:
         env:
           CURSOR_KEY_1: ${{ secrets.CURSOR_API_KEY }}
           CURSOR_KEY_2: ${{ secrets.CURSOR_API_KEY_2 }}
+          CLAUDE_OAUTH_1: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          CLAUDE_APIKEY_1: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_OAUTH_2: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 }}
+          CLAUDE_APIKEY_2: ${{ secrets.ANTHROPIC_API_KEY_2 }}
           MODEL: ${{ steps.bm.outputs.model }}
           DEVOS_BUILDER_MODEL: ${{ steps.bm.outputs.model }}
           DEVOS_BUILDER_EFFORT: ${{ steps.bm.outputs.effort }}
@@ -282,7 +303,13 @@ jobs:
           DEVOS_WATCHDOG_REPORT: bash scripts/devos/progress.sh
         run: |
           . scripts/devos/accounts.sh
-          accounts=$(devos_accounts cursor)
+          builder_tool="${{ steps.ag.outputs.builder_tool }}"
+          builder_id="${{ steps.ag.outputs.builder_id }}"
+          if [ "$builder_tool" = "claude" ]; then
+            accounts=$(devos_accounts claude)
+          else
+            accounts=$(devos_accounts cursor)
+          fi
           # Long tasks run in time slices of 72 minutes: a slice that ends while the builder is still
           # changing files is committed and the same attempt continues in a fresh run, up to
           # builder.max_time_slices. The slice number is read back from this attempt's last builder commit.
@@ -305,10 +332,14 @@ jobs:
           [ "$DEVOS_STAGE" -gt "$DEVOS_STAGES" ] && DEVOS_STAGE=$DEVOS_STAGES
           export DEVOS_STAGE DEVOS_STAGES; echo "stage=$DEVOS_STAGE" >> "$GITHUB_OUTPUT"; echo "stages=$DEVOS_STAGES" >> "$GITHUB_OUTPUT"
           [ "$DEVOS_STAGES" -gt 1 ] && echo "stage $DEVOS_STAGE of $DEVOS_STAGES"
-          [ -n "$accounts" ] || { echo "::error::no Cursor key: set secret CURSOR_API_KEY (and optionally CURSOR_API_KEY_2)"; exit 1; }
+          if [ "$builder_tool" = "claude" ]; then
+            [ -n "$accounts" ] || { echo "::error::set secret CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY (and optionally the _2 pair)"; exit 1; }
+          else
+            [ -n "$accounts" ] || { echo "::error::no Cursor key: set secret CURSOR_API_KEY (and optionally CURSOR_API_KEY_2)"; exit 1; }
+          fi
           # Every active module's local names and throwaway keys (PR-17, PR-26).
           for f in .devos/*.env; do [ -f "$f" ] && { set -a; . "$f"; set +a; }; done
-          echo "builder: $MODEL (effort ${DEVOS_BUILDER_EFFORT}, fast ${DEVOS_BUILDER_FAST}, from ${{ steps.bm.outputs.source }}) ${{ steps.bm.outputs.note }} · Cursor accounts in order: $accounts"
+          echo "builder: $MODEL (effort ${DEVOS_BUILDER_EFFORT}, fast ${DEVOS_BUILDER_FAST}, from ${{ steps.bm.outputs.source }}) ${{ steps.bm.outputs.note }} · $builder_tool accounts in order: $accounts"
           node scripts/devos/render-prompt.mjs builder "$TASK" "$ATTEMPT" --out .devos/builder-prompt.md
           if [ "$DEVOS_STAGES" -gt 1 ]; then
             if [ "$DEVOS_STAGE" -lt "$DEVOS_STAGES" ]; then
@@ -326,6 +357,36 @@ jobs:
               echo "Cursor is working on $TASK: $(( ($(date +%s) - t0) / 60 )) min, $(git status --porcelain | wc -l) file(s) changed so far"
             done ) &
           hb=$!
+          ran_tool="$builder_tool"
+          if [ "$builder_tool" = "claude" ]; then
+            node scripts/devos/role-env.mjs swap claude-builder || exit 1
+            trap 'node scripts/devos/role-env.mjs restore || exit 1' EXIT
+            EFFORT="${{ steps.bm.outputs.effort }}"
+            used=""; restarted=""; T0=$(date +%s)
+            for acc in $accounts; do
+              devos_use_claude "$acc"; used="$acc"
+              while :; do
+                left=$(( 72 - ($(date +%s) - T0) / 60 ))
+                bash scripts/devos/agent-watchdog.sh "$left" 10 .devos/builder.json .devos/builder.err -- \
+                  claude -p "$(cat .devos/builder-prompt.md)" --model "$MODEL" --effort "$EFFORT" --output-format json --permission-mode dontAsk --allowedTools "Read,Glob,Grep,Write,Edit,MultiEdit,Bash,Task,Agent,Skill" --disallowedTools "Bash(git push *),Bash(git commit *),Bash(git checkout *),Bash(git reset *),Bash(gh *),Bash(curl *),Bash(wget *)" --max-turns 400
+                code=$?
+                if { [ "$code" = "125" ] || [ "$code" = "126" ]; } && [ -z "$restarted" ] && [ $(( 72 - ($(date +%s) - T0) / 60 )) -ge 25 ]; then
+                  restarted=1; mkdir -p .devos/logs; cp .devos/builder.err .devos/logs/builder-stalled.err
+                  devos_note "Builder: the Claude CLI stopped making progress (exit $code: 125 lost connection, 126 stuck); restarted once."
+                  printf '\n\n**An earlier run of this attempt stopped making progress (lost connection or stuck).** Its partial changes are already in the working tree (`git status`). Verify them against the fence and continue from them; do not redo or duplicate them.\n' >> .devos/builder-prompt.md
+                  continue
+                fi
+                break
+              done
+              if [ "$code" != "0" ] && devos_limited .devos/builder.json .devos/builder.err "$code"; then
+                mkdir -p .devos/limits; cat .devos/builder.json .devos/builder.err > ".devos/limits/claude-$acc.txt"
+                devos_note "Builder: Claude account $acc reached its usage limit."
+                printf '\n\n**This attempt was started on another Claude account, which reached its usage limit.** Its partial changes are already in the working tree (`git status`). Verify them against the fence and continue from them; do not redo or duplicate them.\n' >> .devos/builder-prompt.md
+                continue
+              fi
+              break
+            done
+          else
           # PR-29: on a usage limit, the same attempt continues on the other account at once; the
           # partial work stays in the tree and the second run is told to continue from it.
           # The watchdog stops a hung CLI inside this step (72 of its 80 minutes), so the work is always
@@ -355,12 +416,76 @@ jobs:
             fi
             break
           done
+          fi
+          if [ "${code:-1}" != "0" ] && devos_limited .devos/builder.json .devos/builder.err "$code"; then
+            next_out=$(node scripts/devos/agents.mjs next --after "$builder_id")
+            next_id=$(printf '%s\n' "$next_out" | sed -n 's/^next_id=//p')
+            next_tool=$(printf '%s\n' "$next_out" | sed -n 's/^next_tool=//p')
+            next_model=$(printf '%s\n' "$next_out" | sed -n 's/^next_model=//p')
+            if [ -n "$next_id" ]; then
+              devos_note "Builder: usage limit; trying pool agent $next_id once."
+              MODEL="$next_model"
+              ran_tool="$next_tool"
+              if [ "$next_tool" = "claude" ]; then
+                if [ "$builder_tool" != "claude" ]; then
+                  node scripts/devos/role-env.mjs swap claude-builder || exit 1
+                  trap 'node scripts/devos/role-env.mjs restore || exit 1' EXIT
+                fi
+                EFFORT="${{ steps.bm.outputs.effort }}"
+                accounts=$(devos_accounts claude)
+                used=""; restarted=""; T0=$(date +%s)
+                for acc in $accounts; do
+                  devos_use_claude "$acc"; used="$acc"
+                  while :; do
+                    left=$(( 72 - ($(date +%s) - T0) / 60 ))
+                    bash scripts/devos/agent-watchdog.sh "$left" 10 .devos/builder.json .devos/builder.err -- \
+                      claude -p "$(cat .devos/builder-prompt.md)" --model "$MODEL" --effort "$EFFORT" --output-format json --permission-mode dontAsk --allowedTools "Read,Glob,Grep,Write,Edit,MultiEdit,Bash,Task,Agent,Skill" --disallowedTools "Bash(git push *),Bash(git commit *),Bash(git checkout *),Bash(git reset *),Bash(gh *),Bash(curl *),Bash(wget *)" --max-turns 400
+                    code=$?
+                    if { [ "$code" = "125" ] || [ "$code" = "126" ]; } && [ -z "$restarted" ] && [ $(( 72 - ($(date +%s) - T0) / 60 )) -ge 25 ]; then
+                      restarted=1; continue
+                    fi
+                    break
+                  done
+                  if [ "$code" != "0" ] && devos_limited .devos/builder.json .devos/builder.err "$code"; then
+                    mkdir -p .devos/limits; cat .devos/builder.json .devos/builder.err > ".devos/limits/claude-$acc.txt"
+                    devos_note "Builder: Claude account $acc reached its usage limit."
+                    continue
+                  fi
+                  break
+                done
+              elif [ "$next_tool" = "cursor" ]; then
+                if [ "$builder_tool" = "claude" ]; then node scripts/devos/role-env.mjs restore || exit 1; trap - EXIT; fi
+                accounts=$(devos_accounts cursor)
+                used=""; restarted=""; T0=$(date +%s)
+                for acc in $accounts; do
+                  devos_use_cursor "$acc"; used="$acc"
+                  while :; do
+                    left=$(( 72 - ($(date +%s) - T0) / 60 ))
+                    bash scripts/devos/agent-watchdog.sh "$left" 10 .devos/builder.json .devos/builder.err -- \
+                      agent -p --force --trust --approve-mcps --model "$MODEL" --output-format stream-json "$(cat .devos/builder-prompt.md)"
+                    code=$?
+                    if { [ "$code" = "125" ] || [ "$code" = "126" ]; } && [ -z "$restarted" ] && [ $(( 72 - ($(date +%s) - T0) / 60 )) -ge 25 ]; then
+                      restarted=1; continue
+                    fi
+                    break
+                  done
+                  if [ "$code" != "0" ] && devos_limited .devos/builder.json .devos/builder.err "$code"; then
+                    mkdir -p .devos/limits; cat .devos/builder.json .devos/builder.err > ".devos/limits/cursor-$acc.txt"
+                    devos_note "Builder: Cursor account $acc reached its usage limit."
+                    continue
+                  fi
+                  break
+                done
+              fi
+            fi
+          fi
+          node scripts/devos/role-env.mjs restore || exit 1; trap - EXIT
           kill "$hb" 2>/dev/null
-          [ "$used" != "${accounts%% *}" ] && devos_note "Builder: switched to Cursor account $used."
+          [ "$used" != "${accounts%% *}" ] && devos_note "Builder: switched to $ran_tool account $used."
           echo "exit=$code" >> "$GITHUB_OUTPUT"
           echo "changed=$(git status --porcelain | wc -l | tr -d ' ')" >> "$GITHUB_OUTPUT"
           echo "account=$used" >> "$GITHUB_OUTPUT"
-          echo "builder exit code: $code (Cursor account $used)"
+          echo "builder exit code: $code ($ran_tool account $used)"
           tail -c 2000 .devos/builder.err || true
 
       - name: Guard — builder surface
@@ -565,6 +690,8 @@ jobs:
           CLAUDE_APIKEY_1: ${{ secrets.ANTHROPIC_API_KEY }}
           CLAUDE_OAUTH_2: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 }}
           CLAUDE_APIKEY_2: ${{ secrets.ANTHROPIC_API_KEY_2 }}
+          CURSOR_KEY_1: ${{ secrets.CURSOR_API_KEY }}
+          CURSOR_KEY_2: ${{ secrets.CURSOR_API_KEY_2 }}
           MODEL: ${{ steps.rp.outputs.model || needs.resolve.outputs.reviewer_model }}
           TURNS: ${{ steps.rp.outputs.max_turns || needs.resolve.outputs.reviewer_max_turns }}
           EFFORT: ${{ steps.rp.outputs.effort || needs.resolve.outputs.reviewer_effort }}
@@ -579,29 +706,59 @@ jobs:
           DEVOS_BUILDER_FAST: ${{ steps.bm.outputs.fast }}
         run: |
           . scripts/devos/accounts.sh
-          accounts=$(devos_accounts claude)
-          [ -n "$accounts" ] || { echo "::error::set secret CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY (and optionally the _2 pair)"; exit 1; }
           for f in .devos/*.env; do [ -f "$f" ] && { set -a; . "$f"; set +a; }; done
-          # PR-28: a method fix is always a deep review by the gate model, chosen from main's config.
+          # PR-28: a method fix is always a deep review by Claude Code with the gate model.
+          if [ -n "$METHOD_CHANGE" ]; then
+            export DEVOS_REVIEW_MODE=deep DEVOS_REVIEW_REASONS="method fix: it changes the automation itself (PR-28)"
+          fi
+          rev_line=$(node scripts/devos/agents.mjs reviewer --mode "$DEVOS_REVIEW_MODE")
+          rev_tool=$(printf '%s\n' "$rev_line" | sed -n 's/^reviewer_tool=//p')
+          rev_model=$(printf '%s\n' "$rev_line" | sed -n 's/^reviewer_model=//p')
+          if [ "$rev_tool" = "cursor" ]; then
+            MODEL="$rev_model"
+          fi
           if [ -n "$METHOD_CHANGE" ]; then
             MODEL=$(git show origin/main:devos.config.json | node -e 'let s="";process.stdin.on("data",(d)=>s+=d).on("end",()=>console.log(JSON.parse(s).reviewer.gate_model))')
             EFFORT=high; TURNS=120
-            export DEVOS_REVIEW_MODE=deep DEVOS_REVIEW_REASONS="method fix: it changes the automation itself (PR-28)"
             echo "method fix: deep review forced ($MODEL, effort $EFFORT, $TURNS turns)"
+            accounts=$(devos_accounts claude)
+            [ -n "$accounts" ] || { echo "::error::a method fix is reviewed by Claude Code with the gate model (PR-28); add CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY"; exit 1; }
+            rev_tool=claude
           fi
           node scripts/devos/render-prompt.mjs reviewer "$TASK" "$ATTEMPT" --out .devos/reviewer-prompt.md
           set +e
+          ran_tool="$rev_tool"
+          if [ "$rev_tool" = "cursor" ]; then
+            node scripts/devos/role-env.mjs swap cursor-reviewer || exit 1
+            trap 'node scripts/devos/role-env.mjs restore || exit 1' EXIT
+            accounts=$(devos_accounts cursor)
+            [ -n "$accounts" ] || { echo "::error::no Cursor key: set secret CURSOR_API_KEY (and optionally CURSOR_API_KEY_2)"; exit 1; }
+            ( t0=$(date +%s); while sleep 60; do
+                f="not yet"; [ -f "docs/reviews/$TASK-a$ATTEMPT.md" ] && f="written"
+                echo "Cursor is reviewing $TASK: $(( ($(date +%s) - t0) / 60 )) min, verdict file $f"
+              done ) &
+            hb=$!
+            used=""
+            for acc in $accounts; do
+              devos_use_cursor "$acc"; used="$acc"
+              agent -p --force --trust --approve-mcps --model "$MODEL" --output-format stream-json "$(cat .devos/reviewer-prompt.md)" > .devos/reviewer.json 2> .devos/reviewer.err
+              rc=$?
+              if devos_limited .devos/reviewer.json .devos/reviewer.err "$rc"; then
+                mkdir -p .devos/limits; cat .devos/reviewer.json .devos/reviewer.err > ".devos/limits/cursor-$acc.txt"
+                devos_note "Reviewer: Cursor account $acc reached its usage limit."
+                continue
+              fi
+              break
+            done
+          else
+          accounts=$(devos_accounts claude)
+          [ -n "$accounts" ] || { echo "::error::set secret CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY (and optionally the _2 pair)"; exit 1; }
           ( t0=$(date +%s); while sleep 60; do
               f="not yet"; [ -f "docs/reviews/$TASK-a$ATTEMPT.md" ] && f="written"
               echo "Claude is reviewing $TASK: $(( ($(date +%s) - t0) / 60 )) min, verdict file $f"
             done ) &
           hb=$!
           # PR-29: on a usage limit the review starts again at once on the other Claude account.
-          rev_tool=$(node scripts/devos/agents.mjs reviewer --mode "$DEVOS_REVIEW_MODE" | sed -n 's/^reviewer_tool=//p')
-          if [ "$rev_tool" != "claude" ]; then
-            echo "::error::reviewer uses $rev_tool; Cursor as reviewer arrives in E12"
-            exit 1
-          fi
           used=""
           for acc in $accounts; do
             devos_use_claude "$acc"; used="$acc"
@@ -623,9 +780,11 @@ jobs:
             fi
             break
           done
+          fi
+          node scripts/devos/role-env.mjs restore || exit 1; trap - EXIT
           kill "$hb" 2>/dev/null
-          [ "$used" != "${accounts%% *}" ] && devos_note "Reviewer: switched to Claude account $used."
-          echo "reviewer exit code: $rc (Claude account $used)"
+          [ "$used" != "${accounts%% *}" ] && devos_note "Reviewer: switched to $ran_tool account $used."
+          echo "reviewer exit code: $rc ($ran_tool account $used)"
           tail -c 2000 .devos/reviewer.err || true
           # Surface any tool calls the permission layer refused, so a denial is never silent.
           node -e 'try{const r=require("./.devos/reviewer.json");const d=r.permission_denials||[];console.log(`reviewer permission denials: ${d.length}`);for(const x of d.slice(0,20))console.log(" -",JSON.stringify(x).slice(0,300))}catch(e){console.log("reviewer.json unreadable:",e.message)}' 
