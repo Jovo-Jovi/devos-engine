@@ -51,9 +51,9 @@ Every task is built and reviewed on its own branch and reaches `main` only after
    `/engine-review E04`. It reviews `main...HEAD` plus the working tree, writes `dev/reviews/E04-a1.md`, updates the
    ledger and writes or reissues the fence.
 4. **Push the branch — you.** `git add -A`, `git commit -m "E04 a1: build + local review"`, `git push -u origin task/E04`.
-   Then tell the remote reviewer (Claude in the DEVOS chat) "check task/E04". It reads the branch on GitHub, writes
+   The push starts the `engine-ci` workflow; when it is green, tell the remote reviewer (Claude in the DEVOS chat) "check task/E04". It reads the branch on GitHub, writes
    `dev/reviews/E04-a1-remote.md` on the branch, and says MERGE or FIX.
-5. **On FAIL or FIX:** stay on the branch, pull, run the next attempt in Cursor, then steps 3–4 again (`a2`, …).
+5. **On FAIL or FIX:** stay on the branch, pull, run the next attempt in Cursor, then steps 3–4 again (`a2`, …). A red `engine-ci` run is a FIX by itself.
 6. **Merge — you, only after both reviews pass:**
    ```
    git switch main
