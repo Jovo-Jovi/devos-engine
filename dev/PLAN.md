@@ -127,8 +127,7 @@ is the same model as the reviewer, `devos doctor` warns (a model grading its own
 - *Both:* usage counts when the tool prints them (`unavailable` otherwise, never estimated), reset-time parsing for
   waits, and an account list for switching.
 
-**Releases.** v1: adapters for **Cursor CLI** (builder *and* reviewer — so any model Cursor offers can review) and
-**Claude Code** (reviewer and builder). v1.1: **Codex CLI** and **Gemini CLI** adapters, then a declarative adapter
+**Releases.** v1: **Cursor CLI** and **Claude Code**, each in either role (E11: any model per role, today's tool per role; E12: the cross roles — so any model Cursor offers can review). v1.1: **Codex CLI** and **Gemini CLI** adapters, then a declarative adapter
 file (`devos/adapters/<tool>.json`: command template, output and limit patterns) so a developer can add another tool
 without engine code. A tool name the owner has not verified is never shipped as supported.
 
@@ -251,8 +250,9 @@ and probe paths (Tower ADR-004) · `devos-deploy.yml` production URL (`vars.TOWE
 | E02 | Config split: engine defaults + project file → generated config; `guard:config` | 3 | E01 | you | a Tower fixture `project.json` regenerates the Tower's `devos.config.json` deep-equal; staged guards pass |
 | E03 | Generalize the Tower-specific lines into project settings; module setup items from the pilot | 3 | E02 | you | E01's list resolves to zero Tower names in shipped files; Tower and pilot fixtures reproduce both behaviours |
 | E04 | `devos` command: doctor, status, developer profile, version, **agent roster: detect tools, pick reviewer, builder pool, policy (§7a)** | 2 | E03 | — | doctor on a machine missing `gh` prints the fix and exits 1; profile holds no value-like string; a roster fixture round-trips; same-model reviewer/pool prints the warning |
-| E11 | **Agent adapters v1 (§7a):** runner reads the roster; Cursor and Claude Code as builder or reviewer; fence `Builder:` checked against the pool; limit fallback across the pool | 3 | E04 | you | a fence naming a pool agent runs it; a name outside the pool falls back to the default with a note; a Cursor-run review with a non-Claude model produces a valid verdict file; a simulated limit moves to the next pool agent |
-| E05 | `install` and `upgrade` (three-way, branch + PR, conflicts listed) | 3 | E11 | you | install into an empty repo → all guards pass; one changed engine line → PR touching only that file and the lock; an edited file listed as a conflict |
+| E11 | **Agents in the runner (§7a):** `agents` in the project config (read on GitHub); the reviewer sees the pool and names a pool id; any model per role with today's tool per role | 3 | E04 | you | default config reproduces today; a pool id resolves its model, an unknown id falls back with a note; the light/deep reviewer models come from `agents`; every cycle flag and loop unchanged |
+| E12 | **Cross-role agents (§7a):** Claude Code as builder and Cursor as reviewer, with the cycle's guards (surfaces, verdict file of record PR-21, limits, accounts); limit fallback to the next pool agent | 3 | E11 | you | a Cursor-run review with a non-Claude model writes a valid review file the runner accepts; a Claude-built attempt passes the builder surface guard; a limit on the chosen agent runs the next pool agent once |
+| E05 | `install` and `upgrade` (three-way, branch + PR, conflicts listed) | 3 | E12 | you | install into an empty repo → all guards pass; one changed engine line → PR touching only that file and the lock; an edited file listed as a conflict |
 | E06 | `init` part 1: contract, questions (onboarding definitions), blueprint through Claude Code, doc templates | 2 | E05 | you | declining stops with exit 1 and writes nothing; a scripted brief produces the documents and fence T01 that `guard:phases` accepts |
 | E07 | `init` part 2: repository, secrets by name through `gh`, variables, generated `SETUP.md`, first cycle | 3 | E06 | you | on a throwaway account: empty folder → repo → `setup-check` green → `devos-cycle` starts T01 |
 | E08 | UI/UX gate: design contract, required spec, axe check, missing evidence = FAIL, pinned design skills, resource catalogue (§10) | 3 | E05 | you | §10 "E08 acceptance" |
@@ -316,5 +316,5 @@ service, keeps paid tiers possible. Recommendation: source-available for v1, rev
 
 ## 17. Calendar
 
-Eleven engine tasks × ≈ 1.4 attempts × 45–90 minutes of Cursor + review each, plus your acceptances: about
+Twelve engine tasks × ≈ 1.4 attempts × 45–90 minutes of Cursor + review each, plus your acceptances: about
 **two weeks part-time**. TR1–TR2 run on the Tower's cycle in the same window; E09's live proof waits for them.
