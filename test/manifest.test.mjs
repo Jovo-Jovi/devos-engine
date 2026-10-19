@@ -5,6 +5,9 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
 import { buildManifest } from "../tools/build-manifest.mjs";
+import { LOCAL, SOURCE_COUNT } from "../tools/sources.mjs";
+
+const fileCount = SOURCE_COUNT + Object.keys(LOCAL.added).length;
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -12,8 +15,8 @@ test("two in-memory builds are deep-equal", () => {
   assert.deepEqual(buildManifest(), buildManifest());
 });
 
-test("manifest has 103 entries", () => {
-  assert.equal(buildManifest().files.length, 103);
+test("manifest entry count follows the source plus local additions", () => {
+  assert.equal(buildManifest().files.length, fileCount);
 });
 
 test("manifest paths are sorted and use POSIX separators", () => {

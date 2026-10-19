@@ -6,8 +6,8 @@ review (Opus) and the owner reads the verdict before committing. Plan: `dev/PLAN
 | Task | Name | Risk | Gate | Fence | Done | Verdict |
 |---|---|---|---|---|---|---|
 | E01 | Repository, verbatim payload, manifest, version | 2 | — | v2 | [x] | PASS a1 — dev/reviews/E01-a1.md |
-| E02 | Config split: engine defaults + project file → generated config; `guard:config` | 3 | owner | v3 issued | [ ] | — |
-| E03 | Generalize the Tower-specific lines into project settings; module setup items from the pilot | 3 | owner | fence on PASS of E02 | [ ] | — |
+| E02 | Config split: engine defaults + project file → generated config; `guard:config` | 3 | owner | v3 | [x] | PASS a1 — dev/reviews/E02-a1.md |
+| E03 | Generalize the Tower-specific lines into project settings; module setup items from the pilot | 3 | owner | v1 issued | [ ] | — |
 | E04 | `devos` command: doctor, status, developer profile, version | 2 | — | fence on PASS of E03 | [ ] | — |
 | E05 | `install` and `upgrade` (three-way, branch + PR, conflicts listed) | 3 | owner | fence on PASS of E04 | [ ] | — |
 | E06 | `init` part 1: contract, questions, blueprint through Claude Code, doc templates | 2 | owner | fence on PASS of E05 | [ ] | — |

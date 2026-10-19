@@ -5,6 +5,9 @@ import path from "node:path";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
+import { LOCAL, SOURCE_COUNT } from "../tools/sources.mjs";
+
+const fileCount = SOURCE_COUNT + Object.keys(LOCAL.added).length;
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -25,12 +28,12 @@ function stage(dir) {
   });
 }
 
-test("stage copies 103 files and keeps stored bytes", () => {
+test("stage copies every manifest file and keeps stored bytes", () => {
   const dir = mkdtempSync(path.join(tmpdir(), "devos-stage-"));
   try {
     const result = stage(dir);
     assert.equal(result.status, 0);
-    assert.equal(walkFiles(dir).length, 103);
+    assert.equal(walkFiles(dir).length, fileCount);
     for (const [installed, stored] of [
       [path.join(".github", "workflows", "devos-cycle.yml"), path.join("dot-github", "workflows", "devos-cycle.yml")],
       [path.join(".claude", "settings.json"), path.join("dot-claude", "settings.json")],

@@ -1,0 +1,11 @@
+{
+  "$comment": "This file is yours; devos.config.json is generated from devos/engine.defaults.json and this file; edit here, then run node scripts/devos/config.mjs --write.",
+  "project": "__PROJECT_KEY__",
+  "scenario": "new",
+  "screens": {
+    "pages": ["/"]
+  },
+  "reviewer": {
+    "deep_paths_extra": []
+  }
+}

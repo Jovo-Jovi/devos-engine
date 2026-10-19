@@ -258,6 +258,12 @@
       "owner": "engine"
     },
     {
+      "path": "devos/engine.defaults.json",
+      "stored": "devos/engine.defaults.json",
+      "sha256": "3cbabc996a089c63fa97170dc84e12b4d07bec48f2f7448745e29da6a0aed07d",
+      "owner": "engine"
+    },
+    {
       "path": "devos/prompts/builder.md",
       "stored": "devos/prompts/builder.md",
       "sha256": "6b3ad446fd8907e6f337594c45cb0d0596a8b3c647a59c525aba9181c6bcedbd",
@@ -332,7 +338,7 @@
     {
       "path": "docs/method/AUTOMATION.md",
       "stored": "docs/method/AUTOMATION.md",
-      "sha256": "5caeef611d0250b90f926939e75a4f1f10068077ad5b839129cbb67f6226a43d",
+      "sha256": "5e448f38a80e38655b7ccdfb381fb452db00d278cb6feb57e5d5c69361851eb1",
       "owner": "engine"
     },
     {
@@ -350,7 +356,7 @@
     {
       "path": "docs/method/PRECEDENTS.md",
       "stored": "docs/method/PRECEDENTS.md",
-      "sha256": "d00a28ef52cb371267bf80cfb245c9f8c87dd70d0c85b97d41e76d2c140c4f58",
+      "sha256": "d0f39489b867d047bac9100cc36ff121d869ebd901fce29bf8a4ee65bac61308",
       "owner": "engine"
     },
     {
@@ -387,6 +393,12 @@
       "path": "scripts/devos/checks-status.sh",
       "stored": "scripts/devos/checks-status.sh",
       "sha256": "6640878b0ce19df7b4fbfcfa9683296434c9562ca66f2724dbcbe1adb954277d",
+      "owner": "engine"
+    },
+    {
+      "path": "scripts/devos/config.mjs",
+      "stored": "scripts/devos/config.mjs",
+      "sha256": "50615e9f27197b5458c39fc242149702b16bcaefca2bd97a2a33e9771c6ef351",
       "owner": "engine"
     },
     {
@@ -558,6 +570,12 @@
       "owner": "engine"
     },
     {
+      "path": "scripts/guards/config.mjs",
+      "stored": "scripts/guards/config.mjs",
+      "sha256": "f7aed14f10870194825be6966334e914028c4848d1a6244a8def3533e6a26947",
+      "owner": "engine"
+    },
+    {
       "path": "scripts/guards/data.mjs",
       "stored": "scripts/guards/data.mjs",
       "sha256": "baf076bf7508844f0d60a7dc4692c59fb7a20b7b976cbd55c89d1ce7a44ebd8e",
@@ -608,7 +626,7 @@
     {
       "path": "scripts/guards/run-all.mjs",
       "stored": "scripts/guards/run-all.mjs",
-      "sha256": "4beb1f036d642c4d3fe75276bbc5b67ad6d543cccabd701a4c865bd0100e3155",
+      "sha256": "3812ddc562aff5ad91b68abe3580be06a3bc9c29c5b1562ed0cc741aa76759de",
       "owner": "engine"
     },
     {

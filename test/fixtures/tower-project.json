@@ -1,0 +1,9 @@
+{
+  "project": "TOWER",
+  "screens": {
+    "pages": ["/sign-in", "/"]
+  },
+  "reviewer": {
+    "deep_paths_extra": ["src/lib/contract/**", "src/app/api/**"]
+  }
+}

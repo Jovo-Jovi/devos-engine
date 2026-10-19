@@ -65,3 +65,18 @@ export function normalizeLf(bytes) {
 export function sha256Hex(bytes) {
   return createHash("sha256").update(bytes).digest("hex");
 }
+
+export const SOURCE_COUNT = 103;
+
+export const LOCAL = {
+  changed: {
+    "scripts/guards/run-all.mjs": "E02",
+    "docs/method/AUTOMATION.md": "E02",
+    "docs/method/PRECEDENTS.md": "E02",
+  },
+  added: {
+    "devos/engine.defaults.json": "E02",
+    "scripts/devos/config.mjs": "E02",
+    "scripts/guards/config.mjs": "E02",
+  },
+};
