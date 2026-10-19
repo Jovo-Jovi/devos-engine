@@ -96,24 +96,41 @@ guard settings, deploy settings, registry receipt reference) → **`devos.config
 keep reading `devos.config.json` exactly as today, so no workflow changes for the split; `guard:config` fails if
 the generated file was edited by hand. Developer preferences (§4) only seed `project.json` at init.
 
-## 7a. Model choice (owner request, 2026-10-19)
+## 7a. Agents: any reviewer, a builder pool, the reviewer picks (owner decision, 2026-10-19)
 
-**Today the method is fixed to two tools and one builder family:** the builder runs through the Cursor CLI and
-`builder-model.mjs` builds ids as `grok-4.7-<effort>[-fast]`; the reviewer, planner and supervisor run through the
-Claude Code CLI with Claude model ids, `--effort`, `--fallback-model` and a JSON schema for the verdict; usage-limit
-detection and account switching know only these two tools.
+**Words.** A *tool* is a command-line agent (Cursor CLI, Claude Code, Codex CLI, Gemini CLI, …). A *model* is what
+the tool runs (Cursor alone offers Claude, GPT, Gemini and Grok models). An *agent* = tool + model + the developer's
+accounts for it. The developer's **roster** is the agents they can use.
 
-**v1 (E04):** any model the developer has **inside those two tools**. The developer profile and `devos/project.json`
-gain a `models` section: builder `{ tool: "cursor", model: <any id from \`agent models\`>, effort_ids: <optional
-map low|medium|high|xhigh → id> }` — without the map, one id serves every effort; reviewer `{ tool: "claude-code",
-light: <id>, deep: <id>, fallback: <id> }`; supervisor `<id>`. `devos init` lists the models each CLI reports and
-asks. `builder-model.mjs` reads the map instead of the Grok naming; the Grok family stays the shipped default. Rule:
-when the builder and the reviewer would be the same model, `devos doctor` warns (a reviewer grading its own model's
-work is weaker); it never blocks.
+**At `devos init` (and `devos agents` later), in this order:**
+1. **Detect.** DEV_OS finds which supported tools are installed and signed in, and lists each tool's models
+   (`agent models` for Cursor; the documented model list for the others).
+2. **Pick the reviewer first** — one agent for deep reviews, planning and the supervisor, optionally a lighter one for
+   light reviews. The reviewer is chosen first because it writes every fence and so decides everything after.
+3. **Pick the builder pool** — one or more agents, each with an optional note on what it is good at (UI, data,
+   refactors, cheap and fast). One is marked default.
+4. **Choose the policy:** *reviewer picks from the pool* (default) or *always the default builder*.
 
-**v1.1 (adapters):** other CLIs as builder or reviewer (for example Codex CLI or Gemini CLI). Each adapter needs: the
-invocation, structured output for the verdict, usage-limit patterns and reset parsing, usage counts, and account
-switching. One adapter per task after v1.0, chosen by demand.
+**Per task.** The reviewer writes the builder into the fence header — `- Builder: <pool id> · Effort: high · Fast:
+no` — choosing from the pool by the task's risk, kind (UI, data, method) and size. The reviewer sees only the pool, so
+it cannot choose anything else; the runner checks the fence's choice against the pool and, if it is not there, uses
+the default and records why. On a usage limit the runner moves to the next agent in the pool (today's account switch,
+generalized). Rule kept from the method: **the reviewer never builds and the builder never reviews**; if a pool agent
+is the same model as the reviewer, `devos doctor` warns (a model grading its own work reviews weaker).
+
+**What a tool needs to take each role (the adapter contract):**
+- *Builder:* non-interactive run on a prompt file; exit status; writes files only (the runner owns git); limit
+  detection. Role surfaces are already enforced after the run by `guard-surfaces.mjs`, whatever the tool.
+- *Reviewer:* the same, plus it must write the review file — the verdict of record is already that file
+  (`VERDICT: PASS|FAIL` on its first line, PR-21), so a tool without a JSON-schema option still works; effort and
+  turn limits map to the tool's own flags where it has them.
+- *Both:* usage counts when the tool prints them (`unavailable` otherwise, never estimated), reset-time parsing for
+  waits, and an account list for switching.
+
+**Releases.** v1: adapters for **Cursor CLI** (builder *and* reviewer — so any model Cursor offers can review) and
+**Claude Code** (reviewer and builder). v1.1: **Codex CLI** and **Gemini CLI** adapters, then a declarative adapter
+file (`devos/adapters/<tool>.json`: command template, output and limit patterns) so a developer can add another tool
+without engine code. A tool name the owner has not verified is never shipped as supported.
 
 ## 8. Contract and registry
 
@@ -233,8 +250,9 @@ and probe paths (Tower ADR-004) · `devos-deploy.yml` production URL (`vars.TOWE
 | E01 | Repository, verbatim payload, manifest, version | 2 | — | — | 103 files byte-identical to the Tower @ `a49ca6d`; manifest rebuilds identically; `devos --version` |
 | E02 | Config split: engine defaults + project file → generated config; `guard:config` | 3 | E01 | you | a Tower fixture `project.json` regenerates the Tower's `devos.config.json` deep-equal; staged guards pass |
 | E03 | Generalize the Tower-specific lines into project settings; module setup items from the pilot | 3 | E02 | you | E01's list resolves to zero Tower names in shipped files; Tower and pilot fixtures reproduce both behaviours |
-| E04 | `devos` command: doctor, status, developer profile, version, **model choice (§7a)** | 2 | E03 | — | doctor on a machine missing `gh` prints the fix and exits 1; profile holds no value-like string; a fixture with a non-Grok builder model resolves through the map, and same-model builder/reviewer prints the warning |
-| E05 | `install` and `upgrade` (three-way, branch + PR, conflicts listed) | 3 | E04 | you | install into an empty repo → all guards pass; one changed engine line → PR touching only that file and the lock; an edited file listed as a conflict |
+| E04 | `devos` command: doctor, status, developer profile, version, **agent roster: detect tools, pick reviewer, builder pool, policy (§7a)** | 2 | E03 | — | doctor on a machine missing `gh` prints the fix and exits 1; profile holds no value-like string; a roster fixture round-trips; same-model reviewer/pool prints the warning |
+| E11 | **Agent adapters v1 (§7a):** runner reads the roster; Cursor and Claude Code as builder or reviewer; fence `Builder:` checked against the pool; limit fallback across the pool | 3 | E04 | you | a fence naming a pool agent runs it; a name outside the pool falls back to the default with a note; a Cursor-run review with a non-Claude model produces a valid verdict file; a simulated limit moves to the next pool agent |
+| E05 | `install` and `upgrade` (three-way, branch + PR, conflicts listed) | 3 | E11 | you | install into an empty repo → all guards pass; one changed engine line → PR touching only that file and the lock; an edited file listed as a conflict |
 | E06 | `init` part 1: contract, questions (onboarding definitions), blueprint through Claude Code, doc templates | 2 | E05 | you | declining stops with exit 1 and writes nothing; a scripted brief produces the documents and fence T01 that `guard:phases` accepts |
 | E07 | `init` part 2: repository, secrets by name through `gh`, variables, generated `SETUP.md`, first cycle | 3 | E06 | you | on a throwaway account: empty folder → repo → `setup-check` green → `devos-cycle` starts T01 |
 | E08 | UI/UX gate: design contract, required spec, axe check, missing evidence = FAIL, pinned design skills, resource catalogue (§10) | 3 | E05 | you | §10 "E08 acceptance" |
@@ -271,7 +289,7 @@ have the contract and privacy text reviewed (it records GitHub identities and re
 
 Adopting existing or production projects (`devos adopt`, the in-development and production scenarios) ·
 the local runner at parity (M2) · stacks other than Next.js + the existing modules · local event reporting
-(ingest keys) · builder or reviewer CLIs other than Cursor and Claude Code (§7a, v1.1) · paid tiers and license
+(ingest keys) · Codex CLI, Gemini CLI and declarative adapters (§7a, v1.1) · paid tiers and license
 keys · a package registry.
 
 ## 15. Risks → mitigation
@@ -298,5 +316,5 @@ service, keeps paid tiers possible. Recommendation: source-available for v1, rev
 
 ## 17. Calendar
 
-Ten engine tasks × ≈ 1.4 attempts × 45–90 minutes of Cursor + review each, plus your acceptances: about
+Eleven engine tasks × ≈ 1.4 attempts × 45–90 minutes of Cursor + review each, plus your acceptances: about
 **two weeks part-time**. TR1–TR2 run on the Tower's cycle in the same window; E09's live proof waits for them.
