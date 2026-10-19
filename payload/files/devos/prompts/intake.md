@@ -46,7 +46,7 @@ analytics or stored visitor data) or a signed decision that only a new client de
 rule and offer the nearest compliant alternative.
 
 A request that explicitly asks to change the profile or open a data zone (a staff dashboard, a member
-area) is the human acting as the client (OD-02): accept it as a **DRAFT OD that amends the earlier OD
+area) is the human acting as the client: accept it as a **DRAFT OD that amends the earlier OD
 by number**, never silently. It names each zone, its routes and whether it holds personal data, and
 updates the `devos:boundary` line in `docs/BOUNDARY_MODEL.md` (PR-19). Personal data from the public
 brings the Personal-Data Protection gate (handbook §10.3): write `docs/PROTECTION_MODEL.md` (each

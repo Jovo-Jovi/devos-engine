@@ -1,4 +1,4 @@
-# Restart the cycle after the HUMAN merges a gated task PR (OD-03 §4) or an intake PR (OD-08 §3).
+# Restart the cycle after the HUMAN merges a gated task PR or an intake PR.
 # Runner auto-merges carry the devos:auto-merged label and are skipped here, because the cycle
 # already dispatched the next task itself (this also prevents a double dispatch when DEVOS_PAT is used).
 # PR-28: after a method fix merges, the product task the problem stopped is restarted the way its

@@ -19,7 +19,7 @@ const attempt = Number(arg("attempt") || "1");
 if (!Number.isInteger(attempt) || attempt < 1) fail(`invalid attempt "${arg("attempt")}"`);
 const row = wanted ? rows.find((r) => r.task === wanted) : nextOpenTask(rows);
 
-// A human revision (/devos revise, OD-08 §3) may go past max_attempts; automatic retries may not.
+// A human revision (/devos revise) may go past max_attempts; automatic retries may not.
 // The revision is a fact of the task branch (devos-intake commits "Tnn: fence reissued for human
 // revision (attempt N)"), so a run resumed after a usage limit, a stall or by the supervisor keeps it
 // even when its dispatch did not pass --revision.

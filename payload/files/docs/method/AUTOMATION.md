@@ -165,7 +165,8 @@ or locale) · `data` (migrations, RLS, grants, server-only secret key, synthetic
 
 ## 6. Prompts, schemas, rules
 
-`devos/prompts/`: `builder.md`, `reviewer.md`, `intake.md`, `method.md`, `revise.md`, `doctor.md`, `supervisor.md`.
+`devos/prompts/`: `builder.md`, `reviewer.md`, `intake.md`, `method.md`, `revise.md`, `doctor.md`, `supervisor.md`,
+`blueprint.md` (`devos init`'s blueprint: the `/devos-new-project` flow, headless).
 `devos/schemas/`: verdict, intake (also revise and method), doctor, supervisor.
 
 `.gitattributes` merges `docs/DEVELOPMENT_JOURNAL.md` by union.
@@ -311,20 +312,11 @@ Close-out is the human's commit:
 **More work later.** File a "Dev OS change request". Its intake PR adds the rows, and your merge
 starts the cycle again.
 
-**The next project.** Run `/devos-new-project` in a new private repository, after copying these
-method files from this one:
-
-- `scripts/devos/` and `scripts/guards/`
-- `devos/`
-- `.github/workflows/` and `.github/ISSUE_TEMPLATE/`
-- `.cursor/`
-- `.claude/commands/`
-- `devos.config.json`
-- from `docs/method/`: the handbook, `FULLSTACK_MODULE.md`, this manual, and `PRECEDENTS.md`
+**The next project.** Run `devos init <folder>`. It shows the contract and stops unless you type `accept`, asks
+only what it cannot infer, installs the method files (`devos install`), and runs the blueprint
+(`devos/prompts/blueprint.md`, the `/devos-new-project` flow headless). It writes `.claude/settings.json` last, once
+the documents and fence T01 exist: that file locks the reviewer to reviews and fences.
 
 Keep the precedent rows: they are the rules the scripts implement and this manual cites. The new
 project rewrites PR-01 for its environment, and its own rulings continue from the live maximum.
 `guard:manual` fails the new repository if this manual is missing.
-
-Copy `.claude/settings.json` last, once the bootstrap is written: it locks the reviewer to reviews
-and fences. `SETUP.md` §10 and `README.md` give the same steps.

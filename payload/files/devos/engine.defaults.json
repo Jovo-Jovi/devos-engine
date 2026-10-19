@@ -1,5 +1,5 @@
 {
-  "$comment": "Dev OS automated cycle configuration (OD-03, OD-05). Changing a model id is a D-row.",
+  "$comment": "Dev OS automated cycle configuration. Changing a model id is a D-row.",
   "base_branch": "main",
   "branch_prefix": "task/",
   "max_attempts": 3,

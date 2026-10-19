@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Visual evidence for the reviewer (OD-08 §5, PR-35): per state and width, a settled screenshot
+// Visual evidence for the reviewer (PR-35): per state and width, a settled screenshot
 // in normal motion, a filmstrip picked from a CDP screencast, a reduced-motion screenshot and the
 // layout-shift value. Written to .devos/screens/ and summarised in motion.json.
 // Importing this module launches nothing. The run starts only when the file is executed.

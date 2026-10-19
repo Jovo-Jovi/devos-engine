@@ -1,5 +1,5 @@
 ---
-description: MCP and cloud tool use (OD-06)
+description: MCP and cloud tool use
 alwaysApply: true
 ---
 - A connected MCP server is not permission. Context7 read-only documentation lookups are allowed in every task; any other MCP call must be named by the fence.

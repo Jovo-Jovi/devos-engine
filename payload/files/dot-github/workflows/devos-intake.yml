@@ -1,4 +1,4 @@
-# Change requests and revisions from GitHub (OD-08 §3).
+# Change requests and revisions from GitHub.
 #
 #   New work:  open an issue with the "Dev OS change request" form (label devos:request). The
 #              reviewer reads it with the repository and either opens an intake PR (draft OD, scope

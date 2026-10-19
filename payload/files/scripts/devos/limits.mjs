@@ -31,7 +31,7 @@ export function parseJsonLoose(text) {
 }
 
 /**
- * Work out when a usage limit resets from the agent's own message (OD-08 §4). Understands
+ * Work out when a usage limit resets from the agent's own message. Understands
  * "resets 12:30pm (UTC)", "resets 3pm", "resets at 18:00", "resets in 2h 15m", "try again in 45
  * minutes" and Claude's "…limit reached|1760112000". Times without a zone are read as UTC, the
  * runner's zone. Returns a Date, or null when nothing parseable is found.

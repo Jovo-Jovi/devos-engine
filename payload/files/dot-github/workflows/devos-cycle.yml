@@ -1,8 +1,8 @@
-# Dev OS automated cycle (OD-03). One run = one task attempt:
+# Dev OS automated cycle. One run = one task attempt:
 #   resolve task → Cursor builds on task/Tnn → surface guard → commit/push/PR → checks →
 #   Claude reviews from the branch → surface guard → verdict.mjs decides → merge | human gate | retry | halt
 # Start it from Actions → devos-cycle → Run workflow (inputs blank = next open task).
-# OD-08: the fence chooses Grok effort/fast; Vercel preview per attempt (when DEVOS_VERCEL=true);
+# The fence chooses Grok effort/fast; Vercel preview per attempt (when DEVOS_VERCEL=true);
 # screenshots for the reviewer's visual check; a usage-limit wait is resumed by the wait-and-resume
 # job below (up to ~5.5 h) and otherwise by devos-resume.
 name: devos-cycle
@@ -619,7 +619,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.DEVOS_PAT || github.token }}
 
-      - name: Vercel preview of this attempt (OD-08 §2)
+      - name: Vercel preview of this attempt
         id: preview
         # With the backend module, previews need a preview database (vars.DEVOS_PREVIEW_DB); without one the
         # review uses the local build against the CI database instead (PR-18).
@@ -653,7 +653,7 @@ jobs:
           echo "preview: $url"
           if [ -n "$PRN" ]; then gh pr comment "$PRN" --repo "$REPO" --body "Preview of $TASK attempt $ATTEMPT: $url"; fi
 
-      - name: Screenshots for the reviewer's visual check (OD-08 §5)
+      - name: Screenshots for the reviewer's visual check
         if: steps.bs.outputs.state == 'ok'
         continue-on-error: true
         env:
@@ -925,7 +925,7 @@ jobs:
           gh pr comment "${PRN:-$BR}" --repo "$REPO" --body "Dev OS runner stopped on a failure in run ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}. Nothing was merged. Fix the cause, then re-run devos-cycle with task=$TASK attempt=$ATTEMPT." 2>/dev/null || true
           [ -n "$PRN" ] && gh workflow run devos-doctor.yml --repo "$REPO" --ref main -f pr="$PRN" 2>/dev/null || true
 
-  # OD-08 §4: wait out a usage limit inside Actions instead of relying on GitHub's best-effort cron.
+  # Wait out a usage limit inside Actions instead of relying on GitHub's best-effort cron.
   # Claude's session limits reset within about five hours, so a wait up to resume.inline_wait_max_minutes
   # (330) is slept through here, then the task is re-dispatched. Longer waits (weekly limits) are
   # left to devos-resume. Remove the devos:quota-wait label, or cancel this run, to stop the wait.

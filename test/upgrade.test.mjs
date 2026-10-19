@@ -225,7 +225,7 @@ test("upgrade.test.mjs publishes one updated file", () => {
     assert.equal(git(["log", "-1", "--format=%s", "devos/upgrade-0.1.1"], staged.project).stdout.trim(), "DEV_OS upgrade 0.1.0 to 0.1.1");
     const branchLock = JSON.parse(git(["show", "devos/upgrade-0.1.1:devos/engine.lock.json"], staged.project).stdout);
     assert.equal(branchLock.engine_version, "0.1.1");
-    assert.equal(branchLock.files.length, 110);
+    assert.equal(branchLock.files.length, JSON.parse(readFileSync(path.join(root, "payload", "manifest.json"), "utf8")).files.length);
     assert.equal(git(["show", "devos/upgrade-0.1.1:devos/prompts/doctor.md"], staged.project).stdout.includes("Upgrade test line."), true);
     const remote = git(["ls-remote", "origin", "refs/heads/devos/upgrade-0.1.1"], staged.project);
     assert.equal(remote.status, 0, remote.stderr);
@@ -263,7 +263,7 @@ test("upgrade.test.mjs leaves a local edit as a conflict", () => {
     const doctorSha = (lock) => lock.files.find((file) => file.path === "devos/prompts/doctor.md").sha256;
     assert.equal(doctorSha(branchLock), doctorSha(mainLock));
     assert.equal(branchLock.engine_version, "0.1.1");
-    assert.equal(branchLock.files.length, 110);
+    assert.equal(branchLock.files.length, JSON.parse(readFileSync(path.join(root, "payload", "manifest.json"), "utf8")).files.length);
   } finally {
     cleanup(staged.parent);
   }

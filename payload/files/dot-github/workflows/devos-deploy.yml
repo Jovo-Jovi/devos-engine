@@ -1,4 +1,4 @@
-# Vercel production deploys (OD-08 §2). Previews are made per task attempt inside devos-cycle.
+# Vercel production deploys. Previews are made per task attempt inside devos-cycle.
 # Production deploys run:
 #   - on a push to main that a person makes (your gate merges, your own pushes). The runner's own
 #     auto-merges use the default GITHUB_TOKEN, which GitHub does not let trigger workflows, so

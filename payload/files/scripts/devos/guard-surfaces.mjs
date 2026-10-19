@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Enforce who may change what (OD-03 §2, PR-07). Run right after an agent finishes, before the
+// Enforce who may change what (PR-07). Run right after an agent finishes, before the
 // runner commits. Checks uncommitted changes (tracked and untracked; ignored files are skipped).
 //
 //   builder  → FAIL on any change to a denied path (the cycle halts; a human looks).
@@ -8,7 +8,7 @@
 //              rewriting next-env.d.ts while the reviewer re-ran the checks). Those paths are
 //              reverted and listed in .devos/surface-warnings.txt; pass --strict to FAIL instead.
 //
-//   intake, revise → like reviewer, with their own allow lists (OD-08 §3).
+//   intake, revise → like reviewer, with their own allow lists.
 //
 // Usage: node scripts/devos/guard-surfaces.mjs builder|reviewer|intake|revise [--strict]
 import { rmSync, mkdirSync, appendFileSync } from "node:fs";

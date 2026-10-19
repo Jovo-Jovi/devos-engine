@@ -13,8 +13,8 @@ review (Opus) and the owner reads the verdict before committing. Plan: `dev/PLAN
 | E12 | Cross-role agents: Claude Code as builder, Cursor as reviewer (verdict from the review file, PR-21) (PLAN §7a) | 3 | owner | v8 | [x] | PASS a3 — remote review of record (no local review: session limit) — dev/reviews/E12-a3-remote.md · FAIL a2 — dev/reviews/E12-a2.md · FAIL a1 — dev/reviews/E12-a1.md |
 | E13 | Engine CI: on every push of `main` and `task/*` run `node --test`, parse every payload workflow with a real YAML parser, run actionlint (engine root `.github/`, not shipped) | 2 | — | v1 | [x] | PASS a1 — remote review of record (no local review: session limit) — dev/reviews/E13-a1-remote.md |
 | E05 | `install` and `upgrade` (three-way, branch + PR, conflicts listed) | 3 | owner | v2 | [x] | PASS a2 — dev/reviews/E05-a2.md · remote MERGE — dev/reviews/E05-a2-remote.md · remote FIX a1 — dev/reviews/E05-a1-remote.md |
-| E06 | `init` part 1: contract (typed accept), questions, install, blueprint through Claude Code, approval; OD citations out of the payload (PR-43) | 3 | owner | v2 issued (v1 not issuable — E05-a2-remote.md) | [ ] | — |
-| E07 | `init` part 2: repository, secrets by name, variables, `SETUP.md`, first cycle | 3 | owner | fence on PASS of E06 | [ ] | — |
+| E06 | `init` part 1: contract (typed accept), questions, install, blueprint through Claude Code, approval; OD citations out of the payload (PR-43) | 3 | owner | v2 issued (v1 not issuable — E05-a2-remote.md) | [x] | PASS a1 — dev/reviews/E06-a1.md · remote MERGE — dev/reviews/E06-a1-remote.md |
+| E07 | `init` part 2: repository, secrets by name, variables, `SETUP.md`, first cycle | 3 | owner | v2 issued | [ ] | — |
 | E08 | UI/UX gate: design contract, required spec, axe check, missing evidence = FAIL, pinned design skills, resource catalogue (PLAN §10) | 3 | owner | fence on PASS of E05 | [ ] | — |
 | E09 | Registry link: `report.mjs`, report steps, registration, cycle preflight | 3 | owner | fence on PASS of E07 and E08, after Tower TR1–TR2 | [ ] | — |
 | E10 | Clean-machine run, docs, license, v1.0.0 | 2 | owner | fence on PASS of E09 and decision D-E4 | [ ] | — |
@@ -37,9 +37,9 @@ review (Opus) and the owner reads the verdict before committing. Plan: `dev/PLAN
 | From | Item | Lands in |
 |---|---|---|
 | E03 a2 remote | The shipped handbook names the client project NEL / Nile Egypt Labs as its case study — owner decides if public; recommended: anonymize, add NEL/Nile/devos-plan to the release-check patterns | E10 (owner decision first) |
-| E03 a2 remote | Prompts, workflows and engine defaults cite the reference project's OD numbers (OD-02…OD-08) | E06 |
+| E03 a2 remote | Prompts, workflows and engine defaults cite the reference project's OD numbers (OD-02…OD-08) | done in E06 a1 (PR-43) |
 | E03 a2 remote | `vercel-bypass` is recommended even when `deploy.bypass` is false — gate it on the setting | E07 |
-| E03 a3 remote | `devos-new-project.md` reads "Copy the copied `.claude/settings.json` last" (fence wording) | E06 |
+| E03 a3 remote | `devos-new-project.md` reads "Copy the copied `.claude/settings.json` last" (fence wording) | done in E06 a1 (command replaced) |
 | E03 a3 remote | PRECEDENTS PR-26 Born-from still says "the reference project" — sweep with the release wording check | E10 |
 | E04 a1 remote | `run()` passes a `.cmd` path to the shell unquoted; a path with a space breaks on Windows — quote it when `viaShell` | done in E12 a3 (`which.run` quotes the path) |
 | E11 a1 remote | Reviewer-tool stop runs after the heartbeat starts | done in E12 (the stop is gone) |
@@ -51,4 +51,10 @@ review (Opus) and the owner reads the verdict before committing. Plan: `dev/PLAN
 | E05 v1 fence | Installed projects get `devos/engine.lock.json`; neither the shipped README nor AUTOMATION §8 explains it yet | E10 (README) |
 | E05 a1 remote | `compareSemver` throws on a pre-release version (`1.0.0-beta`): uncaught stack trace | E10 (release versions) |
 | E05 a2 remote | `rollback()` restores all paths in one `git restore`; one path untracked in HEAD (an engine file the project ignores) makes git reject the whole list, so nothing is restored | E10 (clean-machine run) |
+| E06 a1 | PLAN §3 lists the blueprint (step 5) before the engine files (step 6); `init` installs first because the blueprint reads the installed prompt and handbook | owner (amend PLAN §3) |
+| E06 a1 | `keyFromName` can derive a key that fails `KEY_RE` (`X`, `!!!`, `日本`) and `init` writes it unchecked | E07 (S2) |
+| E06 a1 | `docs/method/FULLSTACK_MODULE.md:5` cites "`/devos-new-project`, step 5"; the command has no numbered steps now (the blueprint's step 5) | E10 (wording sweep) |
+| E07 v1 fence | `devos/setup.json` steps cite `SETUP.md` §11.2, §12.1–§12.3, §13.1–§13.4 (the Tower's SETUP); the generated `SETUP.md` has no such sections | E10 (method wording) |
+| E07 v1 fence | `vercel-var` has `when: always`, so a project with deploy `none` is told to turn Vercel on; `init` skips it, the setup issue still lists it (blocks deploy only) | E10 (method fix) |
 | E06 v2 fence | The contract is a draft (`0-draft`); the deletion channel ("open an issue in the DEV_OS Engine repository") needs the owner's confirmation; legal review before v1.0.0 | E10 (owner) |
+| E06 a1 remote | The automatic repair round sends the bare guard output with no instruction | E07 (S5, fence v2) |

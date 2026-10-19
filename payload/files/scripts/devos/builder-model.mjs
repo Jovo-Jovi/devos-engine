@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Resolve the Cursor model id for this task (OD-08 §1).
+// Resolve the Cursor model id for this task.
 // The reviewer chooses effort and speed in the fence header:
 //     - Builder: grok-4.7 · Effort: high · Fast: no
 // A workflow input can override either. The id is then checked against `agent models`, because

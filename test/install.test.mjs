@@ -56,10 +56,10 @@ test("install.test.mjs installs into an empty folder", () => {
   try {
     const result = devos(["install", folder, "--key", "DEMO"]);
     assert.equal(result.status, 0, result.stdout + result.stderr);
-    assert.equal(result.stdout.includes("devos install 0.1.0: 110 engine files, 3 templates, devos.config.json written"), true, result.stdout);
-    const lock = JSON.parse(readFileSync(path.join(folder, "devos", "engine.lock.json"), "utf8"));
     const manifest = JSON.parse(readFileSync(path.join(root, "payload", "manifest.json"), "utf8"));
-    assert.equal(lock.files.length, 110);
+    assert.equal(result.stdout.includes(`devos install 0.1.0: ${manifest.files.length} engine files, 3 templates, devos.config.json written`), true, result.stdout);
+    const lock = JSON.parse(readFileSync(path.join(folder, "devos", "engine.lock.json"), "utf8"));
+    assert.equal(lock.files.length, manifest.files.length);
     assert.deepEqual(
       lock.files.map((file) => ({ path: file.path, sha256: file.sha256 })),
       manifest.files.map((file) => ({ path: file.path, sha256: file.sha256 })),

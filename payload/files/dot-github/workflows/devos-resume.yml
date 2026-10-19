@@ -1,4 +1,4 @@
-# Backstop for tasks parked by a usage or rate limit (PR-12, OD-08 §4). The cycle's own
+# Backstop for tasks parked by a usage or rate limit (PR-12). The cycle's own
 # wait-and-resume job handles waits up to ~5.5 h; this covers longer ones (weekly limits) and any
 # case where that job was cancelled. GitHub runs schedules on a best-effort basis (they can start
 # late or be skipped), so you can always run this by hand. It takes the oldest open PR labelled

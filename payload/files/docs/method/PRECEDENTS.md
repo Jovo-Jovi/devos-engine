@@ -1,7 +1,7 @@
 # DEV_OS — Precedents
 
 Binding procedural rulings. A ruling is authority only if it is listed here or quoted in a fence.
-Ids are allocated from the live maximum by the task that lands them. **Live maximum: PR-42.**
+Ids are allocated from the live maximum by the task that lands them. **Live maximum: PR-43.**
 PR-01…PR-33 are the rulings of the method's first project, kept because the runner implements
 them and `AUTOMATION.md` cites them; PR-01 is rewritten for each project (`AUTOMATION.md` §11).
 
@@ -49,3 +49,4 @@ them and `AUTOMATION.md` cites them; PR-01 is rewritten for each project (`AUTOM
 | PR-40 | **Project settings, not a reference product.** Hosts, catalogues and route exceptions come from `devos.config.json` `guards`. Probe mode, probe paths, the bypass flag and the production URL fallback come from `deploy`. A project sets them in `devos/project.json`. The production URL variable is `DEVOS_PRODUCTION_URL`. R2, Firebase and the Vercel bypass are setup items and apply only when their `when` says so. | Engine E03 (project settings) |
 | PR-41 | **The builder and the reviewer come from `agents`.** The reviewer names a pool id in `- Builder:`; the runner uses that item's model, falls back to the default with a recorded note, and keeps every flag, account switch and limit rule of the cycle; a choice that needs the other tool stops until cross-role support exists. | Engine E11 (project agents) |
 | PR-42 | **Either tool may take either role.** Claude Code may build and Cursor may review; before that run the runner installs the role's kit and restores the tool's own config afterwards. The review file is the verdict; a builder's usage limit, after that agent's accounts are exhausted, runs the next pool agent once; a reviewer never falls back into the pool. A method fix is always reviewed by Claude Code with the gate model (PR-28). | Engine E12 (cross-role agents) |
+| PR-43 | **A new project starts from `devos init`, and the copied method cites only its own rules.** Setup shows the contract and stops unless the developer types `accept`; nothing is written before that. The blueprint (`devos/prompts/blueprint.md`, the `/devos-new-project` flow headless) writes the documents and fence T01 while `.claude/settings.json` is held back, and `init` keeps them only when `guard:phases` and `guard:naming` pass. Workflows, scripts, prompts and engine defaults name the rule (PR-nn), never another project's OD number. | Engine E06 (init part 1) |

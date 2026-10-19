@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Render a prompt from devos/prompts/*.md.
 // Usage: node scripts/devos/render-prompt.mjs builder|reviewer|revise Tnn attempt [--out file]
-//        node scripts/devos/render-prompt.mjs intake - - [--out file]          (OD-08 §3)
+//        node scripts/devos/render-prompt.mjs intake - - [--out file]
 // Environment it reads when set: DEVOS_BUILDER_MODEL, DEVOS_BUILDER_EFFORT, DEVOS_BUILDER_FAST,
 // DEVOS_PREVIEW_URL, DEVOS_ISSUE, DEVOS_INTAKE_RESUME, DEVOS_REVIEW_MODE, DEVOS_REVIEW_REASONS, DEVOS_REVIEW_CRITICAL.
 import { readFileSync, writeFileSync, existsSync, readdirSync } from "node:fs";

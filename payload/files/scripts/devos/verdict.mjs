@@ -6,9 +6,9 @@
 // Emits: verdict, action (merge | human_gate | retry | halt), next_attempt, summary_file
 //
 // Actions:
-//   merge       PASS, checks green, not a human gate, next fence present (OD-03 §3)
-//   human_gate  PASS on a risk-3 task, a gate task, a schema change (PR-17), or with no next fence (OD-03 §4)
-//   retry       FAIL and attempt < max_attempts (OD-03 §5)
+//   merge       PASS, checks green, not a human gate, next fence present
+//   human_gate  PASS on a risk-3 task, a gate task, a schema change (PR-17), or with no next fence
+//   retry       FAIL and attempt < max_attempts
 //   halt        FAIL at max attempts, or the reviewer produced no usable verdict
 //   quota_wait  the reviewer hit a usage/rate limit: nothing recorded, same attempt, review-only
 //               resume by devos-resume (PR-12)

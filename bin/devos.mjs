@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { detectCommand } from "../lib/detect.mjs";
 import { doctorCommand, statusCommand } from "../lib/doctor.mjs";
+import { initCommand } from "../lib/init.mjs";
 import { installCommand } from "../lib/install.mjs";
 import { profileCommand } from "../lib/profile.mjs";
 import { rosterCommand } from "../lib/roster.mjs";
@@ -24,6 +25,7 @@ devos agents show
 devos agents import <file>
 devos install [folder] --key <KEY>
 devos upgrade [--local]
+devos init [folder]
 `);
   process.exit(2);
 }
@@ -41,6 +43,7 @@ else if (args[0] === "agents" && args[1] === "detect" && args.length === 2) code
 else if (args[0] === "agents") code = rosterCommand(args.slice(1));
 else if (args[0] === "install") code = installCommand(args.slice(1));
 else if (args[0] === "upgrade") code = upgradeCommand(args.slice(1));
+else if (args[0] === "init") code = await initCommand(args.slice(1));
 else {
   console.log(`devos: unknown command ${args[0]}`);
   code = 2;
