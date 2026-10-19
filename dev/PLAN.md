@@ -96,6 +96,25 @@ guard settings, deploy settings, registry receipt reference) → **`devos.config
 keep reading `devos.config.json` exactly as today, so no workflow changes for the split; `guard:config` fails if
 the generated file was edited by hand. Developer preferences (§4) only seed `project.json` at init.
 
+## 7a. Model choice (owner request, 2026-10-19)
+
+**Today the method is fixed to two tools and one builder family:** the builder runs through the Cursor CLI and
+`builder-model.mjs` builds ids as `grok-4.7-<effort>[-fast]`; the reviewer, planner and supervisor run through the
+Claude Code CLI with Claude model ids, `--effort`, `--fallback-model` and a JSON schema for the verdict; usage-limit
+detection and account switching know only these two tools.
+
+**v1 (E04):** any model the developer has **inside those two tools**. The developer profile and `devos/project.json`
+gain a `models` section: builder `{ tool: "cursor", model: <any id from \`agent models\`>, effort_ids: <optional
+map low|medium|high|xhigh → id> }` — without the map, one id serves every effort; reviewer `{ tool: "claude-code",
+light: <id>, deep: <id>, fallback: <id> }`; supervisor `<id>`. `devos init` lists the models each CLI reports and
+asks. `builder-model.mjs` reads the map instead of the Grok naming; the Grok family stays the shipped default. Rule:
+when the builder and the reviewer would be the same model, `devos doctor` warns (a reviewer grading its own model's
+work is weaker); it never blocks.
+
+**v1.1 (adapters):** other CLIs as builder or reviewer (for example Codex CLI or Gemini CLI). Each adapter needs: the
+invocation, structured output for the verdict, usage-limit patterns and reset parsing, usage counts, and account
+switching. One adapter per task after v1.0, chosen by demand.
+
 ## 8. Contract and registry
 
 **In the repository:** `devos/contract.json` — contract version, project key, repository, accepted-by GitHub
@@ -214,7 +233,7 @@ and probe paths (Tower ADR-004) · `devos-deploy.yml` production URL (`vars.TOWE
 | E01 | Repository, verbatim payload, manifest, version | 2 | — | — | 103 files byte-identical to the Tower @ `a49ca6d`; manifest rebuilds identically; `devos --version` |
 | E02 | Config split: engine defaults + project file → generated config; `guard:config` | 3 | E01 | you | a Tower fixture `project.json` regenerates the Tower's `devos.config.json` deep-equal; staged guards pass |
 | E03 | Generalize the Tower-specific lines into project settings; module setup items from the pilot | 3 | E02 | you | E01's list resolves to zero Tower names in shipped files; Tower and pilot fixtures reproduce both behaviours |
-| E04 | `devos` command: doctor, status, developer profile, version | 2 | E03 | — | doctor on a machine missing `gh` prints the fix and exits 1; profile holds no value-like string |
+| E04 | `devos` command: doctor, status, developer profile, version, **model choice (§7a)** | 2 | E03 | — | doctor on a machine missing `gh` prints the fix and exits 1; profile holds no value-like string; a fixture with a non-Grok builder model resolves through the map, and same-model builder/reviewer prints the warning |
 | E05 | `install` and `upgrade` (three-way, branch + PR, conflicts listed) | 3 | E04 | you | install into an empty repo → all guards pass; one changed engine line → PR touching only that file and the lock; an edited file listed as a conflict |
 | E06 | `init` part 1: contract, questions (onboarding definitions), blueprint through Claude Code, doc templates | 2 | E05 | you | declining stops with exit 1 and writes nothing; a scripted brief produces the documents and fence T01 that `guard:phases` accepts |
 | E07 | `init` part 2: repository, secrets by name through `gh`, variables, generated `SETUP.md`, first cycle | 3 | E06 | you | on a throwaway account: empty folder → repo → `setup-check` green → `devos-cycle` starts T01 |
@@ -252,7 +271,8 @@ have the contract and privacy text reviewed (it records GitHub identities and re
 
 Adopting existing or production projects (`devos adopt`, the in-development and production scenarios) ·
 the local runner at parity (M2) · stacks other than Next.js + the existing modules · local event reporting
-(ingest keys) · paid tiers and license keys · a package registry.
+(ingest keys) · builder or reviewer CLIs other than Cursor and Claude Code (§7a, v1.1) · paid tiers and license
+keys · a package registry.
 
 ## 15. Risks → mitigation
 
