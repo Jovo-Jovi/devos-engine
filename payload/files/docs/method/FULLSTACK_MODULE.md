@@ -118,7 +118,7 @@ method patch after review; they never override a fence.
 They follow the same contract as the database module: **a module is declared, never assumed; every
 run proves it against a throwaway local copy; no agent touches a hosted service; production moves
 only in `devos-deploy` after the human's merge, before the app.** Pick the modules a product needs;
-a real product rarely needs two data stores (the pilot runs both only to test the method).
+a real product rarely needs two data stores (the method's first project ran both only to test the method).
 
 | | Database (Supabase) | Object storage (R2) | Content store (Firestore) |
 |---|---|---|---|

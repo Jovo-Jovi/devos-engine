@@ -32,7 +32,7 @@
     {
       "path": ".claude/commands/devos-new-project.md",
       "stored": "dot-claude/commands/devos-new-project.md",
-      "sha256": "92a3ebf63b3b5dff91e735e4821b963471e7d78be6b513a95906bdcf02d8be07",
+      "sha256": "f19430c41f62e50c42130c44cb096595f1597b7b4f1ef9403ad9036bd4503731",
       "owner": "engine"
     },
     {
@@ -90,21 +90,9 @@
       "owner": "engine"
     },
     {
-      "path": ".cursor/rules/10-security-data.mdc",
-      "stored": "dot-cursor/rules/10-security-data.mdc",
-      "sha256": "b97084adac2d0f609851a639e57244c964546f909c7216e2d87b2788195244f7",
-      "owner": "engine"
-    },
-    {
       "path": ".cursor/rules/20-bilingual-rtl.mdc",
       "stored": "dot-cursor/rules/20-bilingual-rtl.mdc",
       "sha256": "fac4cefdc04c0a78157fa88747177071f39cf4bc5f0e4cd6cdbb56dfad840d01",
-      "owner": "engine"
-    },
-    {
-      "path": ".cursor/rules/30-vocabulary.mdc",
-      "stored": "dot-cursor/rules/30-vocabulary.mdc",
-      "sha256": "2389cf77bd1908a53283d76b962bd918ed12bb1703d6db851299276c65078747",
       "owner": "engine"
     },
     {
@@ -206,7 +194,7 @@
     {
       "path": ".github/workflows/devos-deploy.yml",
       "stored": "dot-github/workflows/devos-deploy.yml",
-      "sha256": "5f932e69af72d81dc4ad0ef22e4c063b3b8e8ec384b435f230c607b2e62a4ab2",
+      "sha256": "7a79c3f122e884b86866f5c1d39a578f95b4ee1e035d010bd21d443ce7ed0df4",
       "owner": "engine"
     },
     {
@@ -218,7 +206,7 @@
     {
       "path": ".github/workflows/devos-intake.yml",
       "stored": "dot-github/workflows/devos-intake.yml",
-      "sha256": "adfc0243124dfd3c714b8dd95fb4a64e66b5f341e2a5cb886153544e450de271",
+      "sha256": "168a454676ac25b7d726f0e3f8f5c7365120983127fb019ce9f6b2b82a4459c9",
       "owner": "engine"
     },
     {
@@ -260,13 +248,13 @@
     {
       "path": "devos/engine.defaults.json",
       "stored": "devos/engine.defaults.json",
-      "sha256": "3cbabc996a089c63fa97170dc84e12b4d07bec48f2f7448745e29da6a0aed07d",
+      "sha256": "5799b5026f09e1bd28eacd04fb2117ffd03e4910cc758d920f09bf2375a6a250",
       "owner": "engine"
     },
     {
       "path": "devos/prompts/builder.md",
       "stored": "devos/prompts/builder.md",
-      "sha256": "6b3ad446fd8907e6f337594c45cb0d0596a8b3c647a59c525aba9181c6bcedbd",
+      "sha256": "20a4c15e8a48453dde04a3ac1863e3264d118aa2adc57fb5219a17beb5940d05",
       "owner": "engine"
     },
     {
@@ -278,25 +266,25 @@
     {
       "path": "devos/prompts/intake.md",
       "stored": "devos/prompts/intake.md",
-      "sha256": "d02def05b8b4df95f645eaf9a6ad41ada139815fe295cf40195db26cffebd457",
+      "sha256": "ab367704d7e67bb7e39263e60dab25c500e8fd2b14fdb1e4b1be92b659e3591f",
       "owner": "engine"
     },
     {
       "path": "devos/prompts/method.md",
       "stored": "devos/prompts/method.md",
-      "sha256": "54de314710c7a3a4e0a488eccf61cc6367de7b57c2bb9e5321e63eff05327996",
+      "sha256": "49396a4db50cc2c6cdacbd02ab70b2c86da199796c04b3ef4c6dddd5ee3db3e2",
       "owner": "engine"
     },
     {
       "path": "devos/prompts/reviewer.md",
       "stored": "devos/prompts/reviewer.md",
-      "sha256": "1324789659a53a5ba04faf17b3587582c5f9d730e0a571a721075590f014f0a6",
+      "sha256": "554ea099cca93dd23aeae26d84fda71a049918f4aad0aff82ed5ad66efbc37d8",
       "owner": "engine"
     },
     {
       "path": "devos/prompts/revise.md",
       "stored": "devos/prompts/revise.md",
-      "sha256": "883db3b19c782e882495be7050299e286bd9100ecc378a1e2bd48052483f1b83",
+      "sha256": "9b4dbc795906c660cb1c059b05f244938af18d04dbe191aa27c938a2a9a4b6af",
       "owner": "engine"
     },
     {
@@ -332,13 +320,13 @@
     {
       "path": "devos/setup.json",
       "stored": "devos/setup.json",
-      "sha256": "f1aa741ba4805f1b4fbe9292d21845fc0046c4f18573b4bc46b45797ea449b83",
+      "sha256": "4cd1ccdec6dbd595090670cca123051d486d4eaa1281eb3982bb5f2899988c34",
       "owner": "engine"
     },
     {
       "path": "docs/method/AUTOMATION.md",
       "stored": "docs/method/AUTOMATION.md",
-      "sha256": "5e448f38a80e38655b7ccdfb381fb452db00d278cb6feb57e5d5c69361851eb1",
+      "sha256": "ba541062f8555c24ad2ceb784f74b47d82953fa02026eb14535416989b6338f3",
       "owner": "engine"
     },
     {
@@ -350,13 +338,13 @@
     {
       "path": "docs/method/FULLSTACK_MODULE.md",
       "stored": "docs/method/FULLSTACK_MODULE.md",
-      "sha256": "8112666987337dd98f99711fda613449550dc768551947697b9bb7472ae790f7",
+      "sha256": "63b2116cd2116ffcbbe0d07c4b4891d823eabf4bf76b9dc179b1c9fe890fae64",
       "owner": "engine"
     },
     {
       "path": "docs/method/PRECEDENTS.md",
       "stored": "docs/method/PRECEDENTS.md",
-      "sha256": "d0f39489b867d047bac9100cc36ff121d869ebd901fce29bf8a4ee65bac61308",
+      "sha256": "3e97972a8a611ea9c1db1355194d3ce64b5ef13140ad52e5d55aff0a192c5745",
       "owner": "engine"
     },
     {
@@ -404,7 +392,7 @@
     {
       "path": "scripts/devos/doctor.mjs",
       "stored": "scripts/devos/doctor.mjs",
-      "sha256": "8db66132299796023231e0f41d0b052fd1020f75ad70db5baaabbed9bd870159",
+      "sha256": "7313030650eaa1e23bfdd3deb37065553ae5f48d6dbb008fa29bff31bb332a05",
       "owner": "engine"
     },
     {
@@ -470,7 +458,7 @@
     {
       "path": "scripts/devos/probe.mjs",
       "stored": "scripts/devos/probe.mjs",
-      "sha256": "383fcbf9e79e04449539caf92239c23d7b4cbbd2cb4731661965aaae9d0053f7",
+      "sha256": "0aed27220f7effb6e0bac46cd1a5f3363dd1cef0258a7d7e71073e01d57afc73",
       "owner": "engine"
     },
     {
@@ -488,7 +476,7 @@
     {
       "path": "scripts/devos/render-prompt.mjs",
       "stored": "scripts/devos/render-prompt.mjs",
-      "sha256": "fe05a1c8b16802a3993b4faea88adb9e8d0a2c081ab06d5c5611a9e0a61f746a",
+      "sha256": "ea85e44d9ce2c7460c0d9c8a1a7952861d6bb84c6ae6c5319a9757bc7a873370",
       "owner": "engine"
     },
     {
@@ -584,13 +572,13 @@
     {
       "path": "scripts/guards/design.mjs",
       "stored": "scripts/guards/design.mjs",
-      "sha256": "ab543ee3ca4312a176c6170072a28888c4a63a35541e7f37d438ec5e7cd1c755",
+      "sha256": "65e1feaf892d34198164a3a949fd84db1add5340c2b45ae4491381ea1fd2b377",
       "owner": "engine"
     },
     {
       "path": "scripts/guards/i18n.mjs",
       "stored": "scripts/guards/i18n.mjs",
-      "sha256": "50740fccf4668cc01e839640a009814d51cd42a82b60e62334dc730be7c48c4e",
+      "sha256": "31ebc4ec6907fe7e31b404a4667b3453fe56cd514c053b43e668d9d6df1fba8d",
       "owner": "engine"
     },
     {
@@ -614,7 +602,7 @@
     {
       "path": "scripts/guards/naming.mjs",
       "stored": "scripts/guards/naming.mjs",
-      "sha256": "339a869bbd560cb721c64b93011e6dcd269d1da0657e50c5cf83709c8891af9a",
+      "sha256": "c415b4d40d609cc03399dbf8b31545058bfec39833b5c2883da98c525bfcf787",
       "owner": "engine"
     },
     {

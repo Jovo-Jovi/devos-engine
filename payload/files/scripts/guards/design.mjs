@@ -1,5 +1,7 @@
 // guard:design — logical properties only, tokens only, no third-party hosts (DESIGN_SYSTEM, I18N_MODEL §4).
+import { existsSync, readFileSync } from "node:fs";
 import { hasSrc, srcFiles, scan, result } from "./lib.mjs";
+import { P } from "../devos/lib.mjs";
 
 const TOKENS = "src/styles/tokens.css";
 
@@ -17,15 +19,26 @@ const TSX_RULES = [
   { re: /\b(marginLeft|marginRight|paddingLeft|paddingRight|borderLeft|borderRight)\b/, label: "physical style prop" },
   { re: /\btextAlign\s*:\s*["'](left|right)["']/, label: "physical textAlign" },
 ];
-// Tower configuration (docs/DESIGN_SYSTEM.md §5, PR-34): the Tower must name GitHub origins in code. Allowed hosts:
-//   github.com                          — evidence links `https://github.com/<repo>/blob/<commit>/<path>` (EvidenceLink)
-//   avatars.githubusercontent.com       — the owner's GitHub avatar origin in the CSP `img-src`
-//   token.actions.githubusercontent.com — the OIDC issuer and JWKS the ingestion route verifies against
-// Any other host is still a finding. A new host is a method change (PR-28), not an edit here.
-const ALLOWED_HOSTS = ["github.com", "avatars.githubusercontent.com", "token.actions.githubusercontent.com"];
-const HOST_RULE = [{ re: new RegExp(`https?:\\/\\/(?!localhost\\b|127\\.0\\.0\\.1\\b|(?:${ALLOWED_HOSTS.map((h) => h.replace(/\./g, "\\.")).join("|")})(?![\\w.-]))[^\\s"'\`)]+`), label: "third-party host" }];
+function readSetting(path, check) {
+  const file = existsSync(P("devos.config.json")) ? "devos.config.json" : "devos/engine.defaults.json";
+  let cur = JSON.parse(readFileSync(P(file), "utf8"));
+  for (const key of path) {
+    if (cur === null || typeof cur !== "object" || !Object.hasOwn(cur, key)) throw new Error(`config: ${path.join(".")} missing`);
+    cur = cur[key];
+  }
+  if (!check(cur)) throw new Error(`config: ${path.join(".")} missing`);
+  return cur;
+}
+
+function hostRule(hosts) {
+  const listed = hosts.map((host) => host.replace(/\./g, "\\.")).join("|");
+  const extra = listed ? `|(?:${listed})(?![\\w.-])` : "";
+  return [{ re: new RegExp(`https?:\\/\\/(?!localhost\\b|127\\.0\\.0\\.1\\b${extra})[^\\s"'\`)]+`), label: "third-party host" }];
+}
 
 export default function design() {
+  const hosts = readSetting(["guards", "design", "allowed_hosts"], Array.isArray);
+  const HOST_RULE = hostRule(hosts);
   if (!hasSrc()) return result("N/A", [], "src/ does not exist yet");
   const css = srcFiles([".css"]).filter((f) => f !== TOKENS);
   const code = srcFiles([".ts", ".tsx"]);

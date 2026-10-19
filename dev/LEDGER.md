@@ -7,8 +7,8 @@ review (Opus) and the owner reads the verdict before committing. Plan: `dev/PLAN
 |---|---|---|---|---|---|---|
 | E01 | Repository, verbatim payload, manifest, version | 2 | — | v2 | [x] | PASS a1 — dev/reviews/E01-a1.md |
 | E02 | Config split: engine defaults + project file → generated config; `guard:config` | 3 | owner | v3 | [x] | PASS a1 — dev/reviews/E02-a1.md |
-| E03 | Generalize the Tower-specific lines into project settings; module setup items from the pilot | 3 | owner | v2 issued | [ ] | — |
-| E04 | `devos` command: doctor, status, developer profile, version, agent roster (PLAN §7a) | 2 | — | fence on PASS of E03 | [ ] | — |
+| E03 | Generalize the Tower-specific lines into project settings; module setup items from the pilot | 3 | owner | v4 | [x] | PASS a3 — dev/reviews/E03-a3.md · remote MERGE — dev/reviews/E03-a3-remote.md |
+| E04 | `devos` command: doctor, status, developer profile, version, agent roster (PLAN §7a) | 2 | — | v3 issued | [ ] | — |
 | E11 | Agent adapters v1: roster in the runner, Cursor and Claude Code in either role, builder picked from the pool (PLAN §7a) | 3 | owner | fence on PASS of E04 | [ ] | — |
 | E05 | `install` and `upgrade` (three-way, branch + PR, conflicts listed) | 3 | owner | fence on PASS of E11 | [ ] | — |
 | E06 | `init` part 1: contract, questions, blueprint through Claude Code, doc templates | 2 | owner | fence on PASS of E05 | [ ] | — |
@@ -29,3 +29,13 @@ review (Opus) and the owner reads the verdict before committing. Plan: `dev/PLAN
 |---|---|---|---|
 | TR1 | Registry: claims, App installation binding, acceptance records, unique keys, receipt route | `devos-control-tower` (change request after T11) | not filed |
 | TR2 | Ingestion for registered developer projects; disconnect on uninstall; Registered projects view | same | not filed |
+
+## Follow-ups from reviews
+
+| From | Item | Lands in |
+|---|---|---|
+| E03 a2 remote | The shipped handbook names the client project NEL / Nile Egypt Labs as its case study — owner decides if public; recommended: anonymize, add NEL/Nile/devos-plan to the release-check patterns | E10 (owner decision first) |
+| E03 a2 remote | Prompts, workflows and engine defaults cite the reference project's OD numbers (OD-02…OD-08) | E06 |
+| E03 a2 remote | `vercel-bypass` is recommended even when `deploy.bypass` is false — gate it on the setting | E07 |
+| E03 a3 remote | `devos-new-project.md` reads "Copy the copied `.claude/settings.json` last" (fence wording) | E06 |
+| E03 a3 remote | PRECEDENTS PR-26 Born-from still says "the reference project" — sweep with the release wording check | E10 |

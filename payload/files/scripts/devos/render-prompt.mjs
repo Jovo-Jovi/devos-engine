@@ -36,8 +36,9 @@ function commonVars(cfg, rows) {
     BUILDER_MODEL: env.DEVOS_BUILDER_MODEL || cfg.builder.model,
     BUILDER_EFFORT: env.DEVOS_BUILDER_EFFORT || cfg.builder.default_effort || "high",
     BUILDER_FAST: env.DEVOS_BUILDER_FAST || "no",
+    PROJECT_KEY: cfg.project ?? "",
     PREVIEW_LINE: env.DEVOS_PREVIEW_URL
-      ? `- Preview deployment of this branch: ${env.DEVOS_PREVIEW_URL} (check it with \`node scripts/devos/probe.mjs --base ${env.DEVOS_PREVIEW_URL} /\`; previews sit behind the Vercel login by design, Tower ADR-004).\n`
+      ? `- Preview deployment of this branch: ${env.DEVOS_PREVIEW_URL} (check it with \`node scripts/devos/probe.mjs --base ${env.DEVOS_PREVIEW_URL} /\`; previews sit behind the Vercel login unless the project sets a protection bypass).\n`
       : "",
     SCREENS_LINE: screensLine(screens),
   };

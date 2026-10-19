@@ -1,19 +1,19 @@
 {
-  "$comment": "PR-27. Everything outside the repository the method needs for the Tower: GitHub secrets and variables, and the app's Vercel environment. scripts/devos/setup-check.mjs checks NAMES only (never values) and keeps the 'Dev OS: setup needed' issue up to date. Same format as the pilot's devos/setup.json; items for inactive modules (r2, firebase) and the Vercel bypass are absent on purpose (Tower ADR-004). when: always | module:<name> | var:<NAME> | method. blocks: cycle | deploy | none.",
+  "$comment": "PR-27. Everything outside the repository the method needs: GitHub secrets and variables, and the app's Vercel environment. scripts/devos/setup-check.mjs checks names only and keeps the Dev OS setup issue up to date. when: always | module:<name> | var:<NAME> | method. blocks: cycle | deploy | none.",
   "items": [
     {
       "id": "cursor",
       "title": "Cursor key for the builder (one or two accounts)",
       "kind": "secret",
       "names": ["CURSOR_API_KEY", "CURSOR_API_KEY_2"],
-      "any": true,
       "when": ["always"],
       "blocks": "cycle",
       "steps": [
-        "cursor.com → Dashboard → Integrations → API Keys → create a key named devos-tower.",
-        "GitHub → this repository → Settings → Secrets and variables → Actions → New repository secret `CURSOR_API_KEY`.",
-        "Optional second account (PR-29): `CURSOR_API_KEY_2`."
-      ]
+        "cursor.com → Dashboard → Integrations → API Keys → create a key named devos.",
+        "GitHub → this repository → Settings → Secrets and variables → Actions → New repository secret `CURSOR_API_KEY`, paste the key.",
+        "Optional second account (PR-29): its key as `CURSOR_API_KEY_2`. A run then switches to it when the first reaches its usage limit."
+      ],
+      "any": true
     },
     {
       "id": "claude",
@@ -26,33 +26,46 @@
       "steps": [
         "On your computer run `claude setup-token` and sign in with your Claude plan.",
         "Add the token as the repository secret `CLAUDE_CODE_OAUTH_TOKEN` (or an API key as `ANTHROPIC_API_KEY`).",
-        "Optional second account (PR-29): `CLAUDE_CODE_OAUTH_TOKEN_2` (or `ANTHROPIC_API_KEY_2`)."
+        "Optional second account (PR-29): `CLAUDE_CODE_OAUTH_TOKEN_2` (or `ANTHROPIC_API_KEY_2`). A review then switches to it when the first reaches its usage limit."
       ]
     },
     {
       "id": "pat-method",
-      "title": "Runner token that may change workflows (method fixes) — a separate token for this repository",
+      "title": "Runner token that may change workflows (method fixes)",
       "kind": "secret",
       "names": ["DEVOS_PAT"],
       "when": ["method"],
       "blocks": "cycle",
       "steps": [
-        "GitHub → Settings → Developer settings → Personal access tokens → Fine-grained → Generate a NEW token (never reuse the pilot's).",
-        "Repository access: only devos-control-tower. Permissions (Read and write): Contents, Pull requests, Workflows, Issues, Actions, Commit statuses. Expiry ≤ 90 days. Once set, the runner uses it for every gh call (dispatch, comments, statuses, merges), not only for workflow pushes.",
-        "Add it as the repository secret `DEVOS_PAT`. Needed only when a method fix (TM01) changes a workflow file."
+        "GitHub → your avatar → Settings → Developer settings → Personal access tokens → Fine-grained → Generate.",
+        "Repository access: only this repository. Permissions (Read and write): Contents, Pull requests, Issues, Actions, Commit statuses, **Workflows**.",
+        "Add it as the repository secret `DEVOS_PAT`. GitHub's own runner token can never push a change to `.github/workflows/`, so a method fix that touches a workflow needs this one."
       ]
     },
     {
       "id": "vercel",
-      "title": "Vercel deploy access (private project, Standard Deployment Protection)",
+      "title": "Vercel deploy access",
       "kind": "secret",
       "names": ["VERCEL_TOKEN", "VERCEL_ORG_ID", "VERCEL_PROJECT_ID"],
       "when": ["var:DEVOS_VERCEL"],
       "blocks": "deploy",
       "steps": [
-        "vercel.com → create the project `devos-control-tower` from this repository; Settings → Deployment Protection = Standard (verify by name in T01's review).",
-        "Account Settings → Tokens → create `devos-tower` (scope: your team). Project → Settings → General: copy the Project ID; team Settings: copy the Team ID (`VERCEL_ORG_ID`).",
-        "Add the three as repository secrets. Do NOT create a Protection Bypass for Automation secret (Tower ADR-004)."
+        "vercel.com → Account Settings → Tokens → create `devos` (scope: your team).",
+        "Project → Settings → General: copy the Project ID; team Settings: copy the Team ID (`VERCEL_ORG_ID`).",
+        "Add the three as repository secrets (SETUP.md §11.2)."
+      ]
+    },
+    {
+      "id": "vercel-bypass",
+      "title": "Vercel protection bypass (previews and smoke tests)",
+      "kind": "secret",
+      "names": ["VERCEL_AUTOMATION_BYPASS_SECRET"],
+      "when": ["var:DEVOS_VERCEL"],
+      "blocks": "none",
+      "level": "recommended",
+      "steps": [
+        "Vercel → project → Settings → Deployment Protection → Protection Bypass for Automation → create a secret.",
+        "Add it as the repository secret `VERCEL_AUTOMATION_BYPASS_SECRET`."
       ]
     },
     {
@@ -63,7 +76,9 @@
       "value": "true",
       "when": ["always"],
       "blocks": "deploy",
-      "steps": ["GitHub → Settings → Secrets and variables → Actions → Variables → New repository variable `DEVOS_VERCEL` = `true`."]
+      "steps": [
+        "GitHub → Settings → Secrets and variables → Actions → Variables → New repository variable `DEVOS_VERCEL` = `true`."
+      ]
     },
     {
       "id": "supabase-secrets",
@@ -73,9 +88,8 @@
       "when": ["module:supabase"],
       "blocks": "deploy",
       "steps": [
-        "Supabase → New project `devos-control-tower` (after the M0 capacity check: paid plan, second organisation or co-location — your choice). Authentication → Providers: GitHub ON with the Tower's GitHub OAuth app client id/secret; every other provider OFF; Email OFF.",
-        "Copy the project reference, set the database password, create an access token; choose a backup passphrase and keep a copy offline.",
-        "Add the four repository secrets."
+        "Follow SETUP.md §12.1 (project, reference id, database password, access token).",
+        "Add the four repository secrets (§12.2). Keep a copy of the backup passphrase offline."
       ]
     },
     {
@@ -86,54 +100,101 @@
       "value": "true",
       "when": ["module:supabase"],
       "blocks": "deploy",
-      "steps": ["Repository variable `DEVOS_SUPABASE` = `true`."]
+      "steps": [
+        "GitHub → Settings → Secrets and variables → Actions → Variables → New repository variable `DEVOS_SUPABASE` = `true`."
+      ]
     },
     {
       "id": "supabase-vercel",
-      "title": "Supabase values the app reads (Vercel)",
+      "title": "Supabase values the site reads (Vercel Production)",
       "kind": "vercel",
-      "names": ["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "SUPABASE_SECRET_KEY"],
+      "names": ["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"],
       "when": ["module:supabase", "var:DEVOS_VERCEL"],
       "blocks": "deploy",
       "steps": [
-        "Vercel → project → Settings → Environment Variables: the two NEXT_PUBLIC names for every environment; `SUPABASE_SECRET_KEY` for **Production only**, marked Sensitive (service role; read only by server modules, guard:data rule 6)."
+        "Vercel → project → Settings → Environment Variables → environment **Production**: add both (SETUP.md §12.3)."
       ]
     },
     {
-      "id": "tower-url",
-      "title": "The Tower's production URL (OIDC audience, host check)",
+      "id": "r2-secrets",
+      "title": "Cloudflare R2 bucket (deploy: storage preflight)",
+      "kind": "secret",
+      "names": ["R2_ENDPOINT", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_BUCKET", "R2_PUBLIC_BASE_URL"],
+      "when": ["module:r2"],
+      "blocks": "deploy",
+      "steps": [
+        "Follow SETUP.md §13.1: bucket, public access (r2.dev or a custom domain), an API token for that bucket only.",
+        "Add the five repository secrets (§13.3)."
+      ]
+    },
+    {
+      "id": "r2-var",
+      "title": "Turn on the storage preflight of the deploy",
+      "kind": "variable",
+      "names": ["DEVOS_R2"],
+      "value": "true",
+      "when": ["module:r2"],
+      "blocks": "deploy",
+      "steps": [
+        "Repository variable `DEVOS_R2` = `true`."
+      ]
+    },
+    {
+      "id": "r2-vercel",
+      "title": "R2 values the site reads (Vercel Production)",
       "kind": "vercel",
-      "names": ["TOWER_URL"],
+      "names": ["R2_ENDPOINT", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_BUCKET", "R2_PUBLIC_BASE_URL"],
+      "when": ["module:r2", "var:DEVOS_VERCEL"],
+      "blocks": "deploy",
+      "steps": [
+        "Vercel → Environment Variables → **Production**: the same five names; mark the two keys Sensitive (SETUP.md §13.4)."
+      ]
+    },
+    {
+      "id": "firebase-secrets",
+      "title": "Firebase project (deploy: rules and seed)",
+      "kind": "secret",
+      "names": ["FIREBASE_PROJECT_ID", "FIREBASE_DEPLOY_SERVICE_ACCOUNT"],
+      "when": ["module:firebase"],
+      "blocks": "deploy",
+      "steps": [
+        "Follow SETUP.md §13.2: project with Analytics off, Firestore database, the `devos-deploy` service account (Firebase Admin) and its JSON key.",
+        "Add both repository secrets (§13.3); paste the whole JSON, then delete the downloaded file."
+      ]
+    },
+    {
+      "id": "firebase-var",
+      "title": "Turn on the Firestore step of the deploy",
+      "kind": "variable",
+      "names": ["DEVOS_FIREBASE"],
+      "value": "true",
+      "when": ["module:firebase"],
+      "blocks": "deploy",
+      "steps": [
+        "Repository variable `DEVOS_FIREBASE` = `true`."
+      ]
+    },
+    {
+      "id": "firebase-vercel",
+      "title": "Firestore values the site reads (Vercel Production)",
+      "kind": "vercel",
+      "names": ["FIREBASE_PROJECT_ID", "FIREBASE_SERVICE_ACCOUNT"],
+      "when": ["module:firebase", "var:DEVOS_VERCEL"],
+      "blocks": "deploy",
+      "steps": [
+        "Vercel → Environment Variables → **Production**: `FIREBASE_PROJECT_ID`, and `FIREBASE_SERVICE_ACCOUNT` = the read-only `devos-runtime` key's whole JSON, Sensitive (SETUP.md §13.4)."
+      ]
+    },
+    {
+      "id": "production-url",
+      "title": "The project's production URL",
+      "kind": "vercel",
+      "names": ["DEVOS_PRODUCTION_URL"],
       "when": ["var:DEVOS_VERCEL"],
       "blocks": "deploy",
       "steps": [
-        "Vercel → Environment Variables → **Production**: `TOWER_URL` = `https://<the production hostname>` with no trailing slash. It is the OIDC audience every reporting project uses as `tower.url` (pilot ADR-005) and the host the machine routes accept (Tower ADR-004).",
-        "A custom domain later = a new audience: change it here and in every project's `tower.url` together."
+        "Vercel → Environment Variables → Production: DEVOS_PRODUCTION_URL = https://<the production hostname> with no trailing slash."
       ]
-    },
-    {
-      "id": "github-webhook",
-      "title": "GitHub App `devos-control-tower` webhook secret",
-      "kind": "vercel",
-      "names": ["GITHUB_WEBHOOK_SECRET"],
-      "when": ["var:DEVOS_GITHUB_APP"],
-      "blocks": "none",
-      "level": "recommended",
-      "steps": [
-        "GitHub → Settings → Developer settings → GitHub Apps → New: name `devos-control-tower`; Webhook URL `<TOWER_URL>/api/github/webhook`; generate a secret; permissions READ: Actions, Checks, Commit statuses, Pull requests, Metadata; events: workflow_run, check_run, status, pull_request, installation, installation_repositories (Tower ADR-003). Install it on devos-pilot and devos-control-tower only.",
-        "Vercel → Environment Variables → **Production**: `GITHUB_WEBHOOK_SECRET`, Sensitive. Needed from T03."
-      ]
-    },
-    {
-      "id": "github-app-var",
-      "title": "The GitHub App exists and is installed",
-      "kind": "variable",
-      "names": ["DEVOS_GITHUB_APP"],
-      "value": "true",
-      "when": ["always"],
-      "blocks": "none",
-      "level": "recommended",
-      "steps": ["Repository variable `DEVOS_GITHUB_APP` = `true` once the App is installed on the pilot and the Tower (T03 reads it as a precondition by name)."]
     }
   ]
 }

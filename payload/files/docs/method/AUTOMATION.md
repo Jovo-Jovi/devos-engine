@@ -166,7 +166,7 @@ or locale) · `data` (migrations, RLS, grants, server-only secret key, synthetic
 `devos/prompts/`: `builder.md`, `reviewer.md`, `intake.md`, `method.md`, `revise.md`, `doctor.md`, `supervisor.md`.
 `devos/schemas/`: verdict, intake (also revise and method), doctor, supervisor.
 
-Other scripts: `scripts/scene/art.mjs` is product code of the Tower (T04): it prints the scene-art prompts, checks generated images (size, ratio, seams, poles, bytes) and verifies the bundled set. `.gitattributes` merges `docs/DEVELOPMENT_JOURNAL.md` by union.
+`.gitattributes` merges `docs/DEVELOPMENT_JOURNAL.md` by union.
 
 A UI fence carries a header line `- Screens: \`<name> <path>[ click|hover|focus <selector>]\` · …` naming every page, state and interaction to capture. `screens.mjs` reads that line; without it, `devos.config.json` `screens.pages` is used.
 
@@ -210,13 +210,11 @@ A UI fence carries a header line `- Screens: \`<name> <path>[ click|hover|focus 
   receives them all at once; checks get presence flags, PR-32, PR-33): `CURSOR_API_KEY`(`_2`),
   `CLAUDE_CODE_OAUTH_TOKEN`(`_2`) or `ANTHROPIC_API_KEY`(`_2`), `DEVOS_PAT`, `VERCEL_TOKEN`,
   `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`, `SUPABASE_*` + `DEVOS_BACKUP_PASSPHRASE`, `R2_*`, `FIREBASE_*`
-  (the storage and Firestore modules are inactive in the Tower; their names stay for the method).
-  The Tower has **no** Vercel Protection Bypass for Automation secret (Tower ADR-004).
+  (each applies only while its module is active).
+  A project with `deploy.bypass` false has no Vercel Protection Bypass for Automation secret.
 - **Vercel Production environment** (names only; `devos-setup` checks them through the Vercel API):
   `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (every environment),
-  `SUPABASE_SECRET_KEY` (Sensitive), `TOWER_URL` (the production URL, no trailing slash: the OIDC
-  audience every reporting project uses as `tower.url` and the host the machine routes accept),
-  `GITHUB_WEBHOOK_SECRET` (Sensitive; the GitHub App `devos-control-tower`, needed from T03).
+  `SUPABASE_SECRET_KEY` (Sensitive), `DEVOS_PRODUCTION_URL` (the production URL, no trailing slash: the host the deploy's smoke test probes when `deploy.probe` is `production`)
 - **Repository variables** (GitHub → Settings → Secrets and variables → Actions → **Variables**).
   A variable that is not set takes its default; changes apply from the next run.
 
@@ -224,7 +222,6 @@ A UI fence carries a header line `- Screens: \`<name> <path>[ click|hover|focus 
   |---|---|---|---|
   | `DEVOS_PAUSED` | true · **false** | true stops every `devos-*` workflow (`ci.yml` still checks main) | §9 |
   | `DEVOS_VERCEL` | true · **unset** | previews per attempt and production deploys on Vercel | SETUP §11.2 |
-  | `DEVOS_GITHUB_APP` | true · **unset** | the GitHub App `devos-control-tower` exists and is installed on the pilot and the Tower; T03 reads it as a precondition by name | SETUP §12.5 |
   | `DEVOS_PREVIEW_DB` | true · **unset** | with the database module, previews use their own database | FULLSTACK_MODULE §2 |
   | `DEVOS_SUPABASE` | true · **unset** | deploy step: database backup, then migrations | SETUP §12 |
   | `DEVOS_R2` | true · **unset** | deploy step: storage preflight | SETUP §13 |

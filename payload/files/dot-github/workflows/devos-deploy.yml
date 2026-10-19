@@ -220,11 +220,30 @@ jobs:
           echo "::notice title=Dev OS::Deployed $(git rev-parse --short HEAD) to $TARGET: $url"
       - name: Smoke test the deployment
         env:
-          # Tower ADR-004: no bypass secret. Generated deployment URLs sit behind Vercel
-          # Authentication (Standard), so production is probed on its own domain: vars.TOWER_URL when
-          # set, else the production hostname (public, not a secret; devos/setup.json tower-url).
-          URL: ${{ (inputs.target || 'production') == 'production' && (vars.TOWER_URL || 'https://devos-control-tower.vercel.app') || steps.d.outputs.url }}
+          TARGET: ${{ inputs.target || 'production' }}
+          DEVOS_PRODUCTION_URL: ${{ vars.DEVOS_PRODUCTION_URL }}
+          DEPLOYMENT_URL: ${{ steps.d.outputs.url }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
         run: |
           # Probe the deployment itself, never a local server: an empty URL is a failure (PR-16).
-          case "$URL" in https://*) ;; *) echo "::error title=Dev OS::No deployment URL to smoke test"; exit 1 ;; esac
-          node scripts/devos/probe.mjs --base "$URL" --strict /
+          node --input-type=module <<'EOF'
+          import { readFileSync } from "node:fs";
+          import { spawnSync } from "node:child_process";
+          import { smokeTarget } from "./scripts/devos/probe.mjs";
+          const cfg = JSON.parse(readFileSync("devos.config.json", "utf8"));
+          const url = smokeTarget({
+            probe: cfg.deploy.probe,
+            target: process.env.TARGET,
+            productionUrl: process.env.DEVOS_PRODUCTION_URL || "",
+            fallback: cfg.deploy.production_url_fallback || "",
+            deploymentUrl: process.env.DEPLOYMENT_URL || "",
+          });
+          if (!url.startsWith("https://")) {
+            console.error("::error title=Dev OS::No deployment URL to smoke test");
+            process.exit(1);
+          }
+          const env = { ...process.env };
+          if (cfg.deploy.bypass !== true) delete env.VERCEL_AUTOMATION_BYPASS_SECRET;
+          const run = spawnSync(process.execPath, ["scripts/devos/probe.mjs", "--base", url, "--strict", ...cfg.deploy.probe_paths], { env, stdio: "inherit" });
+          process.exit(run.status ?? 1);
+          EOF

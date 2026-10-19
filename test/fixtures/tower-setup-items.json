@@ -1,0 +1,38 @@
+{
+  "items": [
+    {
+      "id": "github-webhook",
+      "title": "GitHub App `devos-control-tower` webhook secret",
+      "kind": "vercel",
+      "names": [
+        "GITHUB_WEBHOOK_SECRET"
+      ],
+      "when": [
+        "var:DEVOS_GITHUB_APP"
+      ],
+      "blocks": "none",
+      "level": "recommended",
+      "steps": [
+        "GitHub → Settings → Developer settings → GitHub Apps → New: name `devos-control-tower`; Webhook URL `<TOWER_URL>/api/github/webhook`; generate a secret; permissions READ: Actions, Checks, Commit statuses, Pull requests, Metadata; events: workflow_run, check_run, status, pull_request, installation, installation_repositories (Tower ADR-003). Install it on devos-pilot and devos-control-tower only.",
+        "Vercel → Environment Variables → **Production**: `GITHUB_WEBHOOK_SECRET`, Sensitive. Needed from T03."
+      ]
+    },
+    {
+      "id": "github-app-var",
+      "title": "The GitHub App exists and is installed",
+      "kind": "variable",
+      "names": [
+        "DEVOS_GITHUB_APP"
+      ],
+      "value": "true",
+      "when": [
+        "always"
+      ],
+      "blocks": "none",
+      "level": "recommended",
+      "steps": [
+        "Repository variable `DEVOS_GITHUB_APP` = `true` once the App is installed on the pilot and the Tower (T03 reads it as a precondition by name)."
+      ]
+    }
+  ]
+}

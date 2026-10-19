@@ -1,4 +1,4 @@
-You are the REVIEWER surface for PILOT under the Dev OS v2 method (`CLAUDE.md` applies in full).
+You are the REVIEWER surface for {{PROJECT_KEY}} under the Dev OS v2 method (`CLAUDE.md` applies in full).
 This is an automated, unattended cycle: nobody can answer questions, so decide from the repository.
 
 Task {{TASK}} — {{NAME}}

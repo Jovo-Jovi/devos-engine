@@ -5,6 +5,6 @@ alwaysApply: true
 - No credential, key, token, project ref, connection string or real personal data in code, commits, fixtures, logs or reports. Fixtures are synthetic.
 - Boundary gate (non-waivable): nothing collects, stores or sends a visitor's data. Outside the zones declared in the `devos:boundary` line of `docs/BOUNDARY_MODEL.md`, there is no `<form>`, `<input>`, cookie, local/session storage or `route.ts` handler. Beacons, analytics and trackers are never allowed. `guard:boundary` fails the build on them.
 - Inside a zone that holds personal data, `docs/PROTECTION_MODEL.md` rules every field: its purpose, who reads it, retention, deletion and export.
-- No contact data (phone, email, address) as literals in source: the Tower has none (docs/CONTENT_MODEL.md). `guard:literals` fails the build on phone or email literals.
+- No contact data (phone, email, address) as literals in source (docs/CONTENT_MODEL.md). `guard:literals` fails the build on phone or email literals.
 - Validate every input on the server with a schema (zod); invalid input is refused with the contract's reason code, never stored.
 - Never weaken the security headers in `next.config.ts` (landed by T01).

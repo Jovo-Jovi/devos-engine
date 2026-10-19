@@ -63,7 +63,7 @@ jobs:
         )
       )
     runs-on: ubuntu-latest
-    # A planning run reads the whole document set at Opus extra-high effort; the pilot's first took
+    # A planning run reads the whole document set at Opus extra-high effort; the reference project's first took
     # 26 minutes. 90 leaves room for bigger requests (PR-20).
     timeout-minutes: 90
     concurrency:

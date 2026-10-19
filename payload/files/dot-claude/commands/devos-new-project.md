@@ -45,8 +45,8 @@ Work in this order. Ask me only what research cannot answer, once, at the end of
 
 Never write application code. Everything you produce is documents, configuration and the first fence.
 
-Where to run this: in the **new** project's repository, not in the pilot. Copy this command to
-`~/.claude/commands/` so it is available everywhere. Then copy the pilot's method files into the
+Where to run this: in the **new** project's repository, not in the repository you copy the method from. Copy this command to
+`~/.claude/commands/` so it is available everywhere. Then copy the method files from an existing Dev OS project into the
 new repository (the list is in `docs/method/AUTOMATION.md` §11):
 
 - `scripts/devos/` and `scripts/guards/`
@@ -59,6 +59,5 @@ new repository (the list is in `docs/method/AUTOMATION.md` §11):
   `PRECEDENTS.md`
 
 The modules stay inactive until their files exist (`supabase/config.toml`, `firebase.json`,
-`src/lib/r2/`). Copy the
-pilot's `.claude/settings.json` **last**, after the bootstrap is written: its deny rules lock the
+`src/lib/r2/`). Copy the copied `.claude/settings.json` **last**, after the bootstrap is written: its deny rules lock the
 reviewer out of everything but reviews and fences.

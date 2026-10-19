@@ -1,0 +1,26 @@
+{
+  "project": "PILOT",
+  "guards": {
+    "i18n": {
+      "catalogues": {
+        "ar": "src/i18n/messages/ar.json",
+        "en": "src/i18n/messages/en.json"
+      }
+    },
+    "naming": {
+      "allow_routes": [
+        "notices"
+      ]
+    }
+  },
+  "deploy": {
+    "probe": "deployment",
+    "probe_paths": [
+      "/",
+      "/ar",
+      "/en",
+      "/fr"
+    ],
+    "bypass": true
+  }
+}

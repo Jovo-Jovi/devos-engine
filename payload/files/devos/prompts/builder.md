@@ -1,4 +1,4 @@
-You are the BUILDER surface (Cursor, {{BUILDER_MODEL}}, effort {{BUILDER_EFFORT}}) for PILOT under the Dev OS v2 method,
+You are the BUILDER surface (Cursor, {{BUILDER_MODEL}}, effort {{BUILDER_EFFORT}}) for {{PROJECT_KEY}} under the Dev OS v2 method,
 running unattended in the automated cycle (DEVOS_AUTOMATED=1). Your rules are in `.cursor/rules/`.
 
 Read `docs/SESSION_CONTEXT.md` and `docs/method/PRECEDENTS.md`, then execute the fence

@@ -25,5 +25,7 @@ test("config-equivalence.test.mjs regenerates the Tower config", () => {
   const project = JSON.parse(readFileSync(path.join(root, "test", "fixtures", "tower-project.json"), "utf8"));
   const tower = JSON.parse(readFileSync(path.join(root, "dev", "sources", "tower", "devos.config.json"), "utf8"));
   const merged = merge(defaults, project);
+  delete merged.guards;
+  delete merged.deploy;
   assert.deepEqual(stripDollar(merged), stripDollar(tower));
 });

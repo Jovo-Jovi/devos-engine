@@ -1,8 +1,18 @@
 // guard:i18n — every catalogue exists with identical keys and no empty values; no hardcoded lang (I18N_MODEL §3).
+import { existsSync, readFileSync } from "node:fs";
 import { read, exists, hasSrc, srcFiles, scan, result } from "./lib.mjs";
+import { P } from "../devos/lib.mjs";
 
-// Tower configuration (docs/I18N_MODEL.md §5, PR-34): one catalogue. A second locale restores the pilot's constant.
-const CATALOGUES = { en: "src/i18n/messages/en.json" };
+function catalogues() {
+  const file = existsSync(P("devos.config.json")) ? "devos.config.json" : "devos/engine.defaults.json";
+  let cur = JSON.parse(readFileSync(P(file), "utf8"));
+  for (const key of ["guards", "i18n", "catalogues"]) {
+    if (cur === null || typeof cur !== "object" || !Object.hasOwn(cur, key)) throw new Error(`config: guards.i18n.catalogues missing`);
+    cur = cur[key];
+  }
+  if (cur === null || typeof cur !== "object" || Array.isArray(cur)) throw new Error("config: guards.i18n.catalogues missing");
+  return cur;
+}
 
 function flatten(obj, prefix = "", out = {}) {
   for (const [k, v] of Object.entries(obj)) {
@@ -17,11 +27,10 @@ export default function i18n() {
   if (!hasSrc()) return result("N/A", [], "src/ does not exist yet");
   const findings = [];
   const flat = {};
-  for (const [loc, file] of Object.entries(CATALOGUES)) {
+  for (const [loc, file] of Object.entries(catalogues())) {
     if (!exists(file)) { findings.push(`${file} — missing catalogue`); continue; }
     try { flat[loc] = flatten(JSON.parse(read(file))); } catch (e) { findings.push(`${file} — invalid JSON: ${e.message}`); }
   }
-  // Tower configuration (docs/I18N_MODEL.md §5): key parity across the catalogues present (one today); the empty-value check stays.
   const locs = Object.keys(flat);
   for (const a of locs) for (const b of locs) if (a !== b) for (const k of Object.keys(flat[a])) if (!(k in flat[b])) findings.push(`${b}.json missing key ${k}`);
   for (const [loc, m] of Object.entries(flat)) for (const [k, v] of Object.entries(m)) {

@@ -1,8 +1,18 @@
 // guard:naming — no forbidden bare noun as a type, route segment or content field (GLOSSARY §3).
+import { existsSync, readFileSync } from "node:fs";
 import { read, exists, hasSrc, srcFiles, walk, result } from "./lib.mjs";
+import { P } from "../devos/lib.mjs";
 
-// Route segments that are user-facing URL copy, permitted by GLOSSARY §3.
-const ALLOW_ROUTES = new Set([]); // the pilot's "notices" exception does not apply to the Tower
+function allowRoutes() {
+  const file = existsSync(P("devos.config.json")) ? "devos.config.json" : "devos/engine.defaults.json";
+  let cur = JSON.parse(readFileSync(P(file), "utf8"));
+  for (const key of ["guards", "naming", "allow_routes"]) {
+    if (cur === null || typeof cur !== "object" || !Object.hasOwn(cur, key)) throw new Error("config: guards.naming.allow_routes missing");
+    cur = cur[key];
+  }
+  if (!Array.isArray(cur)) throw new Error("config: guards.naming.allow_routes missing");
+  return new Set(cur.map((name) => String(name).toLowerCase()));
+}
 
 export function forbiddenNouns() {
   const g = read("docs/GLOSSARY.md");
@@ -20,6 +30,7 @@ function contentKeys(value, path, out) {
 }
 
 export default function naming() {
+  const ALLOW_ROUTES = allowRoutes();
   const forbidden = forbiddenNouns();
   const findings = [];
 

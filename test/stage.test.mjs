@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
 import { LOCAL, SOURCE_COUNT } from "../tools/sources.mjs";
 
-const fileCount = SOURCE_COUNT + Object.keys(LOCAL.added).length;
+const fileCount = SOURCE_COUNT - Object.keys(LOCAL.removed).length + Object.keys(LOCAL.added).length;
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 

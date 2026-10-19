@@ -15,11 +15,19 @@
 //        VERCEL_PROJECT_ID, VERCEL_AUTOMATION_BYPASS_SECRET, GITHUB_SERVER_URL, GITHUB_RUN_ID.
 import { mkdirSync, writeFileSync, readFileSync, existsSync, readdirSync, rmSync } from "node:fs";
 import { execFileSync } from "node:child_process";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { P, emit, fail } from "./lib.mjs";
 
+const direct = process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href;
 const mode = process.argv[2];
 const arg = (n) => { const i = process.argv.indexOf(`--${n}`); return i >= 0 ? (process.argv[i + 1] ?? "") : ""; };
-const REPO = process.env.GITHUB_REPOSITORY || fail("GITHUB_REPOSITORY is not set");
+const REPO = process.env.GITHUB_REPOSITORY || (direct ? fail("GITHUB_REPOSITORY is not set") : "");
+
+export function previewBehindLogin(bypass) {
+  if (bypass) return { level: "warn", state: "behind the Vercel login" };
+  return { level: "info", state: "behind the Vercel login (expected)" };
+}
 const SERVER = process.env.GITHUB_SERVER_URL || "https://github.com";
 const OUT = P(".devos/doctor");
 const MARK = "<!-- devos-doctor -->";
@@ -249,6 +257,13 @@ async function diagnoseCi(f, ci, add) {
     todo: [{ who: "you", text: `If it is the task's code, comment:\n\n\`\`\`\n/devos revise ${note}\n\`\`\`\nThe reviewer reissues the fence and the builder fixes it. If it looks like a flake, press **Re-run failed jobs** on the [run](${ci.html_url}).` }] });
 }
 
+function deployBypass() {
+  const file = existsSync(P("devos.config.json")) ? "devos.config.json" : "devos/engine.defaults.json";
+  if (!existsSync(P(file))) return false;
+  const value = JSON.parse(readFileSync(P(file), "utf8"));
+  return value.deploy?.bypass === true;
+}
+
 async function diagnoseVercel(f, add) {
   const list = await vercel(`/v6/deployments?projectId=${process.env.VERCEL_PROJECT_ID}&limit=40`);
   if (!list || list.error) { f.evidence.push(`Vercel API: ${list?.error ?? "no token"}`); return; }
@@ -274,10 +289,12 @@ async function diagnoseVercel(f, add) {
   try { const r = await fetch(`${url}/`, { redirect: "manual", headers, signal: AbortSignal.timeout(20000) }); status = r.status; loc = r.headers.get("location") ?? ""; } catch (e) { loc = e.message; }
   const behindLogin = status === 401 || (status >= 300 && status < 400 && /vercel\.com\/(sso|login)/.test(loc));
   if (behindLogin) {
-    // Tower ADR-004: no Protection Bypass for Automation by design. A preview behind the Vercel login is
-    // expected; the runner takes its screenshots from the local build (PR-15).
-    add({ key: "vercel", label: "Vercel preview", level: "info", state: "behind the Vercel login (expected, ADR-004)", link: url,
-      todo: [{ who: "you", text: "Open the preview yourself while signed in to Vercel. No bypass secret is added (Tower ADR-004); screenshots come from the local build." }] });
+    const bypass = deployBypass();
+    const item = previewBehindLogin(bypass);
+    const text = bypass
+      ? "The preview is behind the Vercel login. Set the secret VERCEL_AUTOMATION_BYPASS_SECRET."
+      : "Open the preview yourself while signed in to Vercel. No bypass secret is added; screenshots come from the local build.";
+    add({ key: "vercel", label: "Vercel preview", level: item.level, state: item.state, link: url, todo: [{ who: "you", text }] });
     return;
   }
   add({ key: "vercel", label: "Vercel preview", level: status === 200 ? "ok" : "warn", state: status === 200 ? "ready" : `answers ${status}`, link: url, todo: [] });
@@ -359,6 +376,8 @@ async function publish() {
   console.log(`devos/gate → ${state}: ${desc}`);
 }
 
-if (mode === "collect") await collect();
-else if (mode === "publish") await publish();
-else fail("usage: doctor.mjs collect --pr <n> | publish [--claude file] [--dry-run]", 2);
+if (direct) {
+  if (mode === "collect") await collect();
+  else if (mode === "publish") await publish();
+  else fail("usage: doctor.mjs collect --pr <n> | publish [--claude file] [--dry-run]", 2);
+}

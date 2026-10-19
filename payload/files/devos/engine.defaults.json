@@ -85,7 +85,7 @@
     "e2e"
   ],
   "screens": {
-    "$comment": "Default pages when the fence has no `- Screens:` line (Tower B0 clean-up). filmstrip_ms and settle_max_ms are written into .devos/screens/motion.json. Signed-in pages need the M3 fixture states (DEVOS_SCREENS=1).",
+    "$comment": "Default pages when the fence has no - Screens: line. filmstrip_ms and settle_max_ms are written into .devos/screens/motion.json. Signed-in pages need the M3 fixture states (DEVOS_SCREENS=1).",
     "pages": [
       "/"
     ],
@@ -259,7 +259,7 @@
         "R2_BUCKET",
         "R2_PUBLIC_BASE_URL"
       ],
-      "env_note": "Locally they point at the emulator with throwaway keys (.devos/r2.env). In production: Vercel Production env (the two keys marked sensitive) and the same five as GitHub secrets for the deploy's storage preflight. R2_ENDPOINT is https://<account-id>.r2.cloudflarestorage.com; R2_PUBLIC_BASE_URL is the bucket's public URL (r2.dev for a pilot, a custom domain for a real product)."
+      "env_note": "Locally they point at the emulator with throwaway keys (.devos/r2.env). In production: Vercel Production env (the two keys marked sensitive) and the same five as GitHub secrets for the deploy's storage preflight. R2_ENDPOINT is https://<account-id>.r2.cloudflarestorage.com; R2_PUBLIC_BASE_URL is the bucket's public URL (r2.dev until the product has a custom domain)."
     },
     "firebase": {
       "$comment": "PR-26. Cloud Firestore as a server-read content store, seeded from firebase/seed/*.json. Active when firebase.json exists. Every run gets the Firestore emulator under a demo project id (scripts/devos/firebase.mjs).",
@@ -296,5 +296,26 @@
     "issue_title": "Dev OS: supervisor",
     "issue_label": "devos:supervisor",
     "note": "devos-supervisor.yml + scripts/devos/supervisor.mjs: notices stopped or stalled work, explains it with fixed rules (Claude, read-only, only when none fits), fixes what is safe (re-run, resume, continue, recover a rescue branch, start the next task) at most max_auto_per_key times per cause, and turns everything else into an issue, a proposal (/devos approve <id>) or setup steps. Never merges, pushes to main or handles a secret. Off: variable DEVOS_SUPERVISOR=off."
+  },
+  "guards": {
+    "design": {
+      "allowed_hosts": []
+    },
+    "i18n": {
+      "catalogues": {
+        "en": "src/i18n/messages/en.json"
+      }
+    },
+    "naming": {
+      "allow_routes": []
+    }
+  },
+  "deploy": {
+    "probe": "deployment",
+    "probe_paths": [
+      "/"
+    ],
+    "bypass": false,
+    "production_url_fallback": ""
   }
 }

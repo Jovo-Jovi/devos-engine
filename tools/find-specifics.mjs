@@ -5,6 +5,17 @@ import { engineRoot, normalizeLf } from "./sources.mjs";
 
 const PATTERNS = [/tower/i, /\bpilot\b/i, /\bADR-0\d\d\b/, /Jovo-Jovi/];
 
+function loadAllow() {
+  const file = path.join(engineRoot(), "tools", "specifics-allow.json");
+  if (!existsSync(file)) return [];
+  const parsed = JSON.parse(readFileSync(file, "utf8"));
+  return Array.isArray(parsed) ? parsed : [];
+}
+
+function isAllowed(allow, installed, line) {
+  return allow.some((entry) => entry.path === installed && entry.text === line);
+}
+
 function walkFiles(dir) {
   if (!existsSync(dir)) return [];
   const found = [];
@@ -22,6 +33,7 @@ function cell(text) {
 }
 
 const filesDir = path.join(engineRoot(), "payload", "files");
+const allow = loadAllow();
 const matches = [];
 for (const abs of walkFiles(filesDir)) {
   const stored = path.relative(filesDir, abs).split(path.sep).join("/");
@@ -29,6 +41,7 @@ for (const abs of walkFiles(filesDir)) {
   const text = normalizeLf(readFileSync(abs)).toString("utf8");
   const lines = text.split("\n");
   for (let index = 0; index < lines.length; index += 1) {
+    if (isAllowed(allow, installed, lines[index])) continue;
     if (!PATTERNS.some((pattern) => pattern.test(lines[index]))) continue;
     matches.push({ path: installed, line: index + 1, text: cell(lines[index]) });
   }
@@ -45,4 +58,9 @@ const body = [
   `Total: ${matches.length} lines in ${fileCount} files`,
 ].join("\n");
 
-writeFileSync(path.join(engineRoot(), "dev", "E01-specifics.md"), `${body}\n`);
+const summary = `${matches.length} ${fileCount}`;
+if (process.argv.includes("--check")) {
+  console.log(summary);
+} else {
+  writeFileSync(path.join(engineRoot(), "dev", "E01-specifics.md"), `${body}\n`);
+}

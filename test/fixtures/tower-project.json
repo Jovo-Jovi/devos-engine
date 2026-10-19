@@ -1,9 +1,37 @@
 {
   "project": "TOWER",
   "screens": {
-    "pages": ["/sign-in", "/"]
+    "pages": [
+      "/sign-in",
+      "/"
+    ]
   },
   "reviewer": {
-    "deep_paths_extra": ["src/lib/contract/**", "src/app/api/**"]
+    "deep_paths_extra": [
+      "src/lib/contract/**",
+      "src/app/api/**"
+    ]
+  },
+  "modules": {
+    "r2": {
+      "env_note": "Locally they point at the emulator with throwaway keys (.devos/r2.env). In production: Vercel Production env (the two keys marked sensitive) and the same five as GitHub secrets for the deploy's storage preflight. R2_ENDPOINT is https://<account-id>.r2.cloudflarestorage.com; R2_PUBLIC_BASE_URL is the bucket's public URL (r2.dev for a pilot, a custom domain for a real product)."
+    }
+  },
+  "guards": {
+    "design": {
+      "allowed_hosts": [
+        "github.com",
+        "avatars.githubusercontent.com",
+        "token.actions.githubusercontent.com"
+      ]
+    }
+  },
+  "deploy": {
+    "probe": "production",
+    "probe_paths": [
+      "/"
+    ],
+    "bypass": false,
+    "production_url_fallback": "https://devos-control-tower.vercel.app"
   }
 }

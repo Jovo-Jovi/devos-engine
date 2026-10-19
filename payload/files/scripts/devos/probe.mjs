@@ -10,9 +10,20 @@
 import { spawn } from "node:child_process";
 import http from "node:http";
 import { existsSync } from "node:fs";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { P } from "./lib.mjs";
 import { readEnvFile } from "./supabase.mjs";
 
+export function smokeTarget({ probe, target, productionUrl, fallback, deploymentUrl }) {
+  if (probe === "production" && target === "production") return productionUrl || fallback || "";
+  return deploymentUrl || "";
+}
+
+const direct = process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href;
+if (!direct) {
+  // imported for smokeTarget; the probe runs only as a script
+} else {
 const argv = process.argv.slice(2);
 const strict = argv.includes("--strict");
 const portIdx = argv.indexOf("--port");
@@ -98,3 +109,4 @@ try {
   }
 }
 process.exit(exit);
+}

@@ -8,8 +8,8 @@ function option(argv, name) {
   return argv[index + 1];
 }
 
-function taskLabel(entries) {
-  return [...new Set(entries.map((filePath) => LOCAL.changed[filePath] ?? LOCAL.added[filePath]))].join(", ");
+function taskLabel(entries, table) {
+  return [...new Set(entries.map((filePath) => table[filePath]))].join(", ");
 }
 
 const towerDir = option(process.argv, "--tower");
@@ -25,6 +25,7 @@ const problems = [];
 let identical = 0;
 const changed = [];
 const added = [];
+const removed = [];
 
 for (const entry of manifest.files) {
   const rel = entry.path;
@@ -57,6 +58,10 @@ for (const entry of manifest.files) {
 }
 
 for (const filePath of listed) {
+  if (LOCAL.removed[filePath]) {
+    removed.push(filePath);
+    continue;
+  }
   if (!manifestPaths.has(filePath)) problems.push(`extra ${filePath}`);
 }
 for (const filePath of Object.keys(LOCAL.changed)) {
@@ -65,6 +70,10 @@ for (const filePath of Object.keys(LOCAL.changed)) {
 for (const filePath of Object.keys(LOCAL.added)) {
   if (!manifestPaths.has(filePath)) problems.push(`missing ${filePath}`);
 }
+for (const filePath of Object.keys(LOCAL.removed)) {
+  if (!listed.has(filePath)) problems.push(`removed file missing in source: ${filePath}`);
+  if (manifestPaths.has(filePath)) problems.push(`removed file still in manifest: ${filePath}`);
+}
 
 if (problems.length > 0) {
   for (const problem of problems.sort()) console.log(problem);
@@ -72,4 +81,4 @@ if (problems.length > 0) {
 }
 
 const short = TOWER.commit.slice(0, 7);
-console.log(`${identical} identical, ${changed.length} changed (${taskLabel(changed)}), ${added.length} added (${taskLabel(added)}) — ${TOWER.repo}@${short}`);
+console.log(`${identical} identical, ${changed.length} changed (${taskLabel(changed, LOCAL.changed)}), ${added.length} added (${taskLabel(added, LOCAL.added)}), ${removed.length} removed (${taskLabel(removed, LOCAL.removed)}) — ${TOWER.repo}@${short}`);
