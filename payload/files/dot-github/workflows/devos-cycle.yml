@@ -117,6 +117,10 @@ jobs:
               "CLAUDE_CODE_OAUTH_TOKEN_2":"${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 != '' && '1' || '' }}",
               "ANTHROPIC_API_KEY":"${{ secrets.ANTHROPIC_API_KEY != '' && '1' || '' }}",
               "ANTHROPIC_API_KEY_2":"${{ secrets.ANTHROPIC_API_KEY_2 != '' && '1' || '' }}",
+              "OPENAI_API_KEY":"${{ secrets.OPENAI_API_KEY != '' && '1' || '' }}",
+              "OPENAI_API_KEY_2":"${{ secrets.OPENAI_API_KEY_2 != '' && '1' || '' }}",
+              "GEMINI_API_KEY":"${{ secrets.GEMINI_API_KEY != '' && '1' || '' }}",
+              "GEMINI_API_KEY_2":"${{ secrets.GEMINI_API_KEY_2 != '' && '1' || '' }}",
               "DEVOS_PAT":"${{ secrets.DEVOS_PAT != '' && '1' || '' }}"
             }
           VARS_JSON: ${{ toJSON(vars) }}
@@ -173,6 +177,8 @@ jobs:
       # PR-29: which account each agent starts with, and whether it switches on a usage limit.
       DEVOS_CURSOR_ACCOUNT: ${{ (inputs.cursor_account != 'default' && inputs.cursor_account) || vars.DEVOS_CURSOR_ACCOUNT || '1' }}
       DEVOS_CLAUDE_ACCOUNT: ${{ (inputs.claude_account != 'default' && inputs.claude_account) || vars.DEVOS_CLAUDE_ACCOUNT || '1' }}
+      DEVOS_CODEX_ACCOUNT: ${{ vars.DEVOS_CODEX_ACCOUNT || '1' }}
+      DEVOS_GEMINI_ACCOUNT: ${{ vars.DEVOS_GEMINI_ACCOUNT || '1' }}
       DEVOS_ACCOUNT_SWITCH: ${{ vars.DEVOS_ACCOUNT_SWITCH || 'auto' }}
     steps:
       # The agents never see a git credential: checkout keeps none, and only the push and gh
@@ -187,12 +193,15 @@ jobs:
         with:
           node-version: 22
 
-      - name: Install pnpm, Claude Code and the Cursor CLI
+      - name: Install pnpm and the agent CLIs
         run: |
           npm install -g pnpm@10 @anthropic-ai/claude-code
           curl https://cursor.com/install -fsS | bash
           echo "$HOME/.cursor/bin" >> "$GITHUB_PATH"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          tools=$(node scripts/devos/agents.mjs tools | sed -n 's/^tools=//p')
+          case " $tools " in *" codex "*) npm install -g @openai/codex ;; esac
+          case " $tools " in *" gemini "*) npm install -g @google/gemini-cli ;; esac
 
       - name: Supabase CLI (backend module, PR-17)
         uses: supabase/setup-cli@v1
@@ -233,7 +242,7 @@ jobs:
           CURSOR_KEY_2: ${{ secrets.CURSOR_API_KEY_2 }}
         run: |
           if [ -n "${{ steps.ag.outputs.builder_note }}" ]; then echo "${{ steps.ag.outputs.builder_note }}"; fi
-          if [ "${{ steps.ag.outputs.builder_tool }}" = "claude" ]; then
+          if [ "${{ steps.ag.outputs.builder_tool }}" != "cursor" ]; then
             POOL_MODEL="${{ steps.ag.outputs.builder_model }}" EFFORT_IN="${{ inputs.effort || 'fence' }}" node --input-type=module - >> "$GITHUB_OUTPUT" <<'EOF'
           import { existsSync, readFileSync } from "node:fs";
           import { parsePhases } from "./scripts/devos/lib.mjs";
@@ -293,6 +302,10 @@ jobs:
           CLAUDE_APIKEY_1: ${{ secrets.ANTHROPIC_API_KEY }}
           CLAUDE_OAUTH_2: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 }}
           CLAUDE_APIKEY_2: ${{ secrets.ANTHROPIC_API_KEY_2 }}
+          CODEX_KEY_1: ${{ secrets.OPENAI_API_KEY }}
+          CODEX_KEY_2: ${{ secrets.OPENAI_API_KEY_2 }}
+          GEMINI_KEY_1: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_KEY_2: ${{ secrets.GEMINI_API_KEY_2 }}
           MODEL: ${{ steps.bm.outputs.model }}
           DEVOS_BUILDER_MODEL: ${{ steps.bm.outputs.model }}
           DEVOS_BUILDER_EFFORT: ${{ steps.bm.outputs.effort }}
@@ -307,6 +320,8 @@ jobs:
           builder_id="${{ steps.ag.outputs.builder_id }}"
           if [ "$builder_tool" = "claude" ]; then
             accounts=$(devos_accounts claude)
+          elif [ "$builder_tool" = "codex" ] || [ "$builder_tool" = "gemini" ]; then
+            accounts=$(devos_accounts "$builder_tool")
           else
             accounts=$(devos_accounts cursor)
           fi
@@ -334,6 +349,10 @@ jobs:
           [ "$DEVOS_STAGES" -gt 1 ] && echo "stage $DEVOS_STAGE of $DEVOS_STAGES"
           if [ "$builder_tool" = "claude" ]; then
             [ -n "$accounts" ] || { echo "::error::set secret CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY (and optionally the _2 pair)"; exit 1; }
+          elif [ "$builder_tool" = "codex" ]; then
+            [ -n "$accounts" ] || { echo "::error::set secret OPENAI_API_KEY (and optionally OPENAI_API_KEY_2)"; exit 1; }
+          elif [ "$builder_tool" = "gemini" ]; then
+            [ -n "$accounts" ] || { echo "::error::set secret GEMINI_API_KEY (and optionally GEMINI_API_KEY_2)"; exit 1; }
           else
             [ -n "$accounts" ] || { echo "::error::no Cursor key: set secret CURSOR_API_KEY (and optionally CURSOR_API_KEY_2)"; exit 1; }
           fi
@@ -358,7 +377,10 @@ jobs:
             done ) &
           hb=$!
           ran_tool="$builder_tool"
-          if [ "$builder_tool" = "claude" ]; then
+          if [ "$builder_tool" = "codex" ] || [ "$builder_tool" = "gemini" ]; then
+            bash scripts/devos/run-agent.sh builder "$builder_tool" "$MODEL" "${{ steps.bm.outputs.effort }}" .devos/builder-prompt.md || exit 1
+            . .devos/builder-run.env
+          elif [ "$builder_tool" = "claude" ]; then
             node scripts/devos/role-env.mjs swap claude-builder || exit 1
             trap 'node scripts/devos/role-env.mjs restore || exit 1' EXIT
             EFFORT="${{ steps.bm.outputs.effort }}"
@@ -476,6 +498,10 @@ jobs:
                   fi
                   break
                 done
+              elif [ "$next_tool" = "codex" ] || [ "$next_tool" = "gemini" ]; then
+                if [ "$builder_tool" = "claude" ]; then node scripts/devos/role-env.mjs restore || exit 1; trap - EXIT; fi
+                bash scripts/devos/run-agent.sh builder "$next_tool" "$next_model" "${{ steps.bm.outputs.effort }}" .devos/builder-prompt.md || exit 1
+                . .devos/builder-run.env
               fi
             fi
           fi
@@ -692,6 +718,10 @@ jobs:
           CLAUDE_APIKEY_2: ${{ secrets.ANTHROPIC_API_KEY_2 }}
           CURSOR_KEY_1: ${{ secrets.CURSOR_API_KEY }}
           CURSOR_KEY_2: ${{ secrets.CURSOR_API_KEY_2 }}
+          CODEX_KEY_1: ${{ secrets.OPENAI_API_KEY }}
+          CODEX_KEY_2: ${{ secrets.OPENAI_API_KEY_2 }}
+          GEMINI_KEY_1: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_KEY_2: ${{ secrets.GEMINI_API_KEY_2 }}
           MODEL: ${{ steps.rp.outputs.model || needs.resolve.outputs.reviewer_model }}
           TURNS: ${{ steps.rp.outputs.max_turns || needs.resolve.outputs.reviewer_max_turns }}
           EFFORT: ${{ steps.rp.outputs.effort || needs.resolve.outputs.reviewer_effort }}
@@ -714,7 +744,7 @@ jobs:
           rev_line=$(node scripts/devos/agents.mjs reviewer --mode "$DEVOS_REVIEW_MODE")
           rev_tool=$(printf '%s\n' "$rev_line" | sed -n 's/^reviewer_tool=//p')
           rev_model=$(printf '%s\n' "$rev_line" | sed -n 's/^reviewer_model=//p')
-          if [ "$rev_tool" = "cursor" ]; then
+          if [ "$rev_tool" != "claude" ]; then
             MODEL="$rev_model"
           fi
           if [ -n "$METHOD_CHANGE" ]; then
@@ -728,7 +758,11 @@ jobs:
           node scripts/devos/render-prompt.mjs reviewer "$TASK" "$ATTEMPT" --out .devos/reviewer-prompt.md
           set +e
           ran_tool="$rev_tool"
-          if [ "$rev_tool" = "cursor" ]; then
+          if [ "$rev_tool" = "codex" ] || [ "$rev_tool" = "gemini" ]; then
+            bash scripts/devos/run-agent.sh reviewer "$rev_tool" "$MODEL" "${EFFORT:-high}" .devos/reviewer-prompt.md || exit 1
+            . .devos/reviewer-run.env
+            rc=$code
+          elif [ "$rev_tool" = "cursor" ]; then
             node scripts/devos/role-env.mjs swap cursor-reviewer || exit 1
             trap 'node scripts/devos/role-env.mjs restore || exit 1' EXIT
             accounts=$(devos_accounts cursor)

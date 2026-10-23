@@ -125,14 +125,16 @@ workflow may start late.
 |---|---|
 | `lib.mjs` | shared: config, PHASES parsing (`nextOpenTask`, `taskAfter`, method rows), globs, outputs, `.devos/*.env` |
 | `config.mjs` | builds `devos.config.json` from `devos/engine.defaults.json` and `devos/project.json`; `--write`, `--check`, `--print`; PR-39 |
-| `agents.mjs` | resolves the builder pool id, the reviewer model and `next --after` from `devos.config.json` `agents` (PR-41, PR-42) |
-| `role-env.mjs` | installs a role kit for a tool in the other role and restores the tool's own config (PR-42); `devos/roles/cursor-blueprint/` is the kit `devos init` gives Cursor while it writes the blueprint (PR-44) |
+| `agents.mjs` | resolves the builder pool id, the reviewer model and `next --after` from `devos.config.json` `agents`; `tools` lists the tools the agents use, so the cycle installs only those CLIs (PR-41, PR-42, PR-45) |
+| `role-env.mjs` | installs a role kit for a tool in the other role and restores the tool's own config (PR-42); `devos/roles/cursor-blueprint/` is the kit `devos init` gives Cursor while it writes the blueprint (PR-44); the kits `codex-builder`, `codex-reviewer`, `gemini-builder` and `gemini-reviewer` give Codex its `AGENTS.md` and Gemini its `GEMINI.md` for the run (PR-45) |
 | `next-task.mjs` | which task and attempt; refuses out-of-order product tasks |
 | `heavy.mjs` | heavy-run notice or hold (`DEVOS_HEAVY`) |
 | `builder-model.mjs` | the builder model id from the pool item's family, checked against `agent models` |
 | `modules.mjs` | starts every needed module (`supabase.mjs`, `r2.mjs`, `firebase.mjs`); `plannedModules()` |
 | `supabase.mjs` · `r2.mjs` · `firebase.mjs` | each module's local service, env file and checks (PR-17, PR-26) |
-| `accounts.sh` · `limit-check.mjs` | account order, credential export, limit detection (PR-29) |
+| `accounts.sh` · `limit-check.mjs` | account order, credential export, limit detection, for Cursor, Claude Code, Codex and Gemini (PR-29, PR-45) |
+| `run-agent.sh` | runs Codex or Gemini as the builder or the reviewer: its role kit, its accounts with the usage-limit switch, the watchdog for the builder, and `.devos/<role>-run.env` (`code`, `used`, `accounts`) for the step (PR-45) |
+| `agent-cli.mjs` | the Codex and Gemini command lines (`args`) and their output in the runner's result shape (`normalize`) (PR-45) |
 | `guard-surfaces.mjs` | who may change what, per role |
 | `sync-main.sh` | merges main into the task branch before every push (PR-14); `.gitattributes` merges the append-only journal by union, and any other conflict first pushes the run's work to `rescue/<branch>-<run id>` so it is never lost |
 | `agent-watchdog.sh` | runs the Cursor CLI in 72-minute time slices with two checks: a lost connection with no progress for 10 minutes (`devos-stall:`, exit 125) and no activity at all for `builder.idle_stop_minutes` — no change in the tree, no CLI output (the builder runs with `--output-format stream-json`, one line per message and tool call) and no CPU use by the run's processes (`devos-stuck:` naming the last action, exit 126) are restarted once, then parked (stall) or halted (stuck); a slice that ends while files are still changing (exit 124) is committed and the same attempt continues in a fresh run, up to `builder.max_time_slices` (`builder-status.mjs` → `continue`). The agent's environment never holds a GitHub token |
@@ -233,15 +235,17 @@ A UI fence carries a header line `- Screens: \`<name> <path>[ click|hover|focus 
   | `DEVOS_HEAVY` | **notify** · hold | heavy runs are announced; hold also waits for `/devos go` | SETUP §11.8 |
   | `DEVOS_CURSOR_ACCOUNT` | **1** · 2 | the Cursor account (builder) a run starts with | SETUP §15 |
   | `DEVOS_CLAUDE_ACCOUNT` | **1** · 2 | the Claude account (review, planning, revision) a run starts with | SETUP §15 |
+  | `DEVOS_CODEX_ACCOUNT` | **1** · 2 | the Codex account a run starts with (secrets `OPENAI_API_KEY`, `OPENAI_API_KEY_2`) | PR-45 |
+  | `DEVOS_GEMINI_ACCOUNT` | **1** · 2 | the Gemini account a run starts with (secrets `GEMINI_API_KEY`, `GEMINI_API_KEY_2`) | PR-45 |
   | `DEVOS_SUPERVISOR` | **on** · off | off stops the supervisor only (the cycle keeps running) | §4 |
-  | `DEVOS_ACCOUNT_SWITCH` | **auto** · off | auto: at a usage limit the run continues on the other account; off: only the chosen one (shared by Cursor and Claude) | SETUP §15 |
+  | `DEVOS_ACCOUNT_SWITCH` | **auto** · off | auto: at a usage limit the run continues on the other account; off: only the chosen one (shared by every agent tool) | SETUP §15 |
 
   Accounts, in practice: nothing set = both accounts on, starting with 1 · only account 2 =
   `DEVOS_CURSOR_ACCOUNT`/`DEVOS_CLAUDE_ACCOUNT` = 2 and `DEVOS_ACCOUNT_SWITCH` = off · for a single
   run, the `cursor_account` / `claude_account` choices in devos-cycle's run form. A second account
   exists only if its `_2` secret is set.
 - **`devos.config.json`:** generated — edit `devos/project.json`; engine defaults in `devos/engine.defaults.json`. `max_attempts`; `builder` (model family, effort by risk); `reviewer`
-  (models and efforts by risk and gate, `modes.light/deep`, `deep_paths`, intake and method efforts); `agents` (reviewer, reviewer_light, pool, policy; either tool may take either role; one next-agent fallback on a builder usage limit; `devos init` writes them from the developer's choices, and the setup items `cursor` and `claude` apply only when an agent uses that tool, PR-44);
+  (models and efforts by risk and gate, `modes.light/deep`, `deep_paths`, intake and method efforts); `agents` (reviewer, reviewer_light, pool, policy; any of Cursor, Claude Code, Codex and Gemini may take either role (PR-45); one next-agent fallback on a builder usage limit; `devos init` writes them from the developer's choices, and the setup items `cursor`, `claude`, `codex` and `gemini` apply only when an agent uses that tool, PR-44);
   `required_checks` / `optional_checks`; `screens` (`pages`, `filmstrip_ms`, `settle_max_ms`; a fence `- Screens:` line overrides `pages`); `surfaces` (builder, builder_method, reviewer, intake,
   revise); `resume` (inline wait, relay, back-off, `stall_wait_minutes`); `modules` (supabase, r2, firebase); `heavy`; `retry_build_on`;
   `builder.max_time_slices` (4) and `builder.idle_stop_minutes` (30) for the watchdog; `supervisor`

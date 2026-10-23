@@ -30,6 +30,34 @@
       ]
     },
     {
+      "id": "codex",
+      "title": "OpenAI key for Codex (one or two accounts)",
+      "kind": "secret",
+      "names": ["OPENAI_API_KEY", "OPENAI_API_KEY_2"],
+      "when": ["tool:codex"],
+      "blocks": "cycle",
+      "steps": [
+        "platform.openai.com → API keys → Create new secret key, named devos.",
+        "GitHub → this repository → Settings → Secrets and variables → Actions → New repository secret `OPENAI_API_KEY`, paste the key.",
+        "Optional second account (PR-29): its key as `OPENAI_API_KEY_2`. A run then switches to it when the first reaches its usage limit."
+      ],
+      "any": true
+    },
+    {
+      "id": "gemini",
+      "title": "Gemini API key (one or two accounts)",
+      "kind": "secret",
+      "names": ["GEMINI_API_KEY", "GEMINI_API_KEY_2"],
+      "when": ["tool:gemini"],
+      "blocks": "cycle",
+      "steps": [
+        "aistudio.google.com → Get API key → Create API key, named devos.",
+        "GitHub → this repository → Settings → Secrets and variables → Actions → New repository secret `GEMINI_API_KEY`, paste the key.",
+        "Optional second account (PR-29): its key as `GEMINI_API_KEY_2`. A run then switches to it when the first reaches its usage limit."
+      ],
+      "any": true
+    },
+    {
       "id": "pat-method",
       "title": "Runner token that may change workflows (method fixes)",
       "kind": "secret",

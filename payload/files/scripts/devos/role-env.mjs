@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Swap a tool into the other role's kit, then restore its own config byte for byte (PR-42).
-// Usage: node scripts/devos/role-env.mjs swap cursor-reviewer|claude-builder
+// Usage: node scripts/devos/role-env.mjs swap cursor-reviewer|claude-builder|codex-builder|codex-reviewer|gemini-builder|gemini-reviewer
 //        node scripts/devos/role-env.mjs restore
 import { execFileSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
@@ -22,6 +22,22 @@ const KITS = {
       { from: "devos/roles/claude-builder/settings.json", to: ".claude/settings.json" },
       { from: "devos/roles/claude-builder/CLAUDE.md", to: "CLAUDE.md" },
     ],
+  },
+  "codex-builder": {
+    move: ["AGENTS.md"],
+    install: [{ from: "devos/roles/claude-builder/CLAUDE.md", to: "AGENTS.md" }],
+  },
+  "codex-reviewer": {
+    move: ["AGENTS.md"],
+    install: [{ from: "CLAUDE.md", to: "AGENTS.md" }],
+  },
+  "gemini-builder": {
+    move: ["GEMINI.md"],
+    install: [{ from: "devos/roles/claude-builder/CLAUDE.md", to: "GEMINI.md" }],
+  },
+  "gemini-reviewer": {
+    move: ["GEMINI.md"],
+    install: [{ from: "CLAUDE.md", to: "GEMINI.md" }],
   },
 };
 
@@ -73,7 +89,7 @@ function restore() {
   rmSync(P(STASH), { recursive: true, force: true });
   let status = "";
   try {
-    status = execFileSync("git", ["status", "--porcelain", "--", ".cursor", ".claude", "CLAUDE.md"], {
+    status = execFileSync("git", ["status", "--porcelain", "--", ".cursor", ".claude", "CLAUDE.md", "AGENTS.md", "GEMINI.md"], {
       cwd: P("."),
       encoding: "utf8",
     });
@@ -93,6 +109,6 @@ const kit = process.argv[3] ?? "";
 if (command === "swap") swap(kit);
 else if (command === "restore") restore();
 else {
-  console.error("usage: role-env.mjs swap cursor-reviewer|claude-builder | restore");
+  console.error("usage: role-env.mjs swap cursor-reviewer|claude-builder|codex-builder|codex-reviewer|gemini-builder|gemini-reviewer | restore");
   process.exit(2);
 }

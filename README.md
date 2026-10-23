@@ -37,7 +37,7 @@ Status: pre-release `0.1.0`. The repository is private and not licensed for use 
 | git | the first local commit | `git --version` |
 | GitHub CLI, signed in with the `repo` and `workflow` scopes | creates the repository, sets secrets and variables | `gh auth status` |
 | One AI coding CLI, signed in on this computer | writes the blueprint | Claude Code `claude`, Cursor CLI `agent`, Codex CLI `codex` or Gemini CLI `gemini` |
-| A key for each tool that runs on GitHub | the reviewer and builders run on GitHub Actions | Cursor: `CURSOR_API_KEY` (cursor.com/dashboard → API keys). Claude Code: `CLAUDE_CODE_OAUTH_TOKEN` (run `claude setup-token`) or `ANTHROPIC_API_KEY` |
+| A key for each tool that runs on GitHub | the reviewer and builders run on GitHub Actions | Cursor: `CURSOR_API_KEY` (cursor.com/dashboard → API keys). Claude Code: `CLAUDE_CODE_OAUTH_TOKEN` (run `claude setup-token`) or `ANTHROPIC_API_KEY`. Codex: `OPENAI_API_KEY` (platform.openai.com → API keys). Gemini: `GEMINI_API_KEY` (aistudio.google.com → API keys) |
 | Optional: a Vercel account | deploys | `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`, which you can set later |
 
 `devos doctor` checks the GitHub CLI for you. `devos agents detect` shows which AI CLIs are installed and signed in.
@@ -76,7 +76,7 @@ Enter takes the default shown.
    - who picks the builder for each task;
    - the blueprint agent, which works on this computer. It can be any signed-in tool.
 
-   For now, the GitHub roles offer Claude Code and Cursor.
+   The GitHub roles offer Claude Code, Cursor, Codex and Gemini.
 4. **Eight questions.**
    - Project name and a one-paragraph brief.
    - Who uses it, and whether it stores data.
@@ -155,8 +155,8 @@ Enter takes the default shown.
 
 ## Current limits
 
-- **GitHub roles.** The reviewer and builders run on Claude Code or Cursor. Codex, Gemini, Muse and GLM can write the
-  blueprint today, and join the GitHub roles in a later version.
+- **GitHub roles.** The reviewer and builders run on Claude Code, Cursor, Codex or Gemini. Codex and Gemini have not yet
+  finished a real run on GitHub; the end-to-end test proves them. Muse and GLM can write the blueprint only.
 - **Stack.** The method's checks expect a Node.js project that uses pnpm, with optional deploys on Vercel and the
   Supabase, R2 and Firebase modules. Other stacks come later.
 - **Keys.** A key is typed as one line. Set a multi-line value, such as a service-account JSON, yourself with
@@ -166,16 +166,15 @@ Enter takes the default shown.
 
 ## Roadmap
 
-1. Codex and Gemini in the GitHub cycle.
-2. A catalogue of project types, stacks and modules, with the keys each one needs.
-3. Checks that follow the chosen stack.
-4. A project scaffold that is green before the first task.
-5. The first green run and the end-to-end test.
-6. The design gate for UI projects.
-7. A guided setup in the browser.
-8. Expert prompts, skills and references for each layer of a project.
-9. A link from every project to the DEV_OS Control Tower dashboard.
-10. Version 1.0 and its licence.
+1. A catalogue of project types, stacks and modules, with the keys each one needs.
+2. Checks that follow the chosen stack.
+3. A project scaffold that is green before the first task.
+4. The first green run and the end-to-end test.
+5. The design gate for UI projects.
+6. A guided setup in the browser.
+7. Expert prompts, skills and references for each layer of a project.
+8. A link from every project to the DEV_OS Control Tower dashboard.
+9. Version 1.0 and its licence.
 
 ## Building the engine (maintainers)
 

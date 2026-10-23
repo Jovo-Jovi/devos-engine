@@ -347,8 +347,8 @@ test("setup.test.mjs rejects a project name whose key is invalid", () => {
 });
 
 test("setup.test.mjs lists applicable items and a secret command block", () => {
-  assert.deepEqual(setupItems(setupJson, { deploy: "vercel" }).map((item) => item.id), SIX);
-  assert.deepEqual(setupItems(setupJson, { deploy: "none" }).map((item) => item.id), ["cursor", "claude"]);
+  assert.deepEqual(setupItems(setupJson, { deploy: "vercel" }).map((item) => item.id), ["cursor", "claude", "codex", "gemini", ...SIX.slice(2)]);
+  assert.deepEqual(setupItems(setupJson, { deploy: "none" }).map((item) => item.id), ["cursor", "claude", "codex", "gemini"]);
   const cursor = setupJson.items.find((item) => item.id === "cursor");
   const markdown = setupMarkdown([cursor], { name: "Demo Shop", slug: "devtest/demo-shop" });
   assert.equal(markdown.includes("```\ngh secret set CURSOR_API_KEY --repo devtest/demo-shop\ngh secret set CURSOR_API_KEY_2 --repo devtest/demo-shop\n```\n"), true, markdown);

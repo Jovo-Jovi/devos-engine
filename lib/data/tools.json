@@ -135,7 +135,7 @@
     {
       "id": "codex",
       "label": "Codex CLI",
-      "cycle": false,
+      "cycle": true,
       "command": "codex",
       "altCommands": [],
       "versionArgs": [
@@ -166,7 +166,7 @@
     {
       "id": "gemini",
       "label": "Gemini CLI",
-      "cycle": false,
+      "cycle": true,
       "command": "gemini",
       "altCommands": [],
       "versionArgs": [

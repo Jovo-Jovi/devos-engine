@@ -3,10 +3,11 @@
 // Usage: node scripts/devos/agents.mjs pick --task Tnn
 //        node scripts/devos/agents.mjs reviewer --mode light|deep
 //        node scripts/devos/agents.mjs pool
+//        node scripts/devos/agents.mjs tools
 import { existsSync, readFileSync } from "node:fs";
 import { P, config, emit, fail } from "./lib.mjs";
 
-const TOOLS = new Set(["cursor", "claude"]);
+const TOOLS = new Set(["cursor", "claude", "codex", "gemini"]);
 const POLICIES = new Set(["reviewer-picks", "always-default"]);
 
 function bad(reason) {
@@ -18,7 +19,7 @@ function isAgent(value, label) {
   if (typeof value.id !== "string" || typeof value.tool !== "string" || typeof value.model !== "string") {
     return `${label} must have id, tool and model`;
   }
-  if (!TOOLS.has(value.tool)) return `${label}.tool must be cursor or claude`;
+  if (!TOOLS.has(value.tool)) return `${label}.tool must be cursor, claude, codex or gemini`;
   const keys = Object.keys(value);
   if (keys.length !== 3 || !keys.includes("id") || !keys.includes("tool") || !keys.includes("model")) {
     return `${label} must have id, tool and model`;
@@ -51,7 +52,7 @@ export function validate(agents) {
     if (typeof item.id !== "string" || typeof item.model !== "string" || typeof item.note !== "string") {
       bad("pool item must have id, tool, model, default and note");
     }
-    if (!TOOLS.has(item.tool)) bad("pool item tool must be cursor or claude");
+    if (!TOOLS.has(item.tool)) bad("pool item tool must be cursor, claude, codex or gemini");
     if (typeof item.default !== "boolean") bad("pool item default must be boolean");
     if (item.default) defaults += 1;
   }
@@ -99,6 +100,14 @@ export function nextAfter(id, agents = config().agents) {
   return null;
 }
 
+export function toolList(agents = config().agents) {
+  const value = validate(agents);
+  const names = new Set([value.reviewer.tool]);
+  if (value.reviewer_light) names.add(value.reviewer_light.tool);
+  for (const item of value.pool) names.add(item.tool);
+  return [...names].sort().join(" ");
+}
+
 export function pick(task, agents = config().agents) {
   const value = validate(agents);
   const chosen = defaultItem(value);
@@ -134,8 +143,10 @@ if (process.argv[1]?.endsWith("agents.mjs")) {
     } else if (command === "next") {
       const item = nextAfter(arg("after"));
       emit({ next_id: item?.id ?? "", next_tool: item?.tool ?? "", next_model: item?.model ?? "" });
+    } else if (command === "tools") {
+      console.log(`tools=${toolList()}`);
     } else {
-      fail("usage: agents.mjs pick --task Tnn | reviewer --mode light|deep | pool | next --after <id>", 2);
+      fail("usage: agents.mjs pick --task Tnn | reviewer --mode light|deep | pool | next --after <id> | tools", 2);
     }
   } catch (error) {
     console.error(error.message);

@@ -313,10 +313,10 @@ test("init.test.mjs (a) GitHub role menus omit tools the cycle cannot run", () =
   try {
     const result = init(staged, "accept\n");
     assert.equal(result.status, 1, result.stdout + result.stderr);
-    const note = "Codex, Gemini, Muse and GLM join the GitHub roles in a later version.";
+    const note = "Muse and GLM join the GitHub roles in a later version.";
     assert.equal(result.stdout.includes(note), true, result.stdout);
     const reviewer = result.stdout.split("Light reviewer")[0];
-    assert.equal(/^\s+\d+\) .*Codex/m.test(reviewer), false, reviewer);
+    assert.equal(/^\s+\d+\) .*Codex/m.test(reviewer), true, reviewer);
   } finally {
     cleanup(staged.parent);
   }
@@ -326,9 +326,9 @@ test("init.test.mjs (b) a Codex reviewer in the roster falls back to the engine 
   const staged = stage();
   try {
     writeFileSync(path.join(staged.parent, "home", ".devos", "roster.json"), `${JSON.stringify({
-      reviewer: { id: "codex-gpt", tool: "codex", model: "gpt-5.1-codex" },
-      reviewer_light: { id: "codex-light", tool: "codex", model: "gpt-5-codex" },
-      pool: [{ id: "codex-pool", tool: "codex", model: "gpt-5.6-sol", default: true, note: "default builder" }],
+      reviewer: { id: "codex-gpt", tool: "glm", model: "glm-4.6" },
+      reviewer_light: { id: "codex-light", tool: "glm", model: "glm-4.6" },
+      pool: [{ id: "codex-pool", tool: "glm", model: "glm-4.6", default: true, note: "default builder" }],
       policy: "reviewer-picks",
     }, null, 2)}\n`);
     const result = init(staged, flow());
@@ -372,7 +372,7 @@ test("init.test.mjs (d) Codex and Gemini blueprint args", () => {
   assert.deepEqual(blueprintArgs("codex", "gpt-5.1-codex", 1), ["exec", "--model", "gpt-5.1-codex", "--sandbox", "workspace-write"]);
   assert.deepEqual(
     blueprintArgs("gemini", "gemini-2.5-pro", 1),
-    ["--model", "gemini-2.5-pro", "--yolo", "-p", "Follow the instructions given on standard input exactly."],
+    ["--model", "gemini-2.5-pro", "--approval-mode", "yolo", "-p", "Follow the instructions given on standard input exactly."],
   );
 });
 
