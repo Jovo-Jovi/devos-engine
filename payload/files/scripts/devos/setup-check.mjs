@@ -13,7 +13,7 @@
 //
 // Environment: SECRETS_JSON, VARS_JSON (from the workflow). Missing ones are treated as empty.
 import { existsSync, mkdirSync, readFileSync, writeFileSync, appendFileSync } from "node:fs";
-import { P, parsePhases, isMethodRow, emit } from "./lib.mjs";
+import { P, parsePhases, isMethodRow, emit, config } from "./lib.mjs";
 import { plannedModules, activeModules } from "./modules.mjs";
 
 const mode = process.argv.includes("--for") ? process.argv[process.argv.indexOf("--for") + 1] : "all";
@@ -29,11 +29,15 @@ const items = [...load("devos/setup.json"), ...load("docs/setup-items.json").map
 // The deploy only cares about modules that are on main now; the issue also lists what is coming.
 const modules = new Set(forDeploy ? activeModules() : plannedModules());
 const methodOpen = parsePhases().rows.some((r) => !r.done && isMethodRow(r));
+// PR-44: an agent tool's credentials are needed only when an agent uses that tool; a method fix always runs on Claude Code (PR-28).
+const agents = config().agents ?? {};
+const toolsInUse = new Set([agents.reviewer, agents.reviewer_light, ...(agents.pool ?? [])].filter(Boolean).map((a) => a.tool));
 const holds = (cond) => {
   if (cond === "always") return true;
   if (cond === "method") return methodOpen;
   if (cond.startsWith("module:")) return modules.has(cond.slice(7));
   if (cond.startsWith("var:")) return String(vars[cond.slice(4)] ?? "") === "true";
+  if (cond.startsWith("tool:")) return toolsInUse.has(cond.slice(5)) || (cond === "tool:claude" && methodOpen);
   return false;
 };
 const needed = items.filter((i) => (i.when ?? ["always"]).every(holds));

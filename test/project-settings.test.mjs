@@ -199,7 +199,18 @@ test("project-settings.test.mjs shipped text stays actionable", () => {
   const setup = readJson("payload/files/devos/setup.json");
   const pilot = readJson("dev/sources/pilot/devos/setup.json");
   for (const id of ["cursor", "claude", "pat-method", "vercel", "supabase-secrets", "supabase-var", "supabase-vercel"]) {
-    assert.deepEqual(setup.items.find((item) => item.id === id), pilot.items.find((item) => item.id === id));
+    const shipped = setup.items.find((item) => item.id === id);
+    const fromPilot = pilot.items.find((item) => item.id === id);
+    if (id === "cursor" || id === "claude") {
+      const shippedRest = { ...shipped };
+      const pilotRest = { ...fromPilot };
+      delete shippedRest.when;
+      delete pilotRest.when;
+      assert.deepEqual(shippedRest, pilotRest);
+      assert.deepEqual(shipped.when, [`tool:${id}`]);
+    } else {
+      assert.deepEqual(shipped, fromPilot);
+    }
   }
 });
 

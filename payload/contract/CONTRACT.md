@@ -1,4 +1,4 @@
-# DEV_OS contract — version 0-draft
+# DEV_OS contract — version 0-draft-2
 
 This is a draft, shown so that setup can be built and tested. A reviewed text replaces it before the first release.
 
@@ -16,8 +16,9 @@ GitHub's own identity for the workflow (OIDC); no token is stored. Reporting nev
 
 ## What is never sent
 
-Your code, diffs, prompts, file contents, secrets and email addresses. DEV_OS never reads or stores a secret value:
-you paste each one into GitHub's own prompt.
+Your code, diffs, prompts, file contents, secrets and email addresses. DEV_OS never stores a secret value. The keys
+you type during setup stay in the engine's memory only until it hands each one to GitHub (`gh secret set`, over
+standard input). No model, file, log or answer ever receives one.
 
 ## Registration
 

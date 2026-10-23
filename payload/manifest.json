@@ -254,7 +254,7 @@
     {
       "path": "devos/prompts/blueprint.md",
       "stored": "devos/prompts/blueprint.md",
-      "sha256": "e4d44250fa5c0490a466c78f60857559855ba7b6770f31c9bcf0d0785fee1263",
+      "sha256": "0f1cfc40a661a22c0371e85465dd29beaa1b7dd7bb78b3fd928b201fe459a08b",
       "owner": "engine"
     },
     {
@@ -312,6 +312,12 @@
       "owner": "engine"
     },
     {
+      "path": "devos/roles/cursor-blueprint/cli.json",
+      "stored": "devos/roles/cursor-blueprint/cli.json",
+      "sha256": "08dc5a6a17a5a064c34bfe142b695a170355dbf8b92325b0d1d7395aaab4d87d",
+      "owner": "engine"
+    },
+    {
       "path": "devos/roles/cursor-reviewer/cli.json",
       "stored": "devos/roles/cursor-reviewer/cli.json",
       "sha256": "f1e495ef50f24370728a7a7cddbf4ff82d688f66e68843d243220a0cdcb1fd15",
@@ -350,13 +356,13 @@
     {
       "path": "devos/setup.json",
       "stored": "devos/setup.json",
-      "sha256": "4cd1ccdec6dbd595090670cca123051d486d4eaa1281eb3982bb5f2899988c34",
+      "sha256": "72f9f3c15f709cfa243d9380889f881abd71efca9a722ea76d9f936e9b56e106",
       "owner": "engine"
     },
     {
       "path": "docs/method/AUTOMATION.md",
       "stored": "docs/method/AUTOMATION.md",
-      "sha256": "8ed394129fe01a5dcf4f11a3e1381ba1a583e67963beea11096cd0d2bda1970b",
+      "sha256": "048c97a62d2be9b5f18f67a1fb2c29f8df713b5ef7107e768a17843ca8333bbc",
       "owner": "engine"
     },
     {
@@ -374,7 +380,7 @@
     {
       "path": "docs/method/PRECEDENTS.md",
       "stored": "docs/method/PRECEDENTS.md",
-      "sha256": "3610b35d33ee25daa9180e2b5b2babd5879639dfb07a12e7827eb475e13949fc",
+      "sha256": "06fb204d31ed413ac8acb0efb7bd3f07405ea3d372d44bbb1cd86d84340ef294",
       "owner": "engine"
     },
     {
@@ -554,7 +560,7 @@
     {
       "path": "scripts/devos/setup-check.mjs",
       "stored": "scripts/devos/setup-check.mjs",
-      "sha256": "eb472dcc1664455aa6a9ca558f0ba94b8bc56ea81d2c5a07b96b66e98cb6f4be",
+      "sha256": "56eee78a81f3a5fa577ac2564c42ba9cdfa1961b2dcc3befb7af135f10a8288e",
       "owner": "engine"
     },
     {
@@ -572,7 +578,7 @@
     {
       "path": "scripts/devos/supervisor.mjs",
       "stored": "scripts/devos/supervisor.mjs",
-      "sha256": "05209b391437363cc5ec0abd3f8b968bfb24fdc6e81c02f0fa3a85c3bdff78e9",
+      "sha256": "2d928b76270fb7696aa58d8b1f72e4dc351c40186daa507f26adba9f626aa812",
       "owner": "engine"
     },
     {

@@ -1,0 +1,39 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(**)",
+      "Write(docs/**)",
+      "Write(devos/project.json)",
+      "Write(devos/ci/**)",
+      "Write(.cursor/rules/**)",
+      "Write(.cursor/mcp.example.json)",
+      "Write(CLAUDE.md)",
+      "Shell(node)",
+      "Shell(ls)",
+      "Shell(cat)"
+    ],
+    "deny": [
+      "Shell(git)",
+      "Shell(gh)",
+      "Shell(curl)",
+      "Shell(wget)",
+      "Shell(rm)",
+      "Shell(sudo)",
+      "Read(.env*)",
+      "Write(.env*)",
+      "Write(.github/**)",
+      "Write(scripts/**)",
+      "Write(devos.config.json)",
+      "Write(devos/prompts/**)",
+      "Write(devos/roles/**)",
+      "Write(devos/engine.defaults.json)",
+      "Write(docs/method/DEV_OS_V2_REVIEWER.md)",
+      "Write(docs/method/AUTOMATION.md)",
+      "Write(docs/method/FULLSTACK_MODULE.md)",
+      "Write(.claude/**)",
+      "Write(.cursor/cli.json)",
+      "Write(.cursor/hooks.json)",
+      "Write(.cursor/hooks/**)"
+    ]
+  }
+}

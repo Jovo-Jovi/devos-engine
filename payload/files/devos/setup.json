@@ -6,7 +6,7 @@
       "title": "Cursor key for the builder (one or two accounts)",
       "kind": "secret",
       "names": ["CURSOR_API_KEY", "CURSOR_API_KEY_2"],
-      "when": ["always"],
+      "when": ["tool:cursor"],
       "blocks": "cycle",
       "steps": [
         "cursor.com → Dashboard → Integrations → API Keys → create a key named devos.",
@@ -21,7 +21,7 @@
       "kind": "secret",
       "names": ["CLAUDE_CODE_OAUTH_TOKEN", "ANTHROPIC_API_KEY", "CLAUDE_CODE_OAUTH_TOKEN_2", "ANTHROPIC_API_KEY_2"],
       "any": true,
-      "when": ["always"],
+      "when": ["tool:claude"],
       "blocks": "cycle",
       "steps": [
         "On your computer run `claude setup-token` and sign in with your Claude plan.",

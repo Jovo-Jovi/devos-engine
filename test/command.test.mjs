@@ -103,9 +103,13 @@ test("command.test.mjs roster import, same-model doctor, detect and status", () 
         chmodSync(stub, 0o755);
       }
     }
-    const detect = devos(["agents", "detect"], { DEVOS_HOME: home, PATH: stubs });
+    const detect = devos(["agents", "detect"], { DEVOS_HOME: home, PATH: `${stubs}${path.delimiter}${process.env.PATH}` });
     assert.equal(detect.status, 0, detect.stderr);
-    assert.equal(detect.stdout, "claude installed signed-in\ncursor installed signed-in\n");
+    const agents = JSON.parse(detect.stdout);
+    const tools = JSON.parse(readFileSync(path.join(root, "lib", "data", "tools.json"), "utf8")).tools;
+    assert.equal(agents.length, tools.length);
+    assert.equal(agents.find((agent) => agent.toolId === "claude").status, "installed");
+    assert.equal(agents.find((agent) => agent.toolId === "cursor").status, "installed");
 
     const status = devos(["status"], { DEVOS_HOME: home }, outside);
     assert.equal(status.status, 0, status.stderr);

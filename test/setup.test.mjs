@@ -1,11 +1,13 @@
 import { spawnSync } from "node:child_process";
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { EventEmitter } from "node:events";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
-import { setupItems, setupMarkdown } from "../lib/setup.mjs";
+import { installInto } from "../lib/install.mjs";
+import { finishSetup, setupItems, setupMarkdown } from "../lib/setup.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const bin = path.join(root, "bin", "devos.mjs");
@@ -20,6 +22,8 @@ function cleanup(dir) {
 const claudeStub = `import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
+const early = process.argv.slice(2);
+if (early.includes("--version") || (early[0] === "auth" && early[1] === "status")) process.exit(0);
 let stdin = "";
 process.stdin.setEncoding("utf8");
 process.stdin.on("data", (chunk) => { stdin += chunk; });
@@ -57,7 +61,17 @@ const log = process.env.DEVOS_GH_LOG;
 if (log) appendFileSync(log, args.join(" ") + "\\n");
 
 if (args[0] === "--version") process.exit(0);
+if (args[0] === "auth" && args[1] === "status") {
+  const scopes = process.env.DEVOS_GH_NO_WORKFLOW === "1" ? "'repo'" : "'repo', 'workflow'";
+  process.stdout.write("Logged in to github.com account devtest\\n");
+  process.stdout.write(\`Token scopes: \${scopes}\\n\`);
+  process.exit(0);
+}
 if (args[0] === "api" && args[1] === "user") {
+  if (!args.includes("--jq")) {
+    process.stdout.write('{"login":"devtest"}\\n');
+    process.exit(0);
+  }
   process.stdout.write("devtest\\n");
   process.exit(0);
 }
@@ -68,6 +82,15 @@ if (args[0] === "repo" && args[1] === "create") {
   const added = spawnSync("git", ["remote", "add", "origin", remote], { cwd: process.cwd(), windowsHide: true });
   process.exit(added.status ?? 1);
 }
+if (args[0] === "secret" && args[1] === "set") {
+  const chunks = [];
+  process.stdin.on("data", (chunk) => chunks.push(chunk));
+  process.stdin.on("end", () => {
+    if (log) appendFileSync(log, "secret-stdin " + Buffer.concat(chunks).length + "\\n");
+    process.exit(0);
+  });
+  process.stdin.resume();
+} else {
 if (args[0] === "secret" && args[1] === "list") {
   process.stdout.write(process.env.STUB_SECRETS || '[{"name":"CURSOR_API_KEY"},{"name":"CLAUDE_CODE_OAUTH_TOKEN"}]');
   process.exit(0);
@@ -84,6 +107,7 @@ if (args[0] === "workflow" && args[1] === "run") {
   process.exit(0);
 }
 process.exit(0);
+}
 `;
 
 function writeStubs(dir) {
@@ -161,6 +185,13 @@ function git(remote, args) {
 function answers(overrides = {}) {
   return [
     "accept",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
     overrides.name ?? "Demo Shop",
     "A small shop.",
     "Customers",
@@ -169,7 +200,10 @@ function answers(overrides = {}) {
     "",
     overrides.deploy ?? "",
     overrides.visibility ?? "",
+    "",
+    "",
     "approve",
+    "",
   ].join("\n") + "\n";
 }
 
@@ -197,6 +231,8 @@ test("setup.test.mjs creates the repository and dispatches the cycle", () => {
     assert.equal(tree.includes("docs/fences/T01.md"), true);
     assert.equal(tree.includes(".claude/settings.json"), true);
     assert.deepEqual(ghLines(staged.parent), [
+      "auth status",
+      "api user",
       "api user --jq .login",
       "repo create devtest/demo-shop --private --source . --remote origin",
       "api -X PUT repos/devtest/demo-shop/actions/permissions/workflow -f default_workflow_permissions=write -F can_approve_pull_request_reviews=true",
@@ -239,7 +275,7 @@ test("setup.test.mjs continues after the cycle settings are added", () => {
     assert.equal(first.stdout.includes("the cycle still needs settings"), true, first.stdout);
     assert.equal(ghLines(staged.parent).some((line) => line.startsWith("workflow run")), false);
     delete staged.env.STUB_SECRETS;
-    const second = init(staged, "", { cont: true });
+    const second = init(staged, "\n", { cont: true });
     assert.equal(second.status, 0, second.stdout + second.stderr);
     assert.equal(ghLines(staged.parent).filter((line) => line.startsWith("repo create")).length, 1);
     assert.equal(git(path.join(staged.parent, "remote.git"), ["rev-list", "--count", "main"]).stdout.trim(), "1");
@@ -254,7 +290,7 @@ test("setup.test.mjs uses github_owner from the profile", () => {
     const result = init(staged, answers());
     assert.equal(result.status, 0, result.stdout + result.stderr);
     assert.equal(result.stdout.trim().split(/\r?\n/).at(-1), "devos init: acme/demo-shop is set up; devos-cycle dispatched");
-    assert.equal(ghLines(staged.parent).some((line) => line.startsWith("api user")), false);
+    assert.equal(ghLines(staged.parent).some((line) => line.startsWith("api user --jq")), false);
   } finally {
     cleanup(staged.parent);
   }
@@ -297,11 +333,11 @@ test("setup.test.mjs rejects a project name whose key is invalid", () => {
   const staged = stage();
   const again = stage();
   try {
-    const result = init(staged, ["accept", "X", "Demo Shop", "A small shop.", "Customers", "", "", "", "", "", "approve"].join("\n") + "\n");
+    const result = init(staged, ["accept", "", "", "", "", "", "", "", "X", "Demo Shop", "A small shop.", "Customers", "", "", "", "", "", "", "", "approve", ""].join("\n") + "\n");
     assert.equal(result.status, 0, result.stdout + result.stderr);
     const project = JSON.parse(readFileSync(path.join(staged.project, "devos", "project.json"), "utf8"));
     assert.equal(project.project, "DEMO-SHOP");
-    const rejected = init(again, "accept\nX\nX\nX\n");
+    const rejected = init(again, "accept\n\n\n\n\n\n\n\nX\nX\nX\n");
     assert.equal(rejected.status, 1, rejected.stdout + rejected.stderr);
     assert.equal(rejected.stdout.includes("no valid answer for Project name"), true, rejected.stdout);
   } finally {
@@ -316,4 +352,133 @@ test("setup.test.mjs lists applicable items and a secret command block", () => {
   const cursor = setupJson.items.find((item) => item.id === "cursor");
   const markdown = setupMarkdown([cursor], { name: "Demo Shop", slug: "devtest/demo-shop" });
   assert.equal(markdown.includes("```\ngh secret set CURSOR_API_KEY --repo devtest/demo-shop\ngh secret set CURSOR_API_KEY_2 --repo devtest/demo-shop\n```\n"), true, markdown);
+});
+
+function treeHas(dir, value) {
+  if (!existsSync(dir)) return false;
+  const needle = Buffer.from(value);
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      if (treeHas(full, value)) return true;
+    } else if (readFileSync(full).includes(needle)) return true;
+  }
+  return false;
+}
+
+test("setup.test.mjs (s) a typed key reaches gh on stdin only", async () => {
+  const staged = stage();
+  const saved = {
+    PATH: process.env.PATH,
+    DEVOS_HOME: process.env.DEVOS_HOME,
+    DEVOS_GH_LOG: process.env.DEVOS_GH_LOG,
+    DEVOS_RETRY_MS: process.env.DEVOS_RETRY_MS,
+    GIT_AUTHOR_NAME: process.env.GIT_AUTHOR_NAME,
+    GIT_AUTHOR_EMAIL: process.env.GIT_AUTHOR_EMAIL,
+    GIT_COMMITTER_NAME: process.env.GIT_COMMITTER_NAME,
+    GIT_COMMITTER_EMAIL: process.env.GIT_COMMITTER_EMAIL,
+  };
+  const value = `k${process.hrtime.bigint().toString(16)}aa`;
+  const other = `m${process.hrtime.bigint().toString(16)}`;
+  const hide = (text) => text.split(value).join("[redacted]").split(other).join("[redacted]");
+  try {
+    process.env.PATH = staged.env.PATH;
+    process.env.DEVOS_HOME = staged.env.DEVOS_HOME;
+    process.env.DEVOS_GH_LOG = staged.env.DEVOS_GH_LOG;
+    process.env.DEVOS_RETRY_MS = "0";
+    process.env.GIT_AUTHOR_NAME = "Devos Test";
+    process.env.GIT_AUTHOR_EMAIL = "devos@example.com";
+    process.env.GIT_COMMITTER_NAME = "Devos Test";
+    process.env.GIT_COMMITTER_EMAIL = "devos@example.com";
+    const installed = installInto(staged.project, "DEMO-SHOP");
+    assert.equal(installed.code, 0, "install");
+    const docs = path.join(staged.project, "docs");
+    mkdirSync(path.join(docs, "fences"), { recursive: true });
+    writeFileSync(path.join(docs, "PHASES.md"), readFileSync(path.join(fixtures, "PHASES.md")));
+    writeFileSync(path.join(docs, "GLOSSARY.md"), readFileSync(path.join(fixtures, "GLOSSARY.md")));
+    writeFileSync(path.join(docs, "fences", "T01.md"), "# T01\n");
+    const secrets = [`${value}\n`, `${other}\n`];
+    const stream = new EventEmitter();
+    stream.setRawMode = () => {};
+    stream.pause = () => {};
+    stream.resume = () => {
+      const next = secrets.shift();
+      if (next !== undefined) process.nextTick(() => stream.emit("data", Buffer.from(next)));
+    };
+    const lines = [""];
+    const read = async () => (lines.length > 0 ? lines.shift() : null);
+    read.pause = () => {};
+    read.resume = () => {};
+    read.isTTY = true;
+    read.stream = stream;
+    const captured = [];
+    const stdout = process.stdout.write;
+    const stderr = process.stderr.write;
+    process.stdout.write = (chunk) => {
+      captured.push(String(chunk));
+      return true;
+    };
+    process.stderr.write = (chunk) => {
+      captured.push(String(chunk));
+      return true;
+    };
+    let status = 1;
+    try {
+      status = await finishSetup(staged.project, { name: "Demo Shop", deploy: "none", visibility: "private" }, read);
+    } finally {
+      process.stdout.write = stdout;
+      process.stderr.write = stderr;
+    }
+    const text = captured.join("");
+    const devosLines = hide(text).split(/\r?\n/).filter((line) => line.startsWith("devos"));
+    assert.equal(status, 0, devosLines.join("\n"));
+    assert.equal(text.includes(value), false);
+    assert.equal(text.includes(other), false);
+    const log = readFileSync(staged.env.DEVOS_GH_LOG, "utf8");
+    assert.equal(log.includes(value), false);
+    assert.equal(log.includes(other), false);
+    assert.equal(log.includes(`secret-stdin ${Buffer.byteLength(value)}`), true, hide(log));
+    assert.equal(log.includes(`secret-stdin ${Buffer.byteLength(other)}`), true, hide(log));
+    for (const line of log.split("\n")) {
+      if (!line.startsWith("secret set") && !line.startsWith("secret-stdin")) continue;
+      assert.equal(line.includes(value), false);
+      assert.equal(line.includes(other), false);
+    }
+    assert.equal(treeHas(staged.parent, value), false);
+    assert.equal(treeHas(staged.parent, other), false);
+    assert.equal(treeHas(path.join(staged.env.DEVOS_HOME, ".devos"), value), false);
+    assert.equal(treeHas(path.join(staged.env.DEVOS_HOME, ".devos"), other), false);
+  } finally {
+    for (const [key, previous] of Object.entries(saved)) {
+      if (previous === undefined) delete process.env[key];
+      else process.env[key] = previous;
+    }
+    cleanup(staged.parent);
+  }
+});
+
+test("setup.test.mjs (t) no at create stops before GitHub", () => {
+  const staged = stage();
+  try {
+    const result = init(staged, answers().replace(/approve\n\n$/, "approve\nno\n"));
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    assert.equal(result.stdout.includes("stopped before GitHub"), true, result.stdout);
+    assert.equal(ghLines(staged.parent).some((line) => line.startsWith("repo create")), false, ghLines(staged.parent).join("\n"));
+    assert.equal(ghLines(staged.parent).some((line) => line.startsWith("secret set")), false);
+  } finally {
+    cleanup(staged.parent);
+  }
+});
+
+test("setup.test.mjs (u) a skipped key is printed and not uploaded", () => {
+  const staged = stage();
+  try {
+    const result = init(staged, answers());
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    assert.equal(result.stdout.includes("gh secret set CURSOR_API_KEY --repo devtest/demo-shop"), true, result.stdout);
+    assert.equal(result.stdout.includes("to set later: CURSOR_API_KEY, CLAUDE_CODE_OAUTH_TOKEN"), true, result.stdout);
+    assert.equal(ghLines(staged.parent).some((line) => line.startsWith("secret set")), false);
+  } finally {
+    cleanup(staged.parent);
+  }
 });

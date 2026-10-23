@@ -6,6 +6,10 @@ project stores data, sign-in, languages, deploy target and repository visibility
 during this run: where the answers and your research leave something open, choose the safer option and record it as
 an **assumption** in `docs/DEVOS_FIT.md`.
 
+When `devos/intake-docs/` exists, read every file in it before step 1. Where a document and the answers disagree,
+the answers win. Anything the product needs that neither gives goes into `docs/OPEN_QUESTIONS.md`, one question per
+line; when nothing is open, that file holds the single line `No open questions.`
+
 Work in this order.
 
 1. **Read the handbook** (§0–§13, §17, §18) and list every station, gate, document and guard this project needs.

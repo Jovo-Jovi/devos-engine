@@ -1,0 +1,283 @@
+{
+  "tools": [
+    {
+      "id": "cursor",
+      "label": "Cursor CLI",
+      "command": "agent",
+      "altCommands": [
+        "cursor-agent"
+      ],
+      "versionArgs": [
+        "--version"
+      ],
+      "modelsArgs": [
+        "models"
+      ],
+      "authProbe": "version",
+      "githubCapable": true,
+      "githubSecrets": [
+        "CURSOR_API_KEY"
+      ],
+      "prompt": {
+        "mode": "-p",
+        "modelFlag": "--model",
+        "template": "agent -p --model {{MODEL}}"
+      },
+      "seedGroups": [
+        {
+          "id": "auto",
+          "label": "Auto — Cursor picks (the only model on Free plans)",
+          "models": [
+            "auto"
+          ]
+        },
+        {
+          "id": "grok",
+          "label": "Grok — Cursor first-party",
+          "models": [
+            "grok-4.7",
+            "grok-4.7-low",
+            "grok-4.7-medium",
+            "grok-4.7-high",
+            "grok-4.7-xhigh",
+            "grok-4.7-fast",
+            "grok-4.6",
+            "grok-4.5"
+          ]
+        },
+        {
+          "id": "claude",
+          "label": "Claude on Cursor",
+          "models": [
+            "claude-fable-5-1",
+            "claude-fable-5",
+            "claude-fable-5-thinking-high",
+            "claude-opus-5-5",
+            "claude-sonnet-5-5",
+            "claude-haiku-5-5"
+          ]
+        },
+        {
+          "id": "gpt",
+          "label": "GPT on Cursor",
+          "models": [
+            "gpt-5.6-sol",
+            "gpt-5.6-terra",
+            "gpt-5.6-luna",
+            "gpt-5.5"
+          ]
+        },
+        {
+          "id": "gemini",
+          "label": "Gemini on Cursor",
+          "models": [
+            "gemini-4-argon",
+            "gemini-3.1-pro",
+            "gemini-3.8-flash"
+          ]
+        },
+        {
+          "id": "composer",
+          "label": "Composer — Cursor first-party",
+          "models": [
+            "composer-2.5",
+            "composer-1"
+          ]
+        },
+        {
+          "id": "muse",
+          "label": "Muse on Cursor",
+          "models": [
+            "muse-wonder"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "claude",
+      "label": "Claude Code",
+      "command": "claude",
+      "altCommands": [],
+      "versionArgs": [
+        "--version"
+      ],
+      "authProbe": "auth-status",
+      "githubCapable": true,
+      "githubSecrets": [
+        "CLAUDE_CODE_OAUTH_TOKEN",
+        "ANTHROPIC_API_KEY"
+      ],
+      "prompt": {
+        "mode": "-p",
+        "modelFlag": "--model",
+        "template": "claude -p --model {{MODEL}}"
+      },
+      "seedGroups": [
+        {
+          "id": "claude",
+          "label": "Claude",
+          "models": [
+            "claude-fable-5-1",
+            "claude-fable-5-1-thinking-high",
+            "claude-fable-5",
+            "claude-opus-5-5",
+            "claude-sonnet-5-5",
+            "claude-haiku-5-5",
+            "claude-opus-4-5",
+            "claude-sonnet-4-5",
+            "claude-haiku-4-5"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "codex",
+      "label": "Codex CLI",
+      "command": "codex",
+      "altCommands": [],
+      "versionArgs": [
+        "--version"
+      ],
+      "authProbe": "login-status",
+      "githubCapable": true,
+      "githubSecrets": [
+        "OPENAI_API_KEY"
+      ],
+      "prompt": {
+        "mode": "exec",
+        "modelFlag": "--model",
+        "template": "codex exec --model {{MODEL}} {{PROMPT_FILE}}"
+      },
+      "seedGroups": [
+        {
+          "id": "gpt",
+          "label": "GPT-5 Codex",
+          "models": [
+            "gpt-5.1-codex",
+            "gpt-5-codex",
+            "gpt-5.6-sol"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "gemini",
+      "label": "Gemini CLI",
+      "command": "gemini",
+      "altCommands": [],
+      "versionArgs": [
+        "--version"
+      ],
+      "authProbe": "version",
+      "githubCapable": true,
+      "githubSecrets": [
+        "GEMINI_API_KEY"
+      ],
+      "prompt": {
+        "mode": "-p",
+        "modelFlag": "--model",
+        "template": "gemini -p --model {{MODEL}} {{PROMPT_FILE}}"
+      },
+      "seedGroups": [
+        {
+          "id": "gemini",
+          "label": "Gemini",
+          "models": [
+            "gemini-4-argon",
+            "gemini-3.1-pro",
+            "gemini-3.8-flash",
+            "gemini-2.5-pro",
+            "gemini-2.5-flash"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "muse",
+      "label": "Muse",
+      "command": "muse",
+      "altCommands": [],
+      "versionArgs": [
+        "--version"
+      ],
+      "modelsArgs": [
+        "models"
+      ],
+      "authProbe": "version",
+      "optional": true,
+      "githubCapable": true,
+      "prompt": {
+        "mode": "-p",
+        "modelFlag": "--model",
+        "template": "muse -p --model {{MODEL}} {{PROMPT_FILE}}"
+      },
+      "seedGroups": [
+        {
+          "id": "muse",
+          "label": "Muse",
+          "models": [
+            "muse-wonder"
+          ]
+        }
+      ],
+      "notInstalledMessage": "Muse is not installed"
+    },
+    {
+      "id": "glm",
+      "label": "Z.ai / GLM",
+      "command": "z",
+      "altCommands": [
+        "zai",
+        "glm"
+      ],
+      "versionArgs": [
+        "--version"
+      ],
+      "modelsArgs": [
+        "models"
+      ],
+      "authProbe": "version",
+      "githubCapable": true,
+      "githubSecrets": [
+        "ZAI_API_KEY"
+      ],
+      "prompt": {
+        "mode": "-p",
+        "modelFlag": "--model",
+        "template": "z -p --model {{MODEL}} {{PROMPT_FILE}}"
+      },
+      "seedGroups": [
+        {
+          "id": "glm",
+          "label": "GLM",
+          "models": [
+            "glm-4.6",
+            "glm-5"
+          ]
+        }
+      ]
+    }
+  ],
+  "customTool": {
+    "label": "Add another tool",
+    "fields": [
+      "displayName",
+      "command",
+      "modelFlag",
+      "versionCommand",
+      "authCommand",
+      "promptTemplate",
+      "secretName",
+      "usageLimitPattern"
+    ],
+    "note": "An adapter without a non-interactive prompt template is 'This computer only'. It may be the configuration model. It may not be the GitHub reviewer or builder."
+  },
+  "builderStrengths": [
+    "ui",
+    "backend",
+    "data",
+    "tests",
+    "fast and cheap",
+    "deep reasoning"
+  ]
+}
