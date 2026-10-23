@@ -272,7 +272,7 @@ export function toolRuns(parent) {
   return readFileSync(log, "utf8").trim().split("\n").filter(Boolean).map((line) => JSON.parse(line));
 }
 
-export function flow({ pool = "", blueprint = "", attachment = "", tail = "approve", confirmAnswer = "", type = "", modules, scope = "" } = {}) {
+export function flow({ pool = "", blueprint = "", attachment = "", tail = "approve", confirmAnswer = "", type = "", stack = "", modules, scope = "" } = {}) {
   const agent = ["", "", "", "", "", "", ""];
   agent[2] = pool;
   agent[5] = blueprint;
@@ -281,7 +281,7 @@ export function flow({ pool = "", blueprint = "", attachment = "", tail = "appro
     "accept",
     ...agent,
     type,
-    "",
+    stack,
     ...moduleLines,
     scope,
     "Demo Shop",

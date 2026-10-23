@@ -24,7 +24,7 @@ test("catalogue.test.mjs (a) integrity", () => {
   const catalogue = loadCatalogue();
   assert.equal(catalogue.types.length, 16);
   assert.equal(catalogue.stacks.length, 20);
-  assert.equal(catalogue.stacks.filter((stack) => stack.runs === true).length, 15);
+  assert.equal(catalogue.stacks.filter((stack) => stack.runs === true).length, 20);
   assert.equal(catalogue.modules.length, 10);
   assert.equal(catalogue.documents.length, 6);
   for (const type of catalogue.types) {
@@ -50,7 +50,7 @@ test("catalogue.test.mjs (a) integrity", () => {
 });
 
 test("catalogue.test.mjs (b) stacks for an api", () => {
-  assert.deepEqual(stacksFor("api").map((stack) => stack.id), ["hono", "fastify", "nest"]);
+  assert.deepEqual(stacksFor("api").map((stack) => stack.id), ["hono", "fastify", "nest", "fastapi", "django", "go-chi"]);
 });
 
 test("catalogue.test.mjs (c) modules for saas", () => {
@@ -98,7 +98,6 @@ test("catalogue.test.mjs (g) init asks the type, the stack and the saas modules"
     appearsInOrder(result.stdout, [
       "Project type",
       "Stack",
-      "Python, Go and Dart stacks join in a later version.",
       ...modules.map((module) => `${module.label} — ${module.consequence}`),
     ]);
     const answers = JSON.parse(readFileSync(path.join(staged.project, "devos", "answers.json"), "utf8"));
@@ -120,6 +119,7 @@ test("catalogue.test.mjs (g) init asks the type, the stack and the saas modules"
     assert.equal(result.stdout.includes("Type: SaaS application"), true);
     assert.equal(result.stdout.includes("Stack: Next.js (App Router, TypeScript)"), true);
     assert.equal(result.stdout.includes("Modules: database none · storage none · auth none · payments none · email none · hosting vercel · observability structured-logs"), true);
+    assert.equal(result.stdout.includes("Python, Go and Dart stacks join in a later version."), false);
   } finally {
     cleanup(staged.parent);
   }

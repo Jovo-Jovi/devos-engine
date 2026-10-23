@@ -80,7 +80,8 @@ Enter takes the default shown.
 4. **Project type, stack and modules.**
    - The project type: SaaS, web app, marketing site, dashboard, marketplace, store, API, mobile, AI product,
      realtime app, documentation site, CLI, library, worker, browser extension or full product.
-   - A stack that fits the type. The method runs JavaScript and TypeScript stacks today.
+   - A stack that fits the type: 15 JavaScript and TypeScript stacks, FastAPI, Django, a Python package, Go with chi,
+     or Flutter.
    - A provider for each module the type uses: database, storage, auth, payments, email, jobs, search, product AI,
      hosting and observability. Each menu starts on the type's usual choice, and `None` is always offered.
    - The scope: **MVP** (the core flow first; every other feature waits on a "Later" list until you ask for it) or
@@ -182,9 +183,9 @@ it.
 
 - **GitHub roles.** The reviewer and builders run on Claude Code, Cursor, Codex or Gemini. Codex and Gemini have not yet
   finished a real run on GitHub; the end-to-end test proves them. Muse and GLM can write the blueprint only.
-- **Stack.** The method's checks run `pnpm run typecheck`, `lint`, `test` and `build`, so the catalogue offers its
-  15 JavaScript and TypeScript stacks. Python, Go and Dart stacks join in a later version. Deploys run on Vercel, and
-  the database and storage modules that deploy with the method are Supabase, R2 and Firebase.
+- **Stack.** Every stack runs its own checks: pnpm scripts for JavaScript and TypeScript, uv for Python, go for Go
+  and flutter for Dart. Supabase, R2, Firebase and Vercel deploys work with JavaScript and TypeScript stacks for now,
+  so a Python, Go or Dart project offers none of them.
 - **App keys.** The keys your app reads (payments, email, error tracking, …) are stored as GitHub secrets. Until the
   deploy copies them to your host, also set them in Vercel → Settings → Environment Variables (Production).
 - **Testing.** Continuous integration tests the engine on Linux and Windows. The full run on GitHub, from
@@ -192,9 +193,9 @@ it.
 
 ## Roadmap
 
-1. Checks that follow the chosen stack.
-2. A project scaffold that is green before the first task, with logging and a health route.
-3. The first green run and the end-to-end test, including copying app keys to the host.
+1. A project scaffold that is green before the first task, with logging and a health route.
+2. The first green run and the end-to-end test, including copying app keys to the host.
+3. Database, storage and deploys for Python, Go and Dart stacks.
 4. The design gate for UI projects.
 5. A guided setup in the browser.
 6. Expert prompts, skills and references for each layer of a project.

@@ -18,7 +18,7 @@ description: Execute a Dev OS fence (docs/fences/Tnn.md) as the builder — prec
    a new dependency it does not name, a tool it does not name), HALT. Do not improvise.
 6. **Done when**: run every command yourself, in order, and keep the real output for the report.
    Fix what fails if the fix is inside the fence; otherwise HALT.
-7. **Guards**: `pnpm guards` (or `node scripts/guards/run-all.mjs` before `package.json` exists)
+7. **Guards**: `node scripts/guards/run-all.mjs` (or `pnpm guards` once a Node `package.json` defines it)
    must print no FAIL.
 8. **Ledgers**: only what the fence says (`SESSION_CONTEXT.md`, `DEVELOPMENT_JOURNAL.md`). Never
    tick `docs/PHASES.md`.

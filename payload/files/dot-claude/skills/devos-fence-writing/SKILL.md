@@ -29,8 +29,8 @@ A builder run has 72 minutes; aim for about 60 minutes of work per stage.
   Done-when ids it proves at the end of that stage.
 - One concern per stage, in this order: data and server first, then UI states, then motion, then
   e2e, captures, ledgers and the report.
-- Every stage leaves the tree green: `pnpm typecheck`, `pnpm lint` and the tests it touches pass
-  after it. No stage depends on a later one.
+- Every stage leaves the tree green: the stack's typecheck, lint and the tests it touches pass
+  after it (`devos.config.json` `stack.commands`). No stage depends on a later one.
 - The runner runs one stage per builder run and tells the builder which stage it is on. Each stage
   appends `## Attempt A · Stage k of N` to the report; the last stage runs **every** Done-when
   command and writes the full report. The review comes once, after the last stage.

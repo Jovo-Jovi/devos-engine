@@ -1,5 +1,5 @@
 {
-  "$comment": "DEV_OS Engine catalogue (E18). Types, the stacks the method can run (runs: true), modules with providers, and the documents worth preparing. A provider with method names the DEV_OS module or variable it turns on; its keys come from devos/setup.json. A provider with env lists the keys the app reads.",
+  "$comment": "DEV_OS Engine catalogue (E18). Types, the stacks the method can run, each with its toolchain, its manifest file and the commands of its checks, modules with providers, and the documents worth preparing. A provider with method names the DEV_OS module or variable it turns on; its keys come from devos/setup.json. A provider with env lists the keys the app reads.",
   "version": 1,
   "types": [
     {
@@ -325,7 +325,16 @@
         "realtime",
         "full"
       ],
-      "runs": true
+      "runs": true,
+      "toolchain": "node",
+      "manifest": "package.json",
+      "commands": {
+        "install": "pnpm install --frozen-lockfile",
+        "typecheck": "pnpm run typecheck",
+        "lint": "pnpm run lint",
+        "test": "pnpm run test",
+        "build": "pnpm run build"
+      }
     },
     {
       "id": "nuxt",
@@ -340,7 +349,16 @@
         "dashboard",
         "full"
       ],
-      "runs": true
+      "runs": true,
+      "toolchain": "node",
+      "manifest": "package.json",
+      "commands": {
+        "install": "pnpm install --frozen-lockfile",
+        "typecheck": "pnpm run typecheck",
+        "lint": "pnpm run lint",
+        "test": "pnpm run test",
+        "build": "pnpm run build"
+      }
     },
     {
       "id": "sveltekit",
@@ -355,7 +373,16 @@
         "dashboard",
         "full"
       ],
-      "runs": true
+      "runs": true,
+      "toolchain": "node",
+      "manifest": "package.json",
+      "commands": {
+        "install": "pnpm install --frozen-lockfile",
+        "typecheck": "pnpm run typecheck",
+        "lint": "pnpm run lint",
+        "test": "pnpm run test",
+        "build": "pnpm run build"
+      }
     },
     {
       "id": "remix",
@@ -370,7 +397,16 @@
         "dashboard",
         "full"
       ],
-      "runs": true
+      "runs": true,
+      "toolchain": "node",
+      "manifest": "package.json",
+      "commands": {
+        "install": "pnpm install --frozen-lockfile",
+        "typecheck": "pnpm run typecheck",
+        "lint": "pnpm run lint",
+        "test": "pnpm run test",
+        "build": "pnpm run build"
+      }
     },
     {
       "id": "astro",
@@ -384,7 +420,16 @@
         "full",
         "web-app"
       ],
-      "runs": true
+      "runs": true,
+      "toolchain": "node",
+      "manifest": "package.json",
+      "commands": {
+        "install": "pnpm install --frozen-lockfile",
+        "typecheck": "pnpm run typecheck",
+        "lint": "pnpm run lint",
+        "test": "pnpm run test",
+        "build": "pnpm run build"
+      }
     },
     {
       "id": "starlight",
@@ -396,7 +441,16 @@
       "fits": [
         "docs"
       ],
-      "runs": true
+      "runs": true,
+      "toolchain": "node",
+      "manifest": "package.json",
+      "commands": {
+        "install": "pnpm install --frozen-lockfile",
+        "typecheck": "pnpm run typecheck",
+        "lint": "pnpm run lint",
+        "test": "pnpm run test",
+        "build": "pnpm run build"
+      }
     },
     {
       "id": "vite-react",
@@ -410,7 +464,16 @@
         "extension",
         "web-app"
       ],
-      "runs": true
+      "runs": true,
+      "toolchain": "node",
+      "manifest": "package.json",
+      "commands": {
+        "install": "pnpm install --frozen-lockfile",
+        "typecheck": "pnpm run typecheck",
+        "lint": "pnpm run lint",
+        "test": "pnpm run test",
+        "build": "pnpm run build"
+      }
     },
     {
       "id": "vite-vue",
@@ -424,7 +487,16 @@
         "extension",
         "web-app"
       ],
-      "runs": true
+      "runs": true,
+      "toolchain": "node",
+      "manifest": "package.json",
+      "commands": {
+        "install": "pnpm install --frozen-lockfile",
+        "typecheck": "pnpm run typecheck",
+        "lint": "pnpm run lint",
+        "test": "pnpm run test",
+        "build": "pnpm run build"
+      }
     },
     {
       "id": "solid",
@@ -438,7 +510,16 @@
         "dashboard",
         "web-app"
       ],
-      "runs": true
+      "runs": true,
+      "toolchain": "node",
+      "manifest": "package.json",
+      "commands": {
+        "install": "pnpm install --frozen-lockfile",
+        "typecheck": "pnpm run typecheck",
+        "lint": "pnpm run lint",
+        "test": "pnpm run test",
+        "build": "pnpm run build"
+      }
     },
     {
       "id": "hono",
@@ -451,7 +532,16 @@
         "api",
         "worker"
       ],
-      "runs": true
+      "runs": true,
+      "toolchain": "node",
+      "manifest": "package.json",
+      "commands": {
+        "install": "pnpm install --frozen-lockfile",
+        "typecheck": "pnpm run typecheck",
+        "lint": "pnpm run lint",
+        "test": "pnpm run test",
+        "build": "pnpm run build"
+      }
     },
     {
       "id": "fastify",
@@ -463,7 +553,16 @@
       "fits": [
         "api"
       ],
-      "runs": true
+      "runs": true,
+      "toolchain": "node",
+      "manifest": "package.json",
+      "commands": {
+        "install": "pnpm install --frozen-lockfile",
+        "typecheck": "pnpm run typecheck",
+        "lint": "pnpm run lint",
+        "test": "pnpm run test",
+        "build": "pnpm run build"
+      }
     },
     {
       "id": "nest",
@@ -475,7 +574,16 @@
       "fits": [
         "api"
       ],
-      "runs": true
+      "runs": true,
+      "toolchain": "node",
+      "manifest": "package.json",
+      "commands": {
+        "install": "pnpm install --frozen-lockfile",
+        "typecheck": "pnpm run typecheck",
+        "lint": "pnpm run lint",
+        "test": "pnpm run test",
+        "build": "pnpm run build"
+      }
     },
     {
       "id": "expo",
@@ -487,7 +595,16 @@
       "fits": [
         "mobile"
       ],
-      "runs": true
+      "runs": true,
+      "toolchain": "node",
+      "manifest": "package.json",
+      "commands": {
+        "install": "pnpm install --frozen-lockfile",
+        "typecheck": "pnpm run typecheck",
+        "lint": "pnpm run lint",
+        "test": "pnpm run test",
+        "build": "pnpm run build"
+      }
     },
     {
       "id": "node-cli",
@@ -498,7 +615,16 @@
       "fits": [
         "cli"
       ],
-      "runs": true
+      "runs": true,
+      "toolchain": "node",
+      "manifest": "package.json",
+      "commands": {
+        "install": "pnpm install --frozen-lockfile",
+        "typecheck": "pnpm run typecheck",
+        "lint": "pnpm run lint",
+        "test": "pnpm run test",
+        "build": "pnpm run build"
+      }
     },
     {
       "id": "node-lib",
@@ -509,7 +635,16 @@
       "fits": [
         "library"
       ],
-      "runs": true
+      "runs": true,
+      "toolchain": "node",
+      "manifest": "package.json",
+      "commands": {
+        "install": "pnpm install --frozen-lockfile",
+        "typecheck": "pnpm run typecheck",
+        "lint": "pnpm run lint",
+        "test": "pnpm run test",
+        "build": "pnpm run build"
+      }
     },
     {
       "id": "fastapi",
@@ -520,7 +655,16 @@
       "fits": [
         "api"
       ],
-      "runs": false
+      "runs": true,
+      "toolchain": "python",
+      "manifest": "pyproject.toml",
+      "commands": {
+        "install": "uv sync --frozen",
+        "typecheck": "uv run mypy .",
+        "lint": "uv run ruff check .",
+        "test": "uv run pytest",
+        "build": "uv run python -m compileall -q ."
+      }
     },
     {
       "id": "django",
@@ -531,7 +675,16 @@
       "fits": [
         "api"
       ],
-      "runs": false
+      "runs": true,
+      "toolchain": "python",
+      "manifest": "pyproject.toml",
+      "commands": {
+        "install": "uv sync --frozen",
+        "typecheck": "uv run mypy .",
+        "lint": "uv run ruff check .",
+        "test": "uv run pytest",
+        "build": "uv run python -m compileall -q ."
+      }
     },
     {
       "id": "go-chi",
@@ -543,7 +696,16 @@
         "api",
         "worker"
       ],
-      "runs": false
+      "runs": true,
+      "toolchain": "go",
+      "manifest": "go.mod",
+      "commands": {
+        "install": "go mod download",
+        "typecheck": "go vet ./...",
+        "lint": "test -z \"$(gofmt -l .)\"",
+        "test": "go test ./...",
+        "build": "go build ./..."
+      }
     },
     {
       "id": "flutter",
@@ -554,7 +716,16 @@
       "fits": [
         "mobile"
       ],
-      "runs": false
+      "runs": true,
+      "toolchain": "dart",
+      "manifest": "pubspec.yaml",
+      "commands": {
+        "install": "flutter pub get",
+        "typecheck": "flutter analyze",
+        "lint": "dart format --output=none --set-exit-if-changed .",
+        "test": "flutter test",
+        "build": "flutter build apk --debug"
+      }
     },
     {
       "id": "python-lib",
@@ -565,7 +736,16 @@
       "fits": [
         "library"
       ],
-      "runs": false
+      "runs": true,
+      "toolchain": "python",
+      "manifest": "pyproject.toml",
+      "commands": {
+        "install": "uv sync --frozen",
+        "typecheck": "uv run mypy .",
+        "lint": "uv run ruff check .",
+        "test": "uv run pytest",
+        "build": "uv build"
+      }
     }
   ],
   "modules": [

@@ -50,7 +50,7 @@
     {
       "path": ".claude/skills/devos-fence-writing/SKILL.md",
       "stored": "dot-claude/skills/devos-fence-writing/SKILL.md",
-      "sha256": "bdf6c223042515302d77e4fe59ec0aaa7428b3bccff7cab0bb92c7c156a4b218",
+      "sha256": "86cf187d3b2af286a461b178fd7358ff2cc2d3ea0794401ce59387f6083c3f70",
       "owner": "engine"
     },
     {
@@ -98,7 +98,7 @@
     {
       "path": ".cursor/rules/40-environment.mdc",
       "stored": "dot-cursor/rules/40-environment.mdc",
-      "sha256": "72d4ccdd9bf147f935196b35a7d0b887fb929fe49d748790772b73584563b9c0",
+      "sha256": "ba3dd0c9c79356f82cdaa42fcb95c4bee133a526ed7e3c19ef2f48426a910677",
       "owner": "engine"
     },
     {
@@ -140,7 +140,7 @@
     {
       "path": ".cursor/skills/devos-execute-fence/SKILL.md",
       "stored": "dot-cursor/skills/devos-execute-fence/SKILL.md",
-      "sha256": "6102658855f715d2e21cc029c62b57974855ceae9da54d2fe8ba7d38e980e834",
+      "sha256": "105228928191a77a0ad10cec3043e6bb65bf29aab5fbfc71e4f27bea80a3ebbc",
       "owner": "engine"
     },
     {
@@ -176,7 +176,7 @@
     {
       "path": ".github/workflows/ci.yml",
       "stored": "dot-github/workflows/ci.yml",
-      "sha256": "414cb7e22258aa9ce66415b2bdcecad0b75dae7a1cdd7d53f76f3fc21bdabc5e",
+      "sha256": "3ff52c161fcc4ad18433f5ee75a5b3e6c5e7f3e602f5f5bc167f0731083ef5f2",
       "owner": "engine"
     },
     {
@@ -188,7 +188,7 @@
     {
       "path": ".github/workflows/devos-cycle.yml",
       "stored": "dot-github/workflows/devos-cycle.yml",
-      "sha256": "6a0300149342c5e55cd37cd5d14672deedde3b7b532e45012f811afa70dc542d",
+      "sha256": "bbf2f7056e9712c905cb6e3ea728585995219ab3b70f17f6d9f97d6b96dd5886",
       "owner": "engine"
     },
     {
@@ -236,7 +236,7 @@
     {
       "path": ".gitignore",
       "stored": "dot-gitignore",
-      "sha256": "087840aad530aa22af0be84857859156072abcd0452e1b7fc7d893c542a7aa39",
+      "sha256": "e45529a9d7e596fd47769f2bdb25175cc37d81d89aebdbf9df55f421f9a4e5d5",
       "owner": "engine"
     },
     {
@@ -254,13 +254,13 @@
     {
       "path": "devos/engine.defaults.json",
       "stored": "devos/engine.defaults.json",
-      "sha256": "b5298b090c2f00cb4ee0b0a58dc7566443b16ea25ac746bc71d6be857f08f975",
+      "sha256": "ded28fb7750039122925677ee3f4aab8593e1e2a230c06cae140c47b60e9649c",
       "owner": "engine"
     },
     {
       "path": "devos/prompts/blueprint.md",
       "stored": "devos/prompts/blueprint.md",
-      "sha256": "5638f345400ce2e1061d7b82d45e46f03540fff6065b46bba2d3c2d638124e1f",
+      "sha256": "d204d39a1c9a41d501e8cf77b5a23b39f2844479604aed521db34d2239ccbe8b",
       "owner": "engine"
     },
     {
@@ -380,7 +380,7 @@
     {
       "path": "docs/method/AUTOMATION.md",
       "stored": "docs/method/AUTOMATION.md",
-      "sha256": "17ee16aa5e7a95aac41c72bbe4599800088da29c178c9acd066a4791b4b23590",
+      "sha256": "6b02fa4863b67d18cd49a76d3c7f67435042c0f86383153371c141003a3ec4ba",
       "owner": "engine"
     },
     {
@@ -398,7 +398,7 @@
     {
       "path": "docs/method/PRECEDENTS.md",
       "stored": "docs/method/PRECEDENTS.md",
-      "sha256": "c2b1e1507d6f5e952a37d344fc803a8329d8335ba856bdd89a30aaaff2fbec9f",
+      "sha256": "b3b0ff74304c15946943b67a0d5386381d360eadfa9dd9a646bc42fcfb5160f8",
       "owner": "engine"
     },
     {
@@ -572,7 +572,7 @@
     {
       "path": "scripts/devos/run-checks.mjs",
       "stored": "scripts/devos/run-checks.mjs",
-      "sha256": "7848b3968e9b592183d2dcafa3d986d323ae9ddc60e46686f695d02a5b5685ae",
+      "sha256": "06e79d08ea0aeeb18a8b23e82a31a9380b2fbd04461f9851670ac70d66d0ad89",
       "owner": "engine"
     },
     {

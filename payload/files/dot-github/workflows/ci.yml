@@ -27,6 +27,28 @@ jobs:
         with:
           node-version: 22
       - run: npm install -g pnpm@10
+      - name: Stack toolchain (PR-48)
+        id: tc
+        run: echo "toolchain=$(node -p "require('./devos.config.json').stack?.toolchain || 'node'")" >> "$GITHUB_OUTPUT"
+
+      - name: Python and uv (Python stacks, PR-48)
+        if: steps.tc.outputs.toolchain == 'python'
+        uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+
+      - name: Go (Go stacks, PR-48)
+        if: steps.tc.outputs.toolchain == 'go'
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      - name: Flutter (Dart stacks, PR-48)
+        if: steps.tc.outputs.toolchain == 'dart'
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
       - name: Supabase CLI (backend module, PR-17)
         if: hashFiles('supabase/config.toml') != ''
         uses: supabase/setup-cli@v1

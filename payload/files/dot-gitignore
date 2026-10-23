@@ -27,6 +27,16 @@ node_modules/
 out/
 *.tsbuildinfo
 
+# Python, Go and Dart toolchains (PR-48)
+.venv/
+__pycache__/
+*.pyc
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+dist/
+.dart_tool/
+
 # Playwright
 test-results/
 playwright-report/

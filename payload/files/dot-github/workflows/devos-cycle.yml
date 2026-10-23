@@ -203,6 +203,28 @@ jobs:
           case " $tools " in *" codex "*) npm install -g @openai/codex ;; esac
           case " $tools " in *" gemini "*) npm install -g @google/gemini-cli ;; esac
 
+      - name: Stack toolchain (PR-48)
+        id: tc
+        run: echo "toolchain=$(node -p "require('./devos.config.json').stack?.toolchain || 'node'")" >> "$GITHUB_OUTPUT"
+
+      - name: Python and uv (Python stacks, PR-48)
+        if: steps.tc.outputs.toolchain == 'python'
+        uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+
+      - name: Go (Go stacks, PR-48)
+        if: steps.tc.outputs.toolchain == 'go'
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      - name: Flutter (Dart stacks, PR-48)
+        if: steps.tc.outputs.toolchain == 'dart'
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
       - name: Supabase CLI (backend module, PR-17)
         uses: supabase/setup-cli@v1
         with:
@@ -229,6 +251,9 @@ jobs:
             if ! timeout 600 pnpm install --frozen-lockfile --reporter=append-only 2>&1 | tee .devos/logs/install-before.log | grep -E "Progress|Done in|ERR" | tail -n 20; then
               echo "::warning::pnpm install (before build) failed or took over 10 minutes; the builder will see it"
             fi
+          fi
+          if ! node scripts/devos/run-checks.mjs --install-only > .devos/logs/install-stack.log 2>&1; then
+            echo "::warning::the stack's install failed; the builder will see it"
           fi
 
       - name: Choose the builder from the pool

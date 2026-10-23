@@ -1,0 +1,84 @@
+# Dev OS runner scratch (logs, prompts, agent output). Never committed.
+.devos/
+
+# Dev OS: the real MCP config is local; commit only .cursor/mcp.example.json
+.cursor/mcp.json
+
+# Supabase CLI local state (the stack itself runs in Docker)
+supabase/.temp/
+supabase/.branches/
+
+# Firebase CLI local state and emulator logs; service-account keys never enter the tree (PR-26)
+.firebase/
+firebase-debug*.log
+firestore-debug*.log
+ui-debug*.log
+*-firebase-adminsdk-*.json
+*service-account*.json
+
+# Local environment
+.env
+.env.*
+!.env.example
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+
+# Python, Go and Dart toolchains (PR-48)
+.venv/
+__pycache__/
+*.pyc
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+dist/
+.dart_tool/
+
+# Playwright
+test-results/
+playwright-report/
+blob-report/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# vercel
+.vercel
+
+# typescript
+next-env.d.ts

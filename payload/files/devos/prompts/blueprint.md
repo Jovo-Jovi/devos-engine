@@ -40,11 +40,11 @@ Work in this order.
    the runner owning git. Write the result as `docs/DEVOS_FIT.md` §7a.
 4. **Write the documents** in `docs/` with the layout of handbook §4: `DEVOS_FIT.md`, `PRODUCT_BRIEF.md`,
    `GLOSSARY.md`, `STACK.md` (the chosen stack in one page: the versions current today from its official
-   documentation, the folder layout, the commands `pnpm run typecheck`, `lint`, `test` and `build`, how to test,
-   how to log with one structured logger, and the conventions every task follows), `DECISIONS.md` (ODs, including
-   the automated relay OD and the tooling OD), `SCOPE.md`, the models the profile needs, `DESIGN_SYSTEM.md`,
-   `PHASES.md`, `SESSION_CONTEXT.md`, `DEVELOPMENT_JOURNAL.md` and `method/CARRY_FORWARDS.md` (empty). Two formats
-   are read by guards and must be exact:
+   documentation, the folder layout, the stack's commands from `devos.config.json` `stack.commands` (install,
+   typecheck, lint, test, build), how to test, how to log with one structured logger, and the conventions every
+   task follows), `DECISIONS.md` (ODs, including the automated relay OD and the tooling OD), `SCOPE.md`, the models
+   the profile needs, `DESIGN_SYSTEM.md`, `PHASES.md`, `SESSION_CONTEXT.md`, `DEVELOPMENT_JOURNAL.md` and
+   `method/CARRY_FORWARDS.md` (empty). Two formats are read by guards and must be exact:
    - `docs/PHASES.md`: the header `| Task | Phase | Station | Name | Risk | Gate | Done | Verdict |`, a separator
      row, then one row per task — `T01` first, ids ascending, Risk 1, 2 or 3, Done `[ ]`, Verdict `—`.
    - `docs/GLOSSARY.md`: a section whose heading starts `## 3.` and holds one fenced code block listing the
