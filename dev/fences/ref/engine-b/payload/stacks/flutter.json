@@ -1,0 +1,24 @@
+{
+  "id": "flutter",
+  "label": "Flutter",
+  "languages": [
+    "dart"
+  ],
+  "fits": [
+    "mobile"
+  ],
+  "packageManager": "flutter",
+  "commands": {
+    "install": "flutter pub get",
+    "typecheck": "flutter analyze",
+    "lint": "flutter analyze",
+    "test": "flutter test",
+    "build": "flutter build apk --debug",
+    "e2e": ""
+  },
+  "configFiles": [
+    "pubspec.yaml"
+  ],
+  "arch": "mobile",
+  "note": "If the runner image cannot install the pinned Flutter SDK, the card says so. The choice is still allowed."
+}

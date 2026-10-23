@@ -1,0 +1,5 @@
+/* Framework default styles. Tokens live here when the ui-kit is custom-tokens. */
+:root {
+  --surface: #ffffff;
+  --text: #17202b;
+}

@@ -1,0 +1,24 @@
+{
+  "id": "python-lib",
+  "label": "Python package",
+  "languages": [
+    "python"
+  ],
+  "fits": [
+    "library"
+  ],
+  "packageManager": "pip",
+  "commands": {
+    "install": "pip install -e .",
+    "typecheck": "python -m mypy src",
+    "lint": "ruff check .",
+    "test": "pytest",
+    "build": "python -m build --wheel",
+    "e2e": ""
+  },
+  "configFiles": [
+    "pyproject.toml"
+  ],
+  "arch": "library",
+  "note": "pytest for tests."
+}

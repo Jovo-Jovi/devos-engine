@@ -14,8 +14,18 @@ review (Opus) and the owner reads the verdict before committing. Plan: `dev/PLAN
 | E13 | Engine CI: on every push of `main` and `task/*` run `node --test`, parse every payload workflow with a real YAML parser, run actionlint (engine root `.github/`, not shipped) | 2 | — | v1 | [x] | PASS a1 — remote review of record (no local review: session limit) — dev/reviews/E13-a1-remote.md |
 | E05 | `install` and `upgrade` (three-way, branch + PR, conflicts listed) | 3 | owner | v2 | [x] | PASS a2 — dev/reviews/E05-a2.md · remote MERGE — dev/reviews/E05-a2-remote.md · remote FIX a1 — dev/reviews/E05-a1-remote.md |
 | E06 | `init` part 1: contract (typed accept), questions, install, blueprint through Claude Code, approval; OD citations out of the payload (PR-43) | 3 | owner | v2 issued (v1 not issuable — E05-a2-remote.md) | [x] | PASS a1 — dev/reviews/E06-a1.md · remote MERGE — dev/reviews/E06-a1-remote.md |
-| E07 | `init` part 2: repository, secrets by name, variables, `SETUP.md`, first cycle | 3 | owner | v2 issued | [ ] | — |
-| E08 | UI/UX gate: design contract, required spec, axe check, missing evidence = FAIL, pinned design skills, resource catalogue (PLAN §10) | 3 | owner | fence on PASS of E05 | [ ] | — |
+| E07 | `init` part 2: repository, secrets by name, variables, `SETUP.md`, first cycle | 3 | owner | v4 | [x] | PASS a2 — dev/reviews/E07-a2.md · remote MERGE — dev/reviews/E07-a2-remote.md · D8 moved to E15 D11 (v4) · PASS a1 — dev/reviews/E07-a1.md · remote a1 — dev/reviews/E07-a1-remote.md |
+| P1 | Port the Tower's two supervisor fixes (PR-36): re-run a deploy an outside service broke; close finished requests | 2 | owner | folded into E15 v2 Stage 1 | [ ] | — |
+| E15 | Agents and keys: any tool and model per role with strengths, gh scope preflight, attached documents, blueprint on the chosen agent, `project.json` agents, credentials by tool, all keys typed once (memory → `gh secret set` stdin), confirm before GitHub (PR-44); P1 port | 3 | owner | v2 issued (owner decisions 2026-10-23: all recommendations; D2 amended to keys-at-once) | [ ] | — |
+| E16 | Preflight and resume: gh scopes `repo`+`workflow`, accounts, confirm before GitHub, adopt an existing repository, `devos continue` checklist, Windows-safe spawn, Stop/Ctrl-C, terminal progress | 3 | owner | proposed (ENGINE-COMPARE §8) | [ ] | — |
+| E17 | Cycle runs Codex and Gemini too: runner adapters, CLI install in the workflow, role kits per tool, reviewer picks by strength (method change) | 3 | owner | proposed (ENGINE-COMPARE §8) | [ ] | — |
+| E18 | Catalogue: project types, stacks with commands, modules with providers, env names and key sources | 2 | owner | proposed (ENGINE-COMPARE §8) | [ ] | — |
+| E19 | Generalize the method by stack: checks run the stack's commands, `ci.yml` per package manager, guards apply by stack/module, screens only for UI types (method change) | 3 | owner | proposed (ENGINE-COMPARE §8) | [ ] | — |
+| E20 | Deterministic scaffold: stack configuration, architecture skeleton, health route, architecture test; checks green before T01 | 3 | owner | proposed (ENGINE-COMPARE §8) | [ ] | — |
+| E21 | First green run: watch the dispatched run, diagnose from its log, `verify`/`fix`/`watch`; the real end-to-end run (former D8) on two stacks | 3 | owner | proposed (ENGINE-COMPARE §8) | [ ] | — |
+| E22 | Guided UI: localhost wizard (session token + Origin checks), live progress, Stop, animations; terminal fallback | 2 | owner | proposed (ENGINE-COMPARE §8) — after the core | [ ] | — |
+| E08 | UI/UX gate part 1: design contract, design specification + `guard:design-spec`, `DESIGN_METHOD.md`, resource catalogue (PLAN §10 items 1, 2, 7; PR-44) | 3 | owner | v1 issued — re-rehearse on PASS of E15 (precedent becomes PR-45; manifest and provenance counts move) | [ ] | — |
+| E14 | UI/UX gate part 2: missing evidence = failed check, axe `a11y` on every capture, vendored pinned design skills, objective/subjective verdict (PLAN §10 items 3–6) | 3 | owner | proposed (owner to confirm the split and the skills licence); fence on PASS of E08 | [ ] | — |
 | E09 | Registry link: `report.mjs`, report steps, registration, cycle preflight | 3 | owner | fence on PASS of E07 and E08, after Tower TR1–TR2 | [ ] | — |
 | E10 | Clean-machine run, docs, license, v1.0.0 | 2 | owner | fence on PASS of E09 and decision D-E4 | [ ] | — |
 
@@ -24,6 +34,8 @@ review (Opus) and the owner reads the verdict before committing. Plan: `dev/PLAN
 | Tower commit | What changed | Engine task |
 |---|---|---|
 | `94db2b6` · `89d007c` · `93fe912` | builder streaming (PR-37), 10-minute builder report, staged fences with helper agents (PR-38) | absorbed: pin moved to `a49ca6d` on 2026-10-19, before E01 |
+| `74d54be` | the supervisor re-runs a deploy that an outside service broke before the site moved (PR-36) | P1 |
+| `02564ef` | the supervisor closes finished requests (PR-36) | P1 |
 
 ## Tower tasks this plan waits for
 
@@ -38,7 +50,7 @@ review (Opus) and the owner reads the verdict before committing. Plan: `dev/PLAN
 |---|---|---|
 | E03 a2 remote | The shipped handbook names the client project NEL / Nile Egypt Labs as its case study — owner decides if public; recommended: anonymize, add NEL/Nile/devos-plan to the release-check patterns | E10 (owner decision first) |
 | E03 a2 remote | Prompts, workflows and engine defaults cite the reference project's OD numbers (OD-02…OD-08) | done in E06 a1 (PR-43) |
-| E03 a2 remote | `vercel-bypass` is recommended even when `deploy.bypass` is false — gate it on the setting | E07 |
+| E03 a2 remote | `vercel-bypass` is recommended even when `deploy.bypass` is false — gate it on the setting | E10 (method fix; E07 fence did not take it and froze the payload — moved in E07 a1) |
 | E03 a3 remote | `devos-new-project.md` reads "Copy the copied `.claude/settings.json` last" (fence wording) | done in E06 a1 (command replaced) |
 | E03 a3 remote | PRECEDENTS PR-26 Born-from still says "the reference project" — sweep with the release wording check | E10 |
 | E04 a1 remote | `run()` passes a `.cmd` path to the shell unquoted; a path with a space breaks on Windows — quote it when `viaShell` | done in E12 a3 (`which.run` quotes the path) |
@@ -52,9 +64,13 @@ review (Opus) and the owner reads the verdict before committing. Plan: `dev/PLAN
 | E05 a1 remote | `compareSemver` throws on a pre-release version (`1.0.0-beta`): uncaught stack trace | E10 (release versions) |
 | E05 a2 remote | `rollback()` restores all paths in one `git restore`; one path untracked in HEAD (an engine file the project ignores) makes git reject the whole list, so nothing is restored | E10 (clean-machine run) |
 | E06 a1 | PLAN §3 lists the blueprint (step 5) before the engine files (step 6); `init` installs first because the blueprint reads the installed prompt and handbook | owner (amend PLAN §3) |
-| E06 a1 | `keyFromName` can derive a key that fails `KEY_RE` (`X`, `!!!`, `日本`) and `init` writes it unchecked | E07 (S2) |
+| E06 a1 | `keyFromName` can derive a key that fails `KEY_RE` (`X`, `!!!`, `日本`) and `init` writes it unchecked | done in E07 a1 (S2) |
 | E06 a1 | `docs/method/FULLSTACK_MODULE.md:5` cites "`/devos-new-project`, step 5"; the command has no numbered steps now (the blueprint's step 5) | E10 (wording sweep) |
 | E07 v1 fence | `devos/setup.json` steps cite `SETUP.md` §11.2, §12.1–§12.3, §13.1–§13.4 (the Tower's SETUP); the generated `SETUP.md` has no such sections | E10 (method wording) |
 | E07 v1 fence | `vercel-var` has `when: always`, so a project with deploy `none` is told to turn Vercel on; `init` skips it, the setup issue still lists it (blocks deploy only) | E10 (method fix) |
 | E06 v2 fence | The contract is a draft (`0-draft`); the deletion channel ("open an issue in the DEV_OS Engine repository") needs the owner's confirmation; legal review before v1.0.0 | E10 (owner) |
-| E06 a1 remote | The automatic repair round sends the bare guard output with no instruction | E07 (S5, fence v2) |
+| E06 a1 remote | The automatic repair round sends the bare guard output with no instruction | done in E07 a1 (S5) |
+| E07 a1 | The TTY secret hand-off (readline paused → `gh secret set` with inherited stdio) has no automated test; Linux was proved with a pseudo-terminal in the a1 remote check | E15 D11 (Windows) |
+| E07 a1 remote | A project name that clashes with an existing repository stops at `repository`; `--continue` retries the same slug (way out: add the remote by hand or start again) | E10 (README) |
+| ENGINE-COMPARE 2026-10-23 | Engine B (the other model's build) is not adopted as base: its cycle merges red PRs, loses ledger/fence/park state between runs and echoes secrets; its onboarding pieces are ported by E15–E22 | owner decisions D1–D7 |
+| ENGINE-COMPARE owner 2026-10-23 | Expert knowledge pack: layer skills and references for every model at blueprint and during the cycle (design: Lenis, GSAP, React Bits and the owner's saved references; middleware, backend, database, security) | E23 (after E21 — a working tool first) |

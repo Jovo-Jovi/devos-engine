@@ -1,0 +1,9 @@
+{
+  "id": "product-ai",
+  "label": "Product AI",
+  "stubs": [
+    "typescript",
+    "python",
+    "go"
+  ]
+}

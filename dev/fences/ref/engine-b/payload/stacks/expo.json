@@ -1,0 +1,26 @@
+{
+  "id": "expo",
+  "label": "Expo",
+  "languages": [
+    "typescript",
+    "javascript"
+  ],
+  "fits": [
+    "mobile"
+  ],
+  "packageManager": "npm",
+  "commands": {
+    "install": "npm install",
+    "typecheck": "npx tsc --noEmit",
+    "lint": "npx eslint .",
+    "test": "npx jest",
+    "build": "npx expo export",
+    "e2e": ""
+  },
+  "configFiles": [
+    "app.json",
+    "tsconfig.json"
+  ],
+  "arch": "mobile",
+  "note": ""
+}

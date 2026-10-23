@@ -1,0 +1,16 @@
+{
+  "arch": "api",
+  "comment": "Folders and files an API or worker project must contain.",
+  "paths": ["src/routes", "src/domain", "src/data"],
+  "health": true,
+  "architectureTest": true,
+  "folderMap": {
+    "src/routes": "HTTP handlers only; no business rules",
+    "src/domain": "business rules, pure",
+    "src/data": "data access; the only place a database client appears",
+    "src/server": "active module wiring"
+  },
+  "dependencyDirection": "routes -> domain -> data. Domain never imports a database client.",
+  "healthRoute": "src/routes/health.ts returns 200",
+  "architectureTest": "tests/architecture.test.mjs fails when a route imports a database client directly"
+}

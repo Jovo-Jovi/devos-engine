@@ -1,0 +1,9 @@
+{
+  "id": "search",
+  "label": "Search",
+  "stubs": [
+    "typescript",
+    "python",
+    "go"
+  ]
+}

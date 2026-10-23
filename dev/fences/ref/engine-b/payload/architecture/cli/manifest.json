@@ -1,0 +1,15 @@
+{
+  "arch": "cli",
+  "comment": "Folders and files a CLI project must contain.",
+  "paths": ["src/commands"],
+  "health": false,
+  "architectureTest": false,
+  "folderMap": {
+    "src/cli.ts": "argument parsing and dispatch",
+    "src/commands": "one file per command",
+    "tests": "node --test or vitest"
+  },
+  "dependencyDirection": "cli -> commands -> lib. Commands never import UI code.",
+  "healthRoute": null,
+  "architectureTest": null
+}

@@ -1,0 +1,18 @@
+{
+  "arch": "web",
+  "comment": "Folders and files a web project must contain. The configuration model creates them; the bootstrap guard enforces them.",
+  "paths": ["src/components", "src/lib", "src/features", "src/server", "public"],
+  "health": true,
+  "architectureTest": true,
+  "folderMap": {
+    "src/app (or the framework's routes)": "routes and pages; public shell and authenticated shell",
+    "public": "static assets",
+    "src/components": "presentational components; no database imports",
+    "src/features/<feature>": "one folder per feature named from the brief",
+    "src/server": "server-side module wiring; one file per active module",
+    "src/lib": "pure helpers, no IO"
+  },
+  "dependencyDirection": "routes -> features -> components; features -> src/server -> providers. Components never import src/server or any database client.",
+  "healthRoute": "src/app/api/health/route.ts returns 200 (adapt the path to the framework's routing)",
+  "architectureTest": "tests/architecture.test.mjs fails when a UI file imports the database"
+}

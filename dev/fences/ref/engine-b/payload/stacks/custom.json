@@ -1,0 +1,42 @@
+{
+  "id": "custom",
+  "label": "Custom",
+  "languages": [
+    "typescript",
+    "javascript",
+    "python",
+    "go",
+    "dart",
+    "ruby"
+  ],
+  "fits": [
+    "saas",
+    "web-app",
+    "marketing",
+    "dashboard",
+    "marketplace",
+    "commerce",
+    "api",
+    "mobile",
+    "ai-product",
+    "realtime",
+    "docs",
+    "cli",
+    "library",
+    "worker",
+    "extension",
+    "full"
+  ],
+  "packageManager": "npm",
+  "commands": {
+    "install": "",
+    "typecheck": "",
+    "lint": "",
+    "test": "",
+    "build": "",
+    "e2e": ""
+  },
+  "configFiles": [],
+  "arch": "web",
+  "note": "The developer fills install, typecheck, lint, test, and build. These commands are required before Confirm."
+}

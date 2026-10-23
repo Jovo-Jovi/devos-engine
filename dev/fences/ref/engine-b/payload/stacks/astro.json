@@ -1,0 +1,28 @@
+{
+  "id": "astro",
+  "label": "Astro",
+  "languages": [
+    "typescript",
+    "javascript"
+  ],
+  "fits": [
+    "marketing",
+    "full",
+    "web-app"
+  ],
+  "packageManager": "npm",
+  "commands": {
+    "install": "npm install",
+    "typecheck": "npx astro check",
+    "lint": "npx eslint .",
+    "test": "npx vitest run",
+    "build": "npm run build",
+    "e2e": "npx playwright test"
+  },
+  "configFiles": [
+    "astro.config.mjs",
+    "tsconfig.json"
+  ],
+  "arch": "web",
+  "note": ""
+}

@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DEV_OS — set up a project</title>
+<link rel="stylesheet" href="/app.css">
+</head>
+<body>
+<div id="app" class="app">
+  <aside id="rail" class="rail" aria-label="Steps">
+    <div class="rail-head">
+      <div class="brand">DEV_OS</div>
+      <button id="theme" class="theme-toggle" type="button" title="Toggle light surface">Light</button>
+    </div>
+    <ol id="rail-steps" class="rail-steps"></ol>
+    <div class="rail-foot" id="rail-foot"></div>
+  </aside>
+  <main id="main" class="main" aria-live="polite">
+    <!-- Instant splash: the engine's first machine check (CLIs, gh, started
+         projects) takes seconds on a cold start, and a blank page reads as a
+         dead engine. This draws immediately and is replaced by the first render. -->
+    <div class="splash" id="splash">
+      <div class="splash-ring" aria-hidden="true"></div>
+      <h1>Waking the engine…</h1>
+      <p class="lede">Checking this machine, the CLIs, and any started project. The page comes alive the moment the check lands — usually seconds.</p>
+      <div class="splash-lines" aria-hidden="true"><span></span><span></span><span></span></div>
+    </div>
+  </main>
+  <aside id="aside" class="aside" aria-label="Answers so far">
+    <div class="aside-title">Answers so far</div>
+    <dl id="aside-list" class="aside-list"></dl>
+  </aside>
+</div>
+<script type="module" src="/hairline-stage.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>

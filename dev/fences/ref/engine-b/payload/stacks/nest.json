@@ -1,0 +1,26 @@
+{
+  "id": "nest",
+  "label": "NestJS",
+  "languages": [
+    "typescript",
+    "javascript"
+  ],
+  "fits": [
+    "api"
+  ],
+  "packageManager": "npm",
+  "commands": {
+    "install": "npm install",
+    "typecheck": "npx tsc --noEmit",
+    "lint": "npx eslint .",
+    "test": "npx jest",
+    "build": "npx nest build",
+    "e2e": ""
+  },
+  "configFiles": [
+    "nest-cli.json",
+    "tsconfig.json"
+  ],
+  "arch": "api",
+  "note": ""
+}

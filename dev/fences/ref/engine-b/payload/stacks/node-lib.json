@@ -1,0 +1,24 @@
+{
+  "id": "node-lib",
+  "label": "Node TypeScript package",
+  "languages": [
+    "typescript"
+  ],
+  "fits": [
+    "library"
+  ],
+  "packageManager": "npm",
+  "commands": {
+    "install": "npm install",
+    "typecheck": "npx tsc --noEmit",
+    "lint": "npx eslint .",
+    "test": "npx vitest run",
+    "build": "npx tsc -p tsconfig.build.json",
+    "e2e": ""
+  },
+  "configFiles": [
+    "tsconfig.json"
+  ],
+  "arch": "library",
+  "note": "vitest for tests."
+}

@@ -1,0 +1,26 @@
+{
+  "id": "starlight",
+  "label": "Astro Starlight (docs)",
+  "languages": [
+    "typescript",
+    "javascript"
+  ],
+  "fits": [
+    "docs"
+  ],
+  "packageManager": "npm",
+  "commands": {
+    "install": "npm install",
+    "typecheck": "npx astro check",
+    "lint": "npx eslint .",
+    "test": "npx vitest run",
+    "build": "npm run build",
+    "e2e": ""
+  },
+  "configFiles": [
+    "astro.config.mjs",
+    "tsconfig.json"
+  ],
+  "arch": "web",
+  "note": ""
+}

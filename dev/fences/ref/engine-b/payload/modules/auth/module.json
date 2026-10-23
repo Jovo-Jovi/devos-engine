@@ -1,0 +1,9 @@
+{
+  "id": "auth",
+  "label": "Auth",
+  "stubs": [
+    "typescript",
+    "python",
+    "go"
+  ]
+}

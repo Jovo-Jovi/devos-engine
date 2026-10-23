@@ -33,6 +33,10 @@ process.stdin.on("end", () => {
   }) + "\\n");
   const mode = process.env.STUB_MODE || "good";
   if (mode === "fail") process.exit(1);
+  if (mode === "fail-json") {
+    process.stdout.write('{"type":"result","is_error":true,"result":"Claude AI usage limit reached|1760900000"}');
+    process.exit(1);
+  }
   const docs = path.join(process.cwd(), "docs");
   mkdirSync(path.join(docs, "fences"), { recursive: true });
   if (mode === "bad-then-good" && !args.includes("--continue")) {
@@ -48,19 +52,58 @@ process.stdin.on("end", () => {
 });
 `;
 
+const ghStub = `import { appendFileSync, readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import path from "node:path";
+
+const args = process.argv.slice(2);
+const log = process.env.DEVOS_GH_LOG;
+if (log) appendFileSync(log, args.join(" ") + "\\n");
+
+if (args[0] === "--version") process.exit(0);
+if (args[0] === "api" && args[1] === "user") {
+  process.stdout.write("devtest\\n");
+  process.exit(0);
+}
+if (args[0] === "repo" && args[1] === "create") {
+  const remote = path.join(path.resolve(process.cwd(), ".."), "remote.git");
+  const init = spawnSync("git", ["init", "--bare", remote], { windowsHide: true });
+  if (init.status !== 0) process.exit(init.status ?? 1);
+  const added = spawnSync("git", ["remote", "add", "origin", remote], { cwd: process.cwd(), windowsHide: true });
+  process.exit(added.status ?? 1);
+}
+if (args[0] === "secret" && args[1] === "list") {
+  process.stdout.write(process.env.STUB_SECRETS || '[{"name":"CURSOR_API_KEY"},{"name":"CLAUDE_CODE_OAUTH_TOKEN"}]');
+  process.exit(0);
+}
+if (args[0] === "variable" && args[1] === "list") {
+  process.stdout.write('[{"name":"DEVOS_VERCEL","value":"true"}]');
+  process.exit(0);
+}
+if (args[0] === "workflow" && args[1] === "run") {
+  if (process.env.STUB_DISPATCH === "fail-once" && log) {
+    const seen = readFileSync(log, "utf8").split("\\n").filter((line) => line.startsWith("workflow run")).length;
+    if (seen === 1) process.exit(1);
+  }
+  process.exit(0);
+}
+process.exit(0);
+`;
+
 function writeStubs(dir) {
   mkdirSync(dir);
   writeFileSync(path.join(dir, "claude-stub.mjs"), claudeStub);
+  writeFileSync(path.join(dir, "gh-stub.mjs"), ghStub);
   if (windows) {
     writeFileSync(path.join(dir, "claude.cmd"), "@node \"%~dp0claude-stub.mjs\" %*\r\n");
-    writeFileSync(path.join(dir, "gh.cmd"), "@exit /b 0\r\n");
+    writeFileSync(path.join(dir, "gh.cmd"), "@node \"%~dp0gh-stub.mjs\" %*\r\n");
     return;
   }
   const claude = path.join(dir, "claude");
   writeFileSync(claude, `#!/usr/bin/env node\n${claudeStub}`);
   chmodSync(claude, 0o755);
   const gh = path.join(dir, "gh");
-  writeFileSync(gh, "#!/bin/sh\nexit 0\n");
+  writeFileSync(gh, `#!/usr/bin/env node\n${ghStub}`);
   chmodSync(gh, 0o755);
 }
 
@@ -83,7 +126,13 @@ function stage(options = {}) {
     PATH: `${stubs}${path.delimiter}${process.env.PATH ?? ""}`,
     DEVOS_HOME: home,
     DEVOS_CLAUDE_LOG: path.join(parent, "claude.log"),
+    DEVOS_GH_LOG: path.join(parent, "gh.log"),
     DEVOS_FIXTURES: fixtures,
+    DEVOS_RETRY_MS: "0",
+    GIT_AUTHOR_NAME: "Devos Test",
+    GIT_AUTHOR_EMAIL: "devos@example.com",
+    GIT_COMMITTER_NAME: "Devos Test",
+    GIT_COMMITTER_EMAIL: "devos@example.com",
     STUB_MODE: options.mode ?? "good",
   };
   return { parent, project, env };
@@ -200,6 +249,7 @@ test("init.test.mjs repairs a failed phases check before approval", () => {
     const called = runs(staged.parent);
     assert.equal(called.length, 2);
     assert.equal(called[1].stdin.includes("guard:phases"), true, called[1].stdin);
+    assert.equal(called[1].stdin.startsWith("The checks after your last round failed:"), true);
   } finally {
     cleanup(staged.parent);
   }
@@ -250,4 +300,46 @@ test("init.test.mjs contract version is 0-draft", () => {
   const first = readFileSync(path.join(root, "payload", "contract", "CONTRACT.md"), "utf8").split("\n")[0];
   assert.equal(first.endsWith("version 0-draft"), true, first);
   assert.equal(CONTRACT_VERSION, "0-draft");
+});
+
+test("init.test.mjs prints a JSON blueprint error and how to resume", () => {
+  const staged = stage({ mode: "fail-json" });
+  try {
+    const result = init(staged, `${accepted}\n`);
+    assert.equal(result.status, 1, result.stdout + result.stderr);
+    assert.equal(result.stdout.includes("Claude AI usage limit reached"), true, result.stdout);
+    assert.equal(result.stdout.includes("claude exited with 1"), true, result.stdout);
+    assert.equal(result.stdout.includes("reports a usage limit"), true, result.stdout);
+    assert.equal(result.stdout.includes("devos init --continue"), true, result.stdout);
+    assert.equal(existsSync(path.join(staged.project, ".claude", "settings.json")), false);
+  } finally {
+    cleanup(staged.parent);
+  }
+});
+
+test("init.test.mjs resumes a failed blueprint with --continue", () => {
+  const staged = stage({ mode: "fail-json" });
+  try {
+    const failed = init(staged, `${accepted}\n`);
+    assert.equal(failed.status, 1, failed.stdout + failed.stderr);
+    staged.env.STUB_MODE = "good";
+    const result = spawnSync(process.execPath, [bin, "init", "--continue", staged.project], {
+      encoding: "utf8",
+      windowsHide: true,
+      timeout: 180000,
+      input: "approve\n",
+      env: staged.env,
+    });
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    const called = runs(staged.parent);
+    assert.equal(called.length, 2);
+    assert.equal(called[1].args.includes("--continue"), false);
+    const settings = readFileSync(path.join(staged.project, ".claude", "settings.json"));
+    const payload = readFileSync(path.join(root, "payload", "files", "dot-claude", "settings.json"));
+    assert.deepEqual(settings, payload);
+    const gh = readFileSync(path.join(staged.parent, "gh.log"), "utf8").trim().split("\n");
+    assert.equal(gh.at(-1).startsWith("workflow run devos-cycle.yml"), true, gh.at(-1));
+  } finally {
+    cleanup(staged.parent);
+  }
 });

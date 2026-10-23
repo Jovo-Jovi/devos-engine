@@ -1,0 +1,7 @@
+{
+  "id": "automation",
+  "label": "Automation",
+  "alwaysOn": true,
+  "carries": ["reviewer id", "builder id", "workflows", "runner scripts", "guards", "prompts", "ledger", "issue forms"],
+  "note": "Every project includes this module. It contains the chosen reviewer id and builder id, and never invokes the configuration model."
+}

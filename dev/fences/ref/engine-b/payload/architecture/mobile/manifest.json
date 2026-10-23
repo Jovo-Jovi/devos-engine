@@ -1,0 +1,15 @@
+{
+  "arch": "mobile",
+  "comment": "Folders and files a mobile project must contain.",
+  "paths": ["src/features"],
+  "health": false,
+  "architectureTest": false,
+  "folderMap": {
+    "app/ (Expo) or lib/ (Flutter)": "screens and navigation",
+    "src/features": "one folder per feature named from the brief",
+    "test/ (Flutter) or tests/": "unit tests"
+  },
+  "dependencyDirection": "screens -> features -> data. Features never import screens.",
+  "healthRoute": null,
+  "architectureTest": null
+}

@@ -1,0 +1,16 @@
+{
+  "name": "devos-engine",
+  "version": "0.1.0",
+  "description": "DEV_OS Engine - a local developer tool that turns one guided configuration session into a GitHub repository where AI reviewer and builder models continue development under your merge gates.",
+  "type": "module",
+  "bin": {
+    "devos": "bin/devos.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test 'test/*.test.mjs'"
+  },
+  "license": "SEE LICENSE IN LICENSE"
+}

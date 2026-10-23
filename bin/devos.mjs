@@ -25,7 +25,7 @@ devos agents show
 devos agents import <file>
 devos install [folder] --key <KEY>
 devos upgrade [--local]
-devos init [folder]
+devos init [--continue] [folder]
 `);
   process.exit(2);
 }

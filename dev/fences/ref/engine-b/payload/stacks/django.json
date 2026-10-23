@@ -1,0 +1,25 @@
+{
+  "id": "django",
+  "label": "Django",
+  "languages": [
+    "python"
+  ],
+  "fits": [
+    "api"
+  ],
+  "packageManager": "pip",
+  "commands": {
+    "install": "pip install -r requirements.txt",
+    "typecheck": "python -m mypy manage.py",
+    "lint": "ruff check .",
+    "test": "python manage.py test",
+    "build": "python -m compileall .",
+    "e2e": ""
+  },
+  "configFiles": [
+    "pyproject.toml",
+    "manage.py"
+  ],
+  "arch": "api",
+  "note": ""
+}

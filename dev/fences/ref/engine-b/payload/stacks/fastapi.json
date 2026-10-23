@@ -1,0 +1,25 @@
+{
+  "id": "fastapi",
+  "label": "FastAPI",
+  "languages": [
+    "python"
+  ],
+  "fits": [
+    "api"
+  ],
+  "packageManager": "pip",
+  "commands": {
+    "install": "pip install -r requirements.txt",
+    "typecheck": "python -m mypy app",
+    "lint": "ruff check .",
+    "test": "pytest",
+    "build": "python -m compileall app",
+    "e2e": ""
+  },
+  "configFiles": [
+    "pyproject.toml",
+    "requirements.txt"
+  ],
+  "arch": "api",
+  "note": ""
+}

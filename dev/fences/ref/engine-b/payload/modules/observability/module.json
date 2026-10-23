@@ -1,0 +1,9 @@
+{
+  "id": "observability",
+  "label": "Observability",
+  "stubs": [
+    "typescript",
+    "python",
+    "go"
+  ]
+}

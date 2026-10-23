@@ -1,0 +1,14 @@
+{
+  "arch": "library",
+  "comment": "Folders and files a library or SDK must contain.",
+  "paths": ["tests"],
+  "health": false,
+  "architectureTest": false,
+  "folderMap": {
+    "src/index.ts": "public API surface; everything else is internal",
+    "tests": "vitest (node-lib) or pytest (python-lib)"
+  },
+  "dependencyDirection": "tests -> src/index.ts -> internal modules.",
+  "healthRoute": null,
+  "architectureTest": null
+}

@@ -1,0 +1,33 @@
+{
+  "id": "next",
+  "label": "Next.js (App Router, TypeScript)",
+  "languages": [
+    "typescript",
+    "javascript"
+  ],
+  "fits": [
+    "saas",
+    "web-app",
+    "dashboard",
+    "marketplace",
+    "commerce",
+    "ai-product",
+    "realtime",
+    "full"
+  ],
+  "packageManager": "npm",
+  "commands": {
+    "install": "npm install",
+    "typecheck": "npx tsc --noEmit",
+    "lint": "npx eslint .",
+    "test": "npx vitest run",
+    "build": "npm run build",
+    "e2e": "npx playwright test"
+  },
+  "configFiles": [
+    "next.config.ts",
+    "tsconfig.json"
+  ],
+  "arch": "web",
+  "note": ""
+}

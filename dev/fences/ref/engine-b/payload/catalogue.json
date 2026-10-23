@@ -1,0 +1,261 @@
+{
+  "version": 1,
+  "comment": "DEV_OS Engine catalogue. Detection of agent CLIs is the source of truth for model ids; these groups only seed the screen (seeded from the vendors' public line-ups: Claude Fable 5.1 / Opus 5.5 / Sonnet 5.5 / Haiku 5.5, Cursor first-party Grok 4.7/4.6/4.5 + Composer 2.5, GPT-5.6 Sol/Terra/Luna, Gemini 4 Argon / 3.1 Pro / 3.8 Flash, Muse Wonder). Framework details live in payload/stacks/<id>.json. Module templates live in payload/modules/<id>/.",
+  "types": [
+    { "id": "saas", "label": "SaaS application", "line": "Multi-user product with accounts, data, and paid plans.", "framework": "next", "hosting": "vercel", "web": true, "ui": true, "modules": ["database", "auth", "email", "hosting", "testing"] },
+    { "id": "web-app", "label": "Web app", "line": "A browser application with its own screens and data.", "framework": "vite-react", "hosting": "vercel", "web": true, "ui": true, "modules": ["database", "auth", "hosting", "testing"] },
+    { "id": "marketing", "label": "Marketing or content site", "line": "Public pages, posts, and SEO. No accounts.", "framework": "astro", "hosting": "vercel", "web": true, "ui": true, "modules": ["hosting", "testing"] },
+    { "id": "dashboard", "label": "Dashboard or internal tool", "line": "Signed-in views over your own data.", "framework": "next", "hosting": "vercel", "web": true, "ui": true, "modules": ["database", "auth", "hosting", "testing"] },
+    { "id": "marketplace", "label": "Marketplace", "line": "Two kinds of user meet and transact.", "framework": "next", "hosting": "vercel", "web": true, "ui": true, "modules": ["database", "auth", "payments", "email", "storage", "hosting", "testing"] },
+    { "id": "commerce", "label": "Store", "line": "Catalog, cart, checkout, orders.", "framework": "next", "hosting": "vercel", "web": true, "ui": true, "modules": ["database", "auth", "payments", "email", "hosting", "testing"] },
+    { "id": "api", "label": "API only", "line": "HTTP service, no styling and no ui-kit.", "framework": "hono", "hosting": "none", "web": false, "ui": false, "modules": ["database"] },
+    { "id": "mobile", "label": "Mobile application", "line": "iOS and Android from one codebase.", "framework": "expo", "hosting": "none", "web": false, "ui": false, "modules": ["testing"] },
+    { "id": "ai-product", "label": "AI product", "line": "Chat, tools, or retrieval is the product itself.", "framework": "next", "hosting": "vercel", "web": true, "ui": true, "modules": ["database", "auth", "product-ai", "hosting", "testing"] },
+    { "id": "realtime", "label": "Realtime app", "line": "Live updates are the core behavior.", "framework": "next", "hosting": "vercel", "web": true, "ui": true, "modules": ["database", "auth", "hosting", "testing"] },
+    { "id": "docs", "label": "Documentation site", "line": "Reference and guides. No auth, no database.", "framework": "starlight", "hosting": "vercel", "web": true, "ui": true, "modules": ["hosting"] },
+    { "id": "cli", "label": "CLI or developer tool", "line": "A command people run in a terminal.", "framework": "node-cli", "hosting": "none", "web": false, "ui": false, "modules": [] },
+    { "id": "library", "label": "Library or SDK", "line": "Code other projects import.", "framework": "node-lib", "hosting": "none", "web": false, "ui": false, "modules": [] },
+    { "id": "worker", "label": "Worker", "line": "Scheduled or queued jobs.", "framework": "hono", "hosting": "fly", "web": false, "ui": false, "modules": ["jobs"] },
+    { "id": "extension", "label": "Browser extension", "line": "Vite plus an extension manifest.", "framework": "vite-react", "hosting": "none", "web": false, "ui": true, "modules": [] },
+    { "id": "full", "label": "Full product", "line": "Web plus API plus data.", "framework": "next", "hosting": "vercel", "web": true, "ui": true, "modules": ["database", "auth", "storage", "hosting", "testing"] }
+  ],
+  "frameworks": [
+    "next", "nuxt", "sveltekit", "remix", "astro", "starlight", "vite-react", "vite-vue", "solid",
+    "hono", "fastify", "nest", "fastapi", "django", "go-chi",
+    "expo", "flutter", "node-cli", "node-lib", "python-lib", "custom"
+  ],
+  "modules": [
+    {
+      "id": "language", "label": "Language", "consequence": "Picks the implementation language. It must match the framework.",
+      "providers": [
+        { "id": "typescript", "label": "TypeScript" },
+        { "id": "javascript", "label": "JavaScript" },
+        { "id": "python", "label": "Python" },
+        { "id": "go", "label": "Go" },
+        { "id": "dart", "label": "Dart" },
+        { "id": "ruby", "label": "Ruby" }
+      ]
+    },
+    {
+      "id": "styling", "label": "Styling", "consequence": "Sets how every screen is styled.", "hiddenWhenNoUi": true,
+      "providers": [
+        { "id": "tailwind", "label": "Tailwind" },
+        { "id": "css-modules", "label": "CSS modules" },
+        { "id": "css", "label": "Plain CSS" },
+        { "id": "framework-default", "label": "Framework default" }
+      ]
+    },
+    {
+      "id": "ui-kit", "label": "UI kit", "consequence": "Adds ready-made interface components.", "hiddenWhenNoUi": true,
+      "providers": [
+        { "id": "none", "label": "None" },
+        { "id": "shadcn", "label": "shadcn/ui", "needs": "react" },
+        { "id": "skeleton", "label": "Skeleton", "needs": "svelte" },
+        { "id": "custom-tokens", "label": "Custom tokens" }
+      ]
+    },
+    {
+      "id": "database", "label": "Database", "consequence": "Adds the database module. Every migration waits for your merge.",
+      "providers": [
+        { "id": "none", "label": "None" },
+        { "id": "supabase", "label": "Postgres on Supabase", "env": ["SUPABASE_ACCESS_TOKEN", "SUPABASE_DB_URL"], "ci": "disposable local database, forward-only migrations, human gate on every schema change" },
+        { "id": "firebase", "label": "Firestore on Firebase", "env": ["FIREBASE_PROJECT_ID", "FIREBASE_SERVICE_ACCOUNT"], "ci": "emulator tests, rules diff in the pull request, human gate on every rules change" },
+        { "id": "neon", "label": "Postgres on Neon", "env": ["NEON_DATABASE_URL"] },
+        { "id": "postgres", "label": "Postgres on your own host", "env": ["DATABASE_URL"] },
+        { "id": "sqlite", "label": "SQLite" },
+        { "id": "mongodb", "label": "MongoDB", "env": ["MONGODB_URI"] }
+      ]
+    },
+    {
+      "id": "auth", "label": "Auth", "consequence": "Adds sign-in. Accounts can hold personal data, so the boundary guard watches it.",
+      "providers": [
+        { "id": "none", "label": "None" },
+        { "id": "email", "label": "Email and password" },
+        { "id": "oauth", "label": "OAuth" },
+        { "id": "email+oauth", "label": "Email and OAuth" }
+      ],
+      "providerNote": "Auth implementation provider: better-auth, supabase-auth (only with Supabase), firebase-auth (only with Firebase), authjs, clerk, or the framework built-in.",
+      "implProviders": [
+        { "id": "better-auth", "label": "Better Auth", "env": ["BETTER_AUTH_SECRET"] },
+        { "id": "supabase-auth", "label": "Supabase Auth", "needs": "supabase" },
+        { "id": "firebase-auth", "label": "Firebase Auth", "needs": "firebase" },
+        { "id": "authjs", "label": "Auth.js" },
+        { "id": "clerk", "label": "Clerk", "env": ["CLERK_SECRET_KEY"] },
+        { "id": "builtin", "label": "Framework built-in" }
+      ]
+    },
+    {
+      "id": "storage", "label": "Storage", "consequence": "Adds file and object storage.",
+      "providers": [
+        { "id": "none", "label": "None" },
+        { "id": "r2", "label": "Cloudflare R2", "env": ["R2_ACCOUNT_ID", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY"] },
+        { "id": "s3", "label": "S3", "env": ["S3_BUCKET", "S3_ACCESS_KEY_ID", "S3_SECRET_ACCESS_KEY"] },
+        { "id": "supabase-storage", "label": "Supabase Storage", "needs": "supabase" },
+        { "id": "firebase-storage", "label": "Firebase Storage", "needs": "firebase" },
+        { "id": "vercel-blob", "label": "Vercel Blob", "env": ["BLOB_READ_WRITE_TOKEN"] }
+      ]
+    },
+    {
+      "id": "payments", "label": "Payments", "consequence": "Adds payments. Money flows need your review before launch.",
+      "providers": [
+        { "id": "none", "label": "None" },
+        { "id": "stripe", "label": "Stripe", "env": ["STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET"] },
+        { "id": "paddle", "label": "Paddle", "env": ["PADDLE_API_KEY"] },
+        { "id": "lemonsqueezy", "label": "Lemon Squeezy", "env": ["LEMONSQUEEZY_API_KEY"] },
+        { "id": "paypal", "label": "PayPal", "env": ["PAYPAL_CLIENT_ID", "PAYPAL_CLIENT_SECRET"] },
+        { "id": "revenuecat", "label": "RevenueCat", "env": ["REVENUECAT_API_KEY"] }
+      ]
+    },
+    {
+      "id": "email", "label": "Email", "consequence": "Adds transactional email.",
+      "providers": [
+        { "id": "none", "label": "None" },
+        { "id": "resend", "label": "Resend", "env": ["RESEND_API_KEY"] },
+        { "id": "postmark", "label": "Postmark", "env": ["POSTMARK_API_KEY"] },
+        { "id": "ses", "label": "Amazon SES", "env": ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_REGION"] }
+      ]
+    },
+    {
+      "id": "jobs", "label": "Jobs", "consequence": "Adds background jobs and queues.",
+      "providers": [
+        { "id": "none", "label": "None" },
+        { "id": "upstash-redis", "label": "Upstash Redis", "env": ["UPSTASH_REDIS_URL", "UPSTASH_REDIS_TOKEN"] },
+        { "id": "bullmq", "label": "BullMQ", "env": ["REDIS_URL"] }
+      ]
+    },
+    {
+      "id": "search", "label": "Search", "consequence": "Adds search over your content.",
+      "providers": [
+        { "id": "none", "label": "None" },
+        { "id": "postgres-fts", "label": "Postgres full text", "needs": "postgres" },
+        { "id": "meilisearch", "label": "Meilisearch", "env": ["MEILISEARCH_HOST", "MEILISEARCH_API_KEY"] }
+      ]
+    },
+    {
+      "id": "product-ai", "label": "Product AI", "consequence": "Adds the product's own AI feature. It is not the reviewer, the builder, or the configuration model.",
+      "defaultOffUnless": "ai-product",
+      "providers": [
+        { "id": "none", "label": "None" },
+        { "id": "chat", "label": "Chat" },
+        { "id": "tools-agents", "label": "Tools and agents" },
+        { "id": "retrieval", "label": "Retrieval" }
+      ],
+      "implProviders": [
+        { "id": "claude", "label": "Claude", "env": ["ANTHROPIC_API_KEY"] },
+        { "id": "openai", "label": "OpenAI", "env": ["OPENAI_API_KEY"] },
+        { "id": "gemini", "label": "Gemini", "env": ["GEMINI_API_KEY"] },
+        { "id": "glm", "label": "GLM", "env": ["ZAI_API_KEY"] },
+        { "id": "openrouter", "label": "OpenRouter", "env": ["OPENROUTER_API_KEY"] },
+        { "id": "custom-base-url", "label": "Custom base URL", "env": ["PRODUCT_AI_API_KEY", "PRODUCT_AI_BASE_URL"] }
+      ]
+    },
+    {
+      "id": "i18n", "label": "Languages", "consequence": "More than one language turns the catalogue-parity guard on.",
+      "providers": []
+    },
+    {
+      "id": "testing", "label": "Testing", "consequence": "Unit tests are always on. Playwright runs end-to-end when there is a web UI.",
+      "providers": [
+        { "id": "unit", "label": "Unit tests", "locked": true },
+        { "id": "playwright", "label": "Playwright", "defaultWhenUi": true }
+      ]
+    },
+    {
+      "id": "hosting", "label": "Hosting", "consequence": "Sets where the product is deployed. none means no deploy step.",
+      "providers": [
+        { "id": "none", "label": "None" },
+        { "id": "vercel", "label": "Vercel", "env": ["VERCEL_TOKEN", "VERCEL_ORG_ID", "VERCEL_PROJECT_ID"] },
+        { "id": "cloudflare-workers", "label": "Cloudflare Workers", "env": ["CLOUDFLARE_API_TOKEN"] },
+        { "id": "fly", "label": "Fly.io", "env": ["FLY_API_TOKEN"] },
+        { "id": "railway", "label": "Railway", "env": ["RAILWAY_TOKEN"] },
+        { "id": "docker", "label": "Docker image", "env": ["DOCKER_REGISTRY_TOKEN"] }
+      ]
+    },
+    {
+      "id": "observability", "label": "Observability", "consequence": "Sets how failures become visible to you.",
+      "providers": [
+        { "id": "none", "label": "None" },
+        { "id": "structured-logs", "label": "Structured logs" },
+        { "id": "sentry", "label": "Sentry", "env": ["SENTRY_DSN", "SENTRY_AUTH_TOKEN"] }
+      ]
+    },
+    {
+      "id": "automation", "label": "Automation", "consequence": "Always on. Workflows, runner scripts, guards, prompts, ledger, and issue forms. It carries your chosen reviewer and builder.",
+      "providers": [],
+      "locked": true
+    }
+  ],
+  "tools": [
+    {
+      "id": "cursor", "label": "Cursor CLI", "command": "agent", "altCommands": ["cursor-agent"],
+      "versionArgs": ["--version"], "modelsArgs": ["models"], "authProbe": "version",
+      "githubCapable": true, "githubSecrets": ["CURSOR_API_KEY"],
+      "prompt": { "mode": "-p", "modelFlag": "--model", "template": "agent -p --model {{MODEL}}" },
+      "seedGroups": [
+        { "id": "auto", "label": "Auto — Cursor picks (the only model on Free plans)", "models": ["auto"] },
+        { "id": "grok", "label": "Grok — Cursor first-party", "models": ["grok-4.7", "grok-4.7-low", "grok-4.7-medium", "grok-4.7-high", "grok-4.7-xhigh", "grok-4.7-fast", "grok-4.6", "grok-4.5"] },
+        { "id": "claude", "label": "Claude on Cursor", "models": ["claude-fable-5-1", "claude-fable-5", "claude-fable-5-thinking-high", "claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5"] },
+        { "id": "gpt", "label": "GPT on Cursor", "models": ["gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna", "gpt-5.5"] },
+        { "id": "gemini", "label": "Gemini on Cursor", "models": ["gemini-4-argon", "gemini-3.1-pro", "gemini-3.8-flash"] },
+        { "id": "composer", "label": "Composer — Cursor first-party", "models": ["composer-2.5", "composer-1"] },
+        { "id": "muse", "label": "Muse on Cursor", "models": ["muse-wonder"] }
+      ]
+    },
+    {
+      "id": "claude", "label": "Claude Code", "command": "claude", "altCommands": [],
+      "versionArgs": ["--version"], "authProbe": "auth-status",
+      "githubCapable": true, "githubSecrets": ["CLAUDE_CODE_OAUTH_TOKEN", "ANTHROPIC_API_KEY"],
+      "prompt": { "mode": "-p", "modelFlag": "--model", "template": "claude -p --model {{MODEL}}" },
+      "seedGroups": [
+        { "id": "claude", "label": "Claude", "models": ["claude-fable-5-1", "claude-fable-5-1-thinking-high", "claude-fable-5", "claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5", "claude-opus-4-5", "claude-sonnet-4-5", "claude-haiku-4-5"] }
+      ]
+    },
+    {
+      "id": "codex", "label": "Codex CLI", "command": "codex", "altCommands": [],
+      "versionArgs": ["--version"], "authProbe": "login-status",
+      "githubCapable": true, "githubSecrets": ["OPENAI_API_KEY"],
+      "prompt": { "mode": "exec", "modelFlag": "--model", "template": "codex exec --model {{MODEL}} {{PROMPT_FILE}}" },
+      "seedGroups": [
+        { "id": "gpt", "label": "GPT-5 Codex", "models": ["gpt-5.1-codex", "gpt-5-codex", "gpt-5.6-sol"] }
+      ]
+    },
+    {
+      "id": "gemini", "label": "Gemini CLI", "command": "gemini", "altCommands": [],
+      "versionArgs": ["--version"], "authProbe": "version",
+      "githubCapable": true, "githubSecrets": ["GEMINI_API_KEY"],
+      "prompt": { "mode": "-p", "modelFlag": "--model", "template": "gemini -p --model {{MODEL}} {{PROMPT_FILE}}" },
+      "seedGroups": [
+        { "id": "gemini", "label": "Gemini", "models": ["gemini-4-argon", "gemini-3.1-pro", "gemini-3.8-flash", "gemini-2.5-pro", "gemini-2.5-flash"] }
+      ]
+    },
+    {
+      "id": "muse", "label": "Muse", "command": "muse", "altCommands": [],
+      "versionArgs": ["--version"], "modelsArgs": ["models"], "authProbe": "version",
+      "optional": true, "githubCapable": true,
+      "prompt": { "mode": "-p", "modelFlag": "--model", "template": "muse -p --model {{MODEL}} {{PROMPT_FILE}}" },
+      "seedGroups": [
+        { "id": "muse", "label": "Muse", "models": ["muse-wonder"] }
+      ],
+      "notInstalledMessage": "Muse is not installed"
+    },
+    {
+      "id": "glm", "label": "Z.ai / GLM", "command": "z", "altCommands": ["zai", "glm"],
+      "versionArgs": ["--version"], "modelsArgs": ["models"], "authProbe": "version",
+      "githubCapable": true, "githubSecrets": ["ZAI_API_KEY"],
+      "prompt": { "mode": "-p", "modelFlag": "--model", "template": "z -p --model {{MODEL}} {{PROMPT_FILE}}" },
+      "seedGroups": [
+        { "id": "glm", "label": "GLM", "models": ["glm-4.6", "glm-5"] }
+      ]
+    }
+  ],
+  "customTool": {
+    "label": "Add another tool",
+    "fields": ["displayName", "command", "modelFlag", "versionCommand", "authCommand", "promptTemplate", "secretName", "usageLimitPattern"],
+    "note": "An adapter without a non-interactive prompt template is 'This computer only'. It may be the configuration model. It may not be the GitHub reviewer or builder."
+  },
+  "builderStrengths": ["ui", "backend", "data", "tests", "fast and cheap", "deep reasoning"],
+  "pickPolicies": [
+    { "id": "reviewer-picks", "label": "The reviewer picks from the builders I listed" },
+    { "id": "default-only", "label": "Always the default builder" }
+  ]
+}

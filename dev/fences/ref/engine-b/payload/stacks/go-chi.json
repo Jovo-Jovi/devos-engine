@@ -1,0 +1,25 @@
+{
+  "id": "go-chi",
+  "label": "Go + chi",
+  "languages": [
+    "go"
+  ],
+  "fits": [
+    "api",
+    "worker"
+  ],
+  "packageManager": "go",
+  "commands": {
+    "install": "go mod download",
+    "typecheck": "go vet ./...",
+    "lint": "gofmt -l .",
+    "test": "go test ./...",
+    "build": "go build ./...",
+    "e2e": ""
+  },
+  "configFiles": [
+    "go.mod"
+  ],
+  "arch": "api",
+  "note": ""
+}
