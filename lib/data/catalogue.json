@@ -1,5 +1,5 @@
 {
-  "$comment": "DEV_OS Engine catalogue (E18). Types, the stacks the method can run, each with its toolchain, its manifest file and the commands of its checks, modules with providers, and the documents worth preparing. A provider with method names the DEV_OS module or variable it turns on; its keys come from devos/setup.json. A provider with env lists the keys the app reads.",
+  "$comment": "DEV_OS Engine catalogue (E18). Types, the stacks the method can run, each with its toolchain, its manifest file and the commands of its checks, modules with providers, and the documents worth preparing. A provider with method names the DEV_OS module or variable it turns on; its keys come from devos/setup.json. A provider with env lists the keys the app reads. Each stack's scaffold is the recipe of fence T01 (PR-49): the generator commands, the health route (empty: none), the logger, the test runner and the one architecture rule its test proves.",
   "version": 1,
   "types": [
     {
@@ -334,6 +334,15 @@
         "lint": "pnpm run lint",
         "test": "pnpm run test",
         "build": "pnpm run build"
+      },
+      "scaffold": {
+        "create": [
+          "pnpm create next-app@latest . --ts --eslint --app --src-dir --import-alias \"@/*\" --use-pnpm --yes"
+        ],
+        "health": "/api/health",
+        "logger": "pino",
+        "tests": "vitest",
+        "architecture": "code under src/domain imports nothing from the framework, the database client or src/app"
       }
     },
     {
@@ -358,6 +367,15 @@
         "lint": "pnpm run lint",
         "test": "pnpm run test",
         "build": "pnpm run build"
+      },
+      "scaffold": {
+        "create": [
+          "pnpm create nuxt@latest . --packageManager pnpm --gitInit false --force"
+        ],
+        "health": "/api/health",
+        "logger": "pino",
+        "tests": "vitest",
+        "architecture": "code under src/domain imports nothing from the framework, the database client or src/app"
       }
     },
     {
@@ -382,6 +400,15 @@
         "lint": "pnpm run lint",
         "test": "pnpm run test",
         "build": "pnpm run build"
+      },
+      "scaffold": {
+        "create": [
+          "pnpm dlx sv create . --template minimal --types ts --no-add-ons --install pnpm"
+        ],
+        "health": "/api/health",
+        "logger": "pino",
+        "tests": "vitest",
+        "architecture": "code under src/domain imports nothing from the framework, the database client or src/app"
       }
     },
     {
@@ -406,6 +433,15 @@
         "lint": "pnpm run lint",
         "test": "pnpm run test",
         "build": "pnpm run build"
+      },
+      "scaffold": {
+        "create": [
+          "pnpm create react-router@latest . --yes --no-git-init"
+        ],
+        "health": "/api/health",
+        "logger": "pino",
+        "tests": "vitest",
+        "architecture": "code under src/domain imports nothing from the framework, the database client or src/app"
       }
     },
     {
@@ -429,6 +465,15 @@
         "lint": "pnpm run lint",
         "test": "pnpm run test",
         "build": "pnpm run build"
+      },
+      "scaffold": {
+        "create": [
+          "pnpm create astro@latest . --template minimal --typescript strict --install --no-git --yes"
+        ],
+        "health": "",
+        "logger": "pino",
+        "tests": "vitest",
+        "architecture": "code under src/domain imports nothing from the framework, the database client or src/app"
       }
     },
     {
@@ -450,6 +495,15 @@
         "lint": "pnpm run lint",
         "test": "pnpm run test",
         "build": "pnpm run build"
+      },
+      "scaffold": {
+        "create": [
+          "pnpm create astro@latest . --template starlight --install --no-git --yes"
+        ],
+        "health": "",
+        "logger": "pino",
+        "tests": "vitest",
+        "architecture": "code under src/domain imports nothing from the framework, the database client or src/app"
       }
     },
     {
@@ -473,6 +527,15 @@
         "lint": "pnpm run lint",
         "test": "pnpm run test",
         "build": "pnpm run build"
+      },
+      "scaffold": {
+        "create": [
+          "pnpm create vite@latest . --template react-ts"
+        ],
+        "health": "",
+        "logger": "pino",
+        "tests": "vitest",
+        "architecture": "code under src/domain imports nothing from the framework, the database client or src/app"
       }
     },
     {
@@ -496,6 +559,15 @@
         "lint": "pnpm run lint",
         "test": "pnpm run test",
         "build": "pnpm run build"
+      },
+      "scaffold": {
+        "create": [
+          "pnpm create vite@latest . --template vue-ts"
+        ],
+        "health": "",
+        "logger": "pino",
+        "tests": "vitest",
+        "architecture": "code under src/domain imports nothing from the framework, the database client or src/app"
       }
     },
     {
@@ -519,6 +591,15 @@
         "lint": "pnpm run lint",
         "test": "pnpm run test",
         "build": "pnpm run build"
+      },
+      "scaffold": {
+        "create": [
+          "pnpm create solid@latest ."
+        ],
+        "health": "/api/health",
+        "logger": "pino",
+        "tests": "vitest",
+        "architecture": "code under src/domain imports nothing from the framework, the database client or src/app"
       }
     },
     {
@@ -541,6 +622,15 @@
         "lint": "pnpm run lint",
         "test": "pnpm run test",
         "build": "pnpm run build"
+      },
+      "scaffold": {
+        "create": [
+          "pnpm create hono@latest . --template nodejs --pm pnpm --install"
+        ],
+        "health": "/health",
+        "logger": "pino",
+        "tests": "vitest",
+        "architecture": "code under src/domain imports nothing from the framework, the database client or src/app"
       }
     },
     {
@@ -562,6 +652,15 @@
         "lint": "pnpm run lint",
         "test": "pnpm run test",
         "build": "pnpm run build"
+      },
+      "scaffold": {
+        "create": [
+          "pnpm dlx fastify-cli generate . --lang=ts"
+        ],
+        "health": "/health",
+        "logger": "pino",
+        "tests": "vitest",
+        "architecture": "code under src/domain imports nothing from the framework, the database client or src/app"
       }
     },
     {
@@ -583,6 +682,15 @@
         "lint": "pnpm run lint",
         "test": "pnpm run test",
         "build": "pnpm run build"
+      },
+      "scaffold": {
+        "create": [
+          "pnpm dlx @nestjs/cli@latest new . --package-manager pnpm --skip-git --strict"
+        ],
+        "health": "/health",
+        "logger": "pino",
+        "tests": "vitest",
+        "architecture": "code under src/domain imports nothing from the framework, the database client or src/app"
       }
     },
     {
@@ -604,6 +712,15 @@
         "lint": "pnpm run lint",
         "test": "pnpm run test",
         "build": "pnpm run build"
+      },
+      "scaffold": {
+        "create": [
+          "pnpm create expo-app@latest . --template blank-typescript"
+        ],
+        "health": "",
+        "logger": "pino",
+        "tests": "vitest",
+        "architecture": "code under src/domain imports nothing from the framework, the database client or src/app"
       }
     },
     {
@@ -624,6 +741,16 @@
         "lint": "pnpm run lint",
         "test": "pnpm run test",
         "build": "pnpm run build"
+      },
+      "scaffold": {
+        "create": [
+          "pnpm init",
+          "pnpm add -D typescript vitest @types/node"
+        ],
+        "health": "",
+        "logger": "pino",
+        "tests": "vitest",
+        "architecture": "code under src/domain imports nothing from the framework, the database client or src/app"
       }
     },
     {
@@ -644,6 +771,16 @@
         "lint": "pnpm run lint",
         "test": "pnpm run test",
         "build": "pnpm run build"
+      },
+      "scaffold": {
+        "create": [
+          "pnpm init",
+          "pnpm add -D typescript vitest @types/node"
+        ],
+        "health": "",
+        "logger": "pino",
+        "tests": "vitest",
+        "architecture": "code under src/domain imports nothing from the framework, the database client or src/app"
       }
     },
     {
@@ -664,6 +801,17 @@
         "lint": "uv run ruff check .",
         "test": "uv run pytest",
         "build": "uv run python -m compileall -q ."
+      },
+      "scaffold": {
+        "create": [
+          "uv init --app .",
+          "uv add fastapi uvicorn structlog",
+          "uv add --dev pytest ruff mypy httpx"
+        ],
+        "health": "/health",
+        "logger": "structlog",
+        "tests": "pytest",
+        "architecture": "code under app/domain imports nothing from fastapi, the database client or app/api"
       }
     },
     {
@@ -684,6 +832,18 @@
         "lint": "uv run ruff check .",
         "test": "uv run pytest",
         "build": "uv run python -m compileall -q ."
+      },
+      "scaffold": {
+        "create": [
+          "uv init --app .",
+          "uv add django structlog",
+          "uv add --dev pytest pytest-django ruff mypy django-stubs",
+          "uv run django-admin startproject config ."
+        ],
+        "health": "/health",
+        "logger": "structlog",
+        "tests": "pytest",
+        "architecture": "domain code (each app's domain.py or domain/) imports nothing from django.http, views or the ORM"
       }
     },
     {
@@ -705,6 +865,16 @@
         "lint": "test -z \"$(gofmt -l .)\"",
         "test": "go test ./...",
         "build": "go build ./..."
+      },
+      "scaffold": {
+        "create": [
+          "go mod init <module path>",
+          "go get github.com/go-chi/chi/v5"
+        ],
+        "health": "/health",
+        "logger": "log/slog (JSON handler)",
+        "tests": "go test",
+        "architecture": "package internal/domain imports nothing from net/http, chi or the database driver"
       }
     },
     {
@@ -725,6 +895,15 @@
         "lint": "dart format --output=none --set-exit-if-changed .",
         "test": "flutter test",
         "build": "flutter build apk --debug"
+      },
+      "scaffold": {
+        "create": [
+          "flutter create --project-name <name> --platforms android,ios ."
+        ],
+        "health": "",
+        "logger": "logging (package:logging)",
+        "tests": "flutter test",
+        "architecture": "code under lib/domain imports nothing from package:flutter"
       }
     },
     {
@@ -745,6 +924,16 @@
         "lint": "uv run ruff check .",
         "test": "uv run pytest",
         "build": "uv build"
+      },
+      "scaffold": {
+        "create": [
+          "uv init --lib .",
+          "uv add --dev pytest ruff mypy"
+        ],
+        "health": "",
+        "logger": "logging (stdlib, JSON formatter)",
+        "tests": "pytest",
+        "architecture": "the public API lives in the package's __init__; internal modules are private (_name) and tests import only the public API"
       }
     }
   ],

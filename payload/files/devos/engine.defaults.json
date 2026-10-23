@@ -351,6 +351,13 @@
       "lint": "pnpm run lint",
       "test": "pnpm run test",
       "build": "pnpm run build"
+    },
+    "scaffold": {
+      "create": [],
+      "health": "",
+      "logger": "",
+      "tests": "",
+      "architecture": ""
     }
   }
 }

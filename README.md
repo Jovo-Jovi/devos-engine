@@ -131,7 +131,10 @@ it.
 
 ## After setup
 
-- **The cycle builds T01 on GitHub.** Follow it in the repository's **Actions** and **Pull requests** tabs.
+- **The cycle builds T01 on GitHub.** T01 is always the project skeleton from your stack's recipe: the official
+  generator, the check commands, one structured logger, error handling, a health route for web and API projects, and
+  one architecture test. Every check passes before the first feature. Follow it in the repository's **Actions** and
+  **Pull requests** tabs.
 - **You merge at the gates.** Each pull request carries a comment from the gate doctor that says what still blocks
   the merge. Comment `/devos doctor` to check again.
 - **`SETUP.md`** in the repository lists every setting the project uses. If the setup check reports a missing one,
@@ -193,14 +196,13 @@ it.
 
 ## Roadmap
 
-1. A project scaffold that is green before the first task, with logging and a health route.
-2. The first green run and the end-to-end test, including copying app keys to the host.
-3. Database, storage and deploys for Python, Go and Dart stacks.
-4. The design gate for UI projects.
-5. A guided setup in the browser.
-6. Expert prompts, skills and references for each layer of a project.
-7. A link from every project to the DEV_OS Control Tower dashboard.
-8. Version 1.0 and its licence.
+1. The design gate for UI projects.
+2. A guided setup in the browser.
+3. Expert prompts, skills and references for each layer of a project.
+4. Database, storage and deploys for Python, Go and Dart stacks.
+5. The first real run and the end-to-end test, including copying app keys to the host.
+6. A link from every project to the DEV_OS Control Tower dashboard.
+7. Version 1.0 and its licence.
 
 ## Building the engine (maintainers)
 

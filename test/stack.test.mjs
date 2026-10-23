@@ -220,12 +220,12 @@ test("stack.test.mjs (h) a python build's output is restored", () => {
     assert.equal(committed.status, 0, committed.stderr);
     const result = runChecks(dir);
     assert.equal(result.status, 0, result.stdout + result.stderr);
-    assert.equal(existsSync(path.join(dir, ".venv", "x")), false);
     assert.equal(existsSync(path.join(dir, "app-bin")), false);
+    assert.equal(existsSync(path.join(dir, ".venv", "x")), true);
     const status = git(["status", "--porcelain"]);
     assert.equal(status.stdout, "");
     const report = JSON.parse(readFileSync(path.join(dir, ".devos", "ci-results.json"), "utf8"));
-    assert.deepEqual([...report.checks_modified_tracked_files].sort(), [".venv/x", "app-bin"]);
+    assert.deepEqual(report.checks_modified_tracked_files, ["app-bin"]);
   } finally {
     rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }

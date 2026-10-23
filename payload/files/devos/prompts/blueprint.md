@@ -57,6 +57,12 @@ Work in this order.
    `CLAUDE.md` from the handbook's §15.1 template. Write the `devos:boundary` line in `docs/BOUNDARY_MODEL.md`
    (PR-19). With the backend module, plan T01 or the first J4 task to create `supabase/`.
 6. **Issue fence T01** as `docs/fences/T01.md` in the format of handbook §6.3, and rehearse every path it names.
+   T01 is always the scaffold, from `devos.config.json` `stack.scaffold`, and builds no feature: run its `create`
+   commands (where a flag has changed, the generator's current documentation wins and the builder reports the
+   change), make each of the five `stack.commands` run, add one structured logger (`logger`) that every log line
+   goes through, error handling that logs the error and returns a safe message, the health route when `health` is
+   set, and one architecture test that proves the `architecture` rule with the test runner (`tests`). Its Done-when
+   is `node scripts/devos/run-checks.mjs --strict` exiting 0.
 7. **End with a summary** as your final message: the profile, the ODs the developer signs by approving, your
    assumptions, and the setup steps that change for this project.
 

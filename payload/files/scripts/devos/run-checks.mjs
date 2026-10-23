@@ -4,7 +4,7 @@
 // Usage: node scripts/devos/run-checks.mjs [--strict]
 //   --strict  exit 1 if a required check fails (used by ci.yml). Without it, always exit 0.
 import { spawnSync } from "node:child_process";
-import { mkdirSync, writeFileSync, existsSync, readFileSync, rmSync } from "node:fs";
+import { mkdirSync, writeFileSync, existsSync, readFileSync } from "node:fs";
 import { P, config, changedPaths, git } from "./lib.mjs";
 import * as supa from "./supabase.mjs";
 import * as r2 from "./r2.mjs";
@@ -54,22 +54,7 @@ if (process.argv.includes("--install-only")) {
   process.exit(installed.status === "pass" ? 0 : 1);
 }
 
-function ignoredPaths() {
-  let out = "";
-  try { out = git(["status", "--porcelain=v1", "-z", "--ignored", "--untracked-files=all"]); } catch { return []; }
-  const paths = [];
-  const parts = out.split("\0").filter(Boolean);
-  for (let i = 0; i < parts.length; i++) {
-    const entry = parts[i];
-    const status = entry.slice(0, 2);
-    if (status === "!!") paths.push(entry.slice(3));
-    if (status[0] === "R" || status[0] === "C") i++;
-  }
-  return paths;
-}
-
 if (toolchain !== "node") {
-  const ignoredBefore = new Set(ignoredPaths());
   const hasManifest = Boolean(stack.manifest) && existsSync(P(stack.manifest));
   const stackResults = [];
   if (hasManifest && stackCommands.install) stackResults.push({ ...shell("install", stackCommands.install), required: false });
@@ -92,15 +77,12 @@ if (toolchain !== "node") {
   const failedRequired = stackResults.filter((r) => r.required && !["pass", "skipped-no-package"].includes(r.status));
   for (const name of cfg.required_checks) if (!stackResults.some((r) => r.name === name)) failedRequired.push({ name });
   const dirtied = changedPaths().filter((p) => !before.has(p) && !p.startsWith(".devos/"));
-  const ignoredNew = ignoredPaths().filter((p) => !ignoredBefore.has(p) && !p.startsWith(".devos/"));
   if (dirtied.length) {
     for (const p of dirtied) {
       try { git(["checkout", "--", p]); } catch { /* untracked: leave for git clean */ }
     }
     try { git(["clean", "-fd", "--", ...dirtied]); } catch { /* nothing to clean */ }
   }
-  for (const p of ignoredNew) rmSync(P(p), { force: true });
-  const created = [...dirtied, ...ignoredNew];
   const summary = {
     generated: new Date().toISOString(),
     head: (() => { try { return git(["rev-parse", "HEAD"]); } catch { return null; } })(),
@@ -109,12 +91,12 @@ if (toolchain !== "node") {
     all_required_passed: failedRequired.length === 0,
     modules: [],
     failed_required: failedRequired.map((r) => r.name),
-    checks_modified_tracked_files: created,
+    checks_modified_tracked_files: dirtied,
     results: stackResults,
   };
   writeFileSync(P(".devos/ci-results.json"), JSON.stringify(summary, null, 2));
   for (const r of stackResults) console.log(`${r.status.toUpperCase().padEnd(18)} ${r.name}${r.required ? "" : " (optional)"}`);
-  if (created.length) console.log(`WARN checks modified tracked files (restored): ${created.join(", ")}`);
+  if (dirtied.length) console.log(`WARN checks modified tracked files (restored): ${dirtied.join(", ")}`);
   console.log(failedRequired.length ? `required checks failed: ${failedRequired.map((r) => r.name).join(", ")}` : "all required checks passed");
   if (strict && failedRequired.length) process.exit(1);
   process.exit(0);

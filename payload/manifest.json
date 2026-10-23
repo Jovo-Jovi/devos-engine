@@ -254,13 +254,13 @@
     {
       "path": "devos/engine.defaults.json",
       "stored": "devos/engine.defaults.json",
-      "sha256": "ded28fb7750039122925677ee3f4aab8593e1e2a230c06cae140c47b60e9649c",
+      "sha256": "3a9066318221b8e00eecfedb4f66227707fdef9af7051045c50b5ccb1ffc3f5f",
       "owner": "engine"
     },
     {
       "path": "devos/prompts/blueprint.md",
       "stored": "devos/prompts/blueprint.md",
-      "sha256": "d204d39a1c9a41d501e8cf77b5a23b39f2844479604aed521db34d2239ccbe8b",
+      "sha256": "cfb58f40402099df8bb858b12bf16ab98cb9668950aa4393c2f23aab3b6e8d88",
       "owner": "engine"
     },
     {
@@ -380,7 +380,7 @@
     {
       "path": "docs/method/AUTOMATION.md",
       "stored": "docs/method/AUTOMATION.md",
-      "sha256": "6b02fa4863b67d18cd49a76d3c7f67435042c0f86383153371c141003a3ec4ba",
+      "sha256": "47772126dea275c5b61b1ef6477a3d4b23258c1fea1e6e2a212f46e0799b399d",
       "owner": "engine"
     },
     {
@@ -398,7 +398,7 @@
     {
       "path": "docs/method/PRECEDENTS.md",
       "stored": "docs/method/PRECEDENTS.md",
-      "sha256": "b3b0ff74304c15946943b67a0d5386381d360eadfa9dd9a646bc42fcfb5160f8",
+      "sha256": "29357f44e132949ce246e47e20c3f735a620cff4ce52738f76e53b9511c48461",
       "owner": "engine"
     },
     {
@@ -572,7 +572,7 @@
     {
       "path": "scripts/devos/run-checks.mjs",
       "stored": "scripts/devos/run-checks.mjs",
-      "sha256": "06e79d08ea0aeeb18a8b23e82a31a9380b2fbd04461f9851670ac70d66d0ad89",
+      "sha256": "564ee94e351582f611a0e9df8a7025968dbf179f111dd2a46e31cded83fab2ca",
       "owner": "engine"
     },
     {
