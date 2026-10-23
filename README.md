@@ -77,24 +77,30 @@ Enter takes the default shown.
    - the blueprint agent, which works on this computer. It can be any signed-in tool.
 
    The GitHub roles offer Claude Code, Cursor, Codex and Gemini.
-4. **Eight questions.**
-   - Project name and a one-paragraph brief.
-   - Who uses it, and whether it stores data.
-   - Sign-in (`none`, `email` or `oauth`).
-   - Languages, and the deploy target (`vercel` or `none`).
-   - Repository visibility, `private` by default.
-5. **Documents (optional).** Give file paths separated by commas: a brief, notes, specs. They are copied to
-   `devos/intake-docs/`. The blueprint reads them and lists what they leave open in `docs/OPEN_QUESTIONS.md`.
-6. **Summary.** Check your answers. Confirm, or answer again.
-7. **Install.** The method files are written into the folder.
-8. **Blueprint.** Your blueprint agent writes the project documents and fence T01 in the folder.
+4. **Project type, stack and modules.**
+   - The project type: SaaS, web app, marketing site, dashboard, marketplace, store, API, mobile, AI product,
+     realtime app, documentation site, CLI, library, worker, browser extension or full product.
+   - A stack that fits the type. The method runs JavaScript and TypeScript stacks today.
+   - A provider for each module the type uses: database, storage, auth, payments, email, jobs, search, product AI,
+     hosting and observability. Each menu starts on the type's usual choice, and `None` is always offered.
+5. **Five questions.** The project name, a one-paragraph brief, who uses it, its languages, and the repository
+   visibility (`private` by default). Whether it stores data, the sign-in and the deploy target follow from the
+   modules.
+6. **Documents (optional).** DEV_OS first lists the documents worth preparing for your type: a product brief or PRD,
+   design references, brand assets, content, data and API notes, business rules. Give the paths of the ones you have,
+   separated by commas. They are copied to `devos/intake-docs/`. The blueprint reads them, writes every document
+   that is still missing, and lists what is left open in `docs/OPEN_QUESTIONS.md`.
+7. **Summary.** Check your answers. Confirm, or answer again.
+8. **Install.** The method files are written into the folder.
+9. **Blueprint.** Your blueprint agent writes the project documents and fence T01 in the folder.
    - A heartbeat line shows it is still working.
    - Ctrl-C stops it and keeps what was written.
    - When it finishes, type `approve`, or describe the changes you want. You get up to five rounds.
-9. **Keys.** DEV_OS lists the keys this project needs and where to get each one. Type each one once. The input is
-   hidden, and Enter skips a key you will set later. The values stay in memory until they are handed to GitHub
-   (`gh secret set`, over standard input).
-10. **GitHub.** DEV_OS shows the plan: the repository, its visibility, the variables, and the keys to upload or set
+10. **Keys.** DEV_OS lists every key this project needs, for the agents and for the modules you picked, and where to
+    get each one. Type each one once. The input is hidden, and Enter skips a key you will set later. For a key that is
+    a JSON file, such as a service account, give the file's path instead. The values stay in memory until they are
+    handed to GitHub (`gh secret set`, over standard input).
+11. **GitHub.** DEV_OS shows the plan: the repository, its visibility, the variables, and the keys to upload or set
     later. At `Create it now?`, answer `yes`. DEV_OS then:
     - commits the folder;
     - creates the repository;
@@ -157,19 +163,20 @@ Enter takes the default shown.
 
 - **GitHub roles.** The reviewer and builders run on Claude Code, Cursor, Codex or Gemini. Codex and Gemini have not yet
   finished a real run on GitHub; the end-to-end test proves them. Muse and GLM can write the blueprint only.
-- **Stack.** The method's checks expect a Node.js project that uses pnpm, with optional deploys on Vercel and the
-  Supabase, R2 and Firebase modules. Other stacks come later.
-- **Keys.** A key is typed as one line. Set a multi-line value, such as a service-account JSON, yourself with
-  `gh secret set <NAME> --repo <owner>/<name>`.
+- **Stack.** The method's checks run `pnpm run typecheck`, `lint`, `test` and `build`, so the catalogue offers its
+  15 JavaScript and TypeScript stacks. Python, Go and Dart stacks join in a later version. Deploys run on Vercel, and
+  the database and storage modules that deploy with the method are Supabase, R2 and Firebase.
+- **App keys.** The keys your app reads (payments, email, error tracking, …) are stored as GitHub secrets. Until the
+  deploy copies them to your host, also set them in Vercel → Settings → Environment Variables (Production).
 - **Testing.** Continuous integration tests the engine on Linux and Windows. The full run on GitHub, from
   `devos init` to a merged first task, gets its end-to-end test before the release.
 
 ## Roadmap
 
-1. A catalogue of project types, stacks and modules, with the keys each one needs.
+1. A basic kit for every agent tool: live library documentation (Context7) and skills for the chosen stack.
 2. Checks that follow the chosen stack.
-3. A project scaffold that is green before the first task.
-4. The first green run and the end-to-end test.
+3. A project scaffold that is green before the first task, with logging and a health route.
+4. The first green run and the end-to-end test, including copying app keys to the host.
 5. The design gate for UI projects.
 6. A guided setup in the browser.
 7. Expert prompts, skills and references for each layer of a project.

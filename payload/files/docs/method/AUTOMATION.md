@@ -317,7 +317,8 @@ Close-out is the human's commit:
 starts the cycle again.
 
 **The next project.** Run `devos init <folder>`. It shows the contract and stops unless you type `accept`, asks
-only what it cannot infer, installs the method files (`devos install`), and runs the blueprint
+the project type, the stack and a provider for each module (PR-46), then only what it cannot infer, lists the
+documents worth preparing, installs the method files (`devos install`), and runs the blueprint
 (`devos/prompts/blueprint.md`, the `/devos-new-project` flow headless). It writes `.claude/settings.json` last, once
 the documents and fence T01 exist: that file locks the reviewer to reviews and fences.
 

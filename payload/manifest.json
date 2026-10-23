@@ -254,7 +254,7 @@
     {
       "path": "devos/prompts/blueprint.md",
       "stored": "devos/prompts/blueprint.md",
-      "sha256": "0f1cfc40a661a22c0371e85465dd29beaa1b7dd7bb78b3fd928b201fe459a08b",
+      "sha256": "096f6712ceb046633e1d19bf6e8948b4f72df6d1cdaca32d974eebd1183baa08",
       "owner": "engine"
     },
     {
@@ -368,7 +368,7 @@
     {
       "path": "docs/method/AUTOMATION.md",
       "stored": "docs/method/AUTOMATION.md",
-      "sha256": "d81f620a2ddcb3aa5b8c74dd3b102d75a80ef6b467adf025abe4fd88569e248b",
+      "sha256": "2e5df7df9d53fdd7ffc111717fe241ae48d81db0ddd849e4b29e247d0de8be75",
       "owner": "engine"
     },
     {
@@ -386,7 +386,7 @@
     {
       "path": "docs/method/PRECEDENTS.md",
       "stored": "docs/method/PRECEDENTS.md",
-      "sha256": "06e7ada511075f174daba1f16ff5c448db533e91a91348241f14ee9157edfbc8",
+      "sha256": "776ec45a6c9447b9ab98f5ec2eae768d25bd831eed759b9cd3319f8699863c6c",
       "owner": "engine"
     },
     {

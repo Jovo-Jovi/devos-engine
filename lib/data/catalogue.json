@@ -1,0 +1,893 @@
+{
+  "$comment": "DEV_OS Engine catalogue (E18). Types, the stacks the method can run (runs: true), modules with providers, and the documents worth preparing. A provider with method names the DEV_OS module or variable it turns on; its keys come from devos/setup.json. A provider with env lists the keys the app reads.",
+  "version": 1,
+  "types": [
+    {
+      "id": "saas",
+      "label": "SaaS application",
+      "line": "Multi-user product with accounts, data, and paid plans.",
+      "stack": "next",
+      "ui": true,
+      "defaults": {
+        "database": "supabase",
+        "storage": "none",
+        "auth": "email",
+        "payments": "none",
+        "email": "resend",
+        "hosting": "vercel",
+        "observability": "structured-logs"
+      },
+      "prepare": [
+        "brief",
+        "design",
+        "brand",
+        "rules",
+        "data"
+      ]
+    },
+    {
+      "id": "web-app",
+      "label": "Web app",
+      "line": "A browser application with its own screens and data.",
+      "stack": "vite-react",
+      "ui": true,
+      "defaults": {
+        "database": "supabase",
+        "storage": "none",
+        "auth": "email",
+        "hosting": "vercel",
+        "observability": "structured-logs"
+      },
+      "prepare": [
+        "brief",
+        "design",
+        "brand",
+        "data"
+      ]
+    },
+    {
+      "id": "marketing",
+      "label": "Marketing or content site",
+      "line": "Public pages, posts, and SEO. No accounts.",
+      "stack": "astro",
+      "ui": true,
+      "defaults": {
+        "email": "none",
+        "hosting": "vercel",
+        "observability": "none"
+      },
+      "prepare": [
+        "brief",
+        "design",
+        "brand",
+        "content"
+      ]
+    },
+    {
+      "id": "dashboard",
+      "label": "Dashboard or internal tool",
+      "line": "Signed-in views over your own data.",
+      "stack": "next",
+      "ui": true,
+      "defaults": {
+        "database": "supabase",
+        "auth": "email",
+        "hosting": "vercel",
+        "observability": "structured-logs"
+      },
+      "prepare": [
+        "brief",
+        "design",
+        "data",
+        "rules"
+      ]
+    },
+    {
+      "id": "marketplace",
+      "label": "Marketplace",
+      "line": "Two kinds of user meet and transact.",
+      "stack": "next",
+      "ui": true,
+      "defaults": {
+        "database": "supabase",
+        "storage": "supabase-storage",
+        "auth": "email",
+        "payments": "stripe",
+        "email": "resend",
+        "search": "none",
+        "hosting": "vercel",
+        "observability": "structured-logs"
+      },
+      "prepare": [
+        "brief",
+        "design",
+        "brand",
+        "content",
+        "rules"
+      ]
+    },
+    {
+      "id": "commerce",
+      "label": "Store",
+      "line": "Catalog, cart, checkout, orders.",
+      "stack": "next",
+      "ui": true,
+      "defaults": {
+        "database": "supabase",
+        "storage": "supabase-storage",
+        "auth": "email",
+        "payments": "stripe",
+        "email": "resend",
+        "search": "none",
+        "hosting": "vercel",
+        "observability": "structured-logs"
+      },
+      "prepare": [
+        "brief",
+        "design",
+        "brand",
+        "content",
+        "rules"
+      ]
+    },
+    {
+      "id": "api",
+      "label": "API only",
+      "line": "HTTP service, no styling and no ui-kit.",
+      "stack": "hono",
+      "ui": false,
+      "defaults": {
+        "database": "supabase",
+        "auth": "none",
+        "jobs": "none",
+        "hosting": "none",
+        "observability": "structured-logs"
+      },
+      "prepare": [
+        "brief",
+        "data",
+        "rules"
+      ]
+    },
+    {
+      "id": "mobile",
+      "label": "Mobile application",
+      "line": "iOS and Android from one codebase.",
+      "stack": "expo",
+      "ui": false,
+      "defaults": {
+        "database": "supabase",
+        "auth": "email",
+        "payments": "none",
+        "observability": "none"
+      },
+      "prepare": [
+        "brief",
+        "design",
+        "brand",
+        "data"
+      ]
+    },
+    {
+      "id": "ai-product",
+      "label": "AI product",
+      "line": "Chat, tools, or retrieval is the product itself.",
+      "stack": "next",
+      "ui": true,
+      "defaults": {
+        "database": "supabase",
+        "storage": "none",
+        "auth": "email",
+        "product-ai": "chat",
+        "hosting": "vercel",
+        "observability": "structured-logs"
+      },
+      "prepare": [
+        "brief",
+        "design",
+        "data",
+        "rules"
+      ]
+    },
+    {
+      "id": "realtime",
+      "label": "Realtime app",
+      "line": "Live updates are the core behavior.",
+      "stack": "next",
+      "ui": true,
+      "defaults": {
+        "database": "supabase",
+        "auth": "email",
+        "hosting": "vercel",
+        "observability": "structured-logs"
+      },
+      "prepare": [
+        "brief",
+        "design",
+        "data"
+      ]
+    },
+    {
+      "id": "docs",
+      "label": "Documentation site",
+      "line": "Reference and guides. No auth, no database.",
+      "stack": "starlight",
+      "ui": true,
+      "defaults": {
+        "search": "none",
+        "hosting": "vercel",
+        "observability": "none"
+      },
+      "prepare": [
+        "brief",
+        "content",
+        "brand"
+      ]
+    },
+    {
+      "id": "cli",
+      "label": "CLI or developer tool",
+      "line": "A command people run in a terminal.",
+      "stack": "node-cli",
+      "ui": false,
+      "defaults": {},
+      "prepare": [
+        "brief",
+        "data"
+      ]
+    },
+    {
+      "id": "library",
+      "label": "Library or SDK",
+      "line": "Code other projects import.",
+      "stack": "node-lib",
+      "ui": false,
+      "defaults": {},
+      "prepare": [
+        "brief",
+        "data"
+      ]
+    },
+    {
+      "id": "worker",
+      "label": "Worker",
+      "line": "Scheduled or queued jobs.",
+      "stack": "hono",
+      "ui": false,
+      "defaults": {
+        "database": "none",
+        "jobs": "upstash-redis",
+        "email": "none",
+        "hosting": "none",
+        "observability": "structured-logs"
+      },
+      "prepare": [
+        "brief",
+        "data"
+      ]
+    },
+    {
+      "id": "extension",
+      "label": "Browser extension",
+      "line": "Vite plus an extension manifest.",
+      "stack": "vite-react",
+      "ui": true,
+      "defaults": {
+        "storage": "none"
+      },
+      "prepare": [
+        "brief",
+        "design"
+      ]
+    },
+    {
+      "id": "full",
+      "label": "Full product",
+      "line": "Web plus API plus data.",
+      "stack": "next",
+      "ui": true,
+      "defaults": {
+        "database": "supabase",
+        "storage": "supabase-storage",
+        "auth": "email",
+        "payments": "none",
+        "email": "resend",
+        "jobs": "none",
+        "search": "none",
+        "product-ai": "none",
+        "hosting": "vercel",
+        "observability": "structured-logs"
+      },
+      "prepare": [
+        "brief",
+        "design",
+        "brand",
+        "data",
+        "rules"
+      ]
+    }
+  ],
+  "stacks": [
+    {
+      "id": "next",
+      "label": "Next.js (App Router, TypeScript)",
+      "languages": [
+        "typescript",
+        "javascript"
+      ],
+      "fits": [
+        "saas",
+        "web-app",
+        "dashboard",
+        "marketplace",
+        "commerce",
+        "ai-product",
+        "realtime",
+        "full"
+      ],
+      "runs": true
+    },
+    {
+      "id": "nuxt",
+      "label": "Nuxt",
+      "languages": [
+        "typescript",
+        "javascript"
+      ],
+      "fits": [
+        "saas",
+        "web-app",
+        "dashboard",
+        "full"
+      ],
+      "runs": true
+    },
+    {
+      "id": "sveltekit",
+      "label": "SvelteKit",
+      "languages": [
+        "typescript",
+        "javascript"
+      ],
+      "fits": [
+        "saas",
+        "web-app",
+        "dashboard",
+        "full"
+      ],
+      "runs": true
+    },
+    {
+      "id": "remix",
+      "label": "Remix",
+      "languages": [
+        "typescript",
+        "javascript"
+      ],
+      "fits": [
+        "saas",
+        "web-app",
+        "dashboard",
+        "full"
+      ],
+      "runs": true
+    },
+    {
+      "id": "astro",
+      "label": "Astro",
+      "languages": [
+        "typescript",
+        "javascript"
+      ],
+      "fits": [
+        "marketing",
+        "full",
+        "web-app"
+      ],
+      "runs": true
+    },
+    {
+      "id": "starlight",
+      "label": "Astro Starlight (docs)",
+      "languages": [
+        "typescript",
+        "javascript"
+      ],
+      "fits": [
+        "docs"
+      ],
+      "runs": true
+    },
+    {
+      "id": "vite-react",
+      "label": "Vite + React",
+      "languages": [
+        "typescript",
+        "javascript"
+      ],
+      "fits": [
+        "marketing",
+        "extension",
+        "web-app"
+      ],
+      "runs": true
+    },
+    {
+      "id": "vite-vue",
+      "label": "Vite + Vue",
+      "languages": [
+        "typescript",
+        "javascript"
+      ],
+      "fits": [
+        "marketing",
+        "extension",
+        "web-app"
+      ],
+      "runs": true
+    },
+    {
+      "id": "solid",
+      "label": "SolidStart",
+      "languages": [
+        "typescript",
+        "javascript"
+      ],
+      "fits": [
+        "marketing",
+        "dashboard",
+        "web-app"
+      ],
+      "runs": true
+    },
+    {
+      "id": "hono",
+      "label": "Hono",
+      "languages": [
+        "typescript",
+        "javascript"
+      ],
+      "fits": [
+        "api",
+        "worker"
+      ],
+      "runs": true
+    },
+    {
+      "id": "fastify",
+      "label": "Fastify",
+      "languages": [
+        "typescript",
+        "javascript"
+      ],
+      "fits": [
+        "api"
+      ],
+      "runs": true
+    },
+    {
+      "id": "nest",
+      "label": "NestJS",
+      "languages": [
+        "typescript",
+        "javascript"
+      ],
+      "fits": [
+        "api"
+      ],
+      "runs": true
+    },
+    {
+      "id": "expo",
+      "label": "Expo",
+      "languages": [
+        "typescript",
+        "javascript"
+      ],
+      "fits": [
+        "mobile"
+      ],
+      "runs": true
+    },
+    {
+      "id": "node-cli",
+      "label": "Node TypeScript bin",
+      "languages": [
+        "typescript"
+      ],
+      "fits": [
+        "cli"
+      ],
+      "runs": true
+    },
+    {
+      "id": "node-lib",
+      "label": "Node TypeScript package",
+      "languages": [
+        "typescript"
+      ],
+      "fits": [
+        "library"
+      ],
+      "runs": true
+    },
+    {
+      "id": "fastapi",
+      "label": "FastAPI",
+      "languages": [
+        "python"
+      ],
+      "fits": [
+        "api"
+      ],
+      "runs": false
+    },
+    {
+      "id": "django",
+      "label": "Django",
+      "languages": [
+        "python"
+      ],
+      "fits": [
+        "api"
+      ],
+      "runs": false
+    },
+    {
+      "id": "go-chi",
+      "label": "Go + chi",
+      "languages": [
+        "go"
+      ],
+      "fits": [
+        "api",
+        "worker"
+      ],
+      "runs": false
+    },
+    {
+      "id": "flutter",
+      "label": "Flutter",
+      "languages": [
+        "dart"
+      ],
+      "fits": [
+        "mobile"
+      ],
+      "runs": false
+    },
+    {
+      "id": "python-lib",
+      "label": "Python package",
+      "languages": [
+        "python"
+      ],
+      "fits": [
+        "library"
+      ],
+      "runs": false
+    }
+  ],
+  "modules": [
+    {
+      "id": "database",
+      "label": "Database",
+      "consequence": "Adds the database module. Every migration waits for your merge.",
+      "providers": [
+        {
+          "id": "none",
+          "label": "None"
+        },
+        {
+          "id": "supabase",
+          "label": "Postgres on Supabase",
+          "method": "supabase"
+        },
+        {
+          "id": "firebase",
+          "label": "Firestore on Firebase",
+          "method": "firebase"
+        }
+      ]
+    },
+    {
+      "id": "storage",
+      "label": "Storage",
+      "consequence": "Adds file and object storage.",
+      "providers": [
+        {
+          "id": "none",
+          "label": "None"
+        },
+        {
+          "id": "supabase-storage",
+          "label": "Supabase Storage",
+          "method": "supabase"
+        },
+        {
+          "id": "r2",
+          "label": "Cloudflare R2",
+          "method": "r2"
+        },
+        {
+          "id": "firebase-storage",
+          "label": "Firebase Storage",
+          "method": "firebase"
+        },
+        {
+          "id": "s3",
+          "label": "S3",
+          "env": [
+            "S3_BUCKET",
+            "S3_ACCESS_KEY_ID",
+            "S3_SECRET_ACCESS_KEY"
+          ]
+        },
+        {
+          "id": "vercel-blob",
+          "label": "Vercel Blob",
+          "env": [
+            "BLOB_READ_WRITE_TOKEN"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "auth",
+      "label": "Auth",
+      "consequence": "Adds sign-in. Accounts can hold personal data, so the boundary guard watches it.",
+      "providers": [
+        {
+          "id": "none",
+          "label": "None"
+        },
+        {
+          "id": "email",
+          "label": "Email and password"
+        },
+        {
+          "id": "oauth",
+          "label": "OAuth"
+        },
+        {
+          "id": "email+oauth",
+          "label": "Email and OAuth"
+        }
+      ]
+    },
+    {
+      "id": "payments",
+      "label": "Payments",
+      "consequence": "Adds payments. Money flows need your review before launch.",
+      "providers": [
+        {
+          "id": "none",
+          "label": "None"
+        },
+        {
+          "id": "stripe",
+          "label": "Stripe",
+          "env": [
+            "STRIPE_SECRET_KEY",
+            "STRIPE_WEBHOOK_SECRET"
+          ]
+        },
+        {
+          "id": "paddle",
+          "label": "Paddle",
+          "env": [
+            "PADDLE_API_KEY"
+          ]
+        },
+        {
+          "id": "lemonsqueezy",
+          "label": "Lemon Squeezy",
+          "env": [
+            "LEMONSQUEEZY_API_KEY"
+          ]
+        },
+        {
+          "id": "paypal",
+          "label": "PayPal",
+          "env": [
+            "PAYPAL_CLIENT_ID",
+            "PAYPAL_CLIENT_SECRET"
+          ]
+        },
+        {
+          "id": "revenuecat",
+          "label": "RevenueCat",
+          "env": [
+            "REVENUECAT_API_KEY"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "email",
+      "label": "Email",
+      "consequence": "Adds transactional email.",
+      "providers": [
+        {
+          "id": "none",
+          "label": "None"
+        },
+        {
+          "id": "resend",
+          "label": "Resend",
+          "env": [
+            "RESEND_API_KEY"
+          ]
+        },
+        {
+          "id": "postmark",
+          "label": "Postmark",
+          "env": [
+            "POSTMARK_API_KEY"
+          ]
+        },
+        {
+          "id": "ses",
+          "label": "Amazon SES",
+          "env": [
+            "AWS_ACCESS_KEY_ID",
+            "AWS_SECRET_ACCESS_KEY",
+            "AWS_REGION"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "jobs",
+      "label": "Jobs",
+      "consequence": "Adds background jobs and queues.",
+      "providers": [
+        {
+          "id": "none",
+          "label": "None"
+        },
+        {
+          "id": "upstash-redis",
+          "label": "Upstash Redis",
+          "env": [
+            "UPSTASH_REDIS_URL",
+            "UPSTASH_REDIS_TOKEN"
+          ]
+        },
+        {
+          "id": "bullmq",
+          "label": "BullMQ",
+          "env": [
+            "REDIS_URL"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "search",
+      "label": "Search",
+      "consequence": "Adds search over your content.",
+      "providers": [
+        {
+          "id": "none",
+          "label": "None"
+        },
+        {
+          "id": "postgres-fts",
+          "label": "Postgres full text"
+        },
+        {
+          "id": "meilisearch",
+          "label": "Meilisearch",
+          "env": [
+            "MEILISEARCH_HOST",
+            "MEILISEARCH_API_KEY"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "product-ai",
+      "label": "Product AI",
+      "consequence": "Adds the product's own AI feature. It is not the reviewer, the builder, or the configuration model.",
+      "providers": [
+        {
+          "id": "none",
+          "label": "None"
+        },
+        {
+          "id": "chat",
+          "label": "Chat",
+          "env": [
+            "PRODUCT_AI_API_KEY"
+          ]
+        },
+        {
+          "id": "tools-agents",
+          "label": "Tools and agents",
+          "env": [
+            "PRODUCT_AI_API_KEY"
+          ]
+        },
+        {
+          "id": "retrieval",
+          "label": "Retrieval",
+          "env": [
+            "PRODUCT_AI_API_KEY"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "hosting",
+      "label": "Hosting",
+      "consequence": "Sets where the product is deployed. None means no deploy step. More hosts join in a later version.",
+      "providers": [
+        {
+          "id": "none",
+          "label": "None"
+        },
+        {
+          "id": "vercel",
+          "label": "Vercel",
+          "method": "vercel"
+        }
+      ]
+    },
+    {
+      "id": "observability",
+      "label": "Observability",
+      "consequence": "Sets how failures become visible to you: structured logs from the first task, error tracking before launch.",
+      "providers": [
+        {
+          "id": "none",
+          "label": "None"
+        },
+        {
+          "id": "structured-logs",
+          "label": "Structured logs"
+        },
+        {
+          "id": "sentry",
+          "label": "Sentry (structured logs plus error tracking)",
+          "env": [
+            "SENTRY_DSN",
+            "SENTRY_AUTH_TOKEN"
+          ]
+        }
+      ]
+    }
+  ],
+  "documents": [
+    {
+      "id": "brief",
+      "label": "Product brief or PRD",
+      "why": "the problem, the users and the must-have features, in your words"
+    },
+    {
+      "id": "design",
+      "label": "Design references",
+      "why": "screens, sites or apps you like, and what you like about each"
+    },
+    {
+      "id": "brand",
+      "label": "Brand assets",
+      "why": "logo, colours and fonts, if you have them"
+    },
+    {
+      "id": "content",
+      "label": "Content",
+      "why": "page copy, product data or sample records"
+    },
+    {
+      "id": "data",
+      "label": "Data and API notes",
+      "why": "existing schemas, APIs the product must call, sample payloads"
+    },
+    {
+      "id": "rules",
+      "label": "Business rules",
+      "why": "roles and permissions, pricing, and any legal requirement you know of"
+    }
+  ]
+}
