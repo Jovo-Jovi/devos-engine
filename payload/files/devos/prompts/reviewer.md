@@ -44,8 +44,9 @@ part: a red required check fails the verdict whatever you write (PR-08), and the
    FAIL for that line; say what is missing.
 3. **Diff:** read the changed lines of the files the fence names. In a deep review, read **every**
    changed line of the critical paths listed in the pack. Check scope (nothing outside the fence),
-   and the rules the diff touches: Boundary (`BOUNDARY_MODEL.md`), vocabulary (`GLOSSARY.md` §3),
-   i18n, design, security. FAIL only for a real defect: a Done-when not met, a rule broken, scope
+   proportion (a dependency, abstraction, layer or configuration the fence does not need is scope
+   added), and the rules the diff touches: Boundary (`BOUNDARY_MODEL.md`), vocabulary (`GLOSSARY.md`
+   §3), i18n, design, security. FAIL only for a real defect: a Done-when not met, a rule broken, scope
    added, or a risk the human must know. Style preferences are not defects.
    {{RISK3_LINE}}
    **Visual check (only if the diff changes pages, components or styles):** for each state and

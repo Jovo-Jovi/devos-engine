@@ -83,6 +83,8 @@ Enter takes the default shown.
    - A stack that fits the type. The method runs JavaScript and TypeScript stacks today.
    - A provider for each module the type uses: database, storage, auth, payments, email, jobs, search, product AI,
      hosting and observability. Each menu starts on the type's usual choice, and `None` is always offered.
+   - The scope: **MVP** (the core flow first; every other feature waits on a "Later" list until you ask for it) or
+     **Full product for production** (every feature in your brief, in phases, then a production-readiness phase).
 5. **Five questions.** The project name, a one-paragraph brief, who uses it, its languages, and the repository
    visibility (`private` by default). Whether it stores data, the sign-in and the deploy target follow from the
    modules.
@@ -108,6 +110,23 @@ Enter takes the default shown.
     - sets the workflow permissions, variables and secrets;
     - runs the setup check;
     - starts the first cycle.
+
+## Lean by default
+
+DEV_OS builds what your brief asks for, nothing cut and nothing added, with the simplest architecture that carries
+it.
+
+- **Scope is your choice.** With **MVP**, the first phases ship the core flow end to end and the rest waits on a
+  "Later" list in `docs/SCOPE.md`; ask for it with a change request when you are ready. With **Full product for
+  production**, every feature is planned in phases, core flow first, and a last phase makes it ready for production:
+  a security review, error tracking and logging, backups when data is stored, and the speed of the main pages.
+- **The plan cites a need** for every layer, service and dependency it includes.
+- **`docs/STACK.md`.** The blueprint writes your stack's current conventions in one page, and every builder follows
+  it.
+- **Builders** make the simplest change that meets each task, and name every new dependency with the reason for it.
+- **Reviewers** fail a task that adds a dependency, abstraction or layer it does not need.
+- **Current documentation.** Every agent on GitHub can look up library documentation through Context7, so the code
+  follows today's APIs rather than the model's memory.
 
 ## After setup
 
@@ -173,15 +192,14 @@ Enter takes the default shown.
 
 ## Roadmap
 
-1. A basic kit for every agent tool: live library documentation (Context7) and skills for the chosen stack.
-2. Checks that follow the chosen stack.
-3. A project scaffold that is green before the first task, with logging and a health route.
-4. The first green run and the end-to-end test, including copying app keys to the host.
-5. The design gate for UI projects.
-6. A guided setup in the browser.
-7. Expert prompts, skills and references for each layer of a project.
-8. A link from every project to the DEV_OS Control Tower dashboard.
-9. Version 1.0 and its licence.
+1. Checks that follow the chosen stack.
+2. A project scaffold that is green before the first task, with logging and a health route.
+3. The first green run and the end-to-end test, including copying app keys to the host.
+4. The design gate for UI projects.
+5. A guided setup in the browser.
+6. Expert prompts, skills and references for each layer of a project.
+7. A link from every project to the DEV_OS Control Tower dashboard.
+8. Version 1.0 and its licence.
 
 ## Building the engine (maintainers)
 

@@ -107,12 +107,14 @@ test("cycle-tools.test.mjs (c) codex builder arguments", () => {
     "codex", "exec", "--model", "M", "--sandbox", "workspace-write",
     "-c", "sandbox_workspace_write.network_access=true",
     "-c", "model_reasoning_effort=\"low\"",
+    "-c", "mcp_servers.context7.url=\"https://mcp.context7.com/mcp\"",
     "--json", "-o", "last.md",
   ]);
   assert.deepEqual(cliArgs({ tool: "codex", role: "builder", model: "M", effort: "max", last: "last.md" }), [
     "codex", "exec", "--model", "M", "--sandbox", "workspace-write",
     "-c", "sandbox_workspace_write.network_access=true",
     "-c", "model_reasoning_effort=\"high\"",
+    "-c", "mcp_servers.context7.url=\"https://mcp.context7.com/mcp\"",
     "--json", "-o", "last.md",
   ]);
 });
@@ -121,6 +123,7 @@ test("cycle-tools.test.mjs (d) codex reviewer arguments", () => {
   assert.deepEqual(cliArgs({ tool: "codex", role: "reviewer", model: "M", effort: "xhigh", last: "last.md" }), [
     "codex", "exec", "--model", "M", "--sandbox", "workspace-write",
     "-c", "model_reasoning_effort=\"xhigh\"",
+    "-c", "mcp_servers.context7.url=\"https://mcp.context7.com/mcp\"",
     "--json", "-o", "last.md",
   ]);
 });
@@ -319,6 +322,7 @@ test("cycle-tools.test.mjs (l) gemini reviewer sees its kit and policy", { skip:
       "printf '%s' \"$GEMINI_CLI_TRUST_WORKSPACE\" > \"$DEVOS_SEEN/trust\"",
       "cp GEMINI.md \"$DEVOS_SEEN/gemini.md\"",
       "cp \"$HOME/.gemini/policies/devos.toml\" \"$DEVOS_SEEN/policy.toml\"",
+      "cp \"$HOME/.gemini/settings.json\" \"$DEVOS_SEEN/settings.json\"",
       "printf '%s\\n' '{\"response\":\"ok\"}'",
       "exit 0",
       "",
@@ -341,6 +345,7 @@ test("cycle-tools.test.mjs (l) gemini reviewer sees its kit and policy", { skip:
     assert.equal(readFileSync(path.join(seen, "trust"), "utf8"), "true");
     assert.deepEqual(readFileSync(path.join(seen, "gemini.md")), readFileSync(path.join(dir, "CLAUDE.md")));
     assert.deepEqual(readFileSync(path.join(seen, "policy.toml")), readFileSync(path.join(dir, "devos", "roles", "gemini", "policy.toml")));
+    assert.deepEqual(readFileSync(path.join(seen, "settings.json")), readFileSync(path.join(dir, "devos", "roles", "gemini", "settings.json")));
     const env = readFileSync(path.join(dir, ".devos", "reviewer-run.env"), "utf8");
     assert.match(env, /^code=0$/m);
     assert.match(env, /^used=1$/m);
@@ -373,6 +378,9 @@ test("cycle-tools.test.mjs (m) the cycle workflow keeps the proven commands and 
   assert.equal(countOf(text, "bash scripts/devos/run-agent.sh reviewer"), 1);
   assert.equal(countOf(text, "npm install -g @openai/codex"), 1);
   assert.equal(countOf(text, "npm install -g @google/gemini-cli"), 1);
+  assert.equal(countOf(text, "--mcp-config devos/ci/mcp.claude.json"), 3);
+  assert.equal(countOf(text, "Skill,mcp__context7\""), 3);
+  assert.equal(countOf(text, "cp devos/ci/mcp.ci.json .cursor/mcp.json"), 2);
   for (const name of ["OPENAI_API_KEY", "OPENAI_API_KEY_2", "GEMINI_API_KEY", "GEMINI_API_KEY_2"]) {
     assert.equal(text.includes(`"${name}":"\${{ secrets.${name} != '' && '1' || '' }}"`), true, name);
   }
@@ -497,4 +505,51 @@ test("cycle-tools.test.mjs (p) the roster accepts Codex and Gemini", () => {
   });
   assert.equal(roster.reviewer.tool, "codex");
   assert.equal(roster.pool[0].tool, "gemini");
+});
+
+test("cycle-tools.test.mjs (s) the prompts keep the work lean", () => {
+  const dir = mkdtempSync(path.join(tmpdir(), "devos-lean-"));
+  try {
+    stage(dir);
+    mkdirSync(path.join(dir, "docs"), { recursive: true });
+    writeFileSync(path.join(dir, "docs", "PHASES.md"), [
+      "| Task | Phase | Station | Name | Risk | Gate | Done | Verdict |",
+      "|---|---|---|---|---|---|---|---|",
+      "| T01 | E | 1 | One | 1 | — | [ ] | — |",
+      "",
+    ].join("\n"));
+    const template = readFileSync(path.join(root, "payload", "templates", "devos", "project.json"), "utf8");
+    writeFileSync(path.join(dir, "devos", "project.json"), template.replaceAll("__PROJECT_KEY__", "DEMO"));
+    const written = spawnSync(process.execPath, ["scripts/devos/config.mjs", "--write"], {
+      cwd: dir,
+      encoding: "utf8",
+      windowsHide: true,
+    });
+    assert.equal(written.status, 0, written.stderr);
+    const render = (role) => spawnSync(process.execPath, ["scripts/devos/render-prompt.mjs", role, "T01", "1"], {
+      cwd: dir,
+      encoding: "utf8",
+      windowsHide: true,
+    });
+    const builder = render("builder");
+    assert.equal(builder.status, 0, builder.stderr);
+    assert.equal(builder.stdout.includes("Keep it lean: make the simplest change that meets the fence."), true, builder.stdout);
+    const reviewer = render("reviewer");
+    assert.equal(reviewer.status, 0, reviewer.stderr);
+    assert.equal(reviewer.stdout.includes("proportion (a dependency, abstraction, layer or configuration the fence does not need is scope"), true, reviewer.stdout);
+  } finally {
+    rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+  }
+});
+
+test("cycle-tools.test.mjs (r) every tool's Context7 config names the same server", () => {
+  const files = [
+    ["payload/files/devos/ci/mcp.ci.json", "url"],
+    ["payload/files/devos/ci/mcp.claude.json", "url"],
+    ["payload/files/devos/roles/gemini/settings.json", "httpUrl"],
+  ];
+  for (const [rel, key] of files) {
+    const json = JSON.parse(readFileSync(path.join(root, rel), "utf8"));
+    assert.equal(json.mcpServers.context7[key], "https://mcp.context7.com/mcp", rel);
+  }
 });

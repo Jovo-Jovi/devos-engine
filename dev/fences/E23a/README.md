@@ -83,6 +83,8 @@ Enter takes the default shown.
    - A stack that fits the type. The method runs JavaScript and TypeScript stacks today.
    - A provider for each module the type uses: database, storage, auth, payments, email, jobs, search, product AI,
      hosting and observability. Each menu starts on the type's usual choice, and `None` is always offered.
+   - The scope: **MVP** (the core flow first; every other feature waits on a "Later" list until you ask for it) or
+     **Full product for production** (every feature in your brief, in phases, then a production-readiness phase).
 5. **Five questions.** The project name, a one-paragraph brief, who uses it, its languages, and the repository
    visibility (`private` by default). Whether it stores data, the sign-in and the deploy target follow from the
    modules.
@@ -111,10 +113,14 @@ Enter takes the default shown.
 
 ## Lean by default
 
-DEV_OS builds the smallest product that meets your brief, with the simplest architecture that carries it.
+DEV_OS builds what your brief asks for, nothing cut and nothing added, with the simplest architecture that carries
+it.
 
-- **The plan.** The blueprint cites a need for every layer, service and dependency it includes. The first phase ships
-  the core flow end to end.
+- **Scope is your choice.** With **MVP**, the first phases ship the core flow end to end and the rest waits on a
+  "Later" list in `docs/SCOPE.md`; ask for it with a change request when you are ready. With **Full product for
+  production**, every feature is planned in phases, core flow first, and a last phase makes it ready for production:
+  a security review, error tracking and logging, backups when data is stored, and the speed of the main pages.
+- **The plan cites a need** for every layer, service and dependency it includes.
 - **`docs/STACK.md`.** The blueprint writes your stack's current conventions in one page, and every builder follows
   it.
 - **Builders** make the simplest change that meets each task, and name every new dependency with the reason for it.

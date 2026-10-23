@@ -9,6 +9,9 @@ Task {{TASK}} — {{NAME}} · risk {{RISK}} · attempt {{ATTEMPT}} of {{MAX_ATTE
 Rules for this run:
 - Nobody can answer questions. If a step cannot be done inside the fence, follow its STOP block:
   HALT and report. Never invent scope, never "improve" beyond the fence.
+- Keep it lean: make the simplest change that meets the fence. Add no dependency, abstraction, layer
+  or configuration the fence does not need, and name every new dependency in the report with the fence
+  line that needs it. Follow `docs/STACK.md` when it exists.
 - Do not run `git add`, `git commit`, `git push` or `gh`, and do not open a pull request (PR-04).
   The runner commits your working tree when you finish.
 - Do not edit any path the fence's "Do NOT" list protects; the runner's surface guard fails the

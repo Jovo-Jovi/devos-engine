@@ -181,7 +181,7 @@ A UI fence carries a header line `- Screens: \`<name> <path>[ click|hover|focus 
 | | skills in `.cursor/skills/`: `devos-execute-fence`, `devos-task-report` (the report format, PR-10), `devos-compose-ui` |
 | | hooks in `.cursor/hooks.json` and `.cursor/hooks/` (shell policy; guards on stop) |
 | | CLI permissions in `.cursor/cli.json` |
-| | MCP: `.cursor/mcp.example.json` in the IDE; `devos/ci/mcp.ci.json` in runs |
+| | MCP: `.cursor/mcp.example.json` in the IDE. In runs, Context7 for every tool (PR-47): `devos/ci/mcp.ci.json` for Cursor (builder and reviewer), `devos/ci/mcp.claude.json` for Claude Code, Codex's `mcp_servers` setting, and `devos/roles/gemini/settings.json` for Gemini |
 | Reviewer | rules in `CLAUDE.md`; permissions in `.claude/settings.json` (reviews and fences only) |
 | | interactive Claude Code commands in `.claude/commands/`: `/devos-review`, `/devos-new-project`, `/devos-method` |
 | | helper agents in `.claude/agents/` (read-only, they report and the reviewer decides): `fence-auditor` (every fence written), `design-inspector` (UI captures), `security-auditor` (deep reviews); skill `.claude/skills/devos-fence-writing` (size rules and staging, PR-38). The reviewer, intake and revise runs may use them (`Task`, `Agent`, `Skill` tools) |

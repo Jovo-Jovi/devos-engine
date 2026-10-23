@@ -28,6 +28,7 @@ const accepted = [
   "email none",
   "",
   "",
+  "",
   "Demo Shop",
   "A small shop.",
   "Customers",
@@ -76,6 +77,7 @@ test("init.test.mjs approves a blueprint with the defaults", () => {
     assert.deepEqual(answers.languages, ["en"]);
     assert.equal(answers.deploy, "vercel");
     assert.equal(answers.visibility, "private");
+    assert.equal(answers.scope, "mvp");
     assert.equal(answers.contract_version, "0-draft-2");
     const called = runs(staged.parent);
     assert.equal(called.length, 1);

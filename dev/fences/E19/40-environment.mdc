@@ -1,0 +1,8 @@
+---
+description: Shell and environment profile (PR-01)
+alwaysApply: true
+---
+- **Automated runs** (GitHub Actions, the default): Linux, bash, Node 22, pnpm 10, plus the stack's toolchain (`devos.config.json` `stack`: uv and Python 3.12, Go, or Flutter). POSIX commands and `&&` are fine. There is no display; never start a long-running dev server without stopping it. Use `node scripts/devos/probe.mjs` for route evidence (it starts and stops the server itself).
+- **Manual IDE runs on Windows / PowerShell**: one command per line, never chain with `&&`; use `curl.exe`, never the `curl` alias; pipe formatted output through `Out-String`/`Write-Output` (empty output from a formatted command is never a zero result); hash committed bytes with `git show <ref>:<path>` through Node or Python, never working files (LF→CRLF conversion).
+- Use the toolchain the stack names (`devos.config.json` `stack.commands`, and `docs/STACK.md`): pnpm for JavaScript and TypeScript, uv for Python, go for Go, flutter for Dart. Never `npm install` a dependency into this repo.
+- Record any new environment quirk as a precedent in the same task's report (the reviewer lands it).

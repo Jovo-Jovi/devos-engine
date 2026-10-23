@@ -390,7 +390,7 @@ jobs:
               while :; do
                 left=$(( 72 - ($(date +%s) - T0) / 60 ))
                 bash scripts/devos/agent-watchdog.sh "$left" 10 .devos/builder.json .devos/builder.err -- \
-                  claude -p "$(cat .devos/builder-prompt.md)" --model "$MODEL" --effort "$EFFORT" --output-format json --permission-mode dontAsk --allowedTools "Read,Glob,Grep,Write,Edit,MultiEdit,Bash,Task,Agent,Skill" --disallowedTools "Bash(git push *),Bash(git commit *),Bash(git checkout *),Bash(git reset *),Bash(gh *),Bash(curl *),Bash(wget *)" --max-turns 400
+                  claude -p "$(cat .devos/builder-prompt.md)" --model "$MODEL" --effort "$EFFORT" --output-format json --permission-mode dontAsk --allowedTools "Read,Glob,Grep,Write,Edit,MultiEdit,Bash,Task,Agent,Skill,mcp__context7" --disallowedTools "Bash(git push *),Bash(git commit *),Bash(git checkout *),Bash(git reset *),Bash(gh *),Bash(curl *),Bash(wget *)" --mcp-config devos/ci/mcp.claude.json --max-turns 400
                 code=$?
                 if { [ "$code" = "125" ] || [ "$code" = "126" ]; } && [ -z "$restarted" ] && [ $(( 72 - ($(date +%s) - T0) / 60 )) -ge 25 ]; then
                   restarted=1; mkdir -p .devos/logs; cp .devos/builder.err .devos/logs/builder-stalled.err
@@ -461,7 +461,7 @@ jobs:
                   while :; do
                     left=$(( 72 - ($(date +%s) - T0) / 60 ))
                     bash scripts/devos/agent-watchdog.sh "$left" 10 .devos/builder.json .devos/builder.err -- \
-                      claude -p "$(cat .devos/builder-prompt.md)" --model "$MODEL" --effort "$EFFORT" --output-format json --permission-mode dontAsk --allowedTools "Read,Glob,Grep,Write,Edit,MultiEdit,Bash,Task,Agent,Skill" --disallowedTools "Bash(git push *),Bash(git commit *),Bash(git checkout *),Bash(git reset *),Bash(gh *),Bash(curl *),Bash(wget *)" --max-turns 400
+                      claude -p "$(cat .devos/builder-prompt.md)" --model "$MODEL" --effort "$EFFORT" --output-format json --permission-mode dontAsk --allowedTools "Read,Glob,Grep,Write,Edit,MultiEdit,Bash,Task,Agent,Skill,mcp__context7" --disallowedTools "Bash(git push *),Bash(git commit *),Bash(git checkout *),Bash(git reset *),Bash(gh *),Bash(curl *),Bash(wget *)" --mcp-config devos/ci/mcp.claude.json --max-turns 400
                     code=$?
                     if { [ "$code" = "125" ] || [ "$code" = "126" ]; } && [ -z "$restarted" ] && [ $(( 72 - ($(date +%s) - T0) / 60 )) -ge 25 ]; then
                       restarted=1; continue
@@ -764,6 +764,7 @@ jobs:
             rc=$code
           elif [ "$rev_tool" = "cursor" ]; then
             node scripts/devos/role-env.mjs swap cursor-reviewer || exit 1
+            cp devos/ci/mcp.ci.json .cursor/mcp.json
             trap 'node scripts/devos/role-env.mjs restore || exit 1' EXIT
             accounts=$(devos_accounts cursor)
             [ -n "$accounts" ] || { echo "::error::no Cursor key: set secret CURSOR_API_KEY (and optionally CURSOR_API_KEY_2)"; exit 1; }
@@ -803,8 +804,9 @@ jobs:
               --output-format json \
               --json-schema "$(cat devos/schemas/verdict.schema.json)" \
               --permission-mode dontAsk \
-              --allowedTools "Read,Glob,Grep,Write,Edit,Bash,Task,Agent,Skill" \
+              --allowedTools "Read,Glob,Grep,Write,Edit,Bash,Task,Agent,Skill,mcp__context7" \
               --disallowedTools "Bash(git push *),Bash(git commit *),Bash(git checkout *),Bash(git reset *),Bash(gh *),Bash(curl *),Bash(wget *)" \
+              --mcp-config devos/ci/mcp.claude.json \
               --max-turns "$TURNS" > .devos/reviewer.json 2> .devos/reviewer.err
             rc=$?
             if devos_limited .devos/reviewer.json .devos/reviewer.err "$rc"; then
@@ -816,6 +818,7 @@ jobs:
           done
           fi
           node scripts/devos/role-env.mjs restore || exit 1; trap - EXIT
+          rm -f .cursor/mcp.json
           kill "$hb" 2>/dev/null
           [ "$used" != "${accounts%% *}" ] && devos_note "Reviewer: switched to $ran_tool account $used."
           echo "reviewer exit code: $rc ($ran_tool account $used)"

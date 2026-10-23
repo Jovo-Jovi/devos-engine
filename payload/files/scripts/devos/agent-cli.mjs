@@ -27,7 +27,7 @@ export function cliArgs({ tool, role, model, effort, last }) {
   if (tool === "codex") {
     const args = ["codex", "exec", "--model", model, "--sandbox", "workspace-write"];
     if (role === "builder") args.push("-c", "sandbox_workspace_write.network_access=true");
-    args.push("-c", `model_reasoning_effort="${E}"`, "--json", "-o", last);
+    args.push("-c", `model_reasoning_effort="${E}"`, "-c", "mcp_servers.context7.url=\"https://mcp.context7.com/mcp\"", "--json", "-o", last);
     return args;
   }
   if (tool === "gemini") {

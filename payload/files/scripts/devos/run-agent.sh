@@ -43,6 +43,7 @@ if [ "$tool" = "gemini" ]; then
   export GEMINI_CLI_TRUST_WORKSPACE=true
   mkdir -p "$HOME/.gemini/policies"
   cp devos/roles/gemini/policy.toml "$HOME/.gemini/policies/devos.toml" || exit 1
+  cp devos/roles/gemini/settings.json "$HOME/.gemini/settings.json" || exit 1
 fi
 
 node scripts/devos/agent-cli.mjs args --tool "$tool" --role "$role" --model "$model" --effort "$effort" --last "$last" > .devos/agent-args.bin || exit 1

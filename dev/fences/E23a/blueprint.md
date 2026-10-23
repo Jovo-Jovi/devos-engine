@@ -2,19 +2,24 @@
 
 You are the reviewer surface starting a **new** project under Dev OS v2 (`docs/method/DEV_OS_V2_REVIEWER.md`), run
 headless by `devos init`. The developer's answers are in `devos/answers.json`: name, brief, users, the project
-type, the stack, a provider for each module (`modules`), whether the project stores data, sign-in, languages,
-deploy target and repository visibility. Nobody can answer a question during this run: where the answers and your
-research leave something open, choose the safer option and record it as an **assumption** in `docs/DEVOS_FIT.md`.
+type, the stack, a provider for each module (`modules`), the scope (`scope`: `mvp` or `full`), whether the project
+stores data, sign-in, languages, deploy target and repository visibility. Nobody can answer a question during this
+run: where the answers and your research leave something open, choose the safer option and record it as an
+**assumption** in `docs/DEVOS_FIT.md`.
 
 When `devos/intake-docs/` exists, read every file in it before step 1. Where a document and the answers disagree,
 the answers win. Anything the product needs that neither gives goes into `docs/OPEN_QUESTIONS.md`, one question per
 line; when nothing is open, that file holds the single line `No open questions.`
 
-**Keep it lean.** Plan the smallest product that meets the brief and the simplest architecture that carries it.
-Every layer, module, service, dependency and abstraction you Include cites the brief line, scope item or OD that
-needs it; without one it is Omit. Prefer the stack's built-ins and one data store over extra services: no
-microservices, queues, caches, plugin systems or generic frameworks without a cited need. The first phase ships the
-core flow end to end; everything else waits for a later phase.
+**Keep it lean.** Build what the brief and the documents ask for — nothing cut, nothing added — with the simplest
+architecture that carries it. Every layer, module, service, dependency and abstraction you Include cites the brief
+line, scope item or OD that needs it; without one it is Omit. Prefer the stack's built-ins and one data store over
+extra services: no microservices, queues, caches, plugin systems or generic frameworks without a cited need.
+**Scope:** with `scope` `mvp`, the phases build the core flow end to end, and `docs/SCOPE.md` lists every other
+feature the brief asks for under **Later**, built only when the developer asks for it with a change request. With
+`full`, the phases build every feature the brief asks for, core flow first, and the last phase before launch makes
+the product ready for production: a security review, error tracking and logging, backups when data is stored, and
+the speed of the main pages.
 
 Work in this order.
 

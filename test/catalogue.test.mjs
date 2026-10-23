@@ -116,6 +116,7 @@ test("catalogue.test.mjs (g) init asks the type, the stack and the saas modules"
     assert.equal(answers.stores_data, false);
     assert.equal(answers.sign_in, "none");
     assert.equal(answers.deploy, "vercel");
+    assert.equal(answers.scope, "mvp");
     assert.equal(result.stdout.includes("Type: SaaS application"), true);
     assert.equal(result.stdout.includes("Stack: Next.js (App Router, TypeScript)"), true);
     assert.equal(result.stdout.includes("Modules: database none · storage none · auth none · payments none · email none · hosting vercel · observability structured-logs"), true);
@@ -239,5 +240,25 @@ test("catalogue.test.mjs (l) app keys close SETUP.md", () => {
     assert.equal(setup.endsWith(ending), true, setup.slice(-600));
   } finally {
     cleanup(staged.parent);
+  }
+});
+
+test("catalogue.test.mjs (t) the scope choice is mvp or full", () => {
+  const mvp = stage();
+  const full = stage();
+  try {
+    const first = init(mvp, flow());
+    assert.equal(first.status, 0, first.stdout + first.stderr);
+    const mvpAnswers = JSON.parse(readFileSync(path.join(mvp.project, "devos", "answers.json"), "utf8"));
+    assert.equal(mvpAnswers.scope, "mvp");
+    assert.equal(first.stdout.includes("Scope: mvp"), true, first.stdout);
+    const second = init(full, flow({ scope: "2" }));
+    assert.equal(second.status, 0, second.stdout + second.stderr);
+    const fullAnswers = JSON.parse(readFileSync(path.join(full.project, "devos", "answers.json"), "utf8"));
+    assert.equal(fullAnswers.scope, "full");
+    assert.equal(second.stdout.includes("Scope: full"), true, second.stdout);
+  } finally {
+    cleanup(mvp.parent);
+    cleanup(full.parent);
   }
 });
