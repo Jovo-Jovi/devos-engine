@@ -1,244 +1,19 @@
-import { spawnSync } from "node:child_process";
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { spawn, spawnSync } from "node:child_process";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
 import { CONTRACT_VERSION } from "../lib/contract.mjs";
+import { doctorCommand } from "../lib/doctor.mjs";
+import { blueprintArgs } from "../lib/init.mjs";
 import { KEY_RE, keyFromName } from "../lib/install.mjs";
 import { checkRoster } from "../lib/roster.mjs";
+import { cleanup, flow, init, processGone, runs, stage, toolRuns } from "./harness.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const bin = path.join(root, "bin", "devos.mjs");
-const windows = process.platform === "win32";
-const fixtures = path.join(root, "test", "fixtures", "docs");
 
-function cleanup(dir) {
-  rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
-}
-
-const claudeStub = `import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import path from "node:path";
-
-const early = process.argv.slice(2);
-if (early.includes("--version") || (early[0] === "auth" && early[1] === "status")) process.exit(0);
-let stdin = "";
-process.stdin.setEncoding("utf8");
-process.stdin.on("data", (chunk) => { stdin += chunk; });
-process.stdin.on("end", () => {
-  const args = process.argv.slice(2);
-  const log = process.env.DEVOS_CLAUDE_LOG;
-  appendFileSync(log, JSON.stringify({
-    args,
-    stdin,
-    settings: existsSync(path.join(process.cwd(), ".claude", "settings.json")),
-  }) + "\\n");
-  const mode = process.env.STUB_MODE || "good";
-  if (mode === "fail") process.exit(1);
-  if (mode === "fail-json") {
-    process.stdout.write('{"type":"result","is_error":true,"result":"Claude AI usage limit reached|1760900000"}');
-    process.exit(1);
-  }
-  const docs = path.join(process.cwd(), "docs");
-  mkdirSync(path.join(docs, "fences"), { recursive: true });
-  if (mode === "bad-then-good" && !args.includes("--continue")) {
-    writeFileSync(path.join(docs, "PHASES.md"), "No header here\\n");
-    process.stdout.write('{"result":"stub summary"}');
-    return;
-  }
-  const fixtureDir = process.env.DEVOS_FIXTURES;
-  writeFileSync(path.join(docs, "PHASES.md"), readFileSync(path.join(fixtureDir, "PHASES.md")));
-  writeFileSync(path.join(docs, "GLOSSARY.md"), readFileSync(path.join(fixtureDir, "GLOSSARY.md")));
-  writeFileSync(path.join(docs, "fences", "T01.md"), "# T01\\n");
-  if (mode === "omit-questions" && args.includes("--continue")) {
-    writeFileSync(path.join(docs, "OPEN_QUESTIONS.md"), "# Open questions\\n");
-  }
-  process.stdout.write('{"result":"stub summary"}');
-});
-`;
-
-const toolStub = `import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import path from "node:path";
-
-const args = process.argv.slice(2);
-const prompt = args.includes("-p") || args[0] === "exec";
-if (!prompt) process.exit(0);
-let stdin = "";
-process.stdin.setEncoding("utf8");
-process.stdin.on("data", (chunk) => { stdin += chunk; });
-process.stdin.on("end", () => {
-  const log = process.env.DEVOS_TOOL_LOG;
-  const cliPath = path.join(process.cwd(), ".cursor", "cli.json");
-  const cli = existsSync(cliPath) ? readFileSync(cliPath, "utf8") : "";
-  if (log) appendFileSync(log, JSON.stringify({ args, stdin, cli }) + "\\n");
-  const docs = path.join(process.cwd(), "docs");
-  mkdirSync(path.join(docs, "fences"), { recursive: true });
-  const fixtureDir = process.env.DEVOS_FIXTURES;
-  writeFileSync(path.join(docs, "PHASES.md"), readFileSync(path.join(fixtureDir, "PHASES.md")));
-  writeFileSync(path.join(docs, "GLOSSARY.md"), readFileSync(path.join(fixtureDir, "GLOSSARY.md")));
-  writeFileSync(path.join(docs, "fences", "T01.md"), "# T01\\n");
-  process.stdout.write('{"result":"stub summary"}');
-});
-`;
-
-const ghStub = `import { appendFileSync, readFileSync } from "node:fs";
-import { spawnSync } from "node:child_process";
-import path from "node:path";
-
-const args = process.argv.slice(2);
-const log = process.env.DEVOS_GH_LOG;
-if (log) appendFileSync(log, args.join(" ") + "\\n");
-
-if (args[0] === "--version") process.exit(0);
-if (args[0] === "auth" && args[1] === "status") {
-  const scopes = process.env.DEVOS_GH_NO_WORKFLOW === "1" ? "'repo'" : "'repo', 'workflow'";
-  process.stdout.write("Logged in to github.com account devtest\\n");
-  process.stdout.write(\`Token scopes: \${scopes}\\n\`);
-  process.exit(0);
-}
-if (args[0] === "api" && args[1] === "user") {
-  if (!args.includes("--jq")) {
-    process.stdout.write('{"login":"devtest"}\\n');
-    process.exit(0);
-  }
-  process.stdout.write("devtest\\n");
-  process.exit(0);
-}
-if (args[0] === "repo" && args[1] === "create") {
-  const remote = path.join(path.resolve(process.cwd(), ".."), "remote.git");
-  const init = spawnSync("git", ["init", "--bare", remote], { windowsHide: true });
-  if (init.status !== 0) process.exit(init.status ?? 1);
-  const added = spawnSync("git", ["remote", "add", "origin", remote], { cwd: process.cwd(), windowsHide: true });
-  process.exit(added.status ?? 1);
-}
-if (args[0] === "secret" && args[1] === "set") {
-  const chunks = [];
-  process.stdin.on("data", (chunk) => chunks.push(chunk));
-  process.stdin.on("end", () => {
-    if (log) appendFileSync(log, "secret-stdin " + Buffer.concat(chunks).length + "\\n");
-    process.exit(0);
-  });
-  process.stdin.resume();
-} else {
-if (args[0] === "secret" && args[1] === "list") {
-  process.stdout.write(process.env.STUB_SECRETS || '[{"name":"CURSOR_API_KEY"},{"name":"CLAUDE_CODE_OAUTH_TOKEN"}]');
-  process.exit(0);
-}
-if (args[0] === "variable" && args[1] === "list") {
-  process.stdout.write('[{"name":"DEVOS_VERCEL","value":"true"}]');
-  process.exit(0);
-}
-if (args[0] === "workflow" && args[1] === "run") {
-  if (process.env.STUB_DISPATCH === "fail-once" && log) {
-    const seen = readFileSync(log, "utf8").split("\\n").filter((line) => line.startsWith("workflow run")).length;
-    if (seen === 1) process.exit(1);
-  }
-  process.exit(0);
-}
-process.exit(0);
-}
-`;
-
-function writeStubs(dir, tools = []) {
-  mkdirSync(dir);
-  writeFileSync(path.join(dir, "claude-stub.mjs"), claudeStub);
-  writeFileSync(path.join(dir, "gh-stub.mjs"), ghStub);
-  for (const name of tools) writeFileSync(path.join(dir, `${name}-stub.mjs`), toolStub);
-  if (windows) {
-    writeFileSync(path.join(dir, "claude.cmd"), "@node \"%~dp0claude-stub.mjs\" %*\r\n");
-    writeFileSync(path.join(dir, "gh.cmd"), "@node \"%~dp0gh-stub.mjs\" %*\r\n");
-    for (const name of tools) writeFileSync(path.join(dir, `${name}.cmd`), `@node "%~dp0${name}-stub.mjs" %*\r\n`);
-    return;
-  }
-  const claude = path.join(dir, "claude");
-  writeFileSync(claude, `#!/usr/bin/env node\n${claudeStub}`);
-  chmodSync(claude, 0o755);
-  const gh = path.join(dir, "gh");
-  writeFileSync(gh, `#!/usr/bin/env node\n${ghStub}`);
-  chmodSync(gh, 0o755);
-  for (const name of tools) {
-    const launcher = path.join(dir, name);
-    writeFileSync(launcher, `#!/usr/bin/env node\n${toolStub}`);
-    chmodSync(launcher, 0o755);
-  }
-}
-
-function stage(options = {}) {
-  const parent = mkdtempSync(path.join(tmpdir(), "devos-init-"));
-  const project = path.join(parent, "project");
-  const stubs = path.join(parent, "bin");
-  const home = path.join(parent, "home");
-  writeStubs(stubs, options.tools ?? []);
-  mkdirSync(path.join(home, ".devos"), { recursive: true });
-  if (options.visibility) {
-    writeFileSync(path.join(home, ".devos", "profile.json"), `${JSON.stringify({ visibility: options.visibility }, null, 2)}\n`);
-  }
-  if (options.seed) {
-    mkdirSync(project);
-    writeFileSync(path.join(project, "keep.txt"), "keep\n");
-  }
-  const env = {
-    ...process.env,
-    PATH: `${stubs}${path.delimiter}${process.env.PATH ?? ""}`,
-    DEVOS_HOME: home,
-    DEVOS_CLAUDE_LOG: path.join(parent, "claude.log"),
-    DEVOS_GH_LOG: path.join(parent, "gh.log"),
-    DEVOS_TOOL_LOG: path.join(parent, "tool.log"),
-    DEVOS_FIXTURES: fixtures,
-    DEVOS_RETRY_MS: "0",
-    GIT_AUTHOR_NAME: "Devos Test",
-    GIT_AUTHOR_EMAIL: "devos@example.com",
-    GIT_COMMITTER_NAME: "Devos Test",
-    GIT_COMMITTER_EMAIL: "devos@example.com",
-    STUB_MODE: options.mode ?? "good",
-  };
-  return { parent, project, env };
-}
-
-function init(staged, input) {
-  return spawnSync(process.execPath, [bin, "init", staged.project], {
-    encoding: "utf8",
-    windowsHide: true,
-    timeout: 180000,
-    input,
-    env: staged.env,
-  });
-}
-
-function runs(parent) {
-  const log = path.join(parent, "claude.log");
-  if (!existsSync(log)) return [];
-  return readFileSync(log, "utf8").trim().split("\n").filter(Boolean).map((line) => JSON.parse(line));
-}
-
-function toolRuns(parent) {
-  const log = path.join(parent, "tool.log");
-  if (!existsSync(log)) return [];
-  return readFileSync(log, "utf8").trim().split("\n").filter(Boolean).map((line) => JSON.parse(line));
-}
-
-function flow({ pool = "", blueprint = "", attachment = "", tail = "approve", confirmAnswer = "" } = {}) {
-  const agent = ["", "", "", "", "", "", ""];
-  agent[2] = pool;
-  agent[5] = blueprint;
-  return [
-    "accept",
-    ...agent,
-    "Demo Shop",
-    "A small shop.",
-    "Customers",
-    "",
-    "",
-    "",
-    "",
-    "",
-    attachment,
-    "",
-    tail,
-    confirmAnswer,
-  ].join("\n") + "\n";
-}
 
 const menus = ["", "", "", "", "", "", ""];
 const accepted = [
@@ -400,7 +175,7 @@ test("init.test.mjs prints a JSON blueprint error and how to resume", () => {
     assert.equal(result.stdout.includes("Claude AI usage limit reached"), true, result.stdout);
     assert.equal(result.stdout.includes("claude exited with 1"), true, result.stdout);
     assert.equal(result.stdout.includes("reports a usage limit"), true, result.stdout);
-    assert.equal(result.stdout.includes("devos init --continue"), true, result.stdout);
+    assert.equal(result.stdout.includes("devos continue"), true, result.stdout);
     assert.equal(existsSync(path.join(staged.project, ".claude", "settings.json")), false);
   } finally {
     cleanup(staged.parent);
@@ -480,7 +255,7 @@ test("init.test.mjs (o) blueprint on Codex", () => {
     assert.equal(result.status, 0, result.stdout + result.stderr);
     const called = toolRuns(staged.parent);
     assert.equal(called.length, 1);
-    assert.deepEqual(called[0].args.slice(0, 4), ["exec", "--model", "gpt-5.1-codex", "-"]);
+    assert.deepEqual(called[0].args, ["exec", "--model", "gpt-5.1-codex", "--sandbox", "workspace-write"]);
     assert.equal(called[0].stdin.startsWith("# Blueprint"), true);
   } finally {
     cleanup(staged.parent);
@@ -513,7 +288,7 @@ test("init.test.mjs (q) missing workflow scope stops before the contract", () =>
   try {
     const result = init(staged, flow());
     assert.equal(result.status, 1, result.stdout + result.stderr);
-    assert.equal(result.stdout.includes("gh auth refresh -h github.com -s repo,workflow"), true, result.stdout);
+    assert.equal(result.stdout.includes("gh auth refresh -h github.com -s workflow"), true, result.stdout);
     assert.equal(result.stdout.includes("Type accept"), false, result.stdout);
     assert.equal(existsSync(staged.project), false);
   } finally {
@@ -528,6 +303,131 @@ test("init.test.mjs (r) a Claude-only pool lists the Claude key", () => {
     assert.equal(result.status, 0, result.stdout + result.stderr);
     assert.equal(result.stdout.includes("CLAUDE_CODE_OAUTH_TOKEN"), true, result.stdout);
     assert.equal(result.stdout.includes("CURSOR_API_KEY"), false, result.stdout);
+  } finally {
+    cleanup(staged.parent);
+  }
+});
+
+test("init.test.mjs (a) GitHub role menus omit tools the cycle cannot run", () => {
+  const staged = stage();
+  try {
+    const result = init(staged, "accept\n");
+    assert.equal(result.status, 1, result.stdout + result.stderr);
+    const note = "Codex, Gemini, Muse and GLM join the GitHub roles in a later version.";
+    assert.equal(result.stdout.includes(note), true, result.stdout);
+    const reviewer = result.stdout.split("Light reviewer")[0];
+    assert.equal(/^\s+\d+\) .*Codex/m.test(reviewer), false, reviewer);
+  } finally {
+    cleanup(staged.parent);
+  }
+});
+
+test("init.test.mjs (b) a Codex reviewer in the roster falls back to the engine default", () => {
+  const staged = stage();
+  try {
+    writeFileSync(path.join(staged.parent, "home", ".devos", "roster.json"), `${JSON.stringify({
+      reviewer: { id: "codex-gpt", tool: "codex", model: "gpt-5.1-codex" },
+      reviewer_light: { id: "codex-light", tool: "codex", model: "gpt-5-codex" },
+      pool: [{ id: "codex-pool", tool: "codex", model: "gpt-5.6-sol", default: true, note: "default builder" }],
+      policy: "reviewer-picks",
+    }, null, 2)}\n`);
+    const result = init(staged, flow());
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    const project = JSON.parse(readFileSync(path.join(staged.project, "devos", "project.json"), "utf8"));
+    assert.equal(project.agents.reviewer.tool, "claude");
+    assert.equal(project.agents.reviewer.model, "claude-opus-5-5");
+    assert.equal(project.agents.pool.some((item) => item.tool === "codex"), false);
+  } finally {
+    cleanup(staged.parent);
+  }
+});
+
+test("init.test.mjs (c) a rejected token prints gh auth login", () => {
+  const savedPath = process.env.PATH;
+  const savedToken = process.env.DEVOS_GH_BAD_TOKEN;
+  process.env.PATH = `${path.join(root, "test", "fixtures", "agents")}${path.delimiter}${savedPath ?? ""}`;
+  process.env.DEVOS_GH_BAD_TOKEN = "1";
+  const lines = [];
+  const write = process.stdout.write;
+  process.stdout.write = (chunk) => {
+    lines.push(String(chunk));
+    return true;
+  };
+  let code = 0;
+  try {
+    code = doctorCommand();
+  } finally {
+    process.stdout.write = write;
+    process.env.PATH = savedPath;
+    if (savedToken === undefined) delete process.env.DEVOS_GH_BAD_TOKEN;
+    else process.env.DEVOS_GH_BAD_TOKEN = savedToken;
+  }
+  const text = lines.join("");
+  assert.equal(code, 1);
+  assert.equal(text.includes("Run: gh auth login"), true, text);
+  assert.equal(text.includes("gh auth refresh"), false, text);
+});
+
+test("init.test.mjs (d) Codex and Gemini blueprint args", () => {
+  assert.deepEqual(blueprintArgs("codex", "gpt-5.1-codex", 1), ["exec", "--model", "gpt-5.1-codex", "--sandbox", "workspace-write"]);
+  assert.deepEqual(
+    blueprintArgs("gemini", "gemini-2.5-pro", 1),
+    ["--model", "gemini-2.5-pro", "--yolo", "-p", "Follow the instructions given on standard input exactly."],
+  );
+});
+
+test("init.test.mjs (e) a heartbeat prints while the blueprint runs", () => {
+  const staged = stage();
+  try {
+    const result = init(staged, flow(), { STUB_MODE: "slow", DEVOS_HEARTBEAT_MS: "50" });
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    assert.equal(result.stdout.includes("blueprint running on"), true, result.stdout);
+  } finally {
+    cleanup(staged.parent);
+  }
+});
+
+test("init.test.mjs (f) Ctrl-C during a round exits 130", { skip: process.platform === "win32" }, async () => {
+  const staged = stage();
+  const child = spawn(process.execPath, [bin, "init", staged.project], {
+    windowsHide: true,
+    env: { ...staged.env, STUB_MODE: "hang" },
+    stdio: ["pipe", "pipe", "pipe"],
+  });
+  let stdout = "";
+  child.stdout.on("data", (chunk) => { stdout += chunk; });
+  child.stdin.write(flow());
+  const pidFile = path.join(staged.parent, "model.pid");
+  const started = Date.now();
+  try {
+    while (!existsSync(pidFile)) {
+      if (Date.now() - started > 20000) throw new Error(`model pid was not written\n${stdout}`);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    const modelPid = Number(readFileSync(pidFile, "utf8"));
+    child.kill("SIGINT");
+    const code = await new Promise((resolve) => {
+      const timer = setTimeout(() => resolve("timeout"), 5000);
+      child.on("exit", (status) => {
+        clearTimeout(timer);
+        resolve(status);
+      });
+    });
+    assert.equal(code, 130, stdout);
+    assert.equal(stdout.includes("devos: stopped — the folder keeps what was written"), true, stdout);
+    assert.equal(await processGone(modelPid, 5000), true);
+  } finally {
+    if (child.exitCode === null && child.signalCode === null) child.kill();
+    cleanup(staged.parent);
+  }
+});
+
+test("init.test.mjs (g) a round past the limit is stopped", () => {
+  const staged = stage();
+  try {
+    const result = init(staged, flow(), { STUB_MODE: "hang", DEVOS_ROUND_LIMIT_MS: "400" });
+    assert.equal(result.status, 1, result.stdout + result.stderr);
+    assert.equal(result.stdout.includes("ran over an hour and was stopped"), true, result.stdout);
   } finally {
     cleanup(staged.parent);
   }

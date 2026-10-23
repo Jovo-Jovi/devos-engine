@@ -3,6 +3,7 @@
     {
       "id": "cursor",
       "label": "Cursor CLI",
+      "cycle": true,
       "command": "agent",
       "altCommands": [
         "cursor-agent"
@@ -96,6 +97,7 @@
     {
       "id": "claude",
       "label": "Claude Code",
+      "cycle": true,
       "command": "claude",
       "altCommands": [],
       "versionArgs": [
@@ -133,6 +135,7 @@
     {
       "id": "codex",
       "label": "Codex CLI",
+      "cycle": false,
       "command": "codex",
       "altCommands": [],
       "versionArgs": [
@@ -163,6 +166,7 @@
     {
       "id": "gemini",
       "label": "Gemini CLI",
+      "cycle": false,
       "command": "gemini",
       "altCommands": [],
       "versionArgs": [
@@ -195,6 +199,7 @@
     {
       "id": "muse",
       "label": "Muse",
+      "cycle": false,
       "command": "muse",
       "altCommands": [],
       "versionArgs": [
@@ -225,6 +230,7 @@
     {
       "id": "glm",
       "label": "Z.ai / GLM",
+      "cycle": false,
       "command": "z",
       "altCommands": [
         "zai",

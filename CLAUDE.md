@@ -23,6 +23,9 @@ When two conflict, the higher one wins and you say so in the verdict. Never reco
 
 ## Reviewing (`/engine-review Exx`)
 
+- **One review per attempt: the remote check is the review of record** (owner decision, 2026-10-23, to save tokens).
+  The local `/engine-review` is optional and runs only when the owner asks for it. Whichever runs, the rules below
+  and "After the verdict" apply to it.
 - **Evidence first, computed from the tree.** Tasks run on a branch `task/Exx` (README "Running a task"). The change
   under review is `main...HEAD` plus any uncommitted working tree; on `main` itself (older tasks) it is the working
   tree against `HEAD`. Run every *Done when* command yourself, one per call. A command whose output differs from the fence's
@@ -62,13 +65,14 @@ Next prompt: <path of the fence written or re-rehearsed, or "none">
   listing exactly what must change. If the defect was the fence's own, say so.
 - Never commit, push or edit outside the three reviewer paths. The owner commits and pushes the branch.
 
-## Remote check (second review, before merge)
+## Remote check (the review of record, before merge)
 
-After the local review the owner pushes `task/Exx`. The remote reviewer (Claude in the DEVOS project chat) clones the
-branch, runs every Done-when command that runs without the owner's machine (everything except `../devos-sources`
-checks, which it repeats against its own pinned clones), reads every changed line, and writes
-`dev/reviews/Exx-aN-remote.md` on the branch with `MERGE` or `FIX: <exact changes>`. Only MERGE lets the owner squash
-the branch into `main`. A FIX becomes the next attempt's focus in the reissued fence.
+After the build the owner commits and pushes `task/Exx` and says "check task/Exx". The remote reviewer (Claude in the
+DEVOS project chat) clones the branch, runs every Done-when command that runs without the owner's machine (everything
+except `../devos-sources` checks, which it repeats against its own pinned clones), reads every changed line, and
+writes `dev/reviews/Exx-aN-remote.md` on the branch with `MERGE` or `FIX: <exact changes>`. It then follows "After the
+verdict" (ledger row, next fence or reissued fence) and pushes those reviewer files to the task branch. Only MERGE lets
+the owner squash the branch into `main`. A FIX becomes the next attempt's focus in the reissued fence.
 
 ## Ports from the Tower
 

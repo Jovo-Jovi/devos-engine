@@ -312,7 +312,7 @@ test("setup.test.mjs refuses continue without an approved blueprint", () => {
   try {
     const result = init(staged, "", { cont: true });
     assert.equal(result.status, 1, result.stdout + result.stderr);
-    assert.equal(result.stdout.includes("has no approved blueprint"), true, result.stdout);
+    assert.equal(result.stdout.includes("devos: start with devos init in an empty folder"), true, result.stdout);
   } finally {
     cleanup(staged.parent);
   }

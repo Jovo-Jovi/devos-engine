@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "DEV_OS Engine — guided onboarding and an automated Cursor ⇄ Claude development cycle",
+  "description": "DEV_OS Engine — from an empty folder to a GitHub project that AI agents build, review and ship task by task",
   "bin": {
     "devos": "bin/devos.mjs"
   },

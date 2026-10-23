@@ -1,0 +1,8 @@
+# DEV_OS: shell commands Gemini may not run in the cycle. The runner owns git and the network (PR-04, PR-45).
+# scripts/devos/run-agent.sh copies this file to ~/.gemini/policies/devos.toml before every Gemini run.
+[[rule]]
+toolName = "run_shell_command"
+commandRegex = '(git +(push|commit|reset|checkout|rebase|merge|tag)|gh|curl|wget|sudo)\b'
+decision = "deny"
+priority = 900
+denyMessage = "The DEV_OS runner owns git and the network; this command is not allowed in the cycle."

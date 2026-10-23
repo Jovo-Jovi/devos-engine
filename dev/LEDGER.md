@@ -1,7 +1,8 @@
 # devos-engine — ledger
 
-Only the reviewer writes *Done* and *Verdict* (after `/engine-review`). The owner commits on PASS. Risk 3 = deep
-review (Opus) and the owner reads the verdict before committing. Plan: `dev/PLAN.md` §12.
+Only the reviewer writes *Done* and *Verdict*, after the remote check (the review of record since 2026-10-23; the local
+`/engine-review` is optional). The owner merges on MERGE. Risk 3 = deep review (Opus) and the owner reads the verdict
+before merging. Plan: `dev/PLAN.md` §12.
 
 | Task | Name | Risk | Gate | Fence | Done | Verdict |
 |---|---|---|---|---|---|---|
@@ -17,14 +18,14 @@ review (Opus) and the owner reads the verdict before committing. Plan: `dev/PLAN
 | E07 | `init` part 2: repository, secrets by name, variables, `SETUP.md`, first cycle | 3 | owner | v4 | [x] | PASS a2 — dev/reviews/E07-a2.md · remote MERGE — dev/reviews/E07-a2-remote.md · D8 moved to E15 D11 (v4) · PASS a1 — dev/reviews/E07-a1.md · remote a1 — dev/reviews/E07-a1-remote.md |
 | P1 | Port the Tower's two supervisor fixes (PR-36): re-run a deploy an outside service broke; close finished requests | 2 | owner | folded into E15 v2 Stage 1 | [x] | done in E15 a1 — dev/reviews/E15-a1-remote.md |
 | E15 | Agents and keys: any tool and model per role with strengths, gh scope preflight, attached documents, blueprint on the chosen agent, `project.json` agents, credentials by tool, all keys typed once (memory → `gh secret set` stdin), confirm before GitHub (PR-44); P1 port | 3 | owner | v2 | [x] | PASS a1 — remote review of record (local skipped by the owner) — dev/reviews/E15-a1-remote.md · D11 moved to E21 (owner) |
-| E16 | Safe long runs (heartbeat, Ctrl-C kills the tree), `devos continue` checklist, adopt an empty existing repository (never overwrite), GitHub-role menus limited to cycle tools, Codex/Gemini blueprint flags, doctor fix line | 3 | owner | v1 issued | [ ] | — |
-| E17 | Cycle runs Codex and Gemini too: runner adapters, CLI install in the workflow, role kits per tool, reviewer picks by strength (method change) | 3 | owner | proposed (ENGINE-COMPARE §8) | [ ] | — |
+| E16 | Safe long runs (heartbeat, Ctrl-C kills the tree), `devos continue` checklist, adopt an empty existing repository (never overwrite), GitHub-role menus limited to cycle tools, Codex/Gemini blueprint flags, doctor fix line | 3 | owner | v3 | [x] | PASS a2 — remote review of record — dev/reviews/E16-a2-remote.md (a1 FIX: dev/reviews/E16-a1-remote.md) |
+| E17 | Cycle runs Codex and Gemini too: `agents.mjs tools`, accounts, `agent-cli.mjs` (args, normalize), role kits per tool, `run-agent.sh`, CLI install in the workflow, setup items; picking by strength already done in E15 (method change, PR-45) | 3 | owner | v1 issued | [ ] | — |
 | E18 | Catalogue: project types, stacks with commands, modules with providers, env names and key sources | 2 | owner | proposed (ENGINE-COMPARE §8) | [ ] | — |
 | E19 | Generalize the method by stack: checks run the stack's commands, `ci.yml` per package manager, guards apply by stack/module, screens only for UI types (method change) | 3 | owner | proposed (ENGINE-COMPARE §8) | [ ] | — |
 | E20 | Deterministic scaffold: stack configuration, architecture skeleton, health route, architecture test; checks green before T01 | 3 | owner | proposed (ENGINE-COMPARE §8) | [ ] | — |
 | E21 | First green run: watch the dispatched run, diagnose from its log, `verify`/`fix`/`watch`; the real end-to-end run on two stacks — includes E15 D11 (Windows hidden input, real keys, real repository) | 3 | owner | proposed (ENGINE-COMPARE §8) | [ ] | — |
 | E22 | Guided UI: localhost wizard (session token + Origin checks), live progress, Stop, animations; terminal fallback | 2 | owner | proposed (ENGINE-COMPARE §8) — after the core | [ ] | — |
-| E08 | UI/UX gate part 1: design contract, design specification + `guard:design-spec`, `DESIGN_METHOD.md`, resource catalogue (PLAN §10 items 1, 2, 7; PR-44) | 3 | owner | v1 issued — re-rehearse on PASS of E15 (precedent becomes PR-45; manifest and provenance counts move) | [ ] | — |
+| E08 | UI/UX gate part 1: design contract, design specification + `guard:design-spec`, `DESIGN_METHOD.md`, resource catalogue (PLAN §10 items 1, 2, 7; PR-44) | 3 | owner | v1 issued — re-rehearse before it runs (E17 took PR-45, so its precedent becomes PR-46; manifest and provenance counts move) | [ ] | — |
 | E14 | UI/UX gate part 2: missing evidence = failed check, axe `a11y` on every capture, vendored pinned design skills, objective/subjective verdict (PLAN §10 items 3–6) | 3 | owner | proposed (owner to confirm the split and the skills licence); fence on PASS of E08 | [ ] | — |
 | E09 | Registry link: `report.mjs`, report steps, registration, cycle preflight | 3 | owner | fence on PASS of E07 and E08, after Tower TR1–TR2 | [ ] | — |
 | E10 | Clean-machine run, docs, license, v1.0.0 | 2 | owner | fence on PASS of E09 and decision D-E4 | [ ] | — |
