@@ -400,7 +400,86 @@ async function workerP() {
   }
 }
 
-const workers = { l: workerL, n: workerN, m: workerM, o: workerO, p: workerP };
+async function workerQ() {
+  const terminal = stage();
+  const planned = stage();
+  Object.assign(process.env, planned.env);
+  let server;
+  try {
+    const plan = planFrom(terminal);
+    plan.project.modules = { ...plan.project.modules, database: "firebase" };
+    server = await startUiServer({ folder: planned.project, port: 0 });
+    const origin = `http://127.0.0.1:${server.port}`;
+    const headers = { "Content-Type": "application/json", Origin: origin, "X-DEVOS-Token": server.token };
+    const posted = await fetch(`${origin}/api/plan`, { method: "POST", headers, body: JSON.stringify(plan) });
+    if (posted.status !== 200) throw new Error("plan was not accepted");
+    await posted.arrayBuffer();
+    const started = await fetch(`${origin}/api/start`, { method: "POST", headers });
+    if (started.status !== 202) throw new Error("start was not accepted");
+    const rounds = [];
+    let firstKey = true;
+    const answer = async (kind, value) => {
+      const response = await fetch(`${origin}/api/answer`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ kind, value }),
+      });
+      const errors = response.status === 204 ? [] : (await response.json()).errors;
+      return { status: response.status, errors };
+    };
+    const events = await readEvents(server.port, server.token, async (event) => {
+      if (event.kind === "approve") {
+        rounds.push(event.round);
+        if (event.round === 1) {
+          const blank = await answer("approve", "  \n ");
+          if (blank.status !== 400 || !blank.errors?.includes("Type approve, or describe the changes.")) throw new Error("a blank approve was accepted");
+          const change = await answer("approve", "split phase 2\n\ninto two");
+          if (change.status !== 204) throw new Error("the change was not accepted");
+        } else {
+          const approved = await answer("approve", "approve");
+          if (approved.status !== 204) throw new Error("approve was not accepted");
+        }
+      } else if (event.kind === "key") {
+        if (firstKey) {
+          firstKey = false;
+          const broken = await answer("key", "kv-a\nkv-b");
+          if (broken.status !== 400 || !broken.errors?.includes("An answer must be one line.")) throw new Error("a two-line key was accepted");
+        }
+        const skipped = await answer("key", "");
+        if (skipped.status !== 204) throw new Error("a skipped key was not accepted");
+      } else if (event.kind === "create") {
+        const maybe = await answer("create", "maybe");
+        if (maybe.status !== 400 || !maybe.errors?.includes("Answer yes or no.")) throw new Error("maybe was accepted");
+        const declined = await answer("create", "no");
+        if (declined.status !== 204) throw new Error("no was not accepted");
+      }
+    });
+    if (rounds.length !== 2 || rounds[0] !== 1 || rounds[1] !== 2) throw new Error("the approve rounds were wrong");
+    const done = events.find((event) => event.type === "done");
+    if (!done || done.code !== 0) throw new Error("run did not finish");
+    if (!events.some((event) => event.type === "log" && String(event.text).includes("nothing was created"))) throw new Error("the stop line was missing");
+    const mark = Date.now();
+    const replay = await fetch(`${origin}/api/events`, { headers: { "X-DEVOS-Token": server.token } });
+    const reader = replay.body.getReader();
+    let text = "";
+    while (true) {
+      const next = await reader.read();
+      if (next.value) text += Buffer.from(next.value).toString("utf8");
+      if (next.done) break;
+    }
+    if (Date.now() - mark > 2000) throw new Error("the replay did not end");
+    if (!text.includes("data:")) throw new Error("the replay was empty");
+    const state = await fetch(`${origin}/api/state`, { headers: { "X-DEVOS-Token": server.token } });
+    const body = await state.json();
+    if (state.status !== 200 || body.run !== "finished") throw new Error("the run was not finished");
+  } finally {
+    if (server) await server.close();
+    cleanup(terminal.parent);
+    cleanup(planned.parent);
+  }
+}
+
+const workers = { l: workerL, n: workerN, m: workerM, o: workerO, p: workerP, q: workerQ };
 const workerName = process.env.DEVOS_UI_WORKER;
 if (workers[workerName]) {
   workers[workerName]().then(() => process.exit(0)).catch((error) => {
@@ -571,5 +650,29 @@ if (workers[workerName]) {
     const leaked = `${result.stdout}${result.stderr}`.includes("fv-");
     assert.equal(result.status, 0, leaked ? "a key value was written" : result.stderr);
     assert.equal(leaked, false);
+  });
+
+  test("ui-server.test.mjs (q) an answer is one line and a finished stream ends", { timeout: 180000 }, () => {
+    const result = runWorker("q");
+    assert.equal(result.status, 0, result.stderr);
+  });
+
+  test("ui-server.test.mjs (r) state lists the tools before a plan", async () => {
+    const staged = stage();
+    const server = await startUiServer({ folder: staged.project, port: 0 });
+    try {
+      const toolFile = JSON.parse(readFileSync(path.join(path.dirname(here), "..", "lib", "data", "tools.json"), "utf8"));
+      const response = await fetch(`http://127.0.0.1:${server.port}/api/state`, { headers: { "X-DEVOS-Token": server.token } });
+      assert.equal(response.status, 200);
+      const body = await response.json();
+      assert.equal(body.run, "idle");
+      assert.deepEqual(body.tools, toolFile.tools.map((tool) => ({ id: tool.id, label: tool.label, cycle: tool.cycle === true })));
+      assert.equal(body.tools.length, 6);
+      assert.deepEqual(body.strengths, toolFile.builderStrengths);
+      assertSecurity(response.headers);
+    } finally {
+      await server.close();
+      cleanup(staged.parent);
+    }
   });
 }

@@ -66,6 +66,17 @@ devos init my-app
 `my-app` must be a new or empty folder. In every menu, type a number (or several, separated by commas) or a name.
 Enter takes the default shown.
 
+**In the browser.** `devos ui my-app` runs the same setup as a guided page:
+
+```
+devos ui my-app
+```
+
+- The page opens in your browser. It runs on this computer only, at `127.0.0.1`, behind a one-time link the
+  terminal prints.
+- Every answer goes to the same steps as `devos init`, and keys typed on the page reach GitHub the same way.
+- Keep the terminal open until the page says it is done. Ctrl-C in the terminal stops the page.
+
 1. **Doctor.** It checks that the GitHub CLI is installed and signed in, and that the token has the scopes it needs.
    When something is missing, it prints the exact command to fix it.
 2. **Contract.** Read it, then type `accept`. Anything else stops setup, and nothing is written or sent.
@@ -163,6 +174,7 @@ it.
 |---|---|
 | `devos doctor` | Checks the GitHub CLI, its sign-in and its token scopes, and prints the exact fix. It changes nothing. |
 | `devos init [folder]` | Guided setup of a new project in an empty folder. |
+| `devos ui [folder] [--no-open]` | The same setup as a guided page in your browser, on this computer only. `--no-open` prints the link without opening it. |
 | `devos continue [folder]` | Shows what is done and finishes what is missing. |
 | `devos status` | In a project folder: shows the project and your saved roster. |
 | `devos agents detect` | Lists the AI CLIs on this computer, their versions, and whether each one is signed in. |
@@ -197,12 +209,11 @@ it.
 ## Roadmap
 
 1. The design gate for UI projects.
-2. A guided setup in the browser.
-3. Expert prompts, skills and references for each layer of a project.
-4. Database, storage and deploys for Python, Go and Dart stacks.
-5. The first real run and the end-to-end test, including copying app keys to the host.
-6. A link from every project to the DEV_OS Control Tower dashboard.
-7. Version 1.0 and its licence.
+2. Expert prompts, skills and references for each layer of a project.
+3. Database, storage and deploys for Python, Go and Dart stacks.
+4. The first real run and the end-to-end test, including copying app keys to the host.
+5. A link from every project to the DEV_OS Control Tower dashboard.
+6. Version 1.0 and its licence.
 
 ## Building the engine (maintainers)
 
@@ -215,6 +226,7 @@ it, and the owner commits. The plan is `dev/PLAN.md`, the decisions are `dev/DEC
 ```
 bin/devos.mjs          the command
 lib/                   command internals; lib/data/tools.json lists the AI CLIs and their models
+lib/ui/                the guided page that devos ui serves (IBM Plex fonts under the OFL, lib/ui/fonts/OFL.txt)
 payload/files/         the method, installed and upgraded (dot-directories are stored as dot-*)
 payload/templates/     project-owned starting points, written once at install
 payload/contract/      the contract shown by devos init
