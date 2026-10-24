@@ -8,6 +8,7 @@ import { readFileSync } from "node:fs";
 import {
   getAdapter,
   looksLikeCommandRejection,
+  looksLikeModelRejection,
   looksLikePlanRestriction,
   looksLikeTrustGate,
   looksLikeUsageLimit,
@@ -59,11 +60,11 @@ test("agents-kit.test.mjs groupModels sorts an account's models first", () => {
   assert.equal(grok.models[0].id, "grok-4.7");
   assert.equal(grok.models[0].available, true);
   assert.equal(grok.models[0].reported, false);
-  assert.equal(grok.models[1].available, false);
+  assert.equal(grok.models.length, 1);
   const other = groups.find((group) => group.id === "other");
   assert.equal(other.models[0].reported, true);
   assert.equal(modelLabel(grok.models[0]), "grok-4.7 — on your account");
-  assert.equal(modelLabel(grok.models[1]), "grok-4.5");
+  assert.equal(modelLabel({ id: "grok-4.5", available: false, reported: false }), "grok-4.5");
   assert.equal(modelLabel(other.models[0]), "weird-model-9 — on your account");
 });
 
@@ -80,7 +81,8 @@ test("agents-kit.test.mjs cursor groups come from seeds plus reported ids", () =
     const grok = cursor.groups.find((group) => group.id === "grok");
     assert.equal(grok.models.some((model) => model.id === "grok-4.7" && !model.reported), true);
     const claudeOnCursor = cursor.groups.find((group) => group.id === "claude");
-    assert.equal(claudeOnCursor.models.some((model) => model.id === "claude-fable-5-1" && !model.reported), true);
+    assert.deepEqual(claudeOnCursor.models.map((model) => model.id), ["claude-sonnet-5-5"]);
+    assert.equal(cursor.groups.every((group) => group.models.every((model) => model.available)), true);
     const other = cursor.groups.find((group) => group.id === "other");
     assert.equal(other.models.some((model) => model.id === "weird-model-9" && model.reported), true);
     const offered = cursor.groups.flatMap((group) => group.models.map((model) => model.id));
@@ -159,7 +161,7 @@ test("agents-kit.test.mjs an installed muse lists its models and a custom tool w
     process.env.PATH = `${extra}${path.delimiter}${previous}`;
     const muse = detectAgents().find((agent) => agent.toolId === "muse");
     assert.equal(muse.status, "installed");
-    assert.deepEqual(muse.groups.flatMap((group) => group.models.map((model) => model.id)), ["muse-1", "muse-2", "muse-wonder"]);
+    assert.deepEqual(muse.groups.flatMap((group) => group.models.map((model) => model.id)), ["muse-1", "muse-2"]);
     const localOnly = customAgent({ command: "mytool", displayName: "My Tool" });
     assert.equal(localOnly.localOnly, true);
     assert.equal(localOnly.githubCapable, false);
@@ -235,8 +237,8 @@ test("agents-kit.test.mjs cursor reports its account and plan and available mode
     const grok = cursor.groups.find((group) => group.id === "grok");
     assert.equal(grok.models[0].available, true);
     const claudeGroup = cursor.groups.find((group) => group.id === "claude");
-    assert.equal(claudeGroup.models.some((model) => model.available), true);
-    assert.equal(claudeGroup.models.some((model) => !model.available), true);
+    assert.equal(claudeGroup.models.length > 0, true);
+    assert.equal(claudeGroup.models.every((model) => model.available), true);
   } finally {
     restore();
   }
@@ -287,6 +289,15 @@ test("agents-kit.test.mjs command rejection classifier", () => {
   assert.equal(looksLikeCommandRejection("the command was rejected by the user"), true);
   assert.equal(looksLikeCommandRejection("All checks passed; the tree is green."), false);
   assert.equal(looksLikeCommandRejection("Do you trust the contents of this directory?"), false);
+});
+
+test("agents-kit.test.mjs model rejection classifier", () => {
+  assert.equal(looksLikeModelRejection("Cannot use this model: grok-4.7-xhigh-fast - Grok 4.7 Extra High Fast"), true);
+  assert.equal(looksLikeModelRejection("There's an issue with the selected model (claude-x). It may not exist or you may not have access to it."), true);
+  assert.equal(looksLikeModelRejection("The 'gpt-x' model is not supported when using Codex with a ChatGPT account."), true);
+  assert.equal(looksLikeModelRejection("models/gemini-x is not found for API version v1beta"), true);
+  assert.equal(looksLikeModelRejection("The data model is not found in docs/GLOSSARY.md yet."), false);
+  assert.equal(looksLikeModelRejection("All checks passed; the tree is green."), false);
 });
 
 test("agents-kit.test.mjs claude adapter does not allow init_github or request_secret", () => {

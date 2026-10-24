@@ -589,6 +589,7 @@ async function workerT() {
 
 async function workerU() {
   const staged = stage();
+  Object.assign(process.env, staged.env);
   const home = mkdtempSync(path.join(tmpdir(), "devos-home-"));
   const previousHome = process.env.HOME;
   const previousProfile = process.env.USERPROFILE;
@@ -608,7 +609,7 @@ async function workerU() {
     const headers = { "Content-Type": "application/json", Origin: origin, "X-DEVOS-Token": server.token };
     const state = await fetch(`${origin}/api/state`, { headers: { "X-DEVOS-Token": server.token } });
     const body = await state.json();
-    const expected = [{ name: "old-app", folder: oldApp, approved: false }];
+    const expected = [{ name: "old-app", folder: oldApp, approved: false, step: "write the blueprint" }];
     if (state.status !== 200 || JSON.stringify(body.projects) !== JSON.stringify(expected)) {
       throw new Error(`projects ${JSON.stringify(body.projects)} != ${JSON.stringify(expected)}`);
     }
@@ -639,7 +640,105 @@ async function workerU() {
   }
 }
 
-const workers = { l: workerL, n: workerN, m: workerM, o: workerO, p: workerP, q: workerQ, s: workerS, t: workerT, u: workerU };
+async function workerV() {
+  const staged = stage({ tools: ["agent"] });
+  Object.assign(process.env, staged.env);
+  const home = mkdtempSync(path.join(tmpdir(), "devos-home-"));
+  process.env.HOME = home;
+  process.env.USERPROFILE = home;
+  let server;
+  let quitCalled = false;
+  try {
+    const projects = path.join(home, "devos-projects");
+    const oldApp = path.join(projects, "old-app");
+    mkdirSync(path.join(oldApp, "devos"), { recursive: true });
+    writeFileSync(path.join(oldApp, "devos", "answers.json"), `${JSON.stringify({ blueprint_agent: { tool: "agent", model: "x" } })}\n`);
+    writeFileSync(path.join(oldApp, "devos", "engine.lock.json"), "{}\n");
+    const loose = path.join(projects, "loose-folder");
+    mkdirSync(loose);
+    server = await startUiServer({ folder: null, port: 0, onQuit: () => { quitCalled = true; } });
+    const origin = `http://127.0.0.1:${server.port}`;
+    const headers = { "Content-Type": "application/json", Origin: origin, "X-DEVOS-Token": server.token };
+    const project = async (folder) => {
+      const response = await fetch(`${origin}/api/project?folder=${encodeURIComponent(folder)}`, { headers: { "X-DEVOS-Token": server.token } });
+      return { status: response.status, body: await response.json() };
+    };
+    for (const [folder, sentence] of [
+      ["relative/app", "The project folder must be a full path."],
+      [path.join(engineRoot(), "inside-app"), "The project folder cannot be inside the engine's folder."],
+      [loose, "That folder holds no started DEV_OS project."],
+    ]) {
+      const got = await project(folder);
+      if (got.status !== 200 || got.body.ok !== false || !got.body.errors?.includes(sentence)) throw new Error(`project ${folder}: ${JSON.stringify(got)}`);
+    }
+    const found = await project(oldApp);
+    const expected = { ok: true, folder: oldApp, name: "old-app", started: true, approved: false, step: "write the blueprint" };
+    if (found.status !== 200 || JSON.stringify(found.body) !== JSON.stringify(expected)) throw new Error(`project: ${JSON.stringify(found)}`);
+    const change = async (blueprint) => {
+      const response = await fetch(`${origin}/api/continue`, { method: "POST", headers, body: JSON.stringify({ folder: oldApp, blueprint }) });
+      return { status: response.status, body: response.status === 202 ? null : await response.json() };
+    };
+    const missing = await change({ tool: "codex", model: "gpt-5.5" });
+    if (missing.status !== 400 || !missing.body.errors.includes("The blueprint tool is not signed in on this computer.")) throw new Error(`tool: ${JSON.stringify(missing)}`);
+    const row = await change({ tool: "cursor", model: "grok-4.7-high - Grok 4.7 High" });
+    if (row.status !== 400 || !row.body.errors.includes('The blueprint agent model "grok-4.7-high - Grok 4.7 High" is not a model id. Pick one from the list the tool reports.')) throw new Error(`model: ${JSON.stringify(row)}`);
+    const changed = await change({ tool: "cursor", model: "grok-4.7-high" });
+    if (changed.status !== 202) throw new Error(`change: ${changed.status}`);
+    const saved = JSON.parse(readFileSync(path.join(oldApp, "devos", "answers.json"), "utf8")).blueprint_agent;
+    if (JSON.stringify(saved) !== JSON.stringify({ tool: "cursor", model: "grok-4.7-high" })) throw new Error(`saved: ${JSON.stringify(saved)}`);
+    await readEvents(server.port, server.token);
+    const quit = await fetch(`${origin}/api/quit`, { method: "POST", headers });
+    if (quit.status !== 204) throw new Error(`quit: ${quit.status}`);
+    for (let i = 0; i < 50 && !quitCalled; i += 1) await new Promise((resolve) => setTimeout(resolve, 100));
+    if (!quitCalled) throw new Error("onQuit was not called");
+    let closed = false;
+    try {
+      await fetch(`${origin}/api/state`, { headers: { "X-DEVOS-Token": server.token }, signal: AbortSignal.timeout(2000) });
+    } catch {
+      closed = true;
+    }
+    if (!closed) throw new Error("the server still answers after quit");
+    server = null;
+  } finally {
+    if (server) await server.close();
+    cleanup(staged.parent);
+    cleanup(home);
+  }
+}
+
+async function workerW() {
+  const terminal = stage();
+  const planned = stage({ tools: ["agent"] });
+  Object.assign(process.env, planned.env, { STUB_TOOL_STEPS: "60" });
+  let server;
+  try {
+    const plan = planFrom(terminal);
+    plan.blueprint = { tool: "cursor", model: "auto" };
+    server = await startUiServer({ folder: planned.project, port: 0 });
+    const origin = `http://127.0.0.1:${server.port}`;
+    const headers = { "Content-Type": "application/json", Origin: origin, "X-DEVOS-Token": server.token };
+    const posted = await fetch(`${origin}/api/plan`, { method: "POST", headers, body: JSON.stringify(plan) });
+    if (posted.status !== 200) throw new Error(`plan ${posted.status} ${await posted.text()}`);
+    if ((await fetch(`${origin}/api/start`, { method: "POST", headers })).status !== 202) throw new Error("start was not accepted");
+    const live = await readEvents(server.port, server.token, async (event) => {
+      if (event.kind !== "approve") return;
+      const stopped = await fetch(`${origin}/api/stop`, { method: "POST", headers });
+      if (stopped.status !== 204) throw new Error("stop was not accepted");
+    });
+    const seen = live.filter((event) => event.type === "step" && event.step === "activity");
+    if (seen.length !== 60) throw new Error(`live activity ${seen.length}`);
+    if (seen[0].text !== "Writing docs/PHASES.md") throw new Error(`first activity ${seen[0].text}`);
+    const replay = await readEvents(server.port, server.token);
+    const kept = replay.filter((event) => event.type === "step" && event.step === "activity");
+    if (kept.length !== 40 || kept.at(-1).text !== "Reading docs/step-60.md") throw new Error(`replayed ${kept.length}`);
+  } finally {
+    if (server) await server.close();
+    cleanup(terminal.parent);
+    cleanup(planned.parent);
+  }
+}
+
+const workers = { l: workerL, n: workerN, m: workerM, o: workerO, p: workerP, q: workerQ, s: workerS, t: workerT, u: workerU, v: workerV, w: workerW };
 const workerName = process.env.DEVOS_UI_WORKER;
 if (workers[workerName]) {
   workers[workerName]().then(() => process.exit(0)).catch((error) => {
@@ -849,5 +948,15 @@ if (workers[workerName]) {
       await server.close();
       cleanup(staged.parent);
     }
+  });
+
+  test("ui-server.test.mjs (v) the page reads where a project resumes, changes its blueprint model, and quits", { timeout: 180000 }, () => {
+    const result = runWorker("v");
+    assert.equal(result.status, 0, result.stderr);
+  });
+
+  test("ui-server.test.mjs (w) the agent's steps stream to the page and the last 40 replay", { timeout: 180000 }, () => {
+    const result = runWorker("w");
+    assert.equal(result.status, 0, result.stderr);
   });
 }

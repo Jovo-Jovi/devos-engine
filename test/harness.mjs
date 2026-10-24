@@ -80,7 +80,15 @@ process.stdin.on("end", () => {
     writeFileSync(path.join(docs, "OPEN_QUESTIONS.md"), "# Open questions\\n");
   }
   const finishDocs = () => {
-    process.stdout.write('{"result":"stub summary"}');
+    if (args.includes("stream-json")) {
+      // Claude Code's stream-json (--verbose): one event per line, ending with the result.
+      const say = (event) => process.stdout.write(JSON.stringify(event) + "\\n");
+      say({ type: "system", subtype: "init", session_id: "claude-session-1", model: "stub" });
+      say({ type: "assistant", message: { content: [{ type: "tool_use", name: "Write", input: { file_path: path.join(docs, "PHASES.md") } }] }, session_id: "claude-session-1" });
+      say({ type: "result", subtype: "success", is_error: false, result: "stub summary", session_id: "claude-session-1" });
+    } else {
+      process.stdout.write('{"result":"stub summary"}');
+    }
     if (mode === "slow") process.exit(0);
   };
   if (mode === "slow") {
@@ -119,6 +127,11 @@ process.stdin.on("end", () => {
   const inputPath = path.join(process.cwd(), ".devos", "blueprint-input.md");
   if (existsSync(inputPath)) input = readFileSync(inputPath, "utf8");
   if (log) appendFileSync(log, JSON.stringify({ args, stdin, cli, input }) + "\\n");
+  if (process.env.STUB_TOOL_MODE === "no-model") {
+    const at = args.indexOf("--model");
+    process.stderr.write("Cannot use this model: " + (at >= 0 ? args[at + 1] : "auto") + " - Stub Model\\n");
+    process.exit(1);
+  }
   const docs = path.join(process.cwd(), "docs");
   mkdirSync(path.join(docs, "fences"), { recursive: true });
   const fixtureDir = process.env.DEVOS_FIXTURES;
@@ -128,7 +141,26 @@ process.stdin.on("end", () => {
   mkdirSync(path.join(docs, "design"), { recursive: true });
   writeFileSync(path.join(docs, "DESIGN_SYSTEM.md"), "# Design system\\n");
   writeFileSync(path.join(docs, "design", "UI_ACCEPTANCE.md"), "| Id | Criterion | Checked by |\\n|---|---|---|\\n| UA-01 | Text contrast meets WCAG 2.2 AA | automated |\\n");
-  process.stdout.write('{"result":"stub summary"}');
+  if (process.env.STUB_TOOL_MODE === "bad-then-good" && !args.includes("--resume")) {
+    writeFileSync(path.join(docs, "PHASES.md"), "No header here\\n");
+  }
+  if (!args.includes("stream-json")) {
+    process.stdout.write('{"result":"stub summary"}');
+    return;
+  }
+  // Cursor's stream-json: one event per line, ending with the agent's result.
+  const say = (event) => process.stdout.write(JSON.stringify(event) + "\\n");
+  say({ type: "system", subtype: "init", session_id: "cursor-session-1", model: "stub" });
+  say({ type: "tool_call", subtype: "started", call_id: "c1", tool_call: { writeToolCall: { args: { path: path.join(docs, "PHASES.md") } } } });
+  for (let i = 2; i <= Number(process.env.STUB_TOOL_STEPS || 1); i += 1) {
+    say({ type: "tool_call", subtype: "started", call_id: "c" + i, tool_call: { readToolCall: { args: { path: path.join(docs, "step-" + i + ".md") } } } });
+  }
+  say({ type: "result", subtype: "success", is_error: false, result: "stub summary", session_id: "cursor-session-1" });
+  // linger: the process does not exit after its result, as a CLI that restarts itself would not.
+  if (process.env.STUB_TOOL_MODE === "linger") {
+    if (process.env.DEVOS_TOOL_PID) writeFileSync(process.env.DEVOS_TOOL_PID, String(process.pid));
+    setInterval(() => {}, 1000000);
+  }
 });
 `;
 

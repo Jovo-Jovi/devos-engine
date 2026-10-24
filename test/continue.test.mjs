@@ -190,3 +190,34 @@ test("continue.test.mjs (n) a stale answers key still names devtest/demo-shop", 
     cleanup(staged.parent);
   }
 });
+
+test("continue.test.mjs (o) a model saved as a listing row is cleaned before the blueprint resumes", () => {
+  const staged = stage({ mode: "fail" });
+  try {
+    const failed = init(staged, flow());
+    assert.equal(failed.status, 1, failed.stdout + failed.stderr);
+    const answersFile = path.join(staged.project, "devos", "answers.json");
+    const answers = JSON.parse(readFileSync(answersFile, "utf8"));
+    const clean = answers.blueprint_agent.model;
+    answers.blueprint_agent.model = `${clean} - Display Name​`;
+    writeFileSync(answersFile, `${JSON.stringify(answers, null, 2)}\n`);
+    const projectFile = path.join(staged.project, "devos", "project.json");
+    const project = JSON.parse(readFileSync(projectFile, "utf8"));
+    const builder = project.agents.pool[0].model;
+    project.agents.pool[0].model = `${builder} - Display Name`;
+    writeFileSync(projectFile, `${JSON.stringify(project, null, 2)}\n`);
+    staged.env.STUB_MODE = "good";
+    const result = resume(staged, ["continue"], "approve\n\n");
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    assert.equal(result.stdout.includes("devos: kept only the model id in devos/answers.json"), true, result.stdout);
+    assert.equal(result.stdout.includes("devos: kept only the model id in devos/project.json"), true, result.stdout);
+    assert.equal(JSON.parse(readFileSync(answersFile, "utf8")).blueprint_agent.model, clean);
+    assert.equal(JSON.parse(readFileSync(projectFile, "utf8")).agents.pool[0].model, builder);
+    const config = JSON.parse(readFileSync(path.join(staged.project, "devos.config.json"), "utf8"));
+    assert.equal(config.agents.pool[0].model, builder);
+    const called = runs(staged.parent).at(-1);
+    assert.equal(called.args[called.args.indexOf("--model") + 1], clean);
+  } finally {
+    cleanup(staged.parent);
+  }
+});

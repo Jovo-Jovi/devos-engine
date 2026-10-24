@@ -185,7 +185,10 @@ test("plan.test.mjs (e) plan mode prints the step and ask markers", () => {
       const body = JSON.parse(line.slice(ask ? "::devos-ask ".length : "::devos-step ".length));
       return { ask, body };
     });
-    const names = markers.map((item) => (item.ask ? `ask:${item.body.kind}` : `step:${item.body.step}`));
+    // The agent's live steps (activity) come between; the sequence of the setup is the rest.
+    assert.equal(markers.some((item) => !item.ask && item.body.step === "activity"), true);
+    const shown = markers.filter((item) => item.ask || item.body.step !== "activity");
+    const names = shown.map((item) => (item.ask ? `ask:${item.body.kind}` : `step:${item.body.step}`));
     const expected = [
       "step:install",
       "step:blueprint",
@@ -199,8 +202,8 @@ test("plan.test.mjs (e) plan mode prints the step and ask markers", () => {
       "step:done",
     ];
     assert.deepEqual(names, expected);
-    assert.equal(markers[2].body.round, 1);
-    assert.equal(markers.at(-1).body.code, 0);
+    assert.equal(shown[2].body.round, 1);
+    assert.equal(shown.at(-1).body.code, 0);
     for (const item of markers) {
       assert.equal(Object.hasOwn(item.body, "value"), false);
       assert.equal(JSON.stringify(item.body).includes('"no"'), false);
@@ -220,4 +223,16 @@ test("plan.test.mjs (f) a terminal init prints no marker", () => {
   } finally {
     cleanup(staged.parent);
   }
+});
+
+test("plan.test.mjs (g) a model listing row is not a model id", () => {
+  const plan = validPlan();
+  plan.blueprint.model = "claude-opus-5-5 - Claude Opus 5.5";
+  plan.agents.pool[0].model = "grok-4.7-xhigh-fast - Grok 4.7 Extra High Fast";
+  const result = validatePlan(plan, signedIn);
+  assert.equal(result.ok, false);
+  assert.deepEqual(result.errors, [
+    'The blueprint agent model "claude-opus-5-5 - Claude Opus 5.5" is not a model id. Pick one from the list the tool reports.',
+    'The builder model "grok-4.7-xhigh-fast - Grok 4.7 Extra High Fast" is not a model id. Pick one from the list the tool reports.',
+  ]);
 });

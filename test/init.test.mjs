@@ -122,7 +122,9 @@ test("init.test.mjs repairs a failed phases check before approval", () => {
     const called = runs(staged.parent);
     assert.equal(called.length, 2);
     assert.equal(called[1].stdin.includes("guard:phases"), true, called[1].stdin);
-    assert.equal(called[1].stdin.startsWith("The checks after your last round failed:"), true);
+    assert.equal(called[1].stdin.startsWith("Your documents and fence T01 are written, and these checks failed:"), true);
+    assert.equal(result.stdout.includes("devos: the checks after round 1 failed:"), true, result.stdout);
+    assert.equal(result.stdout.includes("devos: round 2: claude fixes only what failed, in the same session"), true, result.stdout);
   } finally {
     cleanup(staged.parent);
   }
@@ -266,7 +268,7 @@ test("init.test.mjs (u) an agent that fails without a word gets the call to try 
     const output = result.stdout + result.stderr;
     assert.equal(output.includes("devos: agent exited with 1"), true, output);
     assert.equal(output.includes("devos: agent printed nothing. To see why, run the same call by hand in"), true, output);
-    assert.equal(output.includes('  agent --trust --force -p --model grok-4.7 --output-format json "Read the file .devos/blueprint-input.md in this folder and do exactly what it says."'), true, output);
+    assert.equal(output.includes('  agent --trust --force -p --model grok-4.7 --output-format stream-json "Read the file .devos/blueprint-input.md in this folder and do exactly what it says."'), true, output);
   } finally {
     cleanup(staged.parent);
   }
@@ -454,5 +456,61 @@ test("init.test.mjs (g) a round past the limit is stopped", () => {
     assert.equal(result.stdout.includes("ran over an hour and was stopped"), true, result.stdout);
   } finally {
     cleanup(staged.parent);
+  }
+});
+
+test("init.test.mjs (v) a Cursor round streams its steps and ends on the agent's result", async () => {
+  const staged = stage({ tools: ["agent"] });
+  const pidFile = path.join(staged.parent, "tool.pid");
+  try {
+    const result = init(staged, flow({ blueprint: "Cursor CLI · grok-4.7" }), {
+      STUB_TOOL_MODE: "linger",
+      DEVOS_TOOL_PID: pidFile,
+      DEVOS_RESULT_GRACE_MS: "300",
+      DEVOS_UI: "1",
+    });
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    assert.equal(result.stdout.includes('::devos-step {"step":"activity","kind":"write","text":"Writing docs/PHASES.md"}'), true, result.stdout);
+    assert.equal(toolRuns(staged.parent)[0].args.includes("stream-json"), true);
+    assert.equal(await processGone(Number(readFileSync(pidFile, "utf8")), 5000), true);
+  } finally {
+    cleanup(staged.parent);
+  }
+});
+
+test("init.test.mjs (w) a Cursor repair round resumes the same session and says why", () => {
+  const staged = stage({ tools: ["agent"] });
+  try {
+    const result = init(staged, flow({ blueprint: "Cursor CLI · grok-4.7" }), { STUB_TOOL_MODE: "bad-then-good" });
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    const called = toolRuns(staged.parent);
+    assert.equal(called.length, 2);
+    assert.deepEqual(called[1].args.slice(-3), ["--resume", "cursor-session-1", BLUEPRINT_POINTER]);
+    assert.equal(called[1].input.startsWith("Your documents and fence T01 are written, and these checks failed:"), true, called[1].input);
+    assert.equal(result.stdout.includes("devos: the checks after round 1 failed:"), true, result.stdout);
+    assert.equal(result.stdout.includes("devos: round 2: agent fixes only what failed, in the same session"), true, result.stdout);
+  } finally {
+    cleanup(staged.parent);
+  }
+});
+
+test("init.test.mjs (x) a model the tool refuses is named, with the way out", () => {
+  const staged = stage({ tools: ["agent"] });
+  try {
+    const result = init(staged, flow({ blueprint: "Cursor CLI · grok-4.7" }), { STUB_TOOL_MODE: "no-model" });
+    assert.equal(result.status, 1, result.stdout + result.stderr);
+    assert.equal(result.stdout.includes("devos: agent cannot use the model grok-4.7; choose another model it lists"), true, result.stdout);
+  } finally {
+    cleanup(staged.parent);
+  }
+});
+
+test("init.test.mjs (y) a project folder inside the engine is refused", () => {
+  const inside = path.join(root, "my-app-inside");
+  for (const args of [["init", inside], ["ui", inside, "--no-open"]]) {
+    const result = spawnSync(process.execPath, [bin, ...args], { encoding: "utf8", windowsHide: true, timeout: 30000 });
+    assert.equal(result.status, 1, result.stdout + result.stderr);
+    assert.equal(result.stdout.startsWith(`devos: ${inside} is inside the engine's folder; create the project outside it, for example `), true, result.stdout);
+    assert.equal(existsSync(inside), false);
   }
 });

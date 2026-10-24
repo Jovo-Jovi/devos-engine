@@ -129,50 +129,62 @@ flowchart LR
 
 ## Install
 
-1. **Get the engine.** Clone it, or download the ZIP from GitHub and unzip it anywhere:
+1. **Install the requirements** above. The engine itself needs only Node.js 22 or newer.
+2. **Get the engine.** Clone it, or download the ZIP from GitHub and unzip it anywhere:
 
    ```
    git clone https://github.com/Jovo-Jovi/devos-engine.git
    ```
 
    The repository is private until the release, so you need access to it.
-2. **Start it.** Nothing else to install: the engine has no dependencies.
+3. **Start it.** Nothing else to install: the engine has no dependencies.
    - **Windows:** double-click `Start DEV_OS.cmd` in the engine folder.
    - **macOS:** double-click `Start DEV_OS.command`. The first time, right-click it and choose **Open**.
-   - **Linux, or any terminal:** run `./devos ui` in the engine folder (on Windows, `devos ui`).
+   - **Any terminal:** open it in the engine folder and run the line for your shell.
 
-   The guided setup opens in your browser and asks for the project's name and where to create it. Keep the window
-   that opened with it until the setup is done.
+     | Shell | Command |
+     |---|---|
+     | macOS or Linux | `./devos ui` |
+     | Windows PowerShell | `.\devos ui` |
+     | Windows Command Prompt | `devos ui` |
+     | Any shell | `node bin/devos.mjs ui` |
 
-- **Update:** `git pull` in the engine folder, or download the ZIP again.
-- **The `devos` command anywhere (optional).** Run `npm link` once in the engine folder. If `devos` is still not
-  found, the folder that `npm prefix -g` prints is not on your PATH: add it, or keep using the launchers above.
+   The guided setup opens in your browser. Keep the window that opened with it until the setup is done.
+
+- **Where projects go.** Each project gets its own new folder, outside the engine folder. The page suggests
+  `devos-projects` in your home folder. DEV_OS refuses a folder inside the engine folder.
+- **Update the engine:** `git pull` in the engine folder, or download the ZIP again. Your projects are not touched;
+  `devos upgrade` in a project brings it to the new version.
+- **The `devos` command in any folder (optional).** Run `npm link` once in the engine folder. If `devos` is still not
+  found, npm's global folder is not on your PATH. On Windows that is the folder `npm prefix -g` prints; on macOS and
+  Linux it is that folder's `bin`. Add it to your PATH, or keep using the commands above.
 
 ## Create a project
 
-```
-devos doctor
-devos init my-app
-```
+**In the browser.** Start DEV_OS as in *Install*. The first screen checks this computer: the engine, the GitHub CLI
+and the AI tools signed in. The page then asks where to create the project and walks you through the steps below.
 
-`my-app` must be a new or empty folder. In every menu, type a number (or several, separated by commas) or a name.
-Enter takes the default shown.
-
-**In the browser.** The launchers of *Install* run `devos ui`, the same setup as a guided page:
-
-```
-devos ui            the page asks where to create the project
-devos ui my-app     the page sets up my-app, a new or empty folder
-```
-
-- The page opens in your browser. It runs on this computer only, at `127.0.0.1`, behind a one-time link the
-  terminal prints. It follows your system's light or dark setting; the button at the top right switches it.
+- It runs on this computer only, at `127.0.0.1`, behind a one-time link that the terminal prints.
 - Every answer goes to the same steps as `devos init`, and keys typed on the page reach GitHub the same way.
-- Keep the terminal open until the page says it is done. Ctrl-C in the terminal stops the page.
+- It follows your system's light or dark setting; the button at the top right switches it.
+- **Close DEV_OS** on the last screen, or Ctrl-C in its terminal, stops the page.
+
+**In a terminal.** From the engine folder, with the form of `devos` that works in your shell (see *Install*):
+
+```
+./devos doctor
+./devos init ~/devos-projects/my-app
+```
+
+On Windows PowerShell: `.\devos init $HOME\devos-projects\my-app`. `devos ui <folder>` opens the page for that
+folder instead.
+
+The folder must be new or empty. In every menu, type a number (or several, separated by commas) or a name. Enter
+takes the default shown.
 
 1. **Doctor.** It checks that the GitHub CLI is installed and signed in, and that the token has the scopes it needs.
    When something is missing, it prints the exact command to fix it.
-2. **Contract.** Read it, then type `accept`. Anything else stops setup, and nothing is written or sent.
+2. **Contract.** Read it, then accept it. Anything else stops setup, and nothing is written or sent.
 3. **Agents.** Pick a tool and a model for each role:
    - the reviewer, which reviews every task on GitHub;
    - the light reviewer, for low-risk tasks;
@@ -180,7 +192,8 @@ devos ui my-app     the page sets up my-app, a new or empty folder
    - who picks the builder for each task;
    - the blueprint agent, which works on this computer. It can be any signed-in tool.
 
-   The GitHub roles offer Claude Code, Cursor, Codex and Gemini.
+   The GitHub roles offer Claude Code, Cursor, Codex and Gemini. When a tool lists its models for your account, only
+   those are offered.
 4. **Project type, stack and modules.**
    - The project type: SaaS, web app, marketing site, dashboard, marketplace, store, API, mobile, AI product,
      realtime app, documentation site, CLI, library, worker, browser extension or full product.
@@ -194,21 +207,23 @@ devos ui my-app     the page sets up my-app, a new or empty folder
    visibility (`private` by default). Whether it stores data, the sign-in and the deploy target follow from the
    modules.
 6. **Documents (optional).** DEV_OS first lists the documents worth preparing for your type: a product brief or PRD,
-   design references, brand assets, content, data and API notes, business rules. Give the paths of the ones you have,
-   separated by commas. They are copied to `devos/intake-docs/`. The blueprint reads them, writes every document
-   that is still missing, and lists what is left open in `docs/OPEN_QUESTIONS.md`.
+   design references, brand assets, content, data and API notes, business rules. Give the ones you have. They are
+   copied to `devos/intake-docs/`. The blueprint reads them, writes every document that is still missing, and lists
+   what is left open in `docs/OPEN_QUESTIONS.md`.
 7. **Summary.** Check your answers. Confirm, or answer again.
 8. **Install.** The method files are written into the folder.
 9. **Blueprint.** Your blueprint agent writes the project documents and fence T01 in the folder.
-   - A heartbeat line shows it is still working.
-   - Ctrl-C stops it and keeps what was written.
-   - When it finishes, type `approve`, or describe the changes you want. You get up to five rounds.
+   - With Cursor and Claude Code, the page shows each step as the agent takes it: the file it reads or writes, the
+     command it runs. The terminal's heartbeat line shows the latest one.
+   - When a check of the documents fails, the agent fixes only what failed, in the same session.
+   - Stopping keeps what was written.
+   - When it finishes, approve, or describe the changes you want. You get up to five rounds.
 10. **Keys.** DEV_OS lists every key this project needs, for the agents and for the modules you picked, and where to
-    get each one. Type each one once. The input is hidden, and Enter skips a key you will set later. For a key that is
-    a JSON file, such as a service account, give the file's path instead. The values stay in memory until they are
+    get each one. Type each one once. The input is hidden, and you can skip a key you will set later. For a key that
+    is a JSON file, such as a service account, give the file's path instead. The values stay in memory until they are
     handed to GitHub (`gh secret set`, over standard input).
 11. **GitHub.** DEV_OS shows the plan: the repository, its visibility, the variables, and the keys to upload or set
-    later. At `Create it now?`, answer `yes`. DEV_OS then:
+    later. When you confirm, DEV_OS:
     - commits the folder;
     - creates the repository;
     - pushes it;
@@ -242,31 +257,39 @@ it.
 - **You merge at the gates.** Each pull request carries a comment from the gate doctor that says what still blocks
   the merge. Comment `/devos doctor` to check again.
 - **`SETUP.md`** in the repository lists every setting the project uses. If the setup check reports a missing one,
-  add it on GitHub, then run `devos continue my-app`.
+  add it on GitHub, then run `devos continue <folder>`.
 - **More work later.** Open a "Dev OS change request" issue in the repository.
 - **The operating manual** is `docs/method/AUTOMATION.md` in your project. It covers every workflow, setting,
   comment command and what to do when something goes wrong.
 
 ## Stop and resume
 
-- **Pick up where you left off.** `devos continue my-app` prints a checklist: answers, engine files, blueprint
-  approved, local commit, repository, keys, first cycle. Each line is marked done (`✓`) or open (`·`), and the first
-  open step is finished for you. `devos init --continue my-app` does the same.
+- **Stop.** **Stop run** on the page, or Ctrl-C in the terminal, stops the run. The folder keeps what was written.
+- **Right after a stop or an error,** the page offers:
+  - **Continue** (or **Try again**), which picks up at the first open step;
+  - **Or change the blueprint agent**, when the run ended while the blueprint was being written. Pick another tool or
+    model, then **Try again with this model**. The documents written so far stay;
+  - **Start a new project** and **Close DEV_OS**.
+- **Later.** Start DEV_OS again. The first screen lists your projects in `devos-projects`, each with the step it picks
+  up at. For a project in another folder, paste its full path under **A project in another folder**, then **Find it**.
+- **In a terminal.** `devos continue <folder>` prints a checklist: answers, engine files, blueprint approved, local
+  commit, repository, keys, first cycle. Each line is marked done (`✓`) or open (`·`), and the first open step is
+  finished for you. `devos init --continue <folder>` does the same.
 - **A repository with the same name already on GitHub.**
   - If it is empty, DEV_OS adopts it and pushes.
-  - If it has commits, DEV_OS stops. Delete that repository, or change `"name"` in `devos/answers.json`, then run
-    `devos continue my-app`.
+  - If it has commits, DEV_OS stops. Delete that repository, or change `"name"` in `devos/answers.json`, then
+    continue.
 
   DEV_OS never force-pushes and never rewrites history on GitHub.
 - **When the blueprint or a setup step fails,** the message names the cause: for example a usage limit, a trust
-  prompt, a model your plan does not include, or a GitHub step. Fix it, then run `devos continue my-app`.
+  prompt, a model the tool or your plan does not offer, or a GitHub step. Fix it, then continue.
 
 ## Commands
 
 | Command | What it does |
 |---|---|
 | `devos doctor` | Checks the GitHub CLI, its sign-in and its token scopes, and prints the exact fix. It changes nothing. |
-| `devos init [folder]` | Guided setup of a new project in an empty folder. |
+| `devos init [folder]` | Guided setup of a new project in a new or empty folder outside the engine folder. |
 | `devos ui [folder] [--no-open]` | The same setup as a guided page in your browser, on this computer only. Without a folder, the page asks where to create the project. `--no-open` prints the link without opening it. |
 | `devos continue [folder]` | Shows what is done and finishes what is missing. |
 | `devos status` | In a project folder: shows the project and your saved roster. |
@@ -301,83 +324,12 @@ it.
 
 ## Roadmap
 
-1. The design gate for UI projects.
-2. Expert prompts, skills and references for each layer of a project.
-3. Database, storage and deploys for Python, Go and Dart stacks.
-4. The first real run and the end-to-end test, including copying app keys to the host.
-5. A link from every project to the DEV_OS Control Tower dashboard.
-6. Version 1.0 and its licence.
-
-## Building the engine (maintainers)
-
-The engine is built with its own method. Each task has a fence in `dev/fences/`. Cursor builds it, Claude reviews
-it, and the owner commits. The plan is `dev/PLAN.md`, the decisions are `dev/DECISIONS.md`, and the task list is
-`dev/LEDGER.md`.
-
-### Layout
-
-```
-bin/devos.mjs          the command
-lib/                   command internals; lib/data/tools.json lists the AI CLIs and their models
-lib/ui/                the guided page that devos ui serves (IBM Plex fonts under the OFL, lib/ui/fonts/OFL.txt)
-Start DEV_OS.cmd       Windows launcher of the guided page (Start DEV_OS.command on macOS)
-devos, devos.cmd       the devos command from the engine folder, without npm link
-payload/files/         the method, installed and upgraded (dot-directories are stored as dot-*)
-payload/templates/     project-owned starting points, written once at install
-payload/contract/      the contract shown by devos init
-payload/manifest.json  every engine-owned path with its sha256 (generated: npm run manifest)
-tools/                 build-manifest, verify-source, find-specifics, stage
-test/                  node:test suites, no dependencies (npm test)
-dev/                   plan, decisions, ledger, fences, reports, reviews
-```
-
-### One-time setup
-
-```
-<workspace>/
-├── devos-engine/        this repository
-└── devos-sources/
-    ├── tower/           Jovo-Jovi/devos-control-tower, pinned at a49ca6d (the method's source)
-    └── pilot/           Jovo-Jovi/devos-pilot, pinned at 4ccbef7 (module setup items)
-```
-
-From `<workspace>`:
-
-```
-git clone https://github.com/Jovo-Jovi/devos-engine.git
-git clone https://github.com/Jovo-Jovi/devos-control-tower devos-sources/tower
-git -C devos-sources/tower checkout a49ca6db268b98d6558077bf3e95b8ae759d91b3
-git clone https://github.com/Jovo-Jovi/devos-pilot devos-sources/pilot
-git -C devos-sources/pilot checkout 4ccbef799546315a491da86f4e3676ba46d8fa51
-```
-
-### Running a task
-
-Every task is built and reviewed on its own branch, and reaches `main` only after the review of record.
-
-1. **Branch (you).** Run `git switch main`, `git pull`, then `git switch -c task/E16` (the task id).
-2. **Build (Cursor).** Open `devos-engine` in Cursor and start a new Agent chat with the model the fence header names.
-   The prompt is `Execute dev/fences/E16.md exactly — attempt 1.` The rule `.cursor/rules/00-engine-dev.mdc` binds the
-   builder: no git.
-3. **Local review (optional, Claude Code).** In `devos-engine`, run `claude`, then `/engine-review E16`. It writes
-   `dev/reviews/E16-a1.md`.
-4. **Push (you).** Run `git add -A`, `git commit -m "E16 a1: build"`, then `git push -u origin task/E16`. The push
-   starts `engine-ci` on Linux and Windows.
-5. **Remote review (the review of record).** Tell Claude in the DEVOS project "check task/E16". It runs every
-   *Done when* check and writes `dev/reviews/E16-a1-remote.md` on the branch, with MERGE or FIX. It also updates the
-   ledger and writes the next fence.
-6. **On FIX, or when `engine-ci` is red:** pull the branch, run the next attempt in Cursor (`attempt 2`), and repeat
-   from step 4.
-7. **Merge (you), after MERGE:**
-   ```
-   git switch main
-   git pull
-   git merge --squash task/E16
-   git commit -m "<the commit message from the review>"
-   git push
-   git push origin --delete task/E16
-   git branch -D task/E16
-   ```
-   `main` keeps one commit per accepted task.
-
-If Cursor halts, that is the system working: send its report to the review as it is.
+1. The design gate for UI projects: every capture checked for accessibility and console errors, and pinned design
+   skills.
+2. A usage ledger: the tokens and cost of every agent run, by model and stage, in one file of the project.
+3. Expert skills for every layer of a project, chosen for its stack and modules from one catalogue that any agent
+   reads.
+4. Database, storage and deploys for Python, Go and Dart stacks.
+5. The first real run and the end-to-end test, including copying app keys to the host.
+6. A link from every project to the DEV_OS Control Tower dashboard.
+7. Version 1.0 and its licence.

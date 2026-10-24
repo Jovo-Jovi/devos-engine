@@ -142,7 +142,7 @@ test("ui-page.test.mjs (d) the page texts stay inside the fence", () => {
 test("ui-page.test.mjs (f) the page continues a started project", () => {
   const js = readFileSync(path.join(ui, "app.js"), "utf8");
   const css = readFileSync(path.join(ui, "app.css"), "utf8");
-  assert.equal(js.includes("async function resume(folder) {"), true);
+  assert.equal(js.includes("async function resume(folder, blueprint = null) {"), true);
   assert.equal(js.includes('"/api/continue"'), true);
   assert.equal(js.includes("Continue this project"), true);
   assert.equal(css.includes(".project-row {"), true);
@@ -156,4 +156,15 @@ test("ui-page.test.mjs (e) the page has a theme toggle and a light theme", () =>
   assert.equal(css.includes(':root[data-theme="light"] {'), true);
   assert.equal(css.includes("@media (prefers-color-scheme: light)"), true);
   assert.equal(js.includes('const THEME_KEY = "devos.theme";'), true);
+});
+
+test("ui-page.test.mjs (g) the page shows the agent at work and ends a run with somewhere to go", () => {
+  const js = readFileSync(path.join(ui, "app.js"), "utf8");
+  const css = readFileSync(path.join(ui, "app.css"), "utf8");
+  for (const text of ['event.step === "activity"', '`/api/project', '"/api/quit"', "Start a new project", "Close DEV_OS", "Try again with this model", "A project in another folder"]) {
+    assert.equal(js.includes(text), true, text);
+  }
+  assert.equal(css.includes(".now-pulse {"), true);
+  assert.equal(css.includes("@keyframes now-pulse"), true);
+  assert.equal(css.includes(".agent-now, .now-pulse { animation: none; }"), true);
 });

@@ -48,7 +48,17 @@ if (argv[0] === 'models') {
   // DEVOS_AGENT_MODELS_FAIL=1 mimics the user's real Cursor build: the models
   // probe errors out and answers nothing, so reportedIds stays empty.
   if (process.env.DEVOS_AGENT_MODELS_FAIL === '1') die('fake agent: models unavailable', 1);
-  for (const m of process.env.DEVOS_FAKE_MODELS ? process.env.DEVOS_FAKE_MODELS.split('\n') : (MODELS[self] || [])) say(m);
+  const listed = process.env.DEVOS_FAKE_MODELS ? process.env.DEVOS_FAKE_MODELS.split('\n') : (MODELS[self] || []);
+  // The real Cursor CLI prints a heading, `id - Display Name` rows (with invisible characters) and a tip.
+  if (self === 'agent' && !process.env.DEVOS_FAKE_MODELS) {
+    say('Available models');
+    say('');
+    for (const m of listed) say(`${m} - ${m.replace(/-/g, ' ').toUpperCase()}\u200b`);
+    say('');
+    say('Tip: use --model <id> (or /model in interactive mode) to switch.');
+  } else {
+    for (const m of listed) say(m);
+  }
   process.exit(0);
 }
 
