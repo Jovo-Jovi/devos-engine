@@ -10,6 +10,7 @@ import { installCommand } from "../lib/install.mjs";
 import { profileCommand } from "../lib/profile.mjs";
 import { rosterCommand } from "../lib/roster.mjs";
 import { upgradeCommand } from "../lib/upgrade.mjs";
+import { uiCommand } from "../lib/ui-server.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const pkg = JSON.parse(readFileSync(path.join(here, "..", "package.json"), "utf8"));
@@ -27,6 +28,8 @@ devos agents import <file>
 devos install [folder] --key <KEY>
 devos upgrade [--local]
 devos init [--continue] [folder]
+devos init --plan <file> [folder]
+devos ui [folder] [--no-open]
 devos continue [folder]
 `);
   process.exit(2);
@@ -46,6 +49,7 @@ else if (args[0] === "agents") code = rosterCommand(args.slice(1));
 else if (args[0] === "install") code = installCommand(args.slice(1));
 else if (args[0] === "upgrade") code = upgradeCommand(args.slice(1));
 else if (args[0] === "init") code = await initCommand(args.slice(1));
+else if (args[0] === "ui") code = await uiCommand(args.slice(1));
 else if (args[0] === "continue") code = await continueCommand(path.resolve(args[1] ?? process.cwd()));
 else {
   console.log(`devos: unknown command ${args[0]}`);

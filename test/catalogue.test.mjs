@@ -217,6 +217,21 @@ test("catalogue.test.mjs (k) a file key is read and never printed", async () => 
     const joined = errors.join("");
     assert.equal(joined.split("is not a readable JSON file").length - 1, 3);
     assert.equal(joined.includes("FIREBASE_DEPLOY_SERVICE_ACCOUNT"), true);
+    const secret = "{\"role\":\"fixture\"}";
+    const encoded = Buffer.from(secret).toString("base64");
+    const inlineShown = [];
+    const inlineRead = async () => `base64:${encoded}`;
+    inlineRead.interactive = true;
+    const inline = await readFileKey("FIREBASE_SERVICE_ACCOUNT", inlineRead, { write: (chunk) => inlineShown.push(String(chunk)) });
+    assert.equal(inline, secret);
+    assert.equal(inlineShown.join("").includes(secret), false);
+    let pathAsks = 0;
+    const asPath = await readFileKey("FIREBASE_SERVICE_ACCOUNT", async () => {
+      pathAsks += 1;
+      return `base64:${encoded}`;
+    }, { write: () => {} });
+    assert.equal(asPath, "");
+    assert.equal(pathAsks, 3);
   } finally {
     rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
