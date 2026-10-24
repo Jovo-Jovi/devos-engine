@@ -9,7 +9,7 @@
 #   Method fix (PR-28): open an issue with the "Dev OS method fix" form (label devos:method) when the
 #              automation itself misbehaves. The runner fetches the logs of the runs it links; the
 #              reviewer diagnoses the root cause and either opens an intake PR with the fix planned as a
-#              method task (Phase PM: Grok builds it, deep review, always your merge), asks for what is
+#              method task (Phase PM: the builder agent builds it, deep review, always your merge), asks for what is
 #              missing, or explains that the cause is a setting (devos-setup) or a product defect.
 #
 #   Revision:  comment "/devos revise <what to change>" on an open task PR (task/Tnn). The reviewer
@@ -19,7 +19,8 @@
 #   Go:        comment "/devos go" in the "Dev OS: run notices" issue to start a heavy task that
 #              DEVOS_HEAVY=hold is holding (PR-20).
 #
-# A planning run that hits a Claude usage limit keeps its partial plan on intake/issue-N and resumes
+# Every planning run uses the project's reviewer agent, the one the developer chose (PR-53).
+# A planning run that hits a usage limit keeps its partial plan on intake/issue-N and resumes
 # by itself after the reset (PR-20); "/devos intake resume" continues it by hand.
 #
 # Only repository owners, members and collaborators can trigger any of these.
@@ -63,7 +64,7 @@ jobs:
         )
       )
     runs-on: ubuntu-latest
-    # A planning run reads the whole document set at Opus extra-high effort; the reference project's first took
+    # A planning run reads the whole document set at high effort; the reference project's first took
     # 26 minutes. 90 leaves room for bigger requests (PR-20).
     timeout-minutes: 90
     concurrency:
@@ -86,7 +87,15 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install -g @anthropic-ai/claude-code
+      - name: Install the reviewer agent's CLI (PR-53)
+        run: |
+          tool=$(node scripts/devos/agents.mjs reviewer --mode deep | sed -n 's/^reviewer_tool=//p')
+          case "$tool" in
+            claude) npm install -g @anthropic-ai/claude-code ;;
+            cursor) curl https://cursor.com/install -fsS | bash; echo "$HOME/.cursor/bin" >> "$GITHUB_PATH"; echo "$HOME/.local/bin" >> "$GITHUB_PATH" ;;
+            codex) npm install -g @openai/codex ;;
+            gemini) npm install -g @google/gemini-cli ;;
+          esac
       - name: Acknowledge
         # PR-31: automatic resumes (workflow_dispatch) post nothing; the first run already said it.
         if: github.event_name != 'workflow_dispatch'
@@ -94,7 +103,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           what="is reading this request"; [ "$RESUME" = "true" ] && what="is continuing the partial plan"
-          gh issue comment "$ISSUE" --repo "$REPO" --body "Dev OS: the reviewer $what. This is a heavy run (Opus at high or extra-high effort): expect 20 to 40 minutes and a large part of a Claude usage window. If a limit stops it, the partial plan is kept and it resumes by itself after the reset. Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          gh issue comment "$ISSUE" --repo "$REPO" --body "Dev OS: the reviewer $what. This is a heavy run (the reviewer agent at high effort): expect 20 to 40 minutes and a large part of a usage window. If a limit stops it, the partial plan is kept and it resumes by itself after the reset. Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
       - name: Prepare the request and the branch
         env:
           GH_TOKEN: ${{ github.token }}
@@ -143,44 +152,32 @@ jobs:
           CLAUDE_APIKEY_1: ${{ secrets.ANTHROPIC_API_KEY }}
           CLAUDE_OAUTH_2: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 }}
           CLAUDE_APIKEY_2: ${{ secrets.ANTHROPIC_API_KEY_2 }}
+          CURSOR_KEY_1: ${{ secrets.CURSOR_API_KEY }}
+          CURSOR_KEY_2: ${{ secrets.CURSOR_API_KEY_2 }}
+          CODEX_KEY_1: ${{ secrets.OPENAI_API_KEY }}
+          CODEX_KEY_2: ${{ secrets.OPENAI_API_KEY_2 }}
+          GEMINI_KEY_1: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_KEY_2: ${{ secrets.GEMINI_API_KEY_2 }}
           DEVOS_CLAUDE_ACCOUNT: ${{ vars.DEVOS_CLAUDE_ACCOUNT || '1' }}
+          DEVOS_CURSOR_ACCOUNT: ${{ vars.DEVOS_CURSOR_ACCOUNT || '1' }}
+          DEVOS_CODEX_ACCOUNT: ${{ vars.DEVOS_CODEX_ACCOUNT || '1' }}
+          DEVOS_GEMINI_ACCOUNT: ${{ vars.DEVOS_GEMINI_ACCOUNT || '1' }}
           DEVOS_ACCOUNT_SWITCH: ${{ vars.DEVOS_ACCOUNT_SWITCH || 'auto' }}
           DEVOS_ISSUE: ${{ github.event.issue.number }}
         run: |
-          . scripts/devos/accounts.sh
-          accounts=$(devos_accounts claude)
-          [ -n "$accounts" ] || echo "::error::no Claude credential: set CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY (or the _2 pair)"
-          MODEL=$(node -e 'console.log(require("./devos.config.json").reviewer.gate_model)')
           # A request marked "Small change" is planned at high effort, anything else at intake_effort (PR-20).
           EFFORT=$(node -e '
             const r = require("./devos.config.json").reviewer;
             const small = /How big is it\?\s*\n+\s*Small change/i.test(require("fs").readFileSync(".devos/request.md", "utf8"));
             console.log(small ? (r.intake_effort_small || "high") : (r.intake_effort || "xhigh"));')
           if [ "$MODE" = "method" ]; then EFFORT=$(node -e 'console.log(require("./devos.config.json").reviewer.method_effort || "high")'); fi
-          echo "$MODE: $MODEL at effort $EFFORT (resume: $RESUME)"
-          set +e
-          # PR-29: on a usage limit the planning continues at once on the other Claude account, from
-          # the partial plan the first run left in the tree (rendered as a resume).
-          resume_now="$RESUME"
-          for acc in $accounts; do
-            devos_use_claude "$acc"
-            DEVOS_INTAKE_RESUME="$resume_now" node scripts/devos/render-prompt.mjs "$MODE" - - --out .devos/intake-prompt.md
-            claude -p "$(cat .devos/intake-prompt.md)" --model "$MODEL" --effort "$EFFORT" --output-format json \
-              --json-schema "$(cat devos/schemas/intake.schema.json)" --permission-mode dontAsk --max-turns 120 \
-              --allowedTools "Read,Glob,Grep,Write,Edit,Bash,Task,Agent,Skill" \
-              --disallowedTools "Bash(git push *),Bash(git commit *),Bash(git checkout *),Bash(git reset *),Bash(gh *),Bash(curl *),Bash(wget *)" \
-              > .devos/intake.json 2> .devos/intake.err
-            rc=$?
-            node scripts/devos/usage.mjs record --stage intake --task "intake-$ISSUE" --command claude --model "$MODEL" --out .devos/intake.json --code "$rc" || true
-            echo "reviewer exit code: $rc (Claude account $acc)"
-            if devos_limited .devos/intake.json .devos/intake.err "$rc"; then
-              mkdir -p .devos/limits; cat .devos/intake.json .devos/intake.err > ".devos/limits/claude-$acc.txt"
-              devos_note "Planning: Claude account $acc reached its usage limit."
-              resume_now=true
-              continue
-            fi
-            break
-          done
+          echo "$MODE at effort $EFFORT (resume: $RESUME)"
+          DEVOS_INTAKE_RESUME="$RESUME" node scripts/devos/render-prompt.mjs "$MODE" - - --out .devos/intake-prompt.md
+          DEVOS_INTAKE_RESUME=true node scripts/devos/render-prompt.mjs "$MODE" - - --out .devos/intake-resume-prompt.md
+          # PR-29, PR-53: the project's reviewer agent plans. On a usage limit the planning continues at once on that
+          # tool's other account, from the partial plan the first run left in the tree (rendered as a resume).
+          TASK="intake-$ISSUE" bash scripts/devos/plan-agent.sh intake .devos/intake-prompt.md devos/schemas/intake.schema.json \
+            .devos/intake.json "$EFFORT" 120 .devos/intake-resume-prompt.md
       - name: Guards — intake surface and ledger structure
         id: g
         continue-on-error: true
@@ -197,9 +194,10 @@ jobs:
           TITLE=$(node -e 'try{console.log(JSON.parse(require("fs").readFileSync(".devos/issue.json","utf8")).title)}catch{console.log("change request")}')
           node -e '
             const fs=require("fs"); let r={};
-            try { r=JSON.parse(fs.readFileSync(".devos/intake.json","utf8")); } catch {}
+            const read=(f)=>{try{return fs.readFileSync(f,"utf8")}catch{return ""}};
+            try { r=JSON.parse(read(".devos/intake.json")); } catch {}
             const s=r.structured_output||{};
-            const lim=/usage limit|limit reached|hit your|rate.?limit|overloaded/i.test(JSON.stringify(r)+fs.readFileSync(".devos/intake.err","utf8"));
+            const lim=Boolean(r.limited)||(!s.decision&&/usage limit|limit reached|hit your|rate.?limit|overloaded/i.test(read(".devos/intake.raw")+read(".devos/intake.err")));
             let d=s.decision||(lim?"limit":"error");
             if (d==="accept" && process.env.GUARDS!=="success") d="guards";
             const mins = r.duration_ms ? Math.round(r.duration_ms/60000) : null;
@@ -209,11 +207,11 @@ jobs:
             fs.writeFileSync(".devos/decision", d);
             const q=(s.questions||[]).map((x,i)=>`${i+1}. ${x}`).join("\n");
             fs.writeFileSync(".devos/intake-comment.md", (
-              d==="accept" && process.env.MODE==="method" ? `**Diagnosed; the fix is planned.** ${s.summary}\n\nThe diagnosis (\`docs/requests/issue-${process.env.ISSUE}.md\`) and method task ${(s.tasks||[]).join(", ")} are in the intake PR. Merging it starts the fix: Grok builds it, the reviewer checks every changed line, and the fix waits for your merge before anything changes in the automation.`
+              d==="accept" && process.env.MODE==="method" ? `**Diagnosed; the fix is planned.** ${s.summary}\n\nThe diagnosis (\`docs/requests/issue-${process.env.ISSUE}.md\`) and method task ${(s.tasks||[]).join(", ")} are in the intake PR. Merging it starts the fix: the builder agent builds it, the reviewer checks every changed line, and the fix waits for your merge before anything changes in the automation.`
               : d==="accept" ? `**Accepted.** ${s.summary}\n\nDraft ${s.od||"OD"} and tasks ${(s.tasks||[]).join(", ")} are in the intake PR. Merging it signs the decision and starts the work.`
               : d==="needs-info" ? `**Needs your answers before planning.** ${s.summary||""}\n\n${q}\n\nAnswer in a comment, then comment \`/devos intake\` to run it again.`
               : d==="reject" ? `**Cannot be done as asked.** ${s.summary}`
-              : d==="limit" ? "Claude hit a usage limit while planning this. The partial plan is kept on the intake branch and the planning resumes by itself after the reset (time below). Remove the `devos:quota-wait` label to cancel that."
+              : d==="limit" ? "The reviewer agent hit a usage limit while planning this. The partial plan is kept on the intake branch and the planning resumes by itself after the reset (time below). Remove the `devos:quota-wait` label to cancel that."
               : d==="guards" ? "The plan failed the intake guards (see the run log). Comment `/devos intake resume` to have the reviewer fix it, or `/devos intake` to plan afresh."
               : "The reviewer run stopped without a decision. Its partial plan is kept on the intake branch: comment `/devos intake resume` to continue it, or `/devos intake` to plan afresh.") + stats);'
           D=$(cat .devos/decision)
@@ -245,7 +243,8 @@ jobs:
               const r = JSON.parse(readFileSync("./devos.config.json", "utf8")).resume ?? {};
               const base = r.default_wait_minutes ?? 60, cap = r.max_backoff_minutes ?? 360;
               const backoff = Math.min(base * 2 ** (Number(process.env.CHECKS) - 1), cap);
-              console.log(earliestNotBefore("claude", readText(".devos/intake.json") + "\n" + readText(".devos/intake.err"), backoff));')
+              let tool = "claude"; try { tool = JSON.parse(readText(".devos/intake.json")).tool || tool; } catch {}
+              console.log(earliestNotBefore(tool, readText(".devos/intake.raw") + "\n" + readText(".devos/intake.err"), backoff));')
             echo "not_before=$NB" >> "$GITHUB_OUTPUT"
             gh label create "devos:quota-wait" --color fbca04 --force --repo "$REPO" >/dev/null
             gh issue edit "$ISSUE" --repo "$REPO" --add-label "devos:quota-wait"
@@ -287,7 +286,7 @@ jobs:
           include-hidden-files: true
           if-no-files-found: ignore
 
-  # PR-20: a planning run stopped by a Claude usage limit resumes by itself after the reset (up to
+  # PR-20: a planning run stopped by a usage limit resumes by itself after the reset (up to
   # resume.inline_wait_max_minutes; longer waits are picked up by devos-resume). Remove the
   # devos:quota-wait label from the issue to cancel.
   intake-wait:
@@ -399,7 +398,15 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install -g @anthropic-ai/claude-code
+      - name: Install the reviewer agent's CLI (PR-53)
+        run: |
+          tool=$(node scripts/devos/agents.mjs reviewer --mode deep | sed -n 's/^reviewer_tool=//p')
+          case "$tool" in
+            claude) npm install -g @anthropic-ai/claude-code ;;
+            cursor) curl https://cursor.com/install -fsS | bash; echo "$HOME/.cursor/bin" >> "$GITHUB_PATH"; echo "$HOME/.local/bin" >> "$GITHUB_PATH" ;;
+            codex) npm install -g @openai/codex ;;
+            gemini) npm install -g @google/gemini-cli ;;
+          esac
       - name: Work out the next attempt and save the note
         id: n
         env:
@@ -418,29 +425,24 @@ jobs:
           CLAUDE_APIKEY_1: ${{ secrets.ANTHROPIC_API_KEY }}
           CLAUDE_OAUTH_2: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 }}
           CLAUDE_APIKEY_2: ${{ secrets.ANTHROPIC_API_KEY_2 }}
+          CURSOR_KEY_1: ${{ secrets.CURSOR_API_KEY }}
+          CURSOR_KEY_2: ${{ secrets.CURSOR_API_KEY_2 }}
+          CODEX_KEY_1: ${{ secrets.OPENAI_API_KEY }}
+          CODEX_KEY_2: ${{ secrets.OPENAI_API_KEY_2 }}
+          GEMINI_KEY_1: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_KEY_2: ${{ secrets.GEMINI_API_KEY_2 }}
           DEVOS_CLAUDE_ACCOUNT: ${{ vars.DEVOS_CLAUDE_ACCOUNT || '1' }}
+          DEVOS_CURSOR_ACCOUNT: ${{ vars.DEVOS_CURSOR_ACCOUNT || '1' }}
+          DEVOS_CODEX_ACCOUNT: ${{ vars.DEVOS_CODEX_ACCOUNT || '1' }}
+          DEVOS_GEMINI_ACCOUNT: ${{ vars.DEVOS_GEMINI_ACCOUNT || '1' }}
           DEVOS_ACCOUNT_SWITCH: ${{ vars.DEVOS_ACCOUNT_SWITCH || 'auto' }}
           TASK: ${{ steps.pr.outputs.task }}
           ATTEMPT: ${{ steps.n.outputs.attempt }}
         run: |
-          . scripts/devos/accounts.sh
-          accounts=$(devos_accounts claude)
-          MODEL=$(node -e 'import("./scripts/devos/lib.mjs").then(({parsePhases,reviewerModel})=>{const r=parsePhases().rows.find(x=>x.task===process.env.TASK);console.log(reviewerModel(r))})')
           EFFORT=$(node -e 'import("./scripts/devos/lib.mjs").then(({parsePhases,reviewerEffort})=>{const r=parsePhases().rows.find(x=>x.task===process.env.TASK);console.log(reviewerEffort(r))})')
           node scripts/devos/render-prompt.mjs revise "$TASK" "$ATTEMPT" --out .devos/revise-prompt.md
-          set +e
-          for acc in $accounts; do
-            devos_use_claude "$acc"
-            claude -p "$(cat .devos/revise-prompt.md)" --model "$MODEL" --effort "$EFFORT" --output-format json \
-              --json-schema "$(cat devos/schemas/intake.schema.json)" --permission-mode dontAsk --max-turns 60 \
-              --allowedTools "Read,Glob,Grep,Write,Edit,Bash,Task,Agent,Skill" \
-              --disallowedTools "Bash(git push *),Bash(git commit *),Bash(git checkout *),Bash(git reset *),Bash(gh *),Bash(curl *),Bash(wget *)" \
-              > .devos/revise.json 2> .devos/revise.err
-            rc=$?
-            node scripts/devos/usage.mjs record --stage revise --command claude --model "$MODEL" --out .devos/revise.json --code "$rc" || true
-            echo "reviewer exit code: $rc (Claude account $acc)"
-            devos_limited .devos/revise.json .devos/revise.err "$rc" || break
-          done
+          # PR-53: the project's reviewer agent reissues the fence; a usage limit switches only to that tool's other account.
+          bash scripts/devos/plan-agent.sh revise .devos/revise-prompt.md devos/schemas/intake.schema.json .devos/revise.json "$EFFORT" 60
       - name: Guard — revise surface
         run: node scripts/devos/guard-surfaces.mjs revise
       - name: Push the reissued fence and rebuild

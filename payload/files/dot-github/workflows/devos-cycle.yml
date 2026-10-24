@@ -1,8 +1,9 @@
 # Dev OS automated cycle. One run = one task attempt:
-#   resolve task → Cursor builds on task/Tnn → surface guard → commit/push/PR → checks →
-#   Claude reviews from the branch → surface guard → verdict.mjs decides → merge | human gate | retry | halt
+#   resolve task → the builder agent builds on task/Tnn → surface guard → commit/push/PR → checks →
+#   the reviewer agent reviews from the branch → surface guard → verdict.mjs decides → merge | human gate | retry | halt
+# The agents and models are the ones the developer chose (agents in devos.config.json, PR-53): no other is installed or used.
 # Start it from Actions → devos-cycle → Run workflow (inputs blank = next open task).
-# The fence chooses Grok effort/fast; Vercel preview per attempt (when DEVOS_VERCEL=true);
+# The fence chooses the builder's effort/fast; Vercel preview per attempt (when DEVOS_VERCEL=true);
 # screenshots for the reviewer's visual check; a usage-limit wait is resumed by the wait-and-resume
 # job below (up to ~5.5 h) and otherwise by devos-resume.
 name: devos-cycle
@@ -25,7 +26,7 @@ on:
         required: false
         default: false
       effort:
-        description: "Grok 4.7 effort (fence = use the reviewer's choice in the fence)"
+        description: "Builder effort (fence = use the reviewer's choice in the fence)"
         type: choice
         options: [fence, low, medium, high, xhigh]
         default: fence
@@ -195,11 +196,13 @@ jobs:
 
       - name: Install pnpm and the agent CLIs
         run: |
-          npm install -g pnpm@10 @anthropic-ai/claude-code
-          curl https://cursor.com/install -fsS | bash
+          npm install -g pnpm@10
           echo "$HOME/.cursor/bin" >> "$GITHUB_PATH"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          # PR-53: only the CLIs of the agents the project chose (agents in devos.config.json).
           tools=$(node scripts/devos/agents.mjs tools | sed -n 's/^tools=//p')
+          case " $tools " in *" claude "*) npm install -g @anthropic-ai/claude-code ;; esac
+          case " $tools " in *" cursor "*) curl https://cursor.com/install -fsS | bash ;; esac
           case " $tools " in *" codex "*) npm install -g @openai/codex ;; esac
           case " $tools " in *" gemini "*) npm install -g @google/gemini-cli ;; esac
 
@@ -316,7 +319,7 @@ jobs:
         timeout-minutes: 15
         run: node scripts/devos/modules.mjs start --task "$TASK"
 
-      - name: Builder — Cursor CLI
+      - name: Builder (the project's builder agent)
         id: builder
         if: env.REVIEW_ONLY != 'true'
         timeout-minutes: 80
@@ -344,7 +347,6 @@ jobs:
         run: |
           . scripts/devos/accounts.sh
           builder_tool="${{ steps.ag.outputs.builder_tool }}"
-          builder_id="${{ steps.ag.outputs.builder_id }}"
           if [ "$builder_tool" = "claude" ]; then
             accounts=$(devos_accounts claude)
           elif [ "$builder_tool" = "codex" ] || [ "$builder_tool" = "gemini" ]; then
@@ -466,72 +468,8 @@ jobs:
             break
           done
           fi
-          if [ "${code:-1}" != "0" ] && devos_limited .devos/builder.json .devos/builder.err "$code"; then
-            next_out=$(node scripts/devos/agents.mjs next --after "$builder_id")
-            next_id=$(printf '%s\n' "$next_out" | sed -n 's/^next_id=//p')
-            next_tool=$(printf '%s\n' "$next_out" | sed -n 's/^next_tool=//p')
-            next_model=$(printf '%s\n' "$next_out" | sed -n 's/^next_model=//p')
-            if [ -n "$next_id" ]; then
-              devos_note "Builder: usage limit; trying pool agent $next_id once."
-              MODEL="$next_model"
-              ran_tool="$next_tool"
-              if [ "$next_tool" = "claude" ]; then
-                if [ "$builder_tool" != "claude" ]; then
-                  node scripts/devos/role-env.mjs swap claude-builder || exit 1
-                  trap 'node scripts/devos/role-env.mjs restore || exit 1' EXIT
-                fi
-                EFFORT="${{ steps.bm.outputs.effort }}"
-                accounts=$(devos_accounts claude)
-                used=""; restarted=""; T0=$(date +%s)
-                for acc in $accounts; do
-                  devos_use_claude "$acc"; used="$acc"
-                  while :; do
-                    left=$(( 72 - ($(date +%s) - T0) / 60 ))
-                    bash scripts/devos/agent-watchdog.sh "$left" 10 .devos/builder.json .devos/builder.err -- \
-                      claude -p "$(cat .devos/builder-prompt.md)" --model "$MODEL" --effort "$EFFORT" --output-format json --permission-mode dontAsk --allowedTools "Read,Glob,Grep,Write,Edit,MultiEdit,Bash,Task,Agent,Skill,mcp__context7" --disallowedTools "Bash(git push *),Bash(git commit *),Bash(git checkout *),Bash(git reset *),Bash(gh *),Bash(curl *),Bash(wget *)" --mcp-config devos/ci/mcp.claude.json --max-turns 400
-                    code=$?
-                    if { [ "$code" = "125" ] || [ "$code" = "126" ]; } && [ -z "$restarted" ] && [ $(( 72 - ($(date +%s) - T0) / 60 )) -ge 25 ]; then
-                      restarted=1; continue
-                    fi
-                    break
-                  done
-                  if [ "$code" != "0" ] && devos_limited .devos/builder.json .devos/builder.err "$code"; then
-                    mkdir -p .devos/limits; cat .devos/builder.json .devos/builder.err > ".devos/limits/claude-$acc.txt"
-                    devos_note "Builder: Claude account $acc reached its usage limit."
-                    continue
-                  fi
-                  break
-                done
-              elif [ "$next_tool" = "cursor" ]; then
-                if [ "$builder_tool" = "claude" ]; then node scripts/devos/role-env.mjs restore || exit 1; trap - EXIT; fi
-                accounts=$(devos_accounts cursor)
-                used=""; restarted=""; T0=$(date +%s)
-                for acc in $accounts; do
-                  devos_use_cursor "$acc"; used="$acc"
-                  while :; do
-                    left=$(( 72 - ($(date +%s) - T0) / 60 ))
-                    bash scripts/devos/agent-watchdog.sh "$left" 10 .devos/builder.json .devos/builder.err -- \
-                      agent -p --force --trust --approve-mcps --model "$MODEL" --output-format stream-json "$(cat .devos/builder-prompt.md)"
-                    code=$?
-                    if { [ "$code" = "125" ] || [ "$code" = "126" ]; } && [ -z "$restarted" ] && [ $(( 72 - ($(date +%s) - T0) / 60 )) -ge 25 ]; then
-                      restarted=1; continue
-                    fi
-                    break
-                  done
-                  if [ "$code" != "0" ] && devos_limited .devos/builder.json .devos/builder.err "$code"; then
-                    mkdir -p .devos/limits; cat .devos/builder.json .devos/builder.err > ".devos/limits/cursor-$acc.txt"
-                    devos_note "Builder: Cursor account $acc reached its usage limit."
-                    continue
-                  fi
-                  break
-                done
-              elif [ "$next_tool" = "codex" ] || [ "$next_tool" = "gemini" ]; then
-                if [ "$builder_tool" = "claude" ]; then node scripts/devos/role-env.mjs restore || exit 1; trap - EXIT; fi
-                bash scripts/devos/run-agent.sh builder "$next_tool" "$next_model" "${{ steps.bm.outputs.effort }}" .devos/builder-prompt.md || exit 1
-                . .devos/builder-run.env
-              fi
-            fi
-          fi
+          # PR-53: a usage limit switches only to the same tool's other account (above); with none left the
+          # attempt is parked until the limit resets (builder-status.mjs → quota). No other agent is used.
           node scripts/devos/role-env.mjs restore || exit 1; trap - EXIT
           kill "$hb" 2>/dev/null
           [ "$used" != "${accounts%% *}" ] && devos_note "Builder: switched to $ran_tool account $used."
@@ -597,9 +535,9 @@ jobs:
             echo "- HEAD: \`$LOCAL\`"
             echo "- Remote comparison: \`git ls-remote origin refs/heads/$BR\` = \`$REMOTE_SHA\` → $([ "$LOCAL" = "$REMOTE_SHA" ] && echo MATCH || echo MISMATCH)"
             echo "- Builder: \`${{ steps.bm.outputs.model }}\` (effort ${{ steps.bm.outputs.effort }}, fast ${{ steps.bm.outputs.fast }}, chosen by ${{ steps.bm.outputs.source }}) ${{ steps.bm.outputs.note }}"
-            echo "- Builder exit code: ${{ steps.builder.outputs.exit || 'not run (review-only re-run)' }} · Cursor account: ${{ steps.builder.outputs.account || 'none' }}"
+            echo "- Builder exit code: ${{ steps.builder.outputs.exit || 'not run (review-only re-run)' }} · ${{ steps.ag.outputs.builder_tool }} account: ${{ steps.builder.outputs.account || 'none' }}"
             [ -f .devos/accounts.md ] && cat .devos/accounts.md
-            echo "- Grok ids offered by \`agent models\`: $( (grep -oE 'grok-[A-Za-z0-9.-]+' .devos/models.txt 2>/dev/null || true) | sort -u | tr '\n' ' ')"
+            [ -s .devos/models.txt ] && echo "- Grok ids offered by \`agent models\`: $( (grep -oE 'grok-[A-Za-z0-9.-]+' .devos/models.txt 2>/dev/null || true) | sort -u | tr '\n' ' ')"
             echo
             echo "## Changed files vs main"
             echo '```'
@@ -620,7 +558,7 @@ jobs:
           if [ -z "$PRN" ]; then
             gh pr create --repo "$REPO" --base main --head "$BR" \
               --title "$TASK — $NAME" \
-              --body "Dev OS task **$TASK** (risk $RISK). Fence: \`docs/fences/$TASK.md\`. Built by Cursor, reviewed by Claude; the verdict is posted below by the runner. Do not merge before the verdict: the \`devos/verdict\` status turns green on PASS." \
+              --body "Dev OS task **$TASK** (risk $RISK). Fence: \`docs/fences/$TASK.md\`. Built by ${{ steps.ag.outputs.builder_tool }}, reviewed by the project's reviewer agent; the verdict is posted below by the runner. Do not merge before the verdict: the \`devos/verdict\` status turns green on PASS." \
               --label devos --label "risk-$RISK" || echo "::notice::No PR yet (nothing differs from main); it is opened after the review commit."
             PRN=$(gh pr list --repo "$REPO" --head "$BR" --state open --json number --jq '.[0].number // empty')
           fi
@@ -744,7 +682,7 @@ jobs:
           node scripts/devos/evidence.mjs --task "$TASK" --attempt "$ATTEMPT"
           sed -n '1,12p' .devos/evidence.md
 
-      - name: Reviewer — Claude Code
+      - name: Reviewer (the project's reviewer agent)
         id: reviewer
         # reuse_review (PR-21): a complete review file from this attempt is kept; verdict.mjs reads it.
         if: steps.bs.outputs.state == 'ok' && !(inputs.reuse_review && hashFiles(format('docs/reviews/{0}-a{1}.md', env.TASK, env.ATTEMPT)) != '')
@@ -763,7 +701,6 @@ jobs:
           MODEL: ${{ steps.rp.outputs.model || needs.resolve.outputs.reviewer_model }}
           TURNS: ${{ steps.rp.outputs.max_turns || needs.resolve.outputs.reviewer_max_turns }}
           EFFORT: ${{ steps.rp.outputs.effort || needs.resolve.outputs.reviewer_effort }}
-          FALLBACK: ${{ steps.rp.outputs.fallback || needs.resolve.outputs.reviewer_fallback }}
           DEVOS_PREVIEW_URL: ${{ steps.preview.outputs.url }}
           DEVOS_REVIEW_MODE: ${{ steps.rp.outputs.mode }}
           DEVOS_REVIEW_REASONS: ${{ steps.rp.outputs.reasons }}
@@ -775,24 +712,20 @@ jobs:
         run: |
           . scripts/devos/accounts.sh
           for f in .devos/*.env; do [ -f "$f" ] && { set -a; . "$f"; set +a; }; done
-          # PR-28: a method fix is always a deep review by Claude Code with the gate model.
+          # PR-28, PR-53: a method fix is always a deep review, by the project's own reviewer agent.
           if [ -n "$METHOD_CHANGE" ]; then
             export DEVOS_REVIEW_MODE=deep DEVOS_REVIEW_REASONS="method fix: it changes the automation itself (PR-28)"
           fi
+          # PR-53: the reviewer is always the agent and model the developer chose (agents in devos.config.json).
           rev_line=$(node scripts/devos/agents.mjs reviewer --mode "$DEVOS_REVIEW_MODE")
           rev_tool=$(printf '%s\n' "$rev_line" | sed -n 's/^reviewer_tool=//p')
           rev_model=$(printf '%s\n' "$rev_line" | sed -n 's/^reviewer_model=//p')
-          if [ "$rev_tool" != "claude" ]; then
-            MODEL="$rev_model"
-          fi
+          MODEL="$rev_model"
           if [ -n "$METHOD_CHANGE" ]; then
-            MODEL=$(git show origin/main:devos.config.json | node -e 'let s="";process.stdin.on("data",(d)=>s+=d).on("end",()=>console.log(JSON.parse(s).reviewer.gate_model))')
             EFFORT=high; TURNS=120
-            echo "method fix: deep review forced ($MODEL, effort $EFFORT, $TURNS turns)"
-            accounts=$(devos_accounts claude)
-            [ -n "$accounts" ] || { echo "::error::a method fix is reviewed by Claude Code with the gate model (PR-28); add CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY"; exit 1; }
-            rev_tool=claude
+            echo "method fix: deep review ($rev_tool $MODEL, effort $EFFORT, $TURNS turns)"
           fi
+          echo "reviewer: $rev_tool $MODEL ($DEVOS_REVIEW_MODE review)"
           node scripts/devos/render-prompt.mjs reviewer "$TASK" "$ATTEMPT" --out .devos/reviewer-prompt.md
           set +e
           ran_tool="$rev_tool"
@@ -839,7 +772,6 @@ jobs:
             claude -p "$(cat .devos/reviewer-prompt.md)" \
               --model "$MODEL" \
               --effort "${EFFORT:-high}" \
-              ${FALLBACK:+--fallback-model "$FALLBACK"} \
               --output-format json \
               --json-schema "$(cat devos/schemas/verdict.schema.json)" \
               --permission-mode dontAsk \
@@ -959,7 +891,7 @@ jobs:
               echo "::notice title=Dev OS::$TASK failed attempt $ATTEMPT; attempt $NEXT_ATTEMPT dispatched." ;;
             quota_wait)
               gh pr edit "$PRN" --repo "$REPO" --add-label "devos:quota-wait"
-              echo "::warning title=Dev OS::$TASK parked: Claude usage/rate limit. devos-resume re-runs the review hourly." ;;
+              echo "::warning title=Dev OS::$TASK parked: the agent's usage/rate limit, with no other account of the same tool left. devos-resume re-runs it after the reset." ;;
             halt)
               gh pr edit "$PRN" --repo "$REPO" --add-label "devos:halted"
               gh workflow run devos-doctor.yml --repo "$REPO" --ref main -f pr="$PRN" || true

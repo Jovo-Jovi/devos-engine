@@ -201,9 +201,9 @@ test("stack.test.mjs (g) the workflows set up the toolchain and install it", () 
   }
   const cycle = readFileSync(path.join(root, "payload", "files", "dot-github", "workflows", "devos-cycle.yml"), "utf8");
   assert.equal(countOf(cycle, "run-checks.mjs --install-only"), 1);
-  assert.equal(countOf(cycle, "agent -p --force --trust --approve-mcps --model \"$MODEL\" --output-format stream-json \"$(cat .devos/builder-prompt.md)\""), 2);
+  assert.equal(countOf(cycle, "agent -p --force --trust --approve-mcps --model \"$MODEL\" --output-format stream-json \"$(cat .devos/builder-prompt.md)\""), 1);
   assert.equal(countOf(cycle, "agent -p --force --trust --approve-mcps --model \"$MODEL\" --output-format stream-json \"$(cat .devos/reviewer-prompt.md)\""), 1);
-  assert.equal(countOf(cycle, "claude -p \"$(cat .devos/builder-prompt.md)\" --model \"$MODEL\" --effort \"$EFFORT\" --output-format json --permission-mode dontAsk"), 2);
+  assert.equal(countOf(cycle, "claude -p \"$(cat .devos/builder-prompt.md)\" --model \"$MODEL\" --effort \"$EFFORT\" --output-format json --permission-mode dontAsk"), 1);
   assert.equal(countOf(cycle, "claude -p \"$(cat .devos/reviewer-prompt.md)\""), 1);
 });
 

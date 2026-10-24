@@ -340,7 +340,7 @@ async function publish() {
     if (claude.evidence) lines.push(`Evidence: ${claude.evidence}`, "");
     if (claude.revise_note && claude.category === "code") lines.push("Comment this to have it fixed:", "```", `/devos revise ${claude.revise_note}`, "```", "");
     if (claude.human_action) lines.push(`Otherwise: ${claude.human_action}`, "");
-  } else if (f.ask_claude) lines.push("_No second opinion: Claude was not available for this run._", "");
+  } else if (f.ask_claude) lines.push("_No second opinion for this run: it runs only when the project's reviewer agent is Claude Code, with its key (PR-53)._", "");
   const ev = f.evidence.filter(Boolean);
   if (ev.length) lines.push("<details><summary>Evidence</summary>", "", "```", ...ev.map((e) => e.slice(0, 1500)), "```", "</details>", "");
   const run = process.env.GITHUB_RUN_ID ? ` · [doctor run](${SERVER}/${REPO}/actions/runs/${process.env.GITHUB_RUN_ID})` : "";

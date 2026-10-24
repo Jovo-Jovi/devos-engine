@@ -16,6 +16,22 @@ import * as firebase from "./firebase.mjs";
 
 export const MODULES = { supabase, r2, firebase };
 
+// PR-53: the module each provider of `devos init` brings (database, storage and hosting choices).
+const PROVIDER_MODULE = { supabase: "supabase", "supabase-storage": "supabase", firebase: "firebase", "firebase-storage": "firebase", r2: "r2", vercel: "vercel" };
+
+/** The modules the project chose at `devos init` (devos/answers.json), or null when the project does not say. */
+export function chosenModules() {
+  try {
+    const answers = JSON.parse(readFileSync(P("devos/answers.json"), "utf8"));
+    if (!answers?.modules || typeof answers.modules !== "object") return null;
+    const chosen = new Set(Object.values(answers.modules).map((id) => PROVIDER_MODULE[id]).filter(Boolean));
+    if (answers.deploy === "vercel") chosen.add("vercel");
+    return chosen;
+  } catch {
+    return null;
+  }
+}
+
 /** Modules active in this tree, plus those the task's fence names. */
 export function neededModules(task = "") {
   const mods = config().modules ?? {};
@@ -23,6 +39,9 @@ export function neededModules(task = "") {
   return Object.keys(MODULES).filter((name) => {
     if (!mods[name]) return false;
     if (MODULES[name].isActive()) return true;
+    // A fence that only mentions a module the project did not choose ("do not add Firebase") does not start it.
+    const chosen = chosenModules();
+    if (chosen && !chosen.has(name)) return false;
     return Boolean(fence && mods[name].fence_hint && new RegExp(mods[name].fence_hint).test(fence));
   });
 }

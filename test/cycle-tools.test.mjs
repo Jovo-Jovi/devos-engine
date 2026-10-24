@@ -370,16 +370,17 @@ function countOf(text, needle) {
 
 test("cycle-tools.test.mjs (m) the cycle workflow keeps the proven commands and adds Codex and Gemini", () => {
   const text = readFileSync(path.join(root, "payload", "files", "dot-github", "workflows", "devos-cycle.yml"), "utf8");
-  assert.equal(countOf(text, "agent -p --force --trust --approve-mcps --model \"$MODEL\" --output-format stream-json \"$(cat .devos/builder-prompt.md)\""), 2);
+  // PR-53: one run per builder tool; no other agent takes over on a usage limit.
+  assert.equal(countOf(text, "agent -p --force --trust --approve-mcps --model \"$MODEL\" --output-format stream-json \"$(cat .devos/builder-prompt.md)\""), 1);
   assert.equal(countOf(text, "agent -p --force --trust --approve-mcps --model \"$MODEL\" --output-format stream-json \"$(cat .devos/reviewer-prompt.md)\""), 1);
-  assert.equal(countOf(text, "claude -p \"$(cat .devos/builder-prompt.md)\" --model \"$MODEL\" --effort \"$EFFORT\" --output-format json --permission-mode dontAsk"), 2);
+  assert.equal(countOf(text, "claude -p \"$(cat .devos/builder-prompt.md)\" --model \"$MODEL\" --effort \"$EFFORT\" --output-format json --permission-mode dontAsk"), 1);
   assert.equal(countOf(text, "claude -p \"$(cat .devos/reviewer-prompt.md)\""), 1);
-  assert.equal(countOf(text, "bash scripts/devos/run-agent.sh builder"), 2);
+  assert.equal(countOf(text, "bash scripts/devos/run-agent.sh builder"), 1);
   assert.equal(countOf(text, "bash scripts/devos/run-agent.sh reviewer"), 1);
   assert.equal(countOf(text, "npm install -g @openai/codex"), 1);
   assert.equal(countOf(text, "npm install -g @google/gemini-cli"), 1);
-  assert.equal(countOf(text, "--mcp-config devos/ci/mcp.claude.json"), 3);
-  assert.equal(countOf(text, "Skill,mcp__context7\""), 3);
+  assert.equal(countOf(text, "--mcp-config devos/ci/mcp.claude.json"), 2);
+  assert.equal(countOf(text, "Skill,mcp__context7\""), 2);
   assert.equal(countOf(text, "cp devos/ci/mcp.ci.json .cursor/mcp.json"), 2);
   for (const name of ["OPENAI_API_KEY", "OPENAI_API_KEY_2", "GEMINI_API_KEY", "GEMINI_API_KEY_2"]) {
     assert.equal(text.includes(`"${name}":"\${{ secrets.${name} != '' && '1' || '' }}"`), true, name);

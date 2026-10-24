@@ -7,7 +7,7 @@ Next task: {{NEXT_TASK_OR_NONE}} · Human gate after a PASS: {{HUMAN_GATE}}
 
 ## How this review works (evidence first, PR-22)
 
-The builder (Grok) did the work, wrote the tests and pasted the real output of every Done-when
+The builder agent did the work, wrote the tests and pasted the real output of every Done-when
 command into its report. The runner then ran every check itself and wrote `.devos/evidence.md`.
 **Your job is to judge that evidence, not to redo it.** The runner already enforces the mechanical
 part: a red required check fails the verdict whatever you write (PR-08), and the guards ran.
@@ -86,7 +86,7 @@ part: a red required check fails the verdict whatever you write (PR-08), and the
    `docs/method/AUTOMATION.md` describes the change. Its
    PASS always waits for the human; write no next fence.
    **Who fixes what (PR-27):** a cause **inside** the repository (a package script, a config file,
-   an environment name the code reads, `.env.example`, a test) is Grok's: FAIL with an attempt focus.
+   an environment name the code reads, `.env.example`, a test) is the builder's: FAIL with an attempt focus.
    A cause **outside** it (a missing secret, variable, token permission, account or dashboard
    setting) is not: classify it `SETUP`, reissue no fence, and put in the verdict's
    `human_attention` the exact names and the steps to add them (where in GitHub, Vercel or the

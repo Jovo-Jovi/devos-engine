@@ -1,0 +1,468 @@
+# Change requests and revisions from GitHub.
+#
+#   New work:  open an issue with the "Dev OS change request" form (label devos:request). The
+#              reviewer reads it with the repository and either opens an intake PR (draft OD, scope
+#              amendment, new task rows, first fence), asks up to three questions, or explains why it
+#              cannot be done. Comment "/devos intake" on the issue to run it again after answering.
+#              Merging the intake PR signs the OD, and devos-advance starts the new tasks.
+#
+#   Method fix (PR-28): open an issue with the "Dev OS method fix" form (label devos:method) when the
+#              automation itself misbehaves. The runner fetches the logs of the runs it links; the
+#              reviewer diagnoses the root cause and either opens an intake PR with the fix planned as a
+#              method task (Phase PM: the builder agent builds it, deep review, always your merge), asks for what is
+#              missing, or explains that the cause is a setting (devos-setup) or a product defect.
+#
+#   Revision:  comment "/devos revise <what to change>" on an open task PR (task/Tnn). The reviewer
+#              reissues that task's fence with your change as the next attempt's focus, and the
+#              cycle rebuilds and re-reviews it.
+#
+#   Go:        comment "/devos go" in the "Dev OS: run notices" issue to start a heavy task that
+#              DEVOS_HEAVY=hold is holding (PR-20).
+#
+# Every planning run uses the project's reviewer agent, the one the developer chose (PR-53).
+# A planning run that hits a usage limit keeps its partial plan on intake/issue-N and resumes
+# by itself after the reset (PR-20); "/devos intake resume" continues it by hand.
+#
+# Only repository owners, members and collaborators can trigger any of these.
+name: devos-intake
+
+on:
+  issues:
+    types: [labeled]
+  issue_comment:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      issue:
+        description: "Change-request issue number to plan (used by the automatic resume)"
+        required: true
+      resume:
+        description: "Continue the partial plan already on intake/issue-N"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  actions: write
+  statuses: write
+
+jobs:
+  intake:
+    if: >-
+      vars.DEVOS_PAUSED != 'true' && (
+        github.event_name == 'workflow_dispatch' || (
+          !github.event.issue.pull_request &&
+          (contains(github.event.issue.labels.*.name, 'devos:request') || contains(github.event.issue.labels.*.name, 'devos:method')) &&
+          (
+            (github.event_name == 'issues' && (github.event.label.name == 'devos:request' || github.event.label.name == 'devos:method') &&
+              contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association)) ||
+            (github.event_name == 'issue_comment' && startsWith(github.event.comment.body, '/devos intake') &&
+              contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association))
+          )
+        )
+      )
+    runs-on: ubuntu-latest
+    # A planning run reads the whole document set at high effort; the reference project's first took
+    # 26 minutes. 90 leaves room for bigger requests (PR-20).
+    timeout-minutes: 90
+    concurrency:
+      group: devos-intake-${{ inputs.issue || github.event.issue.number }}
+      cancel-in-progress: false
+    outputs:
+      not_before: ${{ steps.act.outputs.not_before }}
+      issue: ${{ inputs.issue || github.event.issue.number }}
+    env:
+      ISSUE: ${{ inputs.issue || github.event.issue.number }}
+      REPO: ${{ github.repository }}
+      BR: intake/issue-${{ inputs.issue || github.event.issue.number }}
+      RESUME: ${{ (github.event_name == 'workflow_dispatch' && inputs.resume) || (github.event_name == 'issue_comment' && startsWith(github.event.comment.body, '/devos intake resume')) }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install the reviewer agent's CLI (PR-53)
+        run: |
+          tool=$(node scripts/devos/agents.mjs reviewer --mode deep | sed -n 's/^reviewer_tool=//p')
+          case "$tool" in
+            claude) npm install -g @anthropic-ai/claude-code ;;
+            cursor) curl https://cursor.com/install -fsS | bash; echo "$HOME/.cursor/bin" >> "$GITHUB_PATH"; echo "$HOME/.local/bin" >> "$GITHUB_PATH" ;;
+            codex) npm install -g @openai/codex ;;
+            gemini) npm install -g @google/gemini-cli ;;
+          esac
+      - name: Acknowledge
+        # PR-31: automatic resumes (workflow_dispatch) post nothing; the first run already said it.
+        if: github.event_name != 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          what="is reading this request"; [ "$RESUME" = "true" ] && what="is continuing the partial plan"
+          gh issue comment "$ISSUE" --repo "$REPO" --body "Dev OS: the reviewer $what. This is a heavy run (the reviewer agent at high effort): expect 20 to 40 minutes and a large part of a usage window. If a limit stops it, the partial plan is kept and it resumes by itself after the reset. Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+      - name: Prepare the request and the branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "devos-runner"
+          git config user.email "devos-runner@users.noreply.github.com"
+          if [ "$RESUME" = "true" ] && git rev-parse --verify --quiet "origin/$BR" >/dev/null; then
+            git checkout -B "$BR" "origin/$BR"
+            git merge --no-edit origin/main || { git merge --abort; echo "::error::intake/issue-$ISSUE conflicts with main; comment /devos intake to plan afresh"; exit 1; }
+            echo "Continuing the partial plan on $BR."
+          else
+            git checkout -B "$BR" origin/main
+            echo "RESUME=false" >> "$GITHUB_ENV"
+          fi
+          mkdir -p .devos
+          # The request plus the human's own answers in the thread (owners, members, collaborators).
+          gh issue view "$ISSUE" --repo "$REPO" --json title,body,comments,labels > .devos/issue.json
+          # PR-28: a method fix is diagnosed from the logs of the runs it links.
+          MODE=$(node -e 'const i=require("./.devos/issue.json");console.log((i.labels||[]).some(l=>l.name==="devos:method")?"method":"intake")')
+          echo "MODE=$MODE" >> "$GITHUB_ENV"
+          node -e '
+            const i = JSON.parse(require("fs").readFileSync(".devos/issue.json", "utf8"));
+            const trusted = ["OWNER", "MEMBER", "COLLABORATOR"];
+            const notes = (i.comments || [])
+              .filter((c) => trusted.includes(c.authorAssociation) && !/^Dev OS:/.test(c.body))
+              .map((c) => c.body.replace(/^\/devos intake( resume)?\s*/, "").trim())
+              .filter(Boolean);
+            const out = [`# ${i.title}`, "", i.body || "", ...(notes.length ? ["", "## The human'"'"'s answers and notes in the issue thread", "", ...notes.map((n) => `- ${n.replace(/\n/g, "\n  ")}`)] : [])];
+            require("fs").writeFileSync(".devos/request.md", out.join("\n") + "\n");'
+          wc -l .devos/request.md
+          if [ "$MODE" = "method" ]; then
+            mkdir -p .devos/runlogs
+            for id in $(grep -oE 'actions/runs/[0-9]+' .devos/request.md | sed 's#.*/##' | sort -u | head -n 5); do
+              gh run view "$id" --repo "$REPO" --log-failed 2>/dev/null | tail -n 400 > ".devos/runlogs/$id.log" || true
+              gh run view "$id" --repo "$REPO" --json name,displayTitle,conclusion,event,headBranch,createdAt,url,jobs \
+                --jq '{name,displayTitle,conclusion,event,headBranch,createdAt,url,failed:[.jobs[]|select(.conclusion=="failure")|{name,steps:[.steps[]|select(.conclusion=="failure")|.name]}]}' \
+                > ".devos/runlogs/$id.json" 2>/dev/null || true
+              echo "run $id: $(wc -l < ".devos/runlogs/$id.log") log lines"
+            done
+            gh run list --repo "$REPO" --status failure --limit 10 \
+              --json databaseId,workflowName,displayTitle,headBranch,createdAt,url > .devos/runlogs/recent-failures.json || true
+          fi
+      - name: Reviewer — plan the request
+        env:
+          CLAUDE_OAUTH_1: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          CLAUDE_APIKEY_1: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_OAUTH_2: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 }}
+          CLAUDE_APIKEY_2: ${{ secrets.ANTHROPIC_API_KEY_2 }}
+          CURSOR_KEY_1: ${{ secrets.CURSOR_API_KEY }}
+          CURSOR_KEY_2: ${{ secrets.CURSOR_API_KEY_2 }}
+          CODEX_KEY_1: ${{ secrets.OPENAI_API_KEY }}
+          CODEX_KEY_2: ${{ secrets.OPENAI_API_KEY_2 }}
+          GEMINI_KEY_1: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_KEY_2: ${{ secrets.GEMINI_API_KEY_2 }}
+          DEVOS_CLAUDE_ACCOUNT: ${{ vars.DEVOS_CLAUDE_ACCOUNT || '1' }}
+          DEVOS_CURSOR_ACCOUNT: ${{ vars.DEVOS_CURSOR_ACCOUNT || '1' }}
+          DEVOS_CODEX_ACCOUNT: ${{ vars.DEVOS_CODEX_ACCOUNT || '1' }}
+          DEVOS_GEMINI_ACCOUNT: ${{ vars.DEVOS_GEMINI_ACCOUNT || '1' }}
+          DEVOS_ACCOUNT_SWITCH: ${{ vars.DEVOS_ACCOUNT_SWITCH || 'auto' }}
+          DEVOS_ISSUE: ${{ github.event.issue.number }}
+        run: |
+          # A request marked "Small change" is planned at high effort, anything else at intake_effort (PR-20).
+          EFFORT=$(node -e '
+            const r = require("./devos.config.json").reviewer;
+            const small = /How big is it\?\s*\n+\s*Small change/i.test(require("fs").readFileSync(".devos/request.md", "utf8"));
+            console.log(small ? (r.intake_effort_small || "high") : (r.intake_effort || "xhigh"));')
+          if [ "$MODE" = "method" ]; then EFFORT=$(node -e 'console.log(require("./devos.config.json").reviewer.method_effort || "high")'); fi
+          echo "$MODE at effort $EFFORT (resume: $RESUME)"
+          DEVOS_INTAKE_RESUME="$RESUME" node scripts/devos/render-prompt.mjs "$MODE" - - --out .devos/intake-prompt.md
+          DEVOS_INTAKE_RESUME=true node scripts/devos/render-prompt.mjs "$MODE" - - --out .devos/intake-resume-prompt.md
+          # PR-29, PR-53: the project's reviewer agent plans. On a usage limit the planning continues at once on that
+          # tool's other account, from the partial plan the first run left in the tree (rendered as a resume).
+          TASK="intake-$ISSUE" bash scripts/devos/plan-agent.sh intake .devos/intake-prompt.md devos/schemas/intake.schema.json \
+            .devos/intake.json "$EFFORT" 120 .devos/intake-resume-prompt.md
+      - name: Guards — intake surface and ledger structure
+        id: g
+        continue-on-error: true
+        run: |
+          node scripts/devos/guard-surfaces.mjs intake
+          node scripts/guards/run-all.mjs --only phases,secrets
+      - name: Act on the decision
+        id: act
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.DEVOS_PAT || github.token }}
+          GUARDS: ${{ steps.g.outcome }}
+        run: |
+          TITLE=$(node -e 'try{console.log(JSON.parse(require("fs").readFileSync(".devos/issue.json","utf8")).title)}catch{console.log("change request")}')
+          node -e '
+            const fs=require("fs"); let r={};
+            const read=(f)=>{try{return fs.readFileSync(f,"utf8")}catch{return ""}};
+            try { r=JSON.parse(read(".devos/intake.json")); } catch {}
+            const s=r.structured_output||{};
+            const lim=Boolean(r.limited)||(!s.decision&&/usage limit|limit reached|hit your|rate.?limit|overloaded/i.test(read(".devos/intake.raw")+read(".devos/intake.err")));
+            let d=s.decision||(lim?"limit":"error");
+            if (d==="accept" && process.env.GUARDS!=="success") d="guards";
+            const mins = r.duration_ms ? Math.round(r.duration_ms/60000) : null;
+            const u = r.usage || {};
+            const k = (n) => n ? `${Math.round(n/1000)}k` : "0";
+            const stats = mins!==null ? `\n\n<sub>Planning run: ${mins} min, ${r.num_turns ?? "?"} turns, ${k((u.input_tokens||0)+(u.cache_read_input_tokens||0)+(u.cache_creation_input_tokens||0))} tokens read, ${k(u.output_tokens)} written.</sub>` : "";
+            fs.writeFileSync(".devos/decision", d);
+            const q=(s.questions||[]).map((x,i)=>`${i+1}. ${x}`).join("\n");
+            fs.writeFileSync(".devos/intake-comment.md", (
+              d==="accept" && process.env.MODE==="method" ? `**Diagnosed; the fix is planned.** ${s.summary}\n\nThe diagnosis (\`docs/requests/issue-${process.env.ISSUE}.md\`) and method task ${(s.tasks||[]).join(", ")} are in the intake PR. Merging it starts the fix: the builder agent builds it, the reviewer checks every changed line, and the fix waits for your merge before anything changes in the automation.`
+              : d==="accept" ? `**Accepted.** ${s.summary}\n\nDraft ${s.od||"OD"} and tasks ${(s.tasks||[]).join(", ")} are in the intake PR. Merging it signs the decision and starts the work.`
+              : d==="needs-info" ? `**Needs your answers before planning.** ${s.summary||""}\n\n${q}\n\nAnswer in a comment, then comment \`/devos intake\` to run it again.`
+              : d==="reject" ? `**Cannot be done as asked.** ${s.summary}`
+              : d==="limit" ? "The reviewer agent hit a usage limit while planning this. The partial plan is kept on the intake branch and the planning resumes by itself after the reset (time below). Remove the `devos:quota-wait` label to cancel that."
+              : d==="guards" ? "The plan failed the intake guards (see the run log). Comment `/devos intake resume` to have the reviewer fix it, or `/devos intake` to plan afresh."
+              : "The reviewer run stopped without a decision. Its partial plan is kept on the intake branch: comment `/devos intake resume` to continue it, or `/devos intake` to plan afresh.") + stats);'
+          D=$(cat .devos/decision)
+          # PR-52: the planning runs' usage lines go in with the plan (a run that commits nothing keeps its usage in the comment).
+          node scripts/devos/usage.mjs flush --task "intake-$ISSUE"
+          if [ "$D" = "limit" ] || [ "$D" = "error" ] || [ "$D" = "guards" ]; then
+            # Keep whatever the reviewer already wrote, so a resume continues instead of starting over.
+            git add -A -- docs
+            open_pr=$(gh pr list --repo "$REPO" --head "$BR" --state open --json number --jq '.[0].number // empty')
+            if [ -n "$open_pr" ]; then
+              echo "An intake PR (#$open_pr) is open on $BR; its plan is left as it is."
+            elif ! git diff --cached --quiet; then
+              git commit -m "Intake #$ISSUE: partial plan ($D)"
+              git push --force "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" "HEAD:refs/heads/$BR"
+            fi
+          fi
+          WAIT_COMMENT=""
+          if [ "$D" = "limit" ]; then
+            # PR-31: the earlier wait comment on this issue (if any) is updated, not repeated, and a limit
+            # that states no reset time is retried later each time (60, 120, 240 … minutes, capped).
+            prev=$(gh api "repos/$REPO/issues/$ISSUE/comments?per_page=100" \
+              --jq '[.[] | select(.body | contains("<!-- devos-intake-resume issue='"$ISSUE"' "))] | last | "\(.id) \(.body)"' 2>/dev/null || echo "")
+            WAIT_COMMENT=$(echo "$prev" | head -n 1 | awk '{print $1}' | grep -E '^[0-9]+$' || true)
+            CHECKS=$(echo "$prev" | grep -oE 'checks=[0-9]+' | tail -1 | cut -d= -f2); CHECKS=${CHECKS:-0}
+            CHECKS=$(( CHECKS + 1 ))
+            NB=$(CHECKS="$CHECKS" node --input-type=module -e '
+              import { earliestNotBefore, readText } from "./scripts/devos/limits.mjs";
+              import { readFileSync } from "node:fs";
+              const r = JSON.parse(readFileSync("./devos.config.json", "utf8")).resume ?? {};
+              const base = r.default_wait_minutes ?? 60, cap = r.max_backoff_minutes ?? 360;
+              const backoff = Math.min(base * 2 ** (Number(process.env.CHECKS) - 1), cap);
+              let tool = "claude"; try { tool = JSON.parse(readText(".devos/intake.json")).tool || tool; } catch {}
+              console.log(earliestNotBefore(tool, readText(".devos/intake.raw") + "\n" + readText(".devos/intake.err"), backoff));')
+            echo "not_before=$NB" >> "$GITHUB_OUTPUT"
+            gh label create "devos:quota-wait" --color fbca04 --force --repo "$REPO" >/dev/null
+            gh issue edit "$ISSUE" --repo "$REPO" --add-label "devos:quota-wait"
+            printf '\n\nResumes after %s (UTC). Checked %s time(s) so far; last check %s (UTC).\n<!-- devos-intake-resume issue=%s not_before=%s checks=%s -->\n' \
+              "$NB" "$CHECKS" "$(date -u +%Y-%m-%dT%H:%MZ)" "$ISSUE" "$NB" "$CHECKS" >> .devos/intake-comment.md
+          fi
+          if [ "$D" = "accept" ]; then
+            git add -A
+            git commit -m "Intake #$ISSUE: plan the request ($TITLE)"
+            git push --force "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" "HEAD:refs/heads/$BR"
+            gh label create "devos:intake" --color 1d76db --force --repo "$REPO" >/dev/null
+            gh label create "devos" --color 0e8a16 --force --repo "$REPO" >/dev/null
+            if ! gh pr view "$BR" --repo "$REPO" --json number >/dev/null 2>&1; then
+              if [ "$MODE" = "method" ]; then
+                gh label create "devos:method" --color 5319e7 --force --repo "$REPO" >/dev/null
+                gh pr create --repo "$REPO" --base main --head "$BR" --title "Method fix #$ISSUE: $TITLE" \
+                  --body-file .devos/intake-comment.md --label devos --label "devos:intake" --label "devos:method"
+              else
+                gh pr create --repo "$REPO" --base main --head "$BR" --title "Intake #$ISSUE: $TITLE" \
+                  --body-file .devos/intake-comment.md --label devos --label "devos:intake"
+              fi
+            fi
+            gh api "repos/$REPO/statuses/$(git rev-parse HEAD)" -f state=success -f context=devos/verdict \
+              -f description="Intake plan: merging signs the drafted OD" >/dev/null || true
+            echo "" >> .devos/intake-comment.md
+            echo "Intake PR: $(gh pr view "$BR" --repo "$REPO" --json url --jq .url)" >> .devos/intake-comment.md
+          fi
+          if [ -n "$WAIT_COMMENT" ]; then
+            gh api -X PATCH "repos/$REPO/issues/comments/$WAIT_COMMENT" -F body=@.devos/intake-comment.md > /dev/null
+            echo "Updated the wait comment on #$ISSUE instead of adding a new one."
+          else
+            gh issue comment "$ISSUE" --repo "$REPO" --body-file .devos/intake-comment.md
+          fi
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: devos-intake-${{ github.event.issue.number }}
+          path: .devos/
+          include-hidden-files: true
+          if-no-files-found: ignore
+
+  # PR-20: a planning run stopped by a usage limit resumes by itself after the reset (up to
+  # resume.inline_wait_max_minutes; longer waits are picked up by devos-resume). Remove the
+  # devos:quota-wait label from the issue to cancel.
+  intake-wait:
+    needs: intake
+    if: always() && needs.intake.outputs.not_before != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 345
+    permissions:
+      actions: write
+      issues: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+          sparse-checkout: devos.config.json
+      - name: Sleep until the limit resets, then resume the planning
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          ISSUE: ${{ needs.intake.outputs.issue }}
+          NOT_BEFORE: ${{ needs.intake.outputs.not_before }}
+          IS_PRIVATE: ${{ github.event.repository.private }}
+        run: |
+          max_min=$(node -e 'console.log(require("./devos.config.json").resume?.inline_wait_max_minutes ?? 330)')
+          now=$(date -u +%s)
+          target=$(date -u -d "$NOT_BEFORE" +%s 2>/dev/null || echo $((now + 3600)))
+          wait=$(( target - now ))
+          if [ "$wait" -gt $(( max_min * 60 )) ]; then
+            # PR-31: a long wait is relayed by devos-wait (GitHub's schedule is best effort). On a private
+            # repository sleeping costs runner minutes, so resume.relay decides.
+            relay=$(node -e 'console.log(require("./devos.config.json").resume?.relay ?? "public")')
+            if [ "$relay" = "always" ] || { [ "$relay" = "public" ] && [ "$IS_PRIVATE" != "true" ]; }; then
+              gh workflow run devos-wait.yml --repo "$REPO" --ref main -f kind=intake -f not_before="$NOT_BEFORE" -f issue="$ISSUE"
+              echo "::notice title=Dev OS::Issue #$ISSUE resets at $NOT_BEFORE; devos-wait keeps waiting and resumes it then."
+            else
+              echo "::notice title=Dev OS::Issue #$ISSUE resets at $NOT_BEFORE; devos-resume (scheduled, best effort) picks it up, or run devos-resume by hand after that time."
+            fi
+            exit 0
+          fi
+          if [ "$wait" -gt 0 ]; then echo "Waiting $(( wait / 60 )) minutes, until $NOT_BEFORE (UTC)."; sleep "$wait"; fi
+          labels=$(gh issue view "$ISSUE" --repo "$REPO" --json labels --jq '[.labels[].name] | join(",")')
+          case ",$labels," in *",devos:quota-wait,"*) ;; *) echo "Label removed; not resuming."; exit 0 ;; esac
+          gh issue edit "$ISSUE" --repo "$REPO" --remove-label "devos:quota-wait"
+          gh workflow run devos-intake.yml --repo "$REPO" --ref main -f issue="$ISSUE" -f resume=true
+          echo "::notice title=Dev OS::Resumed the planning of issue #$ISSUE."
+
+  # PR-20: "/devos go" in the run-notices issue starts the heavy task DEVOS_HEAVY=hold is holding.
+  go:
+    if: >-
+      vars.DEVOS_PAUSED != 'true' && github.event_name == 'issue_comment' && !github.event.issue.pull_request &&
+      startsWith(github.event.comment.body, '/devos go') &&
+      contains(github.event.issue.labels.*.name, 'devos:notices') &&
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      issues: write
+    steps:
+      - name: Start the held task
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          ISSUE: ${{ github.event.issue.number }}
+        run: |
+          last=$(gh issue view "$ISSUE" --repo "$REPO" --json comments \
+            --jq '[.comments[].body | select(test("<!-- devos-held(-done)? "))] | last // ""')
+          marker=$(printf '%s' "$last" | grep -o 'devos-held task=T[0-9]* attempt=[0-9]*' | tail -1 || true)
+          if [ -z "$marker" ]; then
+            gh issue comment "$ISSUE" --repo "$REPO" --body "Dev OS: nothing is held right now."
+            exit 0
+          fi
+          task=$(echo "$marker" | sed 's/.*task=\(T[0-9]*\).*/\1/')
+          attempt=$(echo "$marker" | sed 's/.*attempt=\([0-9]*\).*/\1/')
+          gh workflow run devos-cycle.yml --repo "$REPO" --ref main -f task="$task" -f attempt="$attempt" -f go=true
+          gh issue comment "$ISSUE" --repo "$REPO" --body "Dev OS: starting $task attempt $attempt now.
+          <!-- devos-held-done task=$task -->"
+
+  revise:
+    if: >-
+      vars.DEVOS_PAUSED != 'true' && github.event_name == 'issue_comment' && github.event.issue.pull_request &&
+      startsWith(github.event.comment.body, '/devos revise') &&
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    concurrency:
+      group: devos-cycle
+      cancel-in-progress: false
+    env:
+      PR: ${{ github.event.issue.number }}
+      REPO: ${{ github.repository }}
+    steps:
+      - name: Find the task branch
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          read -r ref state < <(gh pr view "$PR" --repo "$REPO" --json headRefName,state --jq '"\(.headRefName) \(.state)"')
+          case "$ref" in task/T[0-9][0-9]) ;; *) gh pr comment "$PR" --repo "$REPO" --body "Dev OS: \`/devos revise\` works on task PRs (task/Tnn) only."; exit 1 ;; esac
+          [ "$state" = "OPEN" ] || { gh pr comment "$PR" --repo "$REPO" --body "Dev OS: this PR is $state; file a change request issue instead."; exit 1; }
+          echo "branch=$ref" >> "$GITHUB_OUTPUT"
+          echo "task=${ref#task/}" >> "$GITHUB_OUTPUT"
+          gh pr comment "$PR" --repo "$REPO" --body "Dev OS: revising ${ref#task/} with your note. Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ steps.pr.outputs.branch }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install the reviewer agent's CLI (PR-53)
+        run: |
+          tool=$(node scripts/devos/agents.mjs reviewer --mode deep | sed -n 's/^reviewer_tool=//p')
+          case "$tool" in
+            claude) npm install -g @anthropic-ai/claude-code ;;
+            cursor) curl https://cursor.com/install -fsS | bash; echo "$HOME/.cursor/bin" >> "$GITHUB_PATH"; echo "$HOME/.local/bin" >> "$GITHUB_PATH" ;;
+            codex) npm install -g @openai/codex ;;
+            gemini) npm install -g @google/gemini-cli ;;
+          esac
+      - name: Work out the next attempt and save the note
+        id: n
+        env:
+          TASK: ${{ steps.pr.outputs.task }}
+          NOTE: ${{ github.event.comment.body }}
+        run: |
+          git config user.name "devos-runner"
+          git config user.email "devos-runner@users.noreply.github.com"
+          last=$( { ls docs/reviews/ 2>/dev/null | sed -n "s/^${TASK}-a\([0-9]*\)\.md$/\1/p"; git log --format=%s | sed -n "s/^${TASK} a\([0-9]*\):.*/\1/p"; echo 0; } | sort -n | tail -1)
+          echo "attempt=$(( last + 1 ))" >> "$GITHUB_OUTPUT"
+          mkdir -p .devos
+          printf '%s\n' "${NOTE#/devos revise}" > .devos/revision.md
+      - name: Reviewer — reissue the fence with the revision
+        env:
+          CLAUDE_OAUTH_1: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          CLAUDE_APIKEY_1: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_OAUTH_2: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 }}
+          CLAUDE_APIKEY_2: ${{ secrets.ANTHROPIC_API_KEY_2 }}
+          CURSOR_KEY_1: ${{ secrets.CURSOR_API_KEY }}
+          CURSOR_KEY_2: ${{ secrets.CURSOR_API_KEY_2 }}
+          CODEX_KEY_1: ${{ secrets.OPENAI_API_KEY }}
+          CODEX_KEY_2: ${{ secrets.OPENAI_API_KEY_2 }}
+          GEMINI_KEY_1: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_KEY_2: ${{ secrets.GEMINI_API_KEY_2 }}
+          DEVOS_CLAUDE_ACCOUNT: ${{ vars.DEVOS_CLAUDE_ACCOUNT || '1' }}
+          DEVOS_CURSOR_ACCOUNT: ${{ vars.DEVOS_CURSOR_ACCOUNT || '1' }}
+          DEVOS_CODEX_ACCOUNT: ${{ vars.DEVOS_CODEX_ACCOUNT || '1' }}
+          DEVOS_GEMINI_ACCOUNT: ${{ vars.DEVOS_GEMINI_ACCOUNT || '1' }}
+          DEVOS_ACCOUNT_SWITCH: ${{ vars.DEVOS_ACCOUNT_SWITCH || 'auto' }}
+          TASK: ${{ steps.pr.outputs.task }}
+          ATTEMPT: ${{ steps.n.outputs.attempt }}
+        run: |
+          EFFORT=$(node -e 'import("./scripts/devos/lib.mjs").then(({parsePhases,reviewerEffort})=>{const r=parsePhases().rows.find(x=>x.task===process.env.TASK);console.log(reviewerEffort(r))})')
+          node scripts/devos/render-prompt.mjs revise "$TASK" "$ATTEMPT" --out .devos/revise-prompt.md
+          # PR-53: the project's reviewer agent reissues the fence; a usage limit switches only to that tool's other account.
+          bash scripts/devos/plan-agent.sh revise .devos/revise-prompt.md devos/schemas/intake.schema.json .devos/revise.json "$EFFORT" 60
+      - name: Guard — revise surface
+        run: node scripts/devos/guard-surfaces.mjs revise
+      - name: Push the reissued fence and rebuild
+        env:
+          GH_TOKEN: ${{ secrets.DEVOS_PAT || github.token }}
+          TASK: ${{ steps.pr.outputs.task }}
+          ATTEMPT: ${{ steps.n.outputs.attempt }}
+          BR: ${{ steps.pr.outputs.branch }}
+        run: |
+          D=$(node -e 'try{const r=require("./.devos/revise.json");console.log(r.structured_output?.decision||"error")}catch{console.log("error")}')
+          S=$(node -e 'try{const r=require("./.devos/revise.json");console.log(r.structured_output?.summary||"")}catch{console.log("")}')
+          if [ "$D" != "revised" ] || git diff --quiet -- "docs/fences/$TASK.md"; then
+            gh pr comment "$PR" --repo "$REPO" --body "Dev OS: the fence was not reissued ($D). $S"
+            exit 0
+          fi
+          node scripts/devos/usage.mjs flush --task "$TASK"
+          git add -A
+          git commit -m "$TASK: fence reissued for human revision (attempt $ATTEMPT)"
+          git push "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" "HEAD:refs/heads/$BR"
+          gh pr edit "$BR" --repo "$REPO" --remove-label "devos:human-gate" >/dev/null 2>&1 || true
+          gh pr edit "$BR" --repo "$REPO" --remove-label "devos:halted" >/dev/null 2>&1 || true
+          gh workflow run devos-cycle.yml --repo "$REPO" --ref main -f task="$TASK" -f attempt="$ATTEMPT" -f revision=true
+          gh pr comment "$PR" --repo "$REPO" --body "Dev OS: fence reissued for attempt $ATTEMPT and the build is queued. $S"

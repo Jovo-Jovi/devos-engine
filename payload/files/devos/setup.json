@@ -102,7 +102,7 @@
       "kind": "variable",
       "names": ["DEVOS_VERCEL"],
       "value": "true",
-      "when": ["always"],
+      "when": ["chosen:vercel"],
       "blocks": "deploy",
       "steps": [
         "GitHub → Settings → Secrets and variables → Actions → Variables → New repository variable `DEVOS_VERCEL` = `true`."

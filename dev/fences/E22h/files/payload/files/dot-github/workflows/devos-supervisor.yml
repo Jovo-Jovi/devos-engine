@@ -1,0 +1,129 @@
+# Dev OS supervisor: keeps the automation moving without the owner having to diagnose it.
+#
+# Runs when a Dev OS workflow finishes, every 30 minutes, when you run it by hand, and when you reply
+# `/devos approve <id>` or `/devos reject <id>` on the "Dev OS: supervisor" issue. It:
+#   - spots what has stopped: a failed cycle run, a halted or overdue parked task, a rescue branch,
+#     or nothing running although the next task is waiting;
+#   - explains it with fixed rules first, and asks Claude Code (read-only) only when no rule fits and Claude Code is
+#     the project's reviewer agent (PR-53);
+#   - fixes what is safe on its own (re-run, resume, continue from the branch, recover a rescue
+#     branch, start the next task), at most supervisor.max_auto_per_key times for the same cause;
+#   - turns everything else into something you approve: a method-fix issue, a change request, a
+#     proposed revision (`/devos approve <id>`), or the exact setup steps only you can do;
+#   - reports each incident as one comment on the "Dev OS: supervisor" issue.
+# It never merges, never pushes to main, never handles a secret value. Off switch: repository
+# variable DEVOS_SUPERVISOR=off (DEVOS_PAUSED=true stops it too).
+name: devos-supervisor
+
+on:
+  workflow_run:
+    workflows: [devos-cycle, devos-intake, devos-deploy, devos-resume, devos-wait, devos-advance, ci]
+    types: [completed]
+  schedule:
+    - cron: "11,41 * * * *"
+  issue_comment:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Only report what it would do"
+        type: boolean
+        default: false
+
+concurrency:
+  group: devos-supervisor
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: read
+  issues: write
+  pull-requests: read
+
+jobs:
+  supervise:
+    if: >-
+      vars.DEVOS_SUPERVISOR != 'off' && vars.DEVOS_PAUSED != 'true' &&
+      (github.event_name != 'workflow_run' || !contains(fromJSON('["skipped","cancelled"]'), github.event.workflow_run.conclusion)) && (
+        github.event_name != 'issue_comment' || (
+          !github.event.issue.pull_request &&
+          contains(github.event.issue.labels.*.name, 'devos:supervisor') &&
+          (startsWith(github.event.comment.body, '/devos approve') || startsWith(github.event.comment.body, '/devos reject')) &&
+          contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
+        )
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      REPO: ${{ github.repository }}
+      # The owner's runner token: its comments count as the owner's (so `/devos revise` runs) and it may
+      # dispatch the cycle. Never written anywhere; Claude's step does not receive it.
+      GH_TOKEN: ${{ secrets.DEVOS_PAT || github.token }}
+      # Its own reports use the built-in token, whose comments start no workflow: no self-trigger loop.
+      REPORT_TOKEN: ${{ github.token }}
+      EVENT_NAME: ${{ github.event_name }}
+      # workflow_run.name is the run's title ("devos T05 · attempt 4"); the file names the workflow.
+      WF_NAME: ${{ github.event.workflow_run.name }}
+      WF_PATH: ${{ github.event.workflow_run.path }}
+      WF_RUN_ID: ${{ github.event.workflow_run.id }}
+      WF_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+      DRY: ${{ inputs.dry_run && '--dry-run' || '' }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Approve or reject a proposal
+        if: github.event_name == 'issue_comment'
+        env:
+          BODY: ${{ github.event.comment.body }}
+        run: node scripts/devos/supervisor.mjs approve --body "$BODY"
+
+      - name: Scan — what has stopped, and why (fixed rules)
+        id: scan
+        if: github.event_name != 'issue_comment'
+        run: node scripts/devos/supervisor.mjs scan $DRY
+
+      # Only for what no rule explains, and only when Claude Code is the project's reviewer agent (PR-53): it reads the
+      # facts, the logs and the repository, read-only, on the model the developer chose.
+      - name: Diagnose — Claude Code (read-only)
+        if: steps.scan.outputs.ask_claude == 'true'
+        continue-on-error: true
+        timeout-minutes: 15
+        env:
+          GH_TOKEN: ""
+          OAUTH: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN || secrets.CLAUDE_CODE_OAUTH_TOKEN_2 }}
+          APIKEY: ${{ secrets.ANTHROPIC_API_KEY || secrets.ANTHROPIC_API_KEY_2 }}
+        run: |
+          # PR-53: the second opinion runs only when the project's reviewer agent is Claude Code, on the model the developer chose.
+          line=$(node scripts/devos/agents.mjs reviewer --mode deep 2>/dev/null || true)
+          tool=$(printf '%s\n' "$line" | sed -n 's/^reviewer_tool=//p')
+          if [ -n "$line" ] && [ "$tool" != "claude" ]; then echo "The project's reviewer agent is $tool; no Claude Code second opinion (PR-53)."; exit 0; fi
+          chosen=$(printf '%s\n' "$line" | sed -n 's/^reviewer_model=//p')
+          [ -n "$OAUTH" ] && export CLAUDE_CODE_OAUTH_TOKEN="$OAUTH"
+          [ -n "$APIKEY" ] && export ANTHROPIC_API_KEY="$APIKEY"
+          [ -n "$OAUTH$APIKEY" ] || { echo "No Claude credential; the supervisor reports without a diagnosis."; exit 0; }
+          npm install -g @anthropic-ai/claude-code > /dev/null
+          MODEL=${chosen:-$(node -e 'const c=require("./devos.config.json");console.log(c.supervisor?.model||c.reviewer.gate_model)')}
+          claude -p "$(cat devos/prompts/supervisor.md)" --model "$MODEL" --effort high --output-format json \
+            --json-schema "$(cat devos/schemas/supervisor.schema.json)" --permission-mode dontAsk --max-turns 25 \
+            --allowedTools "Read,Glob,Grep" --disallowedTools "Bash,Write,Edit,WebFetch,WebSearch" \
+            > .devos/supervisor/claude.json 2> .devos/supervisor/claude.err || tail -c 1500 .devos/supervisor/claude.err
+          # PR-52: nothing here is committed, so this run's usage goes on its summary page only.
+          node scripts/devos/usage.mjs record --stage supervisor --command claude --model "$MODEL" --out .devos/supervisor/claude.json --summary || true
+
+      - name: Act and report
+        if: github.event_name != 'issue_comment' && steps.scan.outputs.incidents != '0'
+        run: node scripts/devos/supervisor.mjs act $DRY --claude .devos/supervisor/claude.json
+
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: devos-supervisor-${{ github.run_id }}
+          path: .devos/supervisor/
+          include-hidden-files: true
+          if-no-files-found: ignore

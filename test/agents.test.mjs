@@ -129,16 +129,19 @@ test("agents.test.mjs pool choice, reviewer model, builder family and workflow l
     assert.equal(workflow.includes("claude -p"), true);
     assert.equal(workflow.includes("arrives in E12"), false);
     assert.equal(workflow.includes("VERDICT:"), false);
-    assert.equal(workflow.split('next --after "$builder_id"').length - 1, 1);
+    // PR-53: no other agent takes over on a usage limit, no fallback model, and only the chosen agents' CLIs.
+    assert.equal(workflow.includes("agents.mjs next"), false);
+    assert.equal(workflow.includes("--fallback-model"), false);
+    assert.equal(workflow.includes("npm install -g pnpm@10 @anthropic-ai/claude-code"), false);
     assert.equal(workflow.includes('next --after "$rev_id"'), false);
     assert.equal(workflow.includes('MODEL="$rev_model"'), true);
     const restoreAt = workflow.indexOf("role-env.mjs restore || exit 1; trap - EXIT");
     const changedAt = workflow.indexOf('echo "changed=$(git status --porcelain');
     assert.equal(restoreAt >= 0 && changedAt > restoreAt, true);
-    const methodAt = workflow.indexOf("a method fix is reviewed by Claude Code with the gate model (PR-28)");
+    const methodAt = workflow.indexOf("a method fix is always a deep review, by the project's own reviewer agent");
     const choiceAt = workflow.indexOf("node scripts/devos/role-env.mjs swap cursor-reviewer");
     assert.equal(methodAt >= 0 && choiceAt > methodAt, true);
-    assert.equal(workflow.includes('rev_tool=claude'), true);
+    assert.equal(workflow.includes('rev_tool=claude'), false);
     const workflows = path.join(root, "payload", "files", "dot-github", "workflows");
     for (const name of readdirSync(workflows)) {
       if (!name.endsWith(".yml")) continue;

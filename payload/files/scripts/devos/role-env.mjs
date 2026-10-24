@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Swap a tool into the other role's kit, then restore its own config byte for byte (PR-42).
-// Usage: node scripts/devos/role-env.mjs swap cursor-reviewer|claude-builder|codex-builder|codex-reviewer|gemini-builder|gemini-reviewer
+// Usage: node scripts/devos/role-env.mjs swap cursor-reviewer|cursor-planner|claude-builder|codex-builder|codex-reviewer|gemini-builder|gemini-reviewer
 //        node scripts/devos/role-env.mjs restore
 import { execFileSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
@@ -14,6 +14,13 @@ const KITS = {
     install: [
       { from: "devos/roles/cursor-reviewer/cli.json", to: ".cursor/cli.json" },
       { from: "devos/roles/cursor-reviewer/rules", to: ".cursor/rules" },
+    ],
+  },
+  "cursor-planner": {
+    move: [".cursor/cli.json", ".cursor/hooks.json", ".cursor/rules"],
+    install: [
+      { from: "devos/roles/cursor-planner/cli.json", to: ".cursor/cli.json" },
+      { from: "devos/roles/cursor-planner/rules", to: ".cursor/rules" },
     ],
   },
   "claude-builder": {
@@ -109,6 +116,6 @@ const kit = process.argv[3] ?? "";
 if (command === "swap") swap(kit);
 else if (command === "restore") restore();
 else {
-  console.error("usage: role-env.mjs swap cursor-reviewer|claude-builder|codex-builder|codex-reviewer|gemini-builder|gemini-reviewer | restore");
+  console.error("usage: role-env.mjs swap cursor-reviewer|cursor-planner|claude-builder|codex-builder|codex-reviewer|gemini-builder|gemini-reviewer | restore");
   process.exit(2);
 }

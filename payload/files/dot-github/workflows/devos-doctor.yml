@@ -8,7 +8,8 @@
 #
 # It keeps one comment per PR up to date, sets the commit status `devos/gate` (green = ready for
 # your merge), labels the PR `devos:needs-you` when only a human can act, re-runs a ci run that
-# failed for an environment reason once per commit, and asks Claude (read-only) for a second opinion
+# failed for an environment reason once per commit, and asks Claude Code (read-only, only when it is the project's
+# reviewer agent, PR-53) for a second opinion
 # when a failure matches no known rule. It never merges, pushes or edits code.
 name: devos-doctor
 run-name: "doctor · ${{ inputs.pr && format('PR #{0}', inputs.pr) || github.event.issue.number && format('PR #{0}', github.event.issue.number) || github.event.workflow_run.head_branch }}"
@@ -102,7 +103,8 @@ jobs:
         if: steps.pr.outputs.pr != ''
         run: node scripts/devos/doctor.mjs collect --pr "${{ steps.pr.outputs.pr }}"
 
-      # Only when a failure matches no rule: Claude reads the logs and the code, read-only.
+      # Only when a failure matches no rule, and only when Claude Code is the project's reviewer agent (PR-53): it reads
+      # the logs and the code, read-only, on the model the developer chose.
       - name: Check out the PR head for the second opinion
         if: steps.c.outputs.ask_claude == 'true'
         uses: actions/checkout@v6
@@ -118,11 +120,16 @@ jobs:
           OAUTH: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN || secrets.CLAUDE_CODE_OAUTH_TOKEN_2 }}
           APIKEY: ${{ secrets.ANTHROPIC_API_KEY || secrets.ANTHROPIC_API_KEY_2 }}
         run: |
+          # PR-53: the second opinion runs only when the project's reviewer agent is Claude Code, on the model the developer chose.
+          line=$(node scripts/devos/agents.mjs reviewer --mode deep 2>/dev/null || true)
+          tool=$(printf '%s\n' "$line" | sed -n 's/^reviewer_tool=//p')
+          if [ -n "$line" ] && [ "$tool" != "claude" ]; then echo "The project's reviewer agent is $tool; no Claude Code second opinion (PR-53)."; exit 0; fi
+          chosen=$(printf '%s\n' "$line" | sed -n 's/^reviewer_model=//p')
           [ -n "$OAUTH" ] && export CLAUDE_CODE_OAUTH_TOKEN="$OAUTH"
           [ -n "$APIKEY" ] && export ANTHROPIC_API_KEY="$APIKEY"
           [ -n "$OAUTH$APIKEY" ] || { echo "No Claude credential; skipping the second opinion."; exit 0; }
           npm install -g @anthropic-ai/claude-code > /dev/null
-          MODEL=$(node -e 'console.log(require("./devos.config.json").reviewer.model_by_risk["2"])')
+          MODEL=${chosen:-$(node -e 'console.log(require("./devos.config.json").reviewer.model_by_risk["2"])')}
           mkdir -p pr/.devos && cp -r .devos/doctor pr/.devos/doctor
           cd pr
           claude -p "$(cat ../devos/prompts/doctor.md)" --model "$MODEL" --effort high --output-format json \

@@ -52,6 +52,11 @@ export function isHumanGate(row) {
 }
 
 export function reviewerModel(row, cfg = config()) {
+  // PR-53: a project with agents is reviewed only by the agent the developer chose; the Claude ids are the old default.
+  if (cfg.agents?.reviewer) {
+    const deep = row.risk >= 3 || (row.gate && row.gate !== "—" && row.gate !== "-");
+    return (!deep && cfg.agents.reviewer_light ? cfg.agents.reviewer_light : cfg.agents.reviewer).model;
+  }
   if (row.gate && row.gate !== "—" && row.gate !== "-") return cfg.reviewer.gate_model;
   return cfg.reviewer.model_by_risk[String(row.risk)] ?? cfg.reviewer.gate_model;
 }

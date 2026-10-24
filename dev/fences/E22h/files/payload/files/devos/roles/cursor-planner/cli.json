@@ -1,0 +1,52 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(**)",
+      "Write(docs/**)",
+      "Write(.devos/**)",
+      "Shell(node)",
+      "Shell(pnpm)",
+      "Shell(ls)",
+      "Shell(cat)",
+      "Shell(git:status)",
+      "Shell(git:diff)",
+      "Shell(git:log)",
+      "Shell(git:show)",
+      "Shell(git:rev-parse)",
+      "Mcp(context7:*)"
+    ],
+    "deny": [
+      "Shell(git:push)",
+      "Shell(git:commit)",
+      "Shell(git:reset)",
+      "Shell(git:checkout)",
+      "Shell(gh)",
+      "Shell(curl)",
+      "Shell(wget)",
+      "Shell(sudo)",
+      "Read(.env*)",
+      "Write(.env*)",
+      "Write(.github/workflows/devos-*)",
+      "Write(scripts/devos/**)",
+      "Write(scripts/guards/**)",
+      "Write(devos/**)",
+      "Write(devos.config.json)",
+      "Write(docs/method/DEVOS_FIT.md)",
+      "Write(CLAUDE.md)",
+      "Write(.claude/**)",
+      "Write(.cursor/cli.json)",
+      "Write(.cursor/hooks.json)",
+      "Write(.cursor/hooks/**)",
+      "Write(content/**)",
+      "Shell(supabase:link)",
+      "Shell(supabase:login)",
+      "Shell(supabase:projects)",
+      "Shell(supabase:secrets)",
+      "Write(supabase/.temp/**)",
+      "Write(src/**)",
+      "Write(supabase/**)",
+      "Write(e2e/**)",
+      "Write(public/**)"
+    ]
+  }
+}

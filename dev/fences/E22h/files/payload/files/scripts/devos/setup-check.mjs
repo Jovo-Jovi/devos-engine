@@ -29,7 +29,8 @@ const items = [...load("devos/setup.json"), ...load("docs/setup-items.json").map
 // The deploy only cares about modules that are on main now; the issue also lists what is coming.
 const modules = new Set(forDeploy ? activeModules() : plannedModules());
 const methodOpen = parsePhases().rows.some((r) => !r.done && isMethodRow(r));
-// PR-44: an agent tool's credentials are needed only when an agent uses that tool; a method fix always runs on Claude Code (PR-28).
+// PR-44, PR-53: an agent tool's credentials are needed only when an agent the developer chose uses that tool,
+// a method fix included (it runs on the project's own agents).
 const agents = config().agents ?? {};
 const toolsInUse = new Set([agents.reviewer, agents.reviewer_light, ...(agents.pool ?? [])].filter(Boolean).map((a) => a.tool));
 const holds = (cond) => {
@@ -37,7 +38,7 @@ const holds = (cond) => {
   if (cond === "method") return methodOpen;
   if (cond.startsWith("module:")) return modules.has(cond.slice(7));
   if (cond.startsWith("var:")) return String(vars[cond.slice(4)] ?? "") === "true";
-  if (cond.startsWith("tool:")) return toolsInUse.has(cond.slice(5)) || (cond === "tool:claude" && methodOpen);
+  if (cond.startsWith("tool:")) return toolsInUse.has(cond.slice(5));
   // PR-53: an item for a module the project did not choose at devos init (hosting on Vercel, say) does not apply.
   if (cond.startsWith("chosen:")) {
     const chosen = chosenModules();

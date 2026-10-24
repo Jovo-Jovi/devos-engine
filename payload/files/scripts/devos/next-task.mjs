@@ -61,6 +61,6 @@ emit({
   reviewer_model: reviewerModel(row, cfg),
   reviewer_max_turns: cfg.reviewer.max_turns,
   reviewer_effort: reviewerEffort(row, cfg),
-  reviewer_fallback: cfg.reviewer.fallback_model && cfg.reviewer.fallback_model !== reviewerModel(row, cfg) ? cfg.reviewer.fallback_model : "",
+  reviewer_fallback: !cfg.agents && cfg.reviewer.fallback_model && cfg.reviewer.fallback_model !== reviewerModel(row, cfg) ? cfg.reviewer.fallback_model : "",
   next_task: next ? next.task : "",
 });

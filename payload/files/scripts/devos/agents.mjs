@@ -29,14 +29,15 @@ function isAgent(value, label) {
 
 export function validate(agents) {
   if (!agents || typeof agents !== "object" || Array.isArray(agents)) bad("missing");
+  // PR-53: reviewer_light may be absent (the generated config drops a null): the reviewer then reviews every task.
   const allowed = ["reviewer", "reviewer_light", "pool", "policy"];
   const rootKeys = Object.keys(agents);
-  if (rootKeys.length !== allowed.length || allowed.some((key) => !rootKeys.includes(key))) {
-    bad("must have reviewer, reviewer_light, pool and policy");
+  if (rootKeys.some((key) => !allowed.includes(key)) || ["reviewer", "pool", "policy"].some((key) => !rootKeys.includes(key))) {
+    bad("must have reviewer, pool and policy, and may have reviewer_light");
   }
   const reviewerError = isAgent(agents.reviewer, "reviewer");
   if (reviewerError) bad(reviewerError);
-  if (agents.reviewer_light !== null) {
+  if (agents.reviewer_light != null) {
     const lightError = isAgent(agents.reviewer_light, "reviewer_light");
     if (lightError) bad(lightError);
   }

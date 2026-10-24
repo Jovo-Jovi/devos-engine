@@ -1,0 +1,1002 @@
+# Dev OS automated cycle. One run = one task attempt:
+#   resolve task → the builder agent builds on task/Tnn → surface guard → commit/push/PR → checks →
+#   the reviewer agent reviews from the branch → surface guard → verdict.mjs decides → merge | human gate | retry | halt
+# The agents and models are the ones the developer chose (agents in devos.config.json, PR-53): no other is installed or used.
+# Start it from Actions → devos-cycle → Run workflow (inputs blank = next open task).
+# The fence chooses the builder's effort/fast; Vercel preview per attempt (when DEVOS_VERCEL=true);
+# screenshots for the reviewer's visual check; a usage-limit wait is resumed by the wait-and-resume
+# job below (up to ~5.5 h) and otherwise by devos-resume.
+name: devos-cycle
+run-name: "devos ${{ inputs.task || 'next' }} · attempt ${{ inputs.attempt || '1' }}${{ inputs.review_only && ' · review only' || '' }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      task:
+        description: "Task id, e.g. T03 (blank = next open task in docs/PHASES.md)"
+        required: false
+        default: ""
+      attempt:
+        description: "Attempt number (1 for a first run)"
+        required: false
+        default: "1"
+      review_only:
+        description: "Re-run only the reviewer on the existing task branch (after a reviewer/infra failure)"
+        type: boolean
+        required: false
+        default: false
+      effort:
+        description: "Builder effort (fence = use the reviewer's choice in the fence)"
+        type: choice
+        options: [fence, low, medium, high, xhigh]
+        default: fence
+      fast:
+        description: "Cursor Fast mode (fence = use the reviewer's choice in the fence)"
+        type: choice
+        options: [fence, "no", "yes"]
+        default: fence
+      revision:
+        description: "Set by /devos revise: a human revision may go past max_attempts"
+        type: boolean
+        required: false
+        default: false
+      reuse_review:
+        description: "With review_only: keep the review file this attempt already wrote and only re-decide (PR-21)"
+        type: boolean
+        required: false
+        default: false
+      go:
+        description: "Start now even if DEVOS_HEAVY=hold would hold this heavy task (PR-20)"
+        type: boolean
+        required: false
+        default: false
+      cursor_account:
+        description: "Cursor account to start with (default = variable DEVOS_CURSOR_ACCOUNT, else 1). On a usage limit the run switches to the other (PR-29)"
+        type: choice
+        options: [default, "1", "2"]
+        default: default
+      claude_account:
+        description: "Claude account to start with (default = variable DEVOS_CLAUDE_ACCOUNT, else 1). On a usage limit the run switches to the other (PR-29)"
+        type: choice
+        options: [default, "1", "2"]
+        default: default
+
+concurrency:
+  group: devos-cycle
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  actions: write
+  statuses: write
+
+jobs:
+  resolve:
+    if: vars.DEVOS_PAUSED != 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      done: ${{ steps.t.outputs.done }}
+      task: ${{ steps.t.outputs.task }}
+      name: ${{ steps.t.outputs.name }}
+      risk: ${{ steps.t.outputs.risk }}
+      attempt: ${{ steps.t.outputs.attempt }}
+      branch: ${{ steps.t.outputs.branch }}
+      builder_model: ${{ steps.t.outputs.builder_model }}
+      reviewer_model: ${{ steps.t.outputs.reviewer_model }}
+      reviewer_max_turns: ${{ steps.t.outputs.reviewer_max_turns }}
+      reviewer_effort: ${{ steps.t.outputs.reviewer_effort }}
+      reviewer_fallback: ${{ steps.t.outputs.reviewer_fallback }}
+      held: ${{ steps.heavy.outputs.held }}
+      blocked: ${{ steps.setup.outputs.blocked }}
+      method: ${{ steps.t.outputs.method }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - id: t
+        run: node scripts/devos/next-task.mjs --task "${{ inputs.task }}" --attempt "${{ inputs.attempt }}" --revision "${{ inputs.revision }}"
+      - if: steps.t.outputs.done == 'true'
+        run: echo "::notice title=Dev OS::Every task in docs/PHASES.md is PASS. Nothing to run."
+      # PR-27: a run that cannot work (no builder or reviewer credential, no runner token for a method
+      # fix) does not start. The setup issue gets the steps, and this run resumes when they are done.
+      - name: Settings the cycle needs (PR-27)
+        id: setup
+        if: steps.t.outputs.done == 'false'
+        env:
+          # PR-32: only whether each credential is set ("1" or empty), never its value. Handing every
+          # secret to a step (toJSON(secrets)) made GitHub hold the cycle as possibly malicious.
+          SECRETS_JSON: >-
+            {
+              "CURSOR_API_KEY":"${{ secrets.CURSOR_API_KEY != '' && '1' || '' }}",
+              "CURSOR_API_KEY_2":"${{ secrets.CURSOR_API_KEY_2 != '' && '1' || '' }}",
+              "CLAUDE_CODE_OAUTH_TOKEN":"${{ secrets.CLAUDE_CODE_OAUTH_TOKEN != '' && '1' || '' }}",
+              "CLAUDE_CODE_OAUTH_TOKEN_2":"${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 != '' && '1' || '' }}",
+              "ANTHROPIC_API_KEY":"${{ secrets.ANTHROPIC_API_KEY != '' && '1' || '' }}",
+              "ANTHROPIC_API_KEY_2":"${{ secrets.ANTHROPIC_API_KEY_2 != '' && '1' || '' }}",
+              "OPENAI_API_KEY":"${{ secrets.OPENAI_API_KEY != '' && '1' || '' }}",
+              "OPENAI_API_KEY_2":"${{ secrets.OPENAI_API_KEY_2 != '' && '1' || '' }}",
+              "GEMINI_API_KEY":"${{ secrets.GEMINI_API_KEY != '' && '1' || '' }}",
+              "GEMINI_API_KEY_2":"${{ secrets.GEMINI_API_KEY_2 != '' && '1' || '' }}",
+              "DEVOS_PAT":"${{ secrets.DEVOS_PAT != '' && '1' || '' }}"
+            }
+          VARS_JSON: ${{ toJSON(vars) }}
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          if node scripts/devos/setup-check.mjs --for cycle > .setup-check.log 2>&1; then
+            echo "blocked=false" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          cat .setup-check.log
+          echo "blocked=true" >> "$GITHUB_OUTPUT"
+          missing=$(node -e 'console.log(require("./.devos/setup-result.json").missing_required.join(", "))')
+          node scripts/devos/setup-issue.mjs wait --task "${{ steps.t.outputs.task }}" --attempt "${{ steps.t.outputs.attempt }}" \
+            --review-only "${{ inputs.review_only && 'true' || 'false' }}" --reason "the cycle needs settings that are missing ($missing)"
+          echo "::warning title=Dev OS::${{ steps.t.outputs.task }} did not start: missing settings ($missing). See the 'Dev OS: setup needed' issue."
+      - name: Heavy-run notice, or hold (PR-20)
+        id: heavy
+        if: steps.t.outputs.done == 'false' && steps.setup.outputs.blocked != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEVOS_HEAVY: ${{ vars.DEVOS_HEAVY }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          node scripts/devos/heavy.mjs --task "${{ steps.t.outputs.task }}" --attempt "${{ steps.t.outputs.attempt }}" \
+            --review-only "${{ inputs.review_only }}" --revision "${{ inputs.revision }}" --go "${{ inputs.go }}"
+      - if: steps.heavy.outputs.held == 'true'
+        run: |
+          echo "::notice title=Dev OS::${{ steps.t.outputs.task }} is heavy and DEVOS_HEAVY=hold. Comment /devos go in the run notices issue to start it."
+
+  cycle:
+    needs: resolve
+    if: needs.resolve.outputs.done == 'false' && needs.resolve.outputs.held != 'true' && needs.resolve.outputs.blocked != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    outputs:
+      park_task: ${{ steps.park.outputs.task }}
+      park_attempt: ${{ steps.park.outputs.attempt }}
+      park_review_only: ${{ steps.park.outputs.review_only }}
+      park_not_before: ${{ steps.park.outputs.not_before }}
+      park_revision: ${{ steps.park.outputs.revision }}
+      park_pr: ${{ steps.park.outputs.pr }}
+      branch: ${{ needs.resolve.outputs.branch }}
+    env:
+      DEVOS_AUTOMATED: "1"
+      NEXT_TELEMETRY_DISABLED: "1"
+      TASK: ${{ needs.resolve.outputs.task }}
+      NAME: ${{ needs.resolve.outputs.name }}
+      RISK: ${{ needs.resolve.outputs.risk }}
+      ATTEMPT: ${{ needs.resolve.outputs.attempt }}
+      BR: ${{ needs.resolve.outputs.branch }}
+      REPO: ${{ github.repository }}
+      REVIEW_ONLY: ${{ inputs.review_only && 'true' || 'false' }}
+      METHOD: ${{ needs.resolve.outputs.method }}
+      # PR-29: which account each agent starts with, and whether it switches on a usage limit.
+      DEVOS_CURSOR_ACCOUNT: ${{ (inputs.cursor_account != 'default' && inputs.cursor_account) || vars.DEVOS_CURSOR_ACCOUNT || '1' }}
+      DEVOS_CLAUDE_ACCOUNT: ${{ (inputs.claude_account != 'default' && inputs.claude_account) || vars.DEVOS_CLAUDE_ACCOUNT || '1' }}
+      DEVOS_CODEX_ACCOUNT: ${{ vars.DEVOS_CODEX_ACCOUNT || '1' }}
+      DEVOS_GEMINI_ACCOUNT: ${{ vars.DEVOS_GEMINI_ACCOUNT || '1' }}
+      DEVOS_ACCOUNT_SWITCH: ${{ vars.DEVOS_ACCOUNT_SWITCH || 'auto' }}
+    steps:
+      # The agents never see a git credential: checkout keeps none, and only the push and gh
+      # steps below receive a token (PR-04).
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install pnpm and the agent CLIs
+        run: |
+          npm install -g pnpm@10
+          echo "$HOME/.cursor/bin" >> "$GITHUB_PATH"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          # PR-53: only the CLIs of the agents the project chose (agents in devos.config.json).
+          tools=$(node scripts/devos/agents.mjs tools | sed -n 's/^tools=//p')
+          case " $tools " in *" claude "*) npm install -g @anthropic-ai/claude-code ;; esac
+          case " $tools " in *" cursor "*) curl https://cursor.com/install -fsS | bash ;; esac
+          case " $tools " in *" codex "*) npm install -g @openai/codex ;; esac
+          case " $tools " in *" gemini "*) npm install -g @google/gemini-cli ;; esac
+
+      - name: Stack toolchain (PR-48)
+        id: tc
+        run: echo "toolchain=$(node -p "require('./devos.config.json').stack?.toolchain || 'node'")" >> "$GITHUB_OUTPUT"
+
+      - name: Python and uv (Python stacks, PR-48)
+        if: steps.tc.outputs.toolchain == 'python'
+        uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+
+      - name: Go (Go stacks, PR-48)
+        if: steps.tc.outputs.toolchain == 'go'
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      - name: Flutter (Dart stacks, PR-48)
+        if: steps.tc.outputs.toolchain == 'dart'
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Supabase CLI (backend module, PR-17)
+        uses: supabase/setup-cli@v1
+        with:
+          # Pinned (PR-33): "latest" asks GitHub's API, which rate-limits shared runners.
+          version: ${{ vars.DEVOS_SUPABASE_CLI_VERSION || '2.120.0' }}
+
+      - name: Check out the task branch (a reissue continues the same branch, PR-03)
+        run: |
+          git config user.name "devos-runner"
+          git config user.email "devos-runner@users.noreply.github.com"
+          if git rev-parse --verify --quiet "origin/$BR" >/dev/null; then
+            git checkout -B "$BR" "origin/$BR"
+            git merge-base --is-ancestor origin/main HEAD || git merge --no-edit origin/main
+          elif [ "$REVIEW_ONLY" = "true" ]; then
+            echo "::error::review_only needs an existing branch $BR"; exit 1
+          else
+            git checkout -b "$BR"
+          fi
+          test -f "docs/fences/$TASK.md" || { echo "::error::docs/fences/$TASK.md does not exist: the reviewer has not issued this fence"; exit 1; }
+          mkdir -p .devos/logs
+          cp devos/ci/mcp.ci.json .cursor/mcp.json
+          if [ -f package.json ]; then
+            # Visible progress and a hard limit, so a slow registry never looks like a frozen step.
+            if ! timeout 600 pnpm install --frozen-lockfile --reporter=append-only 2>&1 | tee .devos/logs/install-before.log | grep -E "Progress|Done in|ERR" | tail -n 20; then
+              echo "::warning::pnpm install (before build) failed or took over 10 minutes; the builder will see it"
+            fi
+          fi
+          if ! node scripts/devos/run-checks.mjs --install-only > .devos/logs/install-stack.log 2>&1; then
+            echo "::warning::the stack's install failed; the builder will see it"
+          fi
+
+      - name: Choose the builder from the pool
+        id: ag
+        run: node scripts/devos/agents.mjs pick --task "$TASK"
+
+      - name: Resolve the builder model (fence effort/fast, checked against `agent models`)
+        id: bm
+        env:
+          CURSOR_KEY_1: ${{ secrets.CURSOR_API_KEY }}
+          CURSOR_KEY_2: ${{ secrets.CURSOR_API_KEY_2 }}
+        run: |
+          if [ -n "${{ steps.ag.outputs.builder_note }}" ]; then echo "${{ steps.ag.outputs.builder_note }}"; fi
+          if [ "${{ steps.ag.outputs.builder_tool }}" != "cursor" ]; then
+            POOL_MODEL="${{ steps.ag.outputs.builder_model }}" EFFORT_IN="${{ inputs.effort || 'fence' }}" node --input-type=module - >> "$GITHUB_OUTPUT" <<'EOF'
+          import { existsSync, readFileSync } from "node:fs";
+          import { parsePhases } from "./scripts/devos/lib.mjs";
+          const task = process.env.TASK;
+          const cfg = JSON.parse(readFileSync("devos.config.json", "utf8"));
+          let risk = 2;
+          try {
+            const row = parsePhases().rows.find((item) => item.task === task);
+            if (row) risk = row.risk;
+          } catch { /* a missing table uses the risk default */ }
+          const fence = existsSync(`docs/fences/${task}.md`) ? readFileSync(`docs/fences/${task}.md`, "utf8").split(/\r?\n/).slice(0, 30).join("\n") : "";
+          const raw = (/Effort:\s*([A-Za-z -]+?)(?:\s*[·|,]|\s*$|\s*\()/m.exec(fence)?.[1] || "").toLowerCase().replace(/[\s_-]+/g, "");
+          let effort = raw === "extrahigh" || raw === "xhigh" ? "xhigh" : ["low", "medium", "high", "xhigh"].includes(raw) ? raw : "";
+          const input = (process.env.EFFORT_IN || "").toLowerCase();
+          if (["low", "medium", "high", "xhigh"].includes(input)) effort = input;
+          if (!effort) effort = cfg.builder?.effort_by_risk?.[String(risk)] ?? cfg.builder?.default_effort ?? "high";
+          process.stdout.write(`model=${process.env.POOL_MODEL}\neffort=${effort}\nfast=no\nsource=pool\nnote=\n`);
+          EOF
+          else
+            export DEVOS_BUILDER_FAMILY="${{ steps.ag.outputs.builder_model }}"
+            . scripts/devos/accounts.sh
+            first=$(devos_accounts cursor | cut -d' ' -f1)
+            if [ -n "$first" ]; then devos_use_cursor "$first"; agent models > .devos/models.txt 2>&1 || true; fi
+            node scripts/devos/builder-model.mjs --task "$TASK" --effort "${{ inputs.effort || 'fence' }}" --fast "${{ inputs.fast || 'fence' }}"
+          fi
+
+      - name: Firebase CLI and Java 21 (Firebase module, PR-26)
+        timeout-minutes: 8
+        run: |
+          # Installed when the tree has firebase.json or this task's fence introduces the module.
+          need=$(node --input-type=module -e 'import { neededModules } from "./scripts/devos/modules.mjs"; console.log(neededModules(process.env.TASK).join(" "))')
+          echo "modules for $TASK: ${need:-none}"
+          case " $need " in
+            *" firebase "*)
+              if [ -n "$JAVA_HOME_21_X64" ]; then
+                echo "JAVA_HOME=$JAVA_HOME_21_X64" >> "$GITHUB_ENV"
+                echo "$JAVA_HOME_21_X64/bin" >> "$GITHUB_PATH"
+              fi
+              npm install -g firebase-tools > .devos/logs/firebase-tools-install.log 2>&1 || echo "::warning title=Dev OS::firebase-tools did not install; the Firebase checks will report missing"
+              firebase --version || true ;;
+          esac
+
+      - name: Local module services for the builder (Supabase, storage, Firebase)
+        if: env.REVIEW_ONLY != 'true'
+        continue-on-error: true
+        timeout-minutes: 15
+        run: node scripts/devos/modules.mjs start --task "$TASK"
+
+      - name: Builder (the project's builder agent)
+        id: builder
+        if: env.REVIEW_ONLY != 'true'
+        timeout-minutes: 80
+        env:
+          CURSOR_KEY_1: ${{ secrets.CURSOR_API_KEY }}
+          CURSOR_KEY_2: ${{ secrets.CURSOR_API_KEY_2 }}
+          CLAUDE_OAUTH_1: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          CLAUDE_APIKEY_1: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_OAUTH_2: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 }}
+          CLAUDE_APIKEY_2: ${{ secrets.ANTHROPIC_API_KEY_2 }}
+          CODEX_KEY_1: ${{ secrets.OPENAI_API_KEY }}
+          CODEX_KEY_2: ${{ secrets.OPENAI_API_KEY_2 }}
+          GEMINI_KEY_1: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_KEY_2: ${{ secrets.GEMINI_API_KEY_2 }}
+          MODEL: ${{ steps.bm.outputs.model }}
+          DEVOS_BUILDER_MODEL: ${{ steps.bm.outputs.model }}
+          DEVOS_BUILDER_EFFORT: ${{ steps.bm.outputs.effort }}
+          DEVOS_BUILDER_FAST: ${{ steps.bm.outputs.fast }}
+          # Live progress on the devos:notices issue (scripts/devos/progress.sh). The watchdog strips this
+          # token from the agent's environment, so Cursor never sees it.
+          DEVOS_PROGRESS_TOKEN: ${{ secrets.DEVOS_PAT || github.token }}
+          DEVOS_WATCHDOG_REPORT: bash scripts/devos/progress.sh
+          # PR-52: every builder run (restarts, other accounts, the pool's next agent) is in the usage record.
+          DEVOS_USAGE_STAGE: builder
+        run: |
+          . scripts/devos/accounts.sh
+          builder_tool="${{ steps.ag.outputs.builder_tool }}"
+          if [ "$builder_tool" = "claude" ]; then
+            accounts=$(devos_accounts claude)
+          elif [ "$builder_tool" = "codex" ] || [ "$builder_tool" = "gemini" ]; then
+            accounts=$(devos_accounts "$builder_tool")
+          else
+            accounts=$(devos_accounts cursor)
+          fi
+          # Long tasks run in time slices of 72 minutes: a slice that ends while the builder is still
+          # changing files is committed and the same attempt continues in a fresh run, up to
+          # builder.max_time_slices. The slice number is read back from this attempt's last builder commit.
+          export DEVOS_MAX_SLICES=$(node -e 'console.log(require("./devos.config.json").builder.max_time_slices ?? 4)')
+          export DEVOS_IDLE_STOP=$(node -e 'console.log(require("./devos.config.json").builder.idle_stop_minutes ?? 30)')
+          prev=$(git log -20 --format=%s | grep -m1 "^$TASK a$ATTEMPT: builder " || true)
+          DEVOS_SLICE=1
+          case "$prev" in *"(time slice "*) DEVOS_SLICE=$(( $(printf '%s' "$prev" | sed -n 's/.*(time slice \([0-9]*\)).*/\1/p') + 1 ));; esac
+          export DEVOS_SLICE; echo "slice=$DEVOS_SLICE" >> "$GITHUB_OUTPUT"; echo "max_slices=$DEVOS_MAX_SLICES" >> "$GITHUB_OUTPUT"
+          echo "time slice $DEVOS_SLICE of $DEVOS_MAX_SLICES"
+          # PR-38: a big fence is split by the reviewer into stages (`- Stages: N`); one builder run builds
+          # one stage. The stage is read back from this attempt's last builder commit: "(stage k of N done)"
+          # moves on to k+1, "(stage k of N)" (a time slice or a restart) continues stage k.
+          DEVOS_STAGES=$(sed -n 's/^- Stages: *\([0-9][0-9]*\).*/\1/p' "docs/fences/$TASK.md" 2>/dev/null | head -1); DEVOS_STAGES=${DEVOS_STAGES:-1}
+          DEVOS_STAGE=1
+          case "$prev" in
+            *"(stage "*" done)"*) DEVOS_STAGE=$(( $(printf '%s' "$prev" | sed -n 's/.*(stage \([0-9]*\) of [0-9]* done).*/\1/p') + 1 ));;
+            *"(stage "*) DEVOS_STAGE=$(printf '%s' "$prev" | sed -n 's/.*(stage \([0-9]*\) of [0-9]*).*/\1/p');;
+          esac
+          [ "$DEVOS_STAGE" -gt "$DEVOS_STAGES" ] && DEVOS_STAGE=$DEVOS_STAGES
+          export DEVOS_STAGE DEVOS_STAGES; echo "stage=$DEVOS_STAGE" >> "$GITHUB_OUTPUT"; echo "stages=$DEVOS_STAGES" >> "$GITHUB_OUTPUT"
+          [ "$DEVOS_STAGES" -gt 1 ] && echo "stage $DEVOS_STAGE of $DEVOS_STAGES"
+          if [ "$builder_tool" = "claude" ]; then
+            [ -n "$accounts" ] || { echo "::error::set secret CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY (and optionally the _2 pair)"; exit 1; }
+          elif [ "$builder_tool" = "codex" ]; then
+            [ -n "$accounts" ] || { echo "::error::set secret OPENAI_API_KEY (and optionally OPENAI_API_KEY_2)"; exit 1; }
+          elif [ "$builder_tool" = "gemini" ]; then
+            [ -n "$accounts" ] || { echo "::error::set secret GEMINI_API_KEY (and optionally GEMINI_API_KEY_2)"; exit 1; }
+          else
+            [ -n "$accounts" ] || { echo "::error::no Cursor key: set secret CURSOR_API_KEY (and optionally CURSOR_API_KEY_2)"; exit 1; }
+          fi
+          # Every active module's local names and throwaway keys (PR-17, PR-26).
+          for f in .devos/*.env; do [ -f "$f" ] && { set -a; . "$f"; set +a; }; done
+          echo "builder: $MODEL (effort ${DEVOS_BUILDER_EFFORT}, fast ${DEVOS_BUILDER_FAST}, from ${{ steps.bm.outputs.source }}) ${{ steps.bm.outputs.note }} · $builder_tool accounts in order: $accounts"
+          node scripts/devos/render-prompt.mjs builder "$TASK" "$ATTEMPT" --out .devos/builder-prompt.md
+          if [ "$DEVOS_STAGES" -gt 1 ]; then
+            if [ "$DEVOS_STAGE" -lt "$DEVOS_STAGES" ]; then
+              printf '\n\n**This fence is built in %s stages, and this run builds Stage %s only** (the `### Stage %s` block of the fence). Earlier stages are done and committed on this branch: verify them, never redo them. Do only Stage %s'"'"'s steps, prove the Done-when items it names, and leave the tree green (typecheck, lint and the tests it touches pass). Do not start the next stage. Finish by appending `## Attempt %s · Stage %s of %s` to `docs/reports/%s.md` with that stage'"'"'s evidence; its first line is `STATUS: DONE` or `STATUS: HALT`.\n' "$DEVOS_STAGES" "$DEVOS_STAGE" "$DEVOS_STAGE" "$DEVOS_STAGE" "$ATTEMPT" "$DEVOS_STAGE" "$DEVOS_STAGES" "$TASK" >> .devos/builder-prompt.md
+            else
+              printf '\n\n**This fence is built in %s stages, and this run builds the last one, Stage %s.** Earlier stages are done and committed on this branch: verify them, never redo them. Build Stage %s, then run **every** Done-when command of the whole fence and write the full `## Attempt %s` report section as the fence asks.\n' "$DEVOS_STAGES" "$DEVOS_STAGE" "$DEVOS_STAGE" "$ATTEMPT" >> .devos/builder-prompt.md
+            fi
+          fi
+          if [ "$DEVOS_SLICE" -gt 1 ]; then
+            printf '\n\n**This is time slice %s of this attempt.** The earlier slice ran out of time while working; everything it did is committed on this branch (`git diff --stat origin/main...HEAD`, `git log`). Read it, verify it against the fence, and finish only what is still missing or failing. Do not start over, redo or duplicate anything.\n' "$DEVOS_SLICE" >> .devos/builder-prompt.md
+          fi
+          set +e
+          # Heartbeat: Cursor's output goes to a file, so print progress every minute.
+          ( t0=$(date +%s); while sleep 60; do
+              echo "Cursor is working on $TASK: $(( ($(date +%s) - t0) / 60 )) min, $(git status --porcelain | wc -l) file(s) changed so far"
+            done ) &
+          hb=$!
+          ran_tool="$builder_tool"
+          if [ "$builder_tool" = "codex" ] || [ "$builder_tool" = "gemini" ]; then
+            bash scripts/devos/run-agent.sh builder "$builder_tool" "$MODEL" "${{ steps.bm.outputs.effort }}" .devos/builder-prompt.md || exit 1
+            . .devos/builder-run.env
+          elif [ "$builder_tool" = "claude" ]; then
+            node scripts/devos/role-env.mjs swap claude-builder || exit 1
+            trap 'node scripts/devos/role-env.mjs restore || exit 1' EXIT
+            EFFORT="${{ steps.bm.outputs.effort }}"
+            used=""; restarted=""; T0=$(date +%s)
+            for acc in $accounts; do
+              devos_use_claude "$acc"; used="$acc"
+              while :; do
+                left=$(( 72 - ($(date +%s) - T0) / 60 ))
+                bash scripts/devos/agent-watchdog.sh "$left" 10 .devos/builder.json .devos/builder.err -- \
+                  claude -p "$(cat .devos/builder-prompt.md)" --model "$MODEL" --effort "$EFFORT" --output-format json --permission-mode dontAsk --allowedTools "Read,Glob,Grep,Write,Edit,MultiEdit,Bash,Task,Agent,Skill,mcp__context7" --disallowedTools "Bash(git push *),Bash(git commit *),Bash(git checkout *),Bash(git reset *),Bash(gh *),Bash(curl *),Bash(wget *)" --mcp-config devos/ci/mcp.claude.json --max-turns 400
+                code=$?
+                if { [ "$code" = "125" ] || [ "$code" = "126" ]; } && [ -z "$restarted" ] && [ $(( 72 - ($(date +%s) - T0) / 60 )) -ge 25 ]; then
+                  restarted=1; mkdir -p .devos/logs; cp .devos/builder.err .devos/logs/builder-stalled.err
+                  devos_note "Builder: the Claude CLI stopped making progress (exit $code: 125 lost connection, 126 stuck); restarted once."
+                  printf '\n\n**An earlier run of this attempt stopped making progress (lost connection or stuck).** Its partial changes are already in the working tree (`git status`). Verify them against the fence and continue from them; do not redo or duplicate them.\n' >> .devos/builder-prompt.md
+                  continue
+                fi
+                break
+              done
+              if [ "$code" != "0" ] && devos_limited .devos/builder.json .devos/builder.err "$code"; then
+                mkdir -p .devos/limits; cat .devos/builder.json .devos/builder.err > ".devos/limits/claude-$acc.txt"
+                devos_note "Builder: Claude account $acc reached its usage limit."
+                printf '\n\n**This attempt was started on another Claude account, which reached its usage limit.** Its partial changes are already in the working tree (`git status`). Verify them against the fence and continue from them; do not redo or duplicate them.\n' >> .devos/builder-prompt.md
+                continue
+              fi
+              break
+            done
+          else
+          # PR-29: on a usage limit, the same attempt continues on the other account at once; the
+          # partial work stays in the tree and the second run is told to continue from it.
+          # The watchdog stops a hung CLI inside this step (72 of its 80 minutes), so the work is always
+          # committed and the park/halt comment always posted. A lost connection that makes no progress
+          # for 10 minutes is restarted once in place; a second stall parks the task (builder-status).
+          used=""; restarted=""; T0=$(date +%s)
+          for acc in $accounts; do
+            devos_use_cursor "$acc"; used="$acc"
+            while :; do
+              left=$(( 72 - ($(date +%s) - T0) / 60 ))
+              bash scripts/devos/agent-watchdog.sh "$left" 10 .devos/builder.json .devos/builder.err -- \
+                agent -p --force --trust --approve-mcps --model "$MODEL" --output-format stream-json "$(cat .devos/builder-prompt.md)"
+              code=$?
+              if { [ "$code" = "125" ] || [ "$code" = "126" ]; } && [ -z "$restarted" ] && [ $(( 72 - ($(date +%s) - T0) / 60 )) -ge 25 ]; then
+                restarted=1; mkdir -p .devos/logs; cp .devos/builder.err .devos/logs/builder-stalled.err
+                devos_note "Builder: the Cursor CLI stopped making progress (exit $code: 125 lost connection, 126 stuck); restarted once."
+                printf '\n\n**An earlier run of this attempt stopped making progress (lost connection or stuck).** Its partial changes are already in the working tree (`git status`). Verify them against the fence and continue from them; do not redo or duplicate them.\n' >> .devos/builder-prompt.md
+                continue
+              fi
+              break
+            done
+            if [ "$code" != "0" ] && devos_limited .devos/builder.json .devos/builder.err "$code"; then
+              mkdir -p .devos/limits; cat .devos/builder.json .devos/builder.err > ".devos/limits/cursor-$acc.txt"
+              devos_note "Builder: Cursor account $acc reached its usage limit."
+              printf '\n\n**This attempt was started on another Cursor account, which reached its usage limit.** Its partial changes are already in the working tree (`git status`). Verify them against the fence and continue from them; do not redo or duplicate them.\n' >> .devos/builder-prompt.md
+              continue
+            fi
+            break
+          done
+          fi
+          # PR-53: a usage limit switches only to the same tool's other account (above); with none left the
+          # attempt is parked until the limit resets (builder-status.mjs → quota). No other agent is used.
+          node scripts/devos/role-env.mjs restore || exit 1; trap - EXIT
+          kill "$hb" 2>/dev/null
+          [ "$used" != "${accounts%% *}" ] && devos_note "Builder: switched to $ran_tool account $used."
+          echo "exit=$code" >> "$GITHUB_OUTPUT"
+          echo "changed=$(git status --porcelain | wc -l | tr -d ' ')" >> "$GITHUB_OUTPUT"
+          echo "account=$used" >> "$GITHUB_OUTPUT"
+          echo "builder exit code: $code ($ran_tool account $used)"
+          tail -c 2000 .devos/builder.err || true
+
+      - name: Guard — builder surface
+        if: env.REVIEW_ONLY != 'true'
+        run: node scripts/devos/guard-surfaces.mjs builder
+
+      # PR-28: decided here, in the workflow from main, so nothing the builder edits on the branch
+      # (a guard, a script, the config) can change it. A product task never changes the method.
+      - name: Guard — method files (from main's workflow)
+        if: env.REVIEW_ONLY != 'true'
+        run: |
+          changed=$( { git diff --name-only HEAD; git ls-files --others --exclude-standard; } | sort -u \
+            | grep -E '^(\.github/|scripts/devos/|scripts/guards/|devos/|devos\.config\.json$|CLAUDE\.md$|\.claude/|\.cursor/(rules|hooks|cli))' || true)
+          [ -z "$changed" ] && exit 0
+          echo "Method files changed:"; echo "$changed"
+          if [ "$METHOD" != "true" ]; then
+            echo "::error title=Dev OS::$TASK is a product task, but the builder changed method files. Nothing is pushed."
+            exit 1
+          fi
+
+      - name: Commit and push the builder's work, write runner evidence
+        env:
+          GH_TOKEN: ${{ secrets.DEVOS_PAT || github.token }}
+        run: |
+          rm -f .cursor/mcp.json
+          REMOTE="https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git"
+          # PR-52: the builder runs' usage lines go in with the builder's commit.
+          node scripts/devos/usage.mjs flush --task "$TASK"
+          if [ "$REVIEW_ONLY" != "true" ]; then
+            git add -A
+            slice_tag=""; [ "${{ steps.builder.outputs.exit }}" = "124" ] && slice_tag=" (time slice ${{ steps.builder.outputs.slice }})"
+            # PR-38: the stage tag. A stage the builder finished (exit 0) is "done"; anything else continues it.
+            ST="${{ steps.builder.outputs.stage || 1 }}"; STS="${{ steps.builder.outputs.stages || 1 }}"
+            if [ "$STS" -gt 1 ]; then
+              if [ "${{ steps.builder.outputs.exit }}" = "0" ]; then slice_tag=" (stage $ST of $STS done)"; else slice_tag=" (stage $ST of $STS)$slice_tag"; fi
+            fi
+            git commit --allow-empty -m "$TASK a$ATTEMPT: builder (${{ steps.bm.outputs.model }}, effort ${{ steps.bm.outputs.effort }}, fast ${{ steps.bm.outputs.fast }})$slice_tag"
+            bash scripts/devos/sync-main.sh "$REMOTE"
+            if ! git push "$REMOTE" "HEAD:refs/heads/$BR" 2> .devos/push.err; then
+              cat .devos/push.err
+              # GitHub refuses workflow-file changes from a token without the Workflows permission (PR-27).
+              grep -qiE "workflow" .devos/push.err && echo "the runner token cannot push workflow changes: DEVOS_PAT needs the Workflows permission (Read and write)" > .devos/setup-missing
+              exit 1
+            fi
+          fi
+          # PR-28: a method fix always gets the deep review and stops at the human gate.
+          if git diff --name-only origin/main...HEAD | grep -qE '^(\.github/|scripts/devos/|scripts/guards/|devos/|devos\.config\.json$|CLAUDE\.md$|\.claude/|\.cursor/(rules|hooks|cli))'; then
+            echo "METHOD_CHANGE=1" >> "$GITHUB_ENV"
+          fi
+          LOCAL=$(git rev-parse HEAD)
+          REMOTE_SHA=$(git ls-remote "$REMOTE" "refs/heads/$BR" | cut -f1)
+          {
+            echo "# Runner evidence — $TASK attempt $ATTEMPT"
+            echo
+            echo "- Branch: \`$BR\`"
+            echo "- HEAD: \`$LOCAL\`"
+            echo "- Remote comparison: \`git ls-remote origin refs/heads/$BR\` = \`$REMOTE_SHA\` → $([ "$LOCAL" = "$REMOTE_SHA" ] && echo MATCH || echo MISMATCH)"
+            echo "- Builder: \`${{ steps.bm.outputs.model }}\` (effort ${{ steps.bm.outputs.effort }}, fast ${{ steps.bm.outputs.fast }}, chosen by ${{ steps.bm.outputs.source }}) ${{ steps.bm.outputs.note }}"
+            echo "- Builder exit code: ${{ steps.builder.outputs.exit || 'not run (review-only re-run)' }} · ${{ steps.ag.outputs.builder_tool }} account: ${{ steps.builder.outputs.account || 'none' }}"
+            [ -f .devos/accounts.md ] && cat .devos/accounts.md
+            [ -s .devos/models.txt ] && echo "- Grok ids offered by \`agent models\`: $( (grep -oE 'grok-[A-Za-z0-9.-]+' .devos/models.txt 2>/dev/null || true) | sort -u | tr '\n' ' ')"
+            echo
+            echo "## Changed files vs main"
+            echo '```'
+            git diff --stat origin/main...HEAD
+            echo '```'
+          } > .devos/runner-evidence.md
+          cat .devos/runner-evidence.md
+
+      - name: Open the pull request (or reuse it)
+        env:
+          GH_TOKEN: ${{ secrets.DEVOS_PAT || github.token }}
+        run: |
+          for l in "devos:0e8a16" "risk-1:c5def5" "risk-2:fbca04" "risk-3:d93f0b" "devos:human-gate:5319e7" "devos:halted:b60205" "devos:auto-merged:0e8a16" "devos:quota-wait:fbca04" "devos:setup-wait:fbca04" "devos:method:5319e7"; do
+            gh label create "${l%:*}" --color "${l##*:}" --force --repo "$REPO" >/dev/null
+          done
+          # Use the OPEN PR for this branch only. A PR merged early by hand must not be reused (PR-13).
+          PRN=$(gh pr list --repo "$REPO" --head "$BR" --state open --json number --jq '.[0].number // empty')
+          if [ -z "$PRN" ]; then
+            gh pr create --repo "$REPO" --base main --head "$BR" \
+              --title "$TASK — $NAME" \
+              --body "Dev OS task **$TASK** (risk $RISK). Fence: \`docs/fences/$TASK.md\`. Built by ${{ steps.ag.outputs.builder_tool }}, reviewed by the project's reviewer agent; the verdict is posted below by the runner. Do not merge before the verdict: the \`devos/verdict\` status turns green on PASS." \
+              --label devos --label "risk-$RISK" || echo "::notice::No PR yet (nothing differs from main); it is opened after the review commit."
+            PRN=$(gh pr list --repo "$REPO" --head "$BR" --state open --json number --jq '.[0].number // empty')
+          fi
+          if [ -n "$PRN" ] && [ "$METHOD" = "true" ]; then gh pr edit "$PRN" --repo "$REPO" --add-label "devos:method" >/dev/null || true; fi
+          echo "PRN=$PRN" >> "$GITHUB_ENV"
+          if [ -n "$PRN" ]; then
+            gh pr edit "$PRN" --repo "$REPO" --remove-label "devos:halted" >/dev/null 2>&1 || true
+            gh pr edit "$PRN" --repo "$REPO" --remove-label "devos:quota-wait" >/dev/null 2>&1 || true
+          fi
+          gh api "repos/$REPO/statuses/$(git rev-parse HEAD)" -f state=pending -f context=devos/verdict \
+            -f description="Waiting for the Dev OS review of $TASK" >/dev/null || true
+
+      - name: Builder outcome (PR-12)
+        id: bs
+        run: node scripts/devos/builder-status.mjs --task "$TASK" --attempt "$ATTEMPT" --exit "${{ steps.builder.outputs.exit }}" --review-only "$REVIEW_ONLY" --slice "${{ steps.builder.outputs.slice || 1 }}" --max-slices "${{ steps.builder.outputs.max_slices || 4 }}" --changed "${{ steps.builder.outputs.changed || 0 }}" --stage "${{ steps.builder.outputs.stage || 1 }}" --stages "${{ steps.builder.outputs.stages || 1 }}"
+
+      - name: Continue (next time slice), park (usage limit) or halt (builder error) without spending a review
+        if: steps.bs.outputs.state != 'ok'
+        env:
+          GH_TOKEN: ${{ secrets.DEVOS_PAT || github.token }}
+          STATE: ${{ steps.bs.outputs.state }}
+        run: |
+          if [ -f .devos/accounts.md ]; then printf '\n\n**Accounts (PR-29)**\n%s\n' "$(cat .devos/accounts.md)" >> .devos/builder-summary.md; fi
+          if [ -f .devos/builder.json.stream.jsonl ]; then
+            rep=$(timeout 20 node scripts/devos/builder-report.mjs .devos/builder.json.stream.jsonl .devos/builder-timeline.json 2>/dev/null || true)
+            [ -n "$rep" ] && printf '\n\n### What the builder did in this run\n\n%s\n' "$rep" >> .devos/builder-summary.md
+          fi
+          gh pr comment "$PRN" --repo "$REPO" --body-file .devos/builder-summary.md
+          cat .devos/builder-summary.md >> "$GITHUB_STEP_SUMMARY"
+          if [ "$STATE" = "continue" ]; then
+            gh workflow run devos-cycle.yml --repo "$REPO" --ref main -f task="$TASK" -f attempt="$ATTEMPT" -f revision="${{ inputs.revision || false }}"
+            echo "::notice title=Dev OS::$TASK attempt $ATTEMPT: the next time slice or stage is queued and continues from the branch."
+          elif [ "$STATE" = "quota" ]; then
+            gh pr edit "$PRN" --repo "$REPO" --add-label "devos:quota-wait"
+            echo "::warning title=Dev OS::$TASK parked (Cursor usage limit or lost connection); it resumes on its own. See the PR comment."
+          else
+            gh pr edit "$PRN" --repo "$REPO" --add-label "devos:halted"
+            echo "::error title=Dev OS::$TASK halted: the builder failed (not a usage limit). See the PR comment."
+          fi
+
+      - name: Checks (evidence for the reviewer)
+        if: steps.bs.outputs.state == 'ok'
+        run: |
+          if [ -f package.json ]; then
+            timeout 600 pnpm install --frozen-lockfile --reporter=append-only > .devos/logs/install.log 2>&1 || echo "::warning::pnpm install --frozen-lockfile failed or took over 10 minutes"
+            tail -n 3 .devos/logs/install.log
+          fi
+          node scripts/devos/run-checks.mjs
+          # PR-25: the result is a GitHub check on the PR before any merge.
+          bash scripts/devos/checks-status.sh "$(git rev-parse HEAD)"
+        env:
+          GH_TOKEN: ${{ secrets.DEVOS_PAT || github.token }}
+
+      - name: Vercel preview of this attempt
+        id: preview
+        # With the backend module, previews need a preview database (vars.DEVOS_PREVIEW_DB); without one the
+        # review uses the local build against the CI database instead (PR-18).
+        if: steps.bs.outputs.state == 'ok' && vars.DEVOS_VERCEL == 'true' && (hashFiles('supabase/config.toml') == '' || vars.DEVOS_PREVIEW_DB == 'true')
+        continue-on-error: true
+        timeout-minutes: 12
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          GH_TOKEN: ${{ secrets.DEVOS_PAT || github.token }}
+          CI: "1"
+        run: |
+          # Each Vercel command gets 5 minutes; a missing secret or an interactive prompt can no
+          # longer hold the whole cycle. On failure the review simply runs without a preview.
+          for v in VERCEL_TOKEN VERCEL_ORG_ID VERCEL_PROJECT_ID; do
+            [ -n "${!v}" ] || { echo "::warning title=Dev OS::secret $v is not set; skipping the preview"; exit 0; }
+          done
+          set -o pipefail
+          vc() { timeout 300 npx --yes vercel@latest "$@" --token="$VERCEL_TOKEN" < /dev/null; }
+          if ! { vc pull --yes --environment=preview && vc build; } > .devos/logs/vercel.log 2>&1; then
+            echo "::warning title=Dev OS::Vercel pull/build failed or timed out; reviewing without a preview"
+            tail -n 40 .devos/logs/vercel.log; rm -rf .vercel; exit 0
+          fi
+          # Uploads from this directory with .git moved aside (no commit author for Vercel to block)
+          # and prints a URL only when Vercel returned one (PR-15, PR-16).
+          url=$(DEVOS_VERCEL_LOG="$GITHUB_WORKSPACE/.devos/logs/vercel.log" bash scripts/devos/vercel-deploy.sh "$BR") || true
+          rm -rf .vercel
+          case "$url" in https://*) ;; *) echo "::warning title=Dev OS::Vercel deploy gave no URL"; tail -n 40 .devos/logs/vercel.log; exit 0 ;; esac
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "preview: $url"
+          if [ -n "$PRN" ]; then gh pr comment "$PRN" --repo "$REPO" --body "Preview of $TASK attempt $ATTEMPT: $url"; fi
+
+      - name: Screenshots for the reviewer's visual check
+        if: steps.bs.outputs.state == 'ok'
+        continue-on-error: true
+        env:
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: |
+          # screens.mjs falls back to the local build when the preview shows the Vercel login (PR-15).
+          if [ -f package.json ] && grep -q '"@playwright/test"' package.json; then
+            pnpm exec playwright install --with-deps chromium > .devos/logs/playwright-install.log 2>&1 || true
+            if [ -n "${{ steps.preview.outputs.url }}" ]; then
+              node scripts/devos/screens.mjs --base "${{ steps.preview.outputs.url }}"
+            else
+              node scripts/devos/screens.mjs
+            fi
+          else
+            echo "No Playwright in the project; no screenshots."
+          fi
+
+      - name: UI evidence and accessibility checks (PR-51)
+        # A UI fence's captures become the required checks ui-evidence and a11y; devos/checks is posted again.
+        if: steps.bs.outputs.state == 'ok'
+        run: |
+          node scripts/devos/ui-evidence.mjs --task "$TASK"
+          bash scripts/devos/checks-status.sh "$(git rev-parse HEAD)"
+        env:
+          GH_TOKEN: ${{ secrets.DEVOS_PAT || github.token }}
+
+      - name: Review plan and evidence pack (PR-22)
+        id: rp
+        if: steps.bs.outputs.state == 'ok'
+        run: |
+          node scripts/devos/review-mode.mjs --task "$TASK" --attempt "$ATTEMPT"
+          for f in .devos/*.env; do [ -f "$f" ] && { set -a; . "$f"; set +a; }; done
+          node scripts/devos/evidence.mjs --task "$TASK" --attempt "$ATTEMPT"
+          sed -n '1,12p' .devos/evidence.md
+
+      - name: Reviewer (the project's reviewer agent)
+        id: reviewer
+        # reuse_review (PR-21): a complete review file from this attempt is kept; verdict.mjs reads it.
+        if: steps.bs.outputs.state == 'ok' && !(inputs.reuse_review && hashFiles(format('docs/reviews/{0}-a{1}.md', env.TASK, env.ATTEMPT)) != '')
+        timeout-minutes: 75
+        env:
+          CLAUDE_OAUTH_1: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          CLAUDE_APIKEY_1: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_OAUTH_2: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 }}
+          CLAUDE_APIKEY_2: ${{ secrets.ANTHROPIC_API_KEY_2 }}
+          CURSOR_KEY_1: ${{ secrets.CURSOR_API_KEY }}
+          CURSOR_KEY_2: ${{ secrets.CURSOR_API_KEY_2 }}
+          CODEX_KEY_1: ${{ secrets.OPENAI_API_KEY }}
+          CODEX_KEY_2: ${{ secrets.OPENAI_API_KEY_2 }}
+          GEMINI_KEY_1: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_KEY_2: ${{ secrets.GEMINI_API_KEY_2 }}
+          MODEL: ${{ steps.rp.outputs.model || needs.resolve.outputs.reviewer_model }}
+          TURNS: ${{ steps.rp.outputs.max_turns || needs.resolve.outputs.reviewer_max_turns }}
+          EFFORT: ${{ steps.rp.outputs.effort || needs.resolve.outputs.reviewer_effort }}
+          DEVOS_PREVIEW_URL: ${{ steps.preview.outputs.url }}
+          DEVOS_REVIEW_MODE: ${{ steps.rp.outputs.mode }}
+          DEVOS_REVIEW_REASONS: ${{ steps.rp.outputs.reasons }}
+          DEVOS_REVIEW_CRITICAL: ${{ steps.rp.outputs.critical }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+          DEVOS_BUILDER_MODEL: ${{ steps.bm.outputs.model }}
+          DEVOS_BUILDER_EFFORT: ${{ steps.bm.outputs.effort }}
+          DEVOS_BUILDER_FAST: ${{ steps.bm.outputs.fast }}
+        run: |
+          . scripts/devos/accounts.sh
+          for f in .devos/*.env; do [ -f "$f" ] && { set -a; . "$f"; set +a; }; done
+          # PR-28, PR-53: a method fix is always a deep review, by the project's own reviewer agent.
+          if [ -n "$METHOD_CHANGE" ]; then
+            export DEVOS_REVIEW_MODE=deep DEVOS_REVIEW_REASONS="method fix: it changes the automation itself (PR-28)"
+          fi
+          # PR-53: the reviewer is always the agent and model the developer chose (agents in devos.config.json).
+          rev_line=$(node scripts/devos/agents.mjs reviewer --mode "$DEVOS_REVIEW_MODE")
+          rev_tool=$(printf '%s\n' "$rev_line" | sed -n 's/^reviewer_tool=//p')
+          rev_model=$(printf '%s\n' "$rev_line" | sed -n 's/^reviewer_model=//p')
+          MODEL="$rev_model"
+          if [ -n "$METHOD_CHANGE" ]; then
+            EFFORT=high; TURNS=120
+            echo "method fix: deep review ($rev_tool $MODEL, effort $EFFORT, $TURNS turns)"
+          fi
+          echo "reviewer: $rev_tool $MODEL ($DEVOS_REVIEW_MODE review)"
+          node scripts/devos/render-prompt.mjs reviewer "$TASK" "$ATTEMPT" --out .devos/reviewer-prompt.md
+          set +e
+          ran_tool="$rev_tool"
+          if [ "$rev_tool" = "codex" ] || [ "$rev_tool" = "gemini" ]; then
+            bash scripts/devos/run-agent.sh reviewer "$rev_tool" "$MODEL" "${EFFORT:-high}" .devos/reviewer-prompt.md || exit 1
+            . .devos/reviewer-run.env
+            rc=$code
+          elif [ "$rev_tool" = "cursor" ]; then
+            node scripts/devos/role-env.mjs swap cursor-reviewer || exit 1
+            cp devos/ci/mcp.ci.json .cursor/mcp.json
+            trap 'node scripts/devos/role-env.mjs restore || exit 1' EXIT
+            accounts=$(devos_accounts cursor)
+            [ -n "$accounts" ] || { echo "::error::no Cursor key: set secret CURSOR_API_KEY (and optionally CURSOR_API_KEY_2)"; exit 1; }
+            ( t0=$(date +%s); while sleep 60; do
+                f="not yet"; [ -f "docs/reviews/$TASK-a$ATTEMPT.md" ] && f="written"
+                echo "Cursor is reviewing $TASK: $(( ($(date +%s) - t0) / 60 )) min, verdict file $f"
+              done ) &
+            hb=$!
+            used=""
+            for acc in $accounts; do
+              devos_use_cursor "$acc"; used="$acc"
+              agent -p --force --trust --approve-mcps --model "$MODEL" --output-format stream-json "$(cat .devos/reviewer-prompt.md)" > .devos/reviewer.json 2> .devos/reviewer.err
+              rc=$?
+              node scripts/devos/usage.mjs record --stage reviewer --command agent --model "$MODEL" --out .devos/reviewer.json --code "$rc" || true
+              if devos_limited .devos/reviewer.json .devos/reviewer.err "$rc"; then
+                mkdir -p .devos/limits; cat .devos/reviewer.json .devos/reviewer.err > ".devos/limits/cursor-$acc.txt"
+                devos_note "Reviewer: Cursor account $acc reached its usage limit."
+                continue
+              fi
+              break
+            done
+          else
+          accounts=$(devos_accounts claude)
+          [ -n "$accounts" ] || { echo "::error::set secret CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY (and optionally the _2 pair)"; exit 1; }
+          ( t0=$(date +%s); while sleep 60; do
+              f="not yet"; [ -f "docs/reviews/$TASK-a$ATTEMPT.md" ] && f="written"
+              echo "Claude is reviewing $TASK: $(( ($(date +%s) - t0) / 60 )) min, verdict file $f"
+            done ) &
+          hb=$!
+          # PR-29: on a usage limit the review starts again at once on the other Claude account.
+          used=""
+          for acc in $accounts; do
+            devos_use_claude "$acc"; used="$acc"
+            claude -p "$(cat .devos/reviewer-prompt.md)" \
+              --model "$MODEL" \
+              --effort "${EFFORT:-high}" \
+              --output-format json \
+              --json-schema "$(cat devos/schemas/verdict.schema.json)" \
+              --permission-mode dontAsk \
+              --allowedTools "Read,Glob,Grep,Write,Edit,Bash,Task,Agent,Skill,mcp__context7" \
+              --disallowedTools "Bash(git push *),Bash(git commit *),Bash(git checkout *),Bash(git reset *),Bash(gh *),Bash(curl *),Bash(wget *)" \
+              --mcp-config devos/ci/mcp.claude.json \
+              --max-turns "$TURNS" > .devos/reviewer.json 2> .devos/reviewer.err
+            rc=$?
+            node scripts/devos/usage.mjs record --stage reviewer --command claude --model "$MODEL" --out .devos/reviewer.json --code "$rc" || true
+            if devos_limited .devos/reviewer.json .devos/reviewer.err "$rc"; then
+              mkdir -p .devos/limits; cat .devos/reviewer.json .devos/reviewer.err > ".devos/limits/claude-$acc.txt"
+              devos_note "Reviewer: Claude account $acc reached its usage limit."
+              continue
+            fi
+            break
+          done
+          fi
+          node scripts/devos/role-env.mjs restore || exit 1; trap - EXIT
+          rm -f .cursor/mcp.json
+          kill "$hb" 2>/dev/null
+          [ "$used" != "${accounts%% *}" ] && devos_note "Reviewer: switched to $ran_tool account $used."
+          echo "reviewer exit code: $rc ($ran_tool account $used)"
+          tail -c 2000 .devos/reviewer.err || true
+          # Surface any tool calls the permission layer refused, so a denial is never silent.
+          node -e 'try{const r=require("./.devos/reviewer.json");const d=r.permission_denials||[];console.log(`reviewer permission denials: ${d.length}`);for(const x of d.slice(0,20))console.log(" -",JSON.stringify(x).slice(0,300))}catch(e){console.log("reviewer.json unreadable:",e.message)}' 
+
+      - name: Guard — reviewer surface
+        if: steps.bs.outputs.state == 'ok'
+        run: node scripts/devos/guard-surfaces.mjs reviewer
+
+      - name: Verdict (PR-08 applied, recorded in docs/PHASES.md)
+        id: v
+        if: steps.bs.outputs.state == 'ok'
+        run: node scripts/devos/verdict.mjs --task "$TASK" --attempt "$ATTEMPT"
+
+      - name: Commit and push the review
+        if: steps.bs.outputs.state == 'ok'
+        env:
+          GH_TOKEN: ${{ secrets.DEVOS_PAT || github.token }}
+        run: |
+          CHECKED=$(node -e 'try{console.log(require("./.devos/ci-results.json").head||"")}catch{console.log("")}')
+          # PR-52: the reviewer runs' usage lines and the project's totals (docs/USAGE.md) go in with the review.
+          node scripts/devos/usage.mjs flush --task "$TASK"
+          node scripts/devos/usage.mjs report --write
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "$TASK a$ATTEMPT: review — ${{ steps.v.outputs.verdict }} (${{ steps.v.outputs.action }})"
+          fi
+          bash scripts/devos/sync-main.sh "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git"
+          # Main may have brought other runs' lines: the totals are counted again from the merged records.
+          node scripts/devos/usage.mjs report --write
+          git add docs/USAGE.md
+          git diff --cached --quiet || git commit -m "$TASK a$ATTEMPT: usage totals"
+          # PR-25: if main brought code changes while this attempt was reviewed, check the merged result
+          # again before anything can merge. A red re-check stops the merge.
+          moved=""
+          if [ -n "$CHECKED" ]; then
+            moved=$(git diff --name-only "$CHECKED" HEAD -- . ':(exclude)docs/**' ':(exclude).devos/**' || true)
+          fi
+          if [ -n "$moved" ] && [ "${{ steps.v.outputs.verdict }}" = "PASS" ]; then
+            echo "Code changed on main since the checks ran; re-checking the merged result:"
+            echo "$moved"
+            node scripts/devos/run-checks.mjs
+            if ! node -e 'process.exit(require("./.devos/ci-results.json").all_required_passed ? 0 : 1)'; then
+              echo "ACTION_OVERRIDE=halt" >> "$GITHUB_ENV"
+              echo "RECHECK_FAILED=1" >> "$GITHUB_ENV"
+            fi
+          fi
+          git push "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" "HEAD:refs/heads/$BR"
+          if [ -z "$PRN" ]; then
+            gh pr create --repo "$REPO" --base main --head "$BR" --title "$TASK — $NAME (review record)" \
+              --body "Dev OS: the review of $TASK, on a branch whose code is already on main." --label devos --label "risk-$RISK"
+            PRN=$(gh pr list --repo "$REPO" --head "$BR" --state open --json number --jq '.[0].number // empty')
+            echo "PRN=$PRN" >> "$GITHUB_ENV"
+          fi
+          case "${{ steps.v.outputs.verdict }}" in
+            PASS) st=success; d="PASS: $TASK attempt $ATTEMPT" ;;
+            WAIT) st=pending; d="Waiting for a usage limit to reset" ;;
+            *)    st=failure; d="FAIL: $TASK attempt $ATTEMPT" ;;
+          esac
+          if [ -n "$RECHECK_FAILED" ]; then
+            st=failure; d="Re-check after merging the latest main failed"
+            failed=$(node -e 'console.log(require("./.devos/ci-results.json").failed_required.join(", "))')
+            printf '\n\n**Re-check (PR-25):** main changed while this attempt was reviewed. The merged result fails: %s. Not merged; the gate doctor says what to do.\n' "$failed" >> .devos/verdict-summary.md
+          fi
+          bash scripts/devos/checks-status.sh "$(git rev-parse HEAD)"
+          gh api "repos/$REPO/statuses/$(git rev-parse HEAD)" -f state="$st" -f context=devos/verdict -f description="$d" >/dev/null || true
+          if [ -f .devos/accounts.md ]; then printf '\n\n**Accounts (PR-29)**\n%s\n' "$(cat .devos/accounts.md)" >> .devos/verdict-summary.md; fi
+          gh pr comment "$PRN" --repo "$REPO" --body-file .devos/verdict-summary.md
+          cat .devos/verdict-summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Act on the verdict
+        if: steps.bs.outputs.state == 'ok'
+        env:
+          GH_TOKEN: ${{ secrets.DEVOS_PAT || github.token }}
+          ACTION: ${{ steps.v.outputs.action }}
+          NEXT_ATTEMPT: ${{ steps.v.outputs.next_attempt }}
+        run: |
+          ACTION="${ACTION_OVERRIDE:-$ACTION}"
+          # PR-28: whatever the branch's own scripts decided, a change to the method waits for the human.
+          if [ -n "$METHOD_CHANGE" ] && [ "$ACTION" = "merge" ]; then
+            ACTION=human_gate
+            echo "Method files changed: the human gate is forced by the workflow from main."
+          fi
+          case "$ACTION" in
+            merge)
+              gh pr edit "$PRN" --repo "$REPO" --add-label "devos:auto-merged"
+              gh pr merge "$PRN" --repo "$REPO" --merge --delete-branch
+              gh workflow run devos-cycle.yml --repo "$REPO" --ref main
+              echo "::notice title=Dev OS::$TASK merged; next task dispatched." ;;
+            human_gate)
+              gh pr edit "$PRN" --repo "$REPO" --add-label "devos:human-gate"
+              gh workflow run devos-doctor.yml --repo "$REPO" --ref main -f pr="$PRN" || true
+              echo "::notice title=Dev OS::$TASK PASSED and waits at a human gate. Review and merge the PR to continue." ;;
+            retry)
+              gh workflow run devos-cycle.yml --repo "$REPO" --ref main -f task="$TASK" -f attempt="$NEXT_ATTEMPT"
+              echo "::notice title=Dev OS::$TASK failed attempt $ATTEMPT; attempt $NEXT_ATTEMPT dispatched." ;;
+            quota_wait)
+              gh pr edit "$PRN" --repo "$REPO" --add-label "devos:quota-wait"
+              echo "::warning title=Dev OS::$TASK parked: the agent's usage/rate limit, with no other account of the same tool left. devos-resume re-runs it after the reset." ;;
+            halt)
+              gh pr edit "$PRN" --repo "$REPO" --add-label "devos:halted"
+              gh workflow run devos-doctor.yml --repo "$REPO" --ref main -f pr="$PRN" || true
+              echo "::warning title=Dev OS::$TASK halted. A human decision is needed (see the PR comment)." ;;
+            setup_wait)
+              # PR-27: the cause is outside the repository. No Grok retry; the human gets the steps in the
+              # verdict and the setup issue, and this attempt is re-reviewed after `/devos setup`.
+              node scripts/devos/setup-issue.mjs wait --task "$TASK" --attempt "$ATTEMPT" --review-only true --manual \
+                --reason "the review found a setting outside the repository missing; the steps are in the verdict on the PR"
+              echo "::warning title=Dev OS::$TASK waits for a setting outside the repository (see the PR and the setup issue)." ;;
+            *) echo "::error::unknown action '$ACTION'"; exit 1 ;;
+          esac
+
+      - name: Parking info for the waiter (usage limits)
+        id: park
+        if: always()
+        run: |
+          echo "pr=$PRN" >> "$GITHUB_OUTPUT"
+          echo "revision=${{ inputs.revision || false }}" >> "$GITHUB_OUTPUT"
+          if [ "${{ steps.bs.outputs.state }}" = "quota" ]; then
+            { echo "task=$TASK"; echo "attempt=$ATTEMPT"; echo "review_only=false"; echo "not_before=${{ steps.bs.outputs.not_before }}"; } >> "$GITHUB_OUTPUT"
+          elif [ "${{ steps.v.outputs.action }}" = "quota_wait" ]; then
+            { echo "task=$TASK"; echo "attempt=$ATTEMPT"; echo "review_only=true"; echo "not_before=${{ steps.v.outputs.not_before }}"; } >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Keep the evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: devos-${{ needs.resolve.outputs.task }}-a${{ needs.resolve.outputs.attempt }}
+          path: .devos/
+          include-hidden-files: true
+          if-no-files-found: ignore
+
+      - name: Halt on a runner failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.DEVOS_PAT || github.token }}
+        run: |
+          echo "::error title=Dev OS::The cycle stopped on a runner failure (a guard, a missing secret or fence, or a push). Nothing was merged."
+          if [ -f .devos/setup-missing ]; then
+            # PR-27: a setting only the human can fix; record it so the attempt resumes after `/devos setup`.
+            node scripts/devos/setup-issue.mjs wait --task "$TASK" --attempt "$ATTEMPT" --review-only false --manual --reason "$(cat .devos/setup-missing)" || true
+            exit 0
+          fi
+          gh pr edit "${PRN:-$BR}" --repo "$REPO" --add-label "devos:halted" 2>/dev/null || true
+          gh pr comment "${PRN:-$BR}" --repo "$REPO" --body "Dev OS runner stopped on a failure in run ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}. Nothing was merged. Fix the cause, then re-run devos-cycle with task=$TASK attempt=$ATTEMPT." 2>/dev/null || true
+          [ -n "$PRN" ] && gh workflow run devos-doctor.yml --repo "$REPO" --ref main -f pr="$PRN" 2>/dev/null || true
+
+  # Wait out a usage limit inside Actions instead of relying on GitHub's best-effort cron.
+  # Claude's session limits reset within about five hours, so a wait up to resume.inline_wait_max_minutes
+  # (330) is slept through here, then the task is re-dispatched. Longer waits (weekly limits) are
+  # left to devos-resume. Remove the devos:quota-wait label, or cancel this run, to stop the wait.
+  wait-and-resume:
+    needs: cycle
+    if: needs.cycle.outputs.park_task != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 345
+    permissions:
+      actions: write
+      pull-requests: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+          sparse-checkout: devos.config.json
+      - name: Sleep until the limit resets, then resume
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          TASK: ${{ needs.cycle.outputs.park_task }}
+          ATTEMPT: ${{ needs.cycle.outputs.park_attempt }}
+          REVIEW_ONLY: ${{ needs.cycle.outputs.park_review_only }}
+          NOT_BEFORE: ${{ needs.cycle.outputs.park_not_before }}
+          REVISION: ${{ needs.cycle.outputs.park_revision || 'false' }}
+          PR: ${{ needs.cycle.outputs.park_pr || needs.cycle.outputs.branch }}
+          IS_PRIVATE: ${{ github.event.repository.private }}
+        run: |
+          max_min=$(node -e 'console.log(require("./devos.config.json").resume?.inline_wait_max_minutes ?? 330)')
+          now=$(date -u +%s)
+          target=$(date -u -d "$NOT_BEFORE" +%s 2>/dev/null || echo $((now + 3600)))
+          wait=$(( target - now ))
+          if [ "$wait" -gt $(( max_min * 60 )) ]; then
+            # PR-31: a long wait is relayed by devos-wait (GitHub's schedule is best effort). On a private
+            # repository sleeping costs runner minutes, so resume.relay decides.
+            relay=$(node -e 'console.log(require("./devos.config.json").resume?.relay ?? "public")')
+            if [ "$relay" = "always" ] || { [ "$relay" = "public" ] && [ "$IS_PRIVATE" != "true" ]; }; then
+              gh workflow run devos-wait.yml --repo "$REPO" --ref main -f kind=task -f not_before="$NOT_BEFORE" -f task="$TASK" -f attempt="$ATTEMPT" -f review_only="$REVIEW_ONLY" -f revision="$REVISION" -f pr="$PR"
+              echo "::notice title=Dev OS::$TASK resets at $NOT_BEFORE; devos-wait keeps waiting and resumes it then."
+            else
+              echo "::notice title=Dev OS::$TASK resets at $NOT_BEFORE; devos-resume (scheduled, best effort) picks it up, or run devos-resume by hand after that time."
+            fi
+            exit 0
+          fi
+          if [ "$wait" -gt 0 ]; then
+            echo "Waiting $(( wait / 60 )) minutes, until $NOT_BEFORE (UTC), to resume $TASK attempt $ATTEMPT."
+            sleep "$wait"
+          fi
+          labels=$(gh pr view "$PR" --repo "$REPO" --json labels --jq '[.labels[].name] | join(",")' 2>/dev/null || echo "")
+          case ",$labels," in
+            *",devos:quota-wait,"*) ;;
+            *) echo "The devos:quota-wait label was removed; not resuming."; exit 0 ;;
+          esac
+          gh pr edit "$PR" --repo "$REPO" --remove-label "devos:quota-wait"
+          gh workflow run devos-cycle.yml --repo "$REPO" --ref main \
+            -f task="$TASK" -f attempt="$ATTEMPT" -f review_only="$REVIEW_ONLY" -f revision="$REVISION" -f go=true
+          echo "::notice title=Dev OS::Resumed $TASK attempt $ATTEMPT (review_only=$REVIEW_ONLY)."

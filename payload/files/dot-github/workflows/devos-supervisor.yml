@@ -4,7 +4,8 @@
 # `/devos approve <id>` or `/devos reject <id>` on the "Dev OS: supervisor" issue. It:
 #   - spots what has stopped: a failed cycle run, a halted or overdue parked task, a rescue branch,
 #     or nothing running although the next task is waiting;
-#   - explains it with fixed rules first, and asks Claude (read-only) only when no rule fits;
+#   - explains it with fixed rules first, and asks Claude Code (read-only) only when no rule fits and Claude Code is
+#     the project's reviewer agent (PR-53);
 #   - fixes what is safe on its own (re-run, resume, continue from the branch, recover a rescue
 #     branch, start the next task), at most supervisor.max_auto_per_key times for the same cause;
 #   - turns everything else into something you approve: a method-fix issue, a change request, a
@@ -87,7 +88,8 @@ jobs:
         if: github.event_name != 'issue_comment'
         run: node scripts/devos/supervisor.mjs scan $DRY
 
-      # Only for what no rule explains: Claude reads the facts, the logs and the repository, read-only.
+      # Only for what no rule explains, and only when Claude Code is the project's reviewer agent (PR-53): it reads the
+      # facts, the logs and the repository, read-only, on the model the developer chose.
       - name: Diagnose — Claude Code (read-only)
         if: steps.scan.outputs.ask_claude == 'true'
         continue-on-error: true
@@ -97,11 +99,16 @@ jobs:
           OAUTH: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN || secrets.CLAUDE_CODE_OAUTH_TOKEN_2 }}
           APIKEY: ${{ secrets.ANTHROPIC_API_KEY || secrets.ANTHROPIC_API_KEY_2 }}
         run: |
+          # PR-53: the second opinion runs only when the project's reviewer agent is Claude Code, on the model the developer chose.
+          line=$(node scripts/devos/agents.mjs reviewer --mode deep 2>/dev/null || true)
+          tool=$(printf '%s\n' "$line" | sed -n 's/^reviewer_tool=//p')
+          if [ -n "$line" ] && [ "$tool" != "claude" ]; then echo "The project's reviewer agent is $tool; no Claude Code second opinion (PR-53)."; exit 0; fi
+          chosen=$(printf '%s\n' "$line" | sed -n 's/^reviewer_model=//p')
           [ -n "$OAUTH" ] && export CLAUDE_CODE_OAUTH_TOKEN="$OAUTH"
           [ -n "$APIKEY" ] && export ANTHROPIC_API_KEY="$APIKEY"
           [ -n "$OAUTH$APIKEY" ] || { echo "No Claude credential; the supervisor reports without a diagnosis."; exit 0; }
           npm install -g @anthropic-ai/claude-code > /dev/null
-          MODEL=$(node -e 'const c=require("./devos.config.json");console.log(c.supervisor?.model||c.reviewer.gate_model)')
+          MODEL=${chosen:-$(node -e 'const c=require("./devos.config.json");console.log(c.supervisor?.model||c.reviewer.gate_model)')}
           claude -p "$(cat devos/prompts/supervisor.md)" --model "$MODEL" --effort high --output-format json \
             --json-schema "$(cat devos/schemas/supervisor.schema.json)" --permission-mode dontAsk --max-turns 25 \
             --allowedTools "Read,Glob,Grep" --disallowedTools "Bash,Write,Edit,WebFetch,WebSearch" \

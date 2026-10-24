@@ -27,8 +27,8 @@ The method this machine runs is the handbook, `docs/method/DEV_OS_V2_REVIEWER.md
 | Role | Who | May change | Never |
 |---|---|---|---|
 | Human | you | everything; signs ODs and gates by merging | — |
-| Builder | Grok in Cursor CLI (`agent`) | product code, tests, its report (`surfaces.builder.deny` says what not); in a method fix, the method files its fence names (`surfaces.builder_method`) | git, gh, secrets, fences, reviews, ledgers |
-| Reviewer | Claude Code (`claude`) | `docs/reviews/**`, `docs/fences/**` (PR-07); intake/method runs: docs listed in `surfaces.intake` | code, tests, configs |
+| Builder | the builder agent the developer chose (`agents.pool`: Cursor CLI `agent`, Claude Code, Codex or Gemini, PR-45, PR-53) | product code, tests, its report (`surfaces.builder.deny` says what not); in a method fix, the method files its fence names (`surfaces.builder_method`) | git, gh, secrets, fences, reviews, ledgers |
+| Reviewer | the reviewer agent the developer chose (`agents.reviewer`, and `agents.reviewer_light` for light reviews), which also plans intake, method fixes and revisions (PR-53) | `docs/reviews/**`, `docs/fences/**` (PR-07); intake/method runs: docs listed in `surfaces.intake` | code, tests, configs |
 | Runner | GitHub Actions + `scripts/devos/` | git, PRs, labels, statuses, the PHASES ledger | deciding a verdict (it applies `verdict.mjs`) |
 
 Invariants every change must keep: the Boundary gate is non-waivable · red checks override PASS
@@ -39,8 +39,8 @@ secrets never enter a file · fetch, never paste (PR-02) · a usage limit is a w
 
 ## 2. The flows
 
-**New work.** Issue form "Dev OS change request" (label `devos:request`) → `devos-intake` (Claude,
-gate model) plans it on `intake/issue-N`: draft OD, scope row, PHASES rows, first fence,
+**New work.** Issue form "Dev OS change request" (label `devos:request`) → `devos-intake` (the reviewer
+agent, `plan-agent.sh`, PR-53) plans it on `intake/issue-N`: draft OD, scope row, PHASES rows, first fence,
 `docs/requests/issue-N.md`, settings in `docs/setup-items.json` → intake PR (`devos:intake`) → your
 merge signs the OD → `devos-advance` dispatches `devos-cycle`.
 
@@ -54,12 +54,12 @@ runs once, after the last stage. Intake splits big work into separate ledger row
 **One task attempt** (`devos-cycle`, one run = one attempt of one task):
 1. `resolve`: `next-task.mjs` picks the task (method fixes first, PR-28); `setup-check.mjs --for
    cycle` stops a run that has no credentials (PR-27); `heavy.mjs` announces or holds heavy runs (PR-20).
-2. `cycle`: branch `task/Tnn` (a reissue continues it, PR-03) → `builder-model.mjs` picks the Grok
-   id → `modules.mjs start` brings up the local services → Grok builds (`accounts.sh` switches
-   Cursor accounts on a limit, PR-29; `agent-watchdog.sh` stops a hung CLI inside the step) → `guard-surfaces.mjs builder` + the method-file guard (from
+2. `cycle`: branch `task/Tnn` (a reissue continues it, PR-03) → `builder-model.mjs` picks the builder's
+   model id → `modules.mjs start` brings up the local services → the builder agent builds (`accounts.sh` switches
+   to the same tool's other account on a limit, PR-29, and with none left the attempt is parked, PR-53; `agent-watchdog.sh` stops a hung CLI inside the step) → `guard-surfaces.mjs builder` + the method-file guard (from
    main's workflow) → commit, `sync-main.sh`, push → PR → `builder-status.mjs` (ok / park / halt) →
    `run-checks.mjs` + `checks-status.sh` (status `devos/checks`) → preview + `screens.mjs` (settled screenshot, filmstrip, reduced-motion screenshot, layout shift, console errors, failed requests and axe, written to `.devos/screens/motion.json`) → `ui-evidence.mjs` (a UI fence's `ui-evidence` and `a11y` checks, PR-51) + `checks-status.sh` again →
-   `review-mode.mjs` (light/deep) + `evidence.mjs` → Claude reviews (account switch, PR-29) →
+   `review-mode.mjs` (light/deep) + `evidence.mjs` → the reviewer agent reviews (account switch, PR-29) →
    `guard-surfaces.mjs reviewer` → `verdict.mjs` decides → review commit, sync, re-check if main
    moved (PR-25), statuses → act.
 3. Actions: `merge` (auto-merge, label `devos:auto-merged`, next task dispatched) · `human_gate`
@@ -68,8 +68,8 @@ runs once, after the last stage. Intake splits big work into separate ledger row
    (PR-27, `setup-issue.mjs wait`) · `halt` (label `devos:halted`, doctor dispatched).
 
 **Gates.** `devos-doctor` keeps one comment per PR (marker `devos-doctor`), sets `devos/gate`, labels
-`devos:needs-you` when only you can act, re-checks gate PRs when main moves (PR-25), and asks Claude
-for a read-only second opinion when no rule explains a failure. Your merge → `devos-advance`.
+`devos:needs-you` when only you can act, re-checks gate PRs when main moves (PR-25), and asks Claude Code
+for a read-only second opinion when no rule explains a failure and Claude Code is the project's reviewer agent (PR-53). Your merge → `devos-advance`.
 
 **Production.** Push to main by you → `devos-deploy`: `which` skips the runner's auto-merges →
 settings check (PR-27) → guards → storage preflight (PR-26) → database backup + migrations (PR-18) →
@@ -83,7 +83,7 @@ needed" (label `devos:setup`) and resumes waiting runs and a failed deploy when 
 **Method fixes and improvements.** Issue form "Dev OS method fix" (label `devos:method`), for a
 problem or for a change in how the automation works → `devos-intake` in method mode
 (`devos/prompts/method.md`) with the linked runs' logs → PR with diagnosis and a Phase `PM`
-task → your merge → the fix runs first, Grok builds, deep review forced, your gate forced →
+task → your merge → the fix runs first, the builder agent builds, a deep review by the reviewer agent forced, your gate forced →
 `devos-advance` restarts the task the fence's `Resume after merge` names.
 
 **Usage limits.** A run stopped by a limit is parked (label `devos:quota-wait`, a `devos-resume`
@@ -104,7 +104,7 @@ by a usage limit resumes as the revision it is.
 | File | Triggers | Jobs | Does |
 |---|---|---|---|
 | `devos-cycle.yml` | dispatch only (form: task, attempt, review_only, effort, fast, revision, reuse_review, go, cursor_account, claude_account) | `resolve`, `cycle`, `wait-and-resume` | one task attempt, end to end (§2) |
-| `devos-intake.yml` | issue labelled `devos:request` / `devos:method`; comments `/devos intake`, `/devos go`, `/devos revise`; dispatch (resume) | `intake`, `intake-wait`, `go`, `revise` | plans requests and method fixes; holds and resumes plans across limits; releases held runs; revisions |
+| `devos-intake.yml` | issue labelled `devos:request` / `devos:method`; comments `/devos intake`, `/devos go`, `/devos revise`; dispatch (resume) | `intake`, `intake-wait`, `go`, `revise` | plans requests and method fixes on the reviewer agent (`plan-agent.sh`, PR-53); holds and resumes plans across limits; releases held runs; revisions |
 | `devos-advance.yml` | PR closed (merged, `task/` or `intake/`, not auto-merged) | `advance` | dispatches the next task, or restarts the task a method fix unblocked |
 | `devos-doctor.yml` | ci finished; `/devos doctor`; push to main; dispatch (PR) | `gates`, `doctor` | the gate doctor (§2) |
 | `devos-resume.yml` | every 2 hours; dispatch | `resume` | backstop for parked runs and plans; re-checks the setup issue |
@@ -125,14 +125,15 @@ workflow may start late.
 |---|---|
 | `lib.mjs` | shared: config, PHASES parsing (`nextOpenTask`, `taskAfter`, method rows), globs, outputs, `.devos/*.env` |
 | `config.mjs` | builds `devos.config.json` from `devos/engine.defaults.json` and `devos/project.json`; `--write`, `--check`, `--print`; PR-39 |
-| `agents.mjs` | resolves the builder pool id, the reviewer model and `next --after` from `devos.config.json` `agents`; `tools` lists the tools the agents use, so the cycle installs only those CLIs (PR-41, PR-42, PR-45) |
-| `role-env.mjs` | installs a role kit for a tool in the other role and restores the tool's own config (PR-42); `devos/roles/cursor-blueprint/` is the kit `devos init` gives Cursor while it writes the blueprint (PR-44); the kits `codex-builder`, `codex-reviewer`, `gemini-builder` and `gemini-reviewer` give Codex its `AGENTS.md` and Gemini its `GEMINI.md` for the run (PR-45) |
+| `agents.mjs` | resolves the builder pool id, the reviewer model and `next --after` (not used by the cycle since PR-53) from `devos.config.json` `agents`; `tools` lists the tools the agents use, so the cycle installs only those CLIs (PR-41, PR-42, PR-45) |
+| `role-env.mjs` | installs a role kit for a tool in the other role and restores the tool's own config (PR-42); `devos/roles/cursor-blueprint/` is the kit `devos init` gives Cursor while it writes the blueprint (PR-44); `cursor-planner` is Cursor's kit for a planning run (PR-53); the kits `codex-builder`, `codex-reviewer`, `gemini-builder` and `gemini-reviewer` give Codex its `AGENTS.md` and Gemini its `GEMINI.md` for the run (PR-45) |
 | `next-task.mjs` | which task and attempt; refuses out-of-order product tasks |
 | `heavy.mjs` | heavy-run notice or hold (`DEVOS_HEAVY`) |
 | `builder-model.mjs` | the builder model id from the pool item's family, checked against `agent models` |
 | `modules.mjs` | starts every needed module (`supabase.mjs`, `r2.mjs`, `firebase.mjs`); `plannedModules()` |
 | `supabase.mjs` · `r2.mjs` · `firebase.mjs` | each module's local service, env file and checks (PR-17, PR-26) |
 | `accounts.sh` · `limit-check.mjs` | account order, credential export, limit detection, for Cursor, Claude Code, Codex and Gemini (PR-29, PR-45) |
+| `plan-agent.sh` | one planning run (an intake plan, a method-fix diagnosis, a revision) on the project's reviewer agent, the one the developer chose: Claude Code answers through its JSON schema; Cursor, Codex and Gemini write the answer to `.devos/<stage>-answer.json`. Every tool's answer lands in `.devos/<stage>.json` as `structured_output`, with the same tool's other account on a limit. Cursor runs with the planner kit `devos/roles/cursor-planner/` (PR-53) |
 | `run-agent.sh` | runs Codex or Gemini as the builder or the reviewer: its role kit, its accounts with the usage-limit switch, the watchdog for the builder, and `.devos/<role>-run.env` (`code`, `used`, `accounts`) for the step (PR-45) |
 | `agent-cli.mjs` | the Codex and Gemini command lines (`args`) and their output in the runner's result shape (`normalize`) (PR-45) |
 | `guard-surfaces.mjs` | who may change what, per role |
@@ -140,7 +141,7 @@ workflow may start late.
 | `agent-watchdog.sh` | runs the Cursor CLI in 72-minute time slices with two checks: a lost connection with no progress for 10 minutes (`devos-stall:`, exit 125) and no activity at all for `builder.idle_stop_minutes` — no change in the tree, no CLI output (the builder runs with `--output-format stream-json`, one line per message and tool call) and no CPU use by the run's processes (`devos-stuck:` naming the last action, exit 126) are restarted once, then parked (stall) or halted (stuck); a slice that ends while files are still changing (exit 124) is committed and the same attempt continues in a fresh run, up to `builder.max_time_slices` (`builder-status.mjs` → `continue`). The agent's environment never holds a GitHub token. With `DEVOS_USAGE_STAGE` set, each run ends with its line in the usage record (`usage.mjs`, PR-52) |
 | `builder-report.mjs` | reads the builder's stream-json output and prints its plan (the builder's own to-do list: done, in progress, left), its latest note and a timeline with one line per 10 minutes (files read, searches, commands, edits, the files it edited and the commands it ran); used by `progress.sh` and appended to the PR comment when a run continues, parks or halts |
 | `progress.sh` | live builder progress for the owner: one comment per run on the open `devos:notices` issue, edited every 5 minutes (working · quiet · finished · time slice used · stuck), with the minutes, files changed, the builder's last action (from `.devos/builder-last-action`), the `builder-report.mjs` report and a link to the run |
-| `supervisor.mjs` · `devos-supervisor.yml` | the supervisor: after every Dev OS workflow, every 30 minutes and on `/devos approve <id>` / `/devos reject <id>` (on the issue labelled `devos:supervisor`), it closes finished requests (an open `devos:request` or `devos:method` issue whose plan PR `intake/issue-N` is merged and every task row that PR added to `docs/PHASES.md` is ticked PASS on main: a comment, then closed as completed), and it finds what has stopped (a failed cycle run — from the run's event, and on every scan the latest finished cycle run, because runs dispatched with the built-in token fire no event — a failed `ci` on main — re-run when an outside service such as Google Fonts caused it — or a failed production deploy, which it re-runs only when an outside service (network, Google Fonts) failed it and the site was not deployed, and otherwise only reports, a halted or overdue parked task, a rescue branch, nothing running while a task waits), explains it with fixed rules (Claude Opus with the prompt `devos/prompts/supervisor.md`, read-only, only when none fits; at most `supervisor.max_ai_per_day`), fixes what is safe (re-run, resume, continue from the branch, recover a rescue branch, start the next task; at most `supervisor.max_auto_per_key` times per cause, then `devos:needs-you`), and turns the rest into a method-fix issue, a change request, a proposal to approve, or setup steps. One comment per incident on the "Dev OS: supervisor" issue, posted once (a reported key that was not acted on is never reported again; a halt the owner answered with `/devos revise` is skipped) with the built-in token, so its comments start no workflow; skipped or cancelled runs do not wake it (PR-36). Never merges, pushes to main or handles a secret value; off with `DEVOS_SUPERVISOR=off`. `supervisor.mjs classify --run <id>` shows how the rules read a past run |
+| `supervisor.mjs` · `devos-supervisor.yml` | the supervisor: after every Dev OS workflow, every 30 minutes and on `/devos approve <id>` / `/devos reject <id>` (on the issue labelled `devos:supervisor`), it closes finished requests (an open `devos:request` or `devos:method` issue whose plan PR `intake/issue-N` is merged and every task row that PR added to `docs/PHASES.md` is ticked PASS on main: a comment, then closed as completed), and it finds what has stopped (a failed cycle run — from the run's event, and on every scan the latest finished cycle run, because runs dispatched with the built-in token fire no event — a failed `ci` on main — re-run when an outside service such as Google Fonts caused it — or a failed production deploy, which it re-runs only when an outside service (network, Google Fonts) failed it and the site was not deployed, and otherwise only reports, a halted or overdue parked task, a rescue branch, nothing running while a task waits), explains it with fixed rules (Claude Code with the prompt `devos/prompts/supervisor.md`, read-only, only when none fits and Claude Code is the project's reviewer agent, on its model, PR-53; at most `supervisor.max_ai_per_day`), fixes what is safe (re-run, resume, continue from the branch, recover a rescue branch, start the next task; at most `supervisor.max_auto_per_key` times per cause, then `devos:needs-you`), and turns the rest into a method-fix issue, a change request, a proposal to approve, or setup steps. One comment per incident on the "Dev OS: supervisor" issue, posted once (a reported key that was not acted on is never reported again; a halt the owner answered with `/devos revise` is skipped) with the built-in token, so its comments start no workflow; skipped or cancelled runs do not wake it (PR-36). Never merges, pushes to main or handles a secret value; off with `DEVOS_SUPERVISOR=off`. `supervisor.mjs classify --run <id>` shows how the rules read a past run |
 | `rescue.sh` | the supervisor's recovery of a rescue branch: merges the task branch and main into it (journal by union), pushes it to the task branch without force, deletes the rescue branch; a real conflict stops with nothing pushed |
 | `builder-status.mjs` | ok / continue (next time slice, or the next stage of a staged fence) / quota park (usage limit or `devos-stall:`) / halt after the build |
 | `run-checks.mjs` | module checks, then guards, typecheck, lint, test, build, e2e → `.devos/ci-results.json`; a Node stack runs its `package.json` scripts with pnpm, any other toolchain runs `stack.commands` once its manifest exists, after `install` (PR-48); `--install-only` runs just the install, before the builder |
@@ -149,7 +150,7 @@ workflow may start late.
 | `screens.mjs` · `probe.mjs` | motion evidence for the visual check: settled screenshot, filmstrip, reduced-motion screenshot and layout shift in `.devos/screens/motion.json` (PR-35), with each capture's console errors, failed requests and axe result (PR-51); the local build is served by `stack.preview` (`next start` when it is empty); strict reachability probe |
 | `screens.test.mjs` | self-test of that capture (the fence `- Screens:` line, frame pick, filmstrip, layout shift, console errors, failed requests, axe) |
 | `ui-evidence.mjs` | for a UI fence, turns the captures into the required checks `ui-evidence` and `a11y` in `.devos/ci-results.json`: missing evidence is a failed check (PR-51) |
-| `review-mode.mjs` | light or deep review, model, effort, turns, critical paths |
+| `review-mode.mjs` | light or deep review, model (the chosen reviewer's; no fallback model, PR-53), effort, turns, critical paths |
 | `evidence.mjs` | `.devos/evidence.md`, the reviewer's evidence pack |
 | `render-prompt.mjs` | fills `devos/prompts/*.md` |
 | `verdict.mjs` | validates the review, applies PR-08 and the gates, records PHASES, picks the action |
@@ -157,7 +158,7 @@ workflow may start late.
 | `usage.mjs` | the usage record (PR-52): `record` adds one line per agent run to `.devos/usage/pending.jsonl` (stage, task, tool, model, input, output, cache-read and cache-write tokens, the tool's own cost, seconds); `flush` moves the lines to `docs/usage/<task>.jsonl` in the runner's commit; `report --write` rebuilds `docs/USAGE.md`, the totals by model, stage and task, priced from the tool's own cost or `devos/prices.json`. Every builder run is recorded by `agent-watchdog.sh` (`DEVOS_USAGE_STAGE`), every reviewer, intake and revise run right after its call; the gate doctor's and the supervisor's runs go on their run summary only (`--summary`). A record never fails a run |
 | `doctor.mjs` | the gate doctor's facts, rules and comment |
 | `setup-check.mjs` · `setup-issue.mjs` | settings by name; the setup issue and resumptions (PR-27). An item applies only to what the project uses: a module it chose at `devos init` (`chosen:`, from `devos/answers.json`) or a fence names, a tool an agent runs on (PR-53) |
-| `loop.mjs` | the same cycle on your machine, with your logged-in CLIs |
+| `loop.mjs` | the same cycle on your machine, with your logged-in CLIs: Cursor builds and Claude Code reviews, so it refuses a project that chose other agents (PR-53) |
 
 ## 5. Guards (`scripts/guards/`, run by `run-all.mjs` as the `guards` check)
 
@@ -214,7 +215,7 @@ A UI fence carries a header line `- Screens: \`<name> <path>[ click|hover|focus 
 - **Run scratch** (`.devos/`, never committed, kept as the run's artifact): prompts, agent output,
   `ci-results.json`, `logs/`, `evidence.md`, `screens/` (`motion.json` plus settled, filmstrip and reduced-motion PNGs), `*.env` (module services), `limits/`,
   `accounts.md`, `usage/` (usage lines not yet committed), `setup.md`, `setup-result.json`, `progress-issue` / `progress-comment` (the live
-  progress comment), `supervisor/` (facts, incidents, Claude's diagnosis).
+  progress comment), `supervisor/` (facts, incidents, the AI diagnosis).
 
 ## 8. Settings
 
@@ -252,7 +253,7 @@ A UI fence carries a header line `- Screens: \`<name> <path>[ click|hover|focus 
   run, the `cursor_account` / `claude_account` choices in devos-cycle's run form. A second account
   exists only if its `_2` secret is set.
 - **`devos.config.json`:** generated — edit `devos/project.json`; engine defaults in `devos/engine.defaults.json`. `max_attempts`; `builder` (model family, effort by risk); `reviewer`
-  (models and efforts by risk and gate, `modes.light/deep`, `deep_paths`, intake and method efforts); `agents` (reviewer, reviewer_light, pool, policy; without reviewer_light the reviewer reviews every task, PR-53; any of Cursor, Claude Code, Codex and Gemini may take either role (PR-45); one next-agent fallback on a builder usage limit; `devos init` writes them from the developer's choices, and the setup items `cursor`, `claude`, `codex` and `gemini` apply only when an agent uses that tool, PR-44);
+  (models and efforts by risk and gate, `modes.light/deep`, `deep_paths`, intake and method efforts; its Claude model ids apply only to a project without `agents`, PR-53); `agents` (reviewer, reviewer_light, pool, policy; without reviewer_light the reviewer reviews every task, PR-53; any of Cursor, Claude Code, Codex and Gemini may take either role (PR-45); a usage limit switches only to the same tool's other account, and with none left the attempt waits for the reset: no other agent or model takes over, PR-53; `devos init` writes them from the developer's choices, and the setup items `cursor`, `claude`, `codex` and `gemini` apply only when an agent uses that tool, PR-44);
   `required_checks` / `optional_checks`; `stack` (the toolchain, its manifest and the commands of its checks, written by `devos init`, PR-48, and `scaffold`, the recipe fence T01 follows, PR-49); `screens` (`pages`, `filmstrip_ms`, `settle_max_ms`; a fence `- Screens:` line overrides `pages`); `surfaces` (builder, builder_method, reviewer, intake,
   revise); `resume` (inline wait, relay, back-off, `stall_wait_minutes`); `modules` (supabase, r2, firebase); `heavy`; `retry_build_on`;
   `builder.max_time_slices` (4) and `builder.idle_stop_minutes` (30) for the watchdog; `supervisor`
@@ -266,15 +267,15 @@ A UI fence carries a header line `- Screens: \`<name> <path>[ click|hover|focus 
 
 | Symptom | What the automation does | What you do |
 |---|---|---|
-| Usage limit (Cursor or Claude) | switches to the other account; if both are out, parks, waits (relayed by `devos-wait`) and resumes after the first reset | nothing; to resume at once, run `devos-resume` by hand |
+| Usage limit (any agent) | switches to the same tool's other account; if both are out, parks (no other agent or model takes over, PR-53), waits (relayed by `devos-wait`) and resumes after the first reset | nothing; to resume at once, run `devos-resume` by hand |
 | Missing secret, variable, Vercel value | the run does not start or the deploy stops; the setup issue lists it with steps | add it; the rest resumes |
 | Review finds an outside cause | `setup_wait`: no retry spent; steps in the verdict | add it, comment `/devos setup` |
-| A check fails on the code | the reviewer FAILs with a focus; Grok retries up to `max_attempts` | only at halt: `/devos revise` or a change request |
+| A check fails on the code | the reviewer FAILs with a focus; the builder retries up to `max_attempts` | only at halt: `/devos revise` or a change request |
 | Review over its turn limit | the verdict is taken from the complete review file (PR-21) | nothing |
 | Main moved during a run | merged in before push (the journal by union); a real conflict saves the work on `rescue/…` and the supervisor recovers it; re-checked before any merge (PR-14, PR-25) | nothing |
 | The builder runs out of time while still working | the slice is committed and the same attempt continues in a fresh run (up to 4 slices) | nothing; watch issue #1 |
 | The builder loses its connection or stops changing anything | restarted once; then parked (connection) or halted (stuck), and the supervisor re-dispatches within its limit | nothing, unless the supervisor asks |
-| Any run stops and no rule above covers it | the supervisor asks Claude for a diagnosis and fixes or proposes | approve or reject on the supervisor issue |
+| Any run stops and no rule above covers it | the supervisor asks Claude Code for a diagnosis (when it is the reviewer agent) and fixes or proposes | approve or reject on the supervisor issue |
 | Google Fonts download fails the build | retried three times (PR-24) | nothing |
 | Deploy fails (database paused, wrong key) | stops before the app moves, with the reason | fix the setting; a failed deploy re-runs when setup completes |
 | The automation itself misbehaves | — | file a "Dev OS method fix" with the run link |
@@ -285,7 +286,7 @@ A UI fence carries a header line `- Screens: \`<name> <path>[ click|hover|focus 
 ## 10. Changing the automation
 
 The normal path is a **method fix issue**, for a problem or an improvement: the reviewer diagnoses
-from the logs (or designs the improvement with the recipes below), Grok builds, the reviewer reads
+from the logs (or designs the improvement with the recipes below), the builder agent builds, the reviewer reads
 every line, you merge. Every method change, whoever makes it, must:
 
 1. keep every invariant in §1 and fit every precedent, or amend one explicitly;

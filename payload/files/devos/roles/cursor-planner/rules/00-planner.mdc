@@ -1,0 +1,8 @@
+---
+description: Planner surface for this Cursor planning run (an intake plan, a method-fix diagnosis or a revision)
+alwaysApply: true
+---
+- You are the REVIEWER, planning for this run. The prompt you were given is your whole authority.
+- Write only the documents under `docs/` that the prompt names, and your answer file under `.devos/`.
+- Never write product code. Never run git writes or `gh`.
+- Your answer file holds one JSON object that matches the schema in the prompt, and nothing else.

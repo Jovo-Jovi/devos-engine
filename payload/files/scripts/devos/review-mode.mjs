@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 // How deep the review goes, decided by the runner after the build (PR-22).
 //
-//   light  risk 1–2, no gate, no critical path touched: Sonnet at low cost, evidence-first, spot checks.
+//   light  risk 1–2, no gate, no critical path touched: the light reviewer (or the reviewer), evidence-first, spot checks.
 //   deep   risk 3, a gate, or the diff touches a critical path (devos.config.json
-//          reviewer.deep_paths: migrations, auth, headers, workflows…): Opus, every changed line
+//          reviewer.deep_paths: migrations, auth, headers, workflows…): the reviewer, every changed line
 //          of the critical files, targeted probes only.
+// The agents and models are the ones the developer chose (agents in devos.config.json, PR-53); no fallback model.
 //
 // A retry (attempt 2+) raises the effort one step: the cheap review missed something or the task is hard.
 // Usage: node scripts/devos/review-mode.mjs --task T12 --attempt 1
@@ -35,10 +36,11 @@ export function reviewPlan(row, changed = [], attempt = 1, cfg = config()) {
     effort = EFFORTS[i];
   }
   const gateOrMethod = hasGate(row) || isMethodRow(row);
-  const model = gateOrMethod ? r.gate_model : (cfg.agents ? reviewerFor(mode, cfg.agents).model : m.model);
+  // PR-53: a project with agents is reviewed only by the agent and model the developer chose, with no fallback model.
+  const model = cfg.agents ? reviewerFor(gateOrMethod ? "deep" : mode, cfg.agents).model : (gateOrMethod ? r.gate_model : m.model);
   return {
     mode, model, effort, max_turns: m.max_turns ?? r.max_turns ?? 80,
-    fallback: r.fallback_model && r.fallback_model !== model ? r.fallback_model : "",
+    fallback: !cfg.agents && r.fallback_model && r.fallback_model !== model ? r.fallback_model : "",
     reasons: reasons.length ? reasons : ["risk 1–2, no gate, no critical path"],
     critical,
   };

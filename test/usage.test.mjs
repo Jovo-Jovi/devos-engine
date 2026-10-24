@@ -245,7 +245,12 @@ test("usage.test.mjs (g) every agent call in the workflows is recorded", () => {
   assert.equal(count(cycle, "node scripts/devos/usage.mjs flush --task \"$TASK\""), 2);
   assert.equal(count(cycle, "node scripts/devos/usage.mjs report --write"), 2);
   assert.equal(count(read("scripts/devos/run-agent.sh"), "usage.mjs record --stage reviewer"), 1);
-  for (const [file, stages] of [["devos-intake.yml", ["intake", "revise"]], ["devos-doctor.yml", ["doctor"]], ["devos-supervisor.yml", ["supervisor"]]]) {
+  // PR-53: intake and revise run through plan-agent.sh, which records every planning run under its stage.
+  const intake = read("dot-github/workflows/devos-intake.yml");
+  assert.equal(count(intake, "claude -p"), 0);
+  for (const stage of ["intake", "revise"]) assert.equal(count(intake, `bash scripts/devos/plan-agent.sh ${stage} `), 1, stage);
+  assert.equal(count(read("scripts/devos/plan-agent.sh"), 'usage.mjs record --stage "$stage"'), 1);
+  for (const [file, stages] of [["devos-doctor.yml", ["doctor"]], ["devos-supervisor.yml", ["supervisor"]]]) {
     const text = read(`dot-github/workflows/${file}`);
     assert.equal(count(text, "claude -p"), stages.length, file);
     for (const stage of stages) assert.equal(count(text, `usage.mjs record --stage ${stage} `), 1, `${file} ${stage}`);

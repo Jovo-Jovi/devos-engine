@@ -20,7 +20,7 @@
   <img alt="Gemini" src="https://img.shields.io/badge/Gemini-reviewer%20%26%20builder-8E75B2?style=flat-square&logo=googlegemini&logoColor=white">
 </p>
 <p align="center">
-  <img alt="Pre-release 0.2.0" src="https://img.shields.io/badge/pre--release-0.2.0-C9A96E?style=flat-square">
+  <img alt="Pre-release 0.2.1" src="https://img.shields.io/badge/pre--release-0.2.1-C9A96E?style=flat-square">
   <img alt="20 stacks" src="https://img.shields.io/badge/stacks-20-0C1628?style=flat-square">
   <img alt="16 project types" src="https://img.shields.io/badge/project%20types-16-0C1628?style=flat-square">
   <img alt="Keys never stored" src="https://img.shields.io/badge/keys-never%20stored-7CC4A8?style=flat-square">
@@ -39,7 +39,7 @@ questions in your browser or your terminal, and an AI agent on your computer wri
 approve it, DEV_OS creates the GitHub repository and starts the automated cycle on GitHub Actions. From then on, a
 builder agent writes each task, a reviewer agent reviews it, and you merge at the gates.
 
-Status: pre-release `0.2.0`. The repository is private and not licensed for use yet (see `LICENSE`).
+Status: pre-release `0.2.1`. The repository is private and not licensed for use yet (see `LICENSE`).
 
 ## Why DEV_OS
 

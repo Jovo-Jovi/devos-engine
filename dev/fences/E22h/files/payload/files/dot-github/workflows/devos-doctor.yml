@@ -1,0 +1,163 @@
+# Gate doctor (PR-15): before you merge, it says on the PR what needs attention and why.
+#
+# Runs when:
+#   - `ci` finishes on a pull request (pass or fail),
+#   - the cycle stops at a human gate or halts (it dispatches this workflow),
+#   - an owner/member/collaborator comments `/devos doctor` on a PR,
+#   - you run it from Actions → devos-doctor → Run workflow (PR number).
+#
+# It keeps one comment per PR up to date, sets the commit status `devos/gate` (green = ready for
+# your merge), labels the PR `devos:needs-you` when only a human can act, re-runs a ci run that
+# failed for an environment reason once per commit, and asks Claude Code (read-only, only when it is the project's
+# reviewer agent, PR-53) for a second opinion
+# when a failure matches no known rule. It never merges, pushes or edits code.
+name: devos-doctor
+run-name: "doctor · ${{ inputs.pr && format('PR #{0}', inputs.pr) || github.event.issue.number && format('PR #{0}', github.event.issue.number) || github.event.workflow_run.head_branch }}"
+
+on:
+  workflow_run:
+    workflows: [ci]
+    types: [completed]
+  issue_comment:
+    types: [created]
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: "Pull request number"
+        required: true
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  statuses: write
+  actions: write
+
+concurrency:
+  group: devos-doctor-${{ inputs.pr || github.event.issue.number || github.event.workflow_run.head_branch }}
+  cancel-in-progress: true
+
+jobs:
+  # PR-25: when main moves, every PR waiting at a human gate is checked again by the doctor, which
+  # re-checks it against the new main if main gained code.
+  gates:
+    if: vars.DEVOS_PAUSED != 'true' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run the doctor on every PR waiting at a gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          for pr in $(gh pr list --repo "$REPO" --state open --label "devos:human-gate" --json number --jq '.[].number'); do
+            gh workflow run devos-doctor.yml --repo "$REPO" --ref main -f pr="$pr"
+            echo "doctor dispatched for PR #$pr"
+          done
+
+  doctor:
+    if: >-
+      vars.DEVOS_PAUSED != 'true' && github.event_name != 'push' && (
+        github.event_name == 'workflow_dispatch' ||
+        (github.event_name == 'workflow_run' && github.event.workflow_run.event == 'pull_request') ||
+        (github.event_name == 'issue_comment' && github.event.issue.pull_request &&
+          startsWith(github.event.comment.body, '/devos doctor') &&
+          contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association))
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      REPO: ${{ github.repository }}
+      GH_TOKEN: ${{ github.token }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Which pull request
+        id: pr
+        env:
+          IN_PR: ${{ inputs.pr || github.event.issue.number || github.event.workflow_run.pull_requests[0].number }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          COMMENT_ID: ${{ github.event.comment.id }}
+        run: |
+          PR="$IN_PR"
+          if [ -z "$PR" ] && [ -n "$HEAD_BRANCH" ]; then
+            PR=$(gh pr list --repo "$REPO" --head "$HEAD_BRANCH" --state open --json number --jq '.[0].number // empty')
+          fi
+          [ -n "$PR" ] || { echo "No open pull request for this event; nothing to check."; exit 0; }
+          echo "pr=$PR" >> "$GITHUB_OUTPUT"
+          [ -n "$COMMENT_ID" ] && gh api "repos/$REPO/issues/comments/$COMMENT_ID/reactions" -f content=eyes >/dev/null || true
+
+      - name: Collect the facts and apply the known-issue rules
+        id: c
+        if: steps.pr.outputs.pr != ''
+        run: node scripts/devos/doctor.mjs collect --pr "${{ steps.pr.outputs.pr }}"
+
+      # Only when a failure matches no rule, and only when Claude Code is the project's reviewer agent (PR-53): it reads
+      # the logs and the code, read-only, on the model the developer chose.
+      - name: Check out the PR head for the second opinion
+        if: steps.c.outputs.ask_claude == 'true'
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ steps.c.outputs.sha }}
+          path: pr
+          persist-credentials: false
+      - name: Second opinion — Claude Code (read-only)
+        if: steps.c.outputs.ask_claude == 'true'
+        continue-on-error: true
+        timeout-minutes: 20
+        env:
+          OAUTH: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN || secrets.CLAUDE_CODE_OAUTH_TOKEN_2 }}
+          APIKEY: ${{ secrets.ANTHROPIC_API_KEY || secrets.ANTHROPIC_API_KEY_2 }}
+        run: |
+          # PR-53: the second opinion runs only when the project's reviewer agent is Claude Code, on the model the developer chose.
+          line=$(node scripts/devos/agents.mjs reviewer --mode deep 2>/dev/null || true)
+          tool=$(printf '%s\n' "$line" | sed -n 's/^reviewer_tool=//p')
+          if [ -n "$line" ] && [ "$tool" != "claude" ]; then echo "The project's reviewer agent is $tool; no Claude Code second opinion (PR-53)."; exit 0; fi
+          chosen=$(printf '%s\n' "$line" | sed -n 's/^reviewer_model=//p')
+          [ -n "$OAUTH" ] && export CLAUDE_CODE_OAUTH_TOKEN="$OAUTH"
+          [ -n "$APIKEY" ] && export ANTHROPIC_API_KEY="$APIKEY"
+          [ -n "$OAUTH$APIKEY" ] || { echo "No Claude credential; skipping the second opinion."; exit 0; }
+          npm install -g @anthropic-ai/claude-code > /dev/null
+          MODEL=${chosen:-$(node -e 'console.log(require("./devos.config.json").reviewer.model_by_risk["2"])')}
+          mkdir -p pr/.devos && cp -r .devos/doctor pr/.devos/doctor
+          cd pr
+          claude -p "$(cat ../devos/prompts/doctor.md)" --model "$MODEL" --effort high --output-format json \
+            --json-schema "$(cat ../devos/schemas/doctor.schema.json)" --permission-mode dontAsk --max-turns 30 \
+            --allowedTools "Read,Glob,Grep" --disallowedTools "Bash,Write,Edit,WebFetch,WebSearch" \
+            > ../.devos/doctor/claude.json 2> ../.devos/doctor/claude.err || tail -c 1500 ../.devos/doctor/claude.err
+          # PR-52: nothing here is committed, so this run's usage goes on its summary page only.
+          node ../scripts/devos/usage.mjs record --stage doctor --command claude --model "$MODEL" --out ../.devos/doctor/claude.json --summary || true
+
+      - name: Post the report, set devos/gate, re-run an environment failure
+        id: p
+        if: steps.pr.outputs.pr != ''
+        run: node scripts/devos/doctor.mjs publish --claude .devos/doctor/claude.json
+
+      # A re-run started with this workflow's token may not trigger the doctor again on its own,
+      # so wait for it here and report its result.
+      - name: Wait for the ci re-run, then report again
+        if: steps.p.outputs.reran != ''
+        timeout-minutes: 30
+        run: |
+          gh run watch "${{ steps.p.outputs.reran }}" --repo "$REPO" --interval 30 > /dev/null || true
+          node scripts/devos/doctor.mjs collect --pr "${{ steps.pr.outputs.pr }}"
+          node scripts/devos/doctor.mjs publish
+
+      - if: always() && steps.pr.outputs.pr != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: devos-doctor-pr${{ steps.pr.outputs.pr }}
+          path: .devos/doctor/
+          include-hidden-files: true
+          if-no-files-found: ignore
