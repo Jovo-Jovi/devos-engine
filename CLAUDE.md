@@ -26,7 +26,7 @@ When two conflict, the higher one wins and you say so in the verdict. Never reco
 - **One review per attempt: the remote check is the review of record** (owner decision, 2026-10-23, to save tokens).
   The local `/engine-review` is optional and runs only when the owner asks for it. Whichever runs, the rules below
   and "After the verdict" apply to it.
-- **Evidence first, computed from the tree.** Tasks run on a branch `task/Exx` (README "Running a task"). The change
+- **Evidence first, computed from the tree.** Tasks run on a branch `task/Exx` (dev/MAINTAINERS.md "Running a task"). The change
   under review is `main...HEAD` plus any uncommitted working tree; on `main` itself (older tasks) it is the working
   tree against `HEAD`. Run every *Done when* command yourself, one per call. A command whose output differs from the fence's
   expected result fails that row, whatever the report says. A pasted report is a claim, not evidence.
@@ -68,14 +68,7 @@ Next prompt: <path of the fence written or re-rehearsed, or "none">
 ## Remote check (the review of record, before merge)
 
 After the build the owner commits and pushes `task/Exx` and says "check task/Exx". The remote reviewer (Claude in the
-DEVOS project chat) clones the branch, runs every Done-when command that runs without the owner's machine (everything
-except `../devos-sources` checks, which it repeats against its own pinned clones), reads every changed line, and
+DEVOS project chat) clones the branch, runs every Done-when command that runs without the owner's machine, reads every changed line, and
 writes `dev/reviews/Exx-aN-remote.md` on the branch with `MERGE` or `FIX: <exact changes>`. It then follows "After the
 verdict" (ledger row, next fence or reissued fence) and pushes those reviewer files to the task branch. Only MERGE lets
 the owner squash the branch into `main`. A FIX becomes the next attempt's focus in the reissued fence.
-
-## Ports from the Tower
-
-The payload is the Tower's method frozen at `a49ca6d`. When asked, compare with
-`git -C ../devos-sources/tower log --oneline a49ca6d..origin/main -- scripts .github devos .cursor .claude docs/method`
-(after the owner fetches) and add each method change to the ledger's *Ports* table as a future engine task.
