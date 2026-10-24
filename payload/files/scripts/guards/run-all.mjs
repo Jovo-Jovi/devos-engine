@@ -14,10 +14,12 @@ import services from "./services.mjs";
 import manual from "./manual.mjs";
 import config from "./config.mjs";
 import designSpec from "./design-spec.mjs";
+import skills from "./skills.mjs";
 
 const GUARDS = { secrets, phases, naming, design, i18n, boundary, literals, data, services, manual };
 GUARDS.config = config;
 GUARDS["design-spec"] = designSpec;
+GUARDS.skills = skills;
 const onlyIdx = process.argv.indexOf("--only");
 const only = onlyIdx >= 0 ? process.argv[onlyIdx + 1].split(",") : Object.keys(GUARDS);
 

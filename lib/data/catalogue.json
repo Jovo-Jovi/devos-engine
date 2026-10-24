@@ -1,5 +1,5 @@
 {
-  "$comment": "DEV_OS Engine catalogue (E18). Types, the stacks the method can run, each with its toolchain, its manifest file and the commands of its checks, modules with providers, and the documents worth preparing. A provider with method names the DEV_OS module or variable it turns on; its keys come from devos/setup.json. A provider with env lists the keys the app reads. Each stack's scaffold is the recipe of fence T01 (PR-49): the generator commands, the health route (empty: none), the logger, the test runner and the one architecture rule its test proves.",
+  "$comment": "DEV_OS Engine catalogue (E18). Types, the stacks the method can run, each with its toolchain, its manifest file and the commands of its checks, modules with providers, and the documents worth preparing. A provider with method names the DEV_OS module or variable it turns on; its keys come from devos/setup.json. A provider with env lists the keys the app reads. Each stack's scaffold is the recipe of fence T01 (PR-49): the generator commands, the health route (empty: none), the logger, the test runner and the one architecture rule its test proves. A stack that serves a web interface has preview: the command that serves its production build for the runner's captures ({port} is replaced and PORT is set, PR-51).",
   "version": 1,
   "types": [
     {
@@ -335,6 +335,7 @@
         "test": "pnpm run test",
         "build": "pnpm run build"
       },
+      "preview": "pnpm exec next start -H 127.0.0.1 -p {port}",
       "scaffold": {
         "create": [
           "pnpm create next-app@latest . --ts --eslint --app --src-dir --import-alias \"@/*\" --use-pnpm --yes"
@@ -368,9 +369,10 @@
         "test": "pnpm run test",
         "build": "pnpm run build"
       },
+      "preview": "node .output/server/index.mjs",
       "scaffold": {
         "create": [
-          "pnpm create nuxt@latest . --packageManager pnpm --gitInit false --force"
+          "pnpm create nuxt@latest . --template minimal --packageManager pnpm --no-gitInit --force"
         ],
         "health": "/api/health",
         "logger": "pino",
@@ -401,6 +403,7 @@
         "test": "pnpm run test",
         "build": "pnpm run build"
       },
+      "preview": "pnpm exec vite preview --host 127.0.0.1 --port {port} --strictPort",
       "scaffold": {
         "create": [
           "pnpm dlx sv create . --template minimal --types ts --no-add-ons --install pnpm"
@@ -434,6 +437,7 @@
         "test": "pnpm run test",
         "build": "pnpm run build"
       },
+      "preview": "pnpm exec react-router-serve ./build/server/index.js",
       "scaffold": {
         "create": [
           "pnpm create react-router@latest . --yes --no-git-init"
@@ -466,6 +470,7 @@
         "test": "pnpm run test",
         "build": "pnpm run build"
       },
+      "preview": "pnpm exec astro preview --host 127.0.0.1 --port {port}",
       "scaffold": {
         "create": [
           "pnpm create astro@latest . --template minimal --typescript strict --install --no-git --yes"
@@ -496,6 +501,7 @@
         "test": "pnpm run test",
         "build": "pnpm run build"
       },
+      "preview": "pnpm exec astro preview --host 127.0.0.1 --port {port}",
       "scaffold": {
         "create": [
           "pnpm create astro@latest . --template starlight --install --no-git --yes"
@@ -528,6 +534,7 @@
         "test": "pnpm run test",
         "build": "pnpm run build"
       },
+      "preview": "pnpm exec vite preview --host 127.0.0.1 --port {port} --strictPort",
       "scaffold": {
         "create": [
           "pnpm create vite@latest . --template react-ts"
@@ -560,6 +567,7 @@
         "test": "pnpm run test",
         "build": "pnpm run build"
       },
+      "preview": "pnpm exec vite preview --host 127.0.0.1 --port {port} --strictPort",
       "scaffold": {
         "create": [
           "pnpm create vite@latest . --template vue-ts"
@@ -592,9 +600,10 @@
         "test": "pnpm run test",
         "build": "pnpm run build"
       },
+      "preview": "node .output/server/index.mjs",
       "scaffold": {
         "create": [
-          "pnpm create solid@latest ."
+          "pnpm create solid@latest . --solidstart --v2 --template basic --ts"
         ],
         "health": "/api/health",
         "logger": "pino",
@@ -623,6 +632,7 @@
         "test": "pnpm run test",
         "build": "pnpm run build"
       },
+      "preview": "",
       "scaffold": {
         "create": [
           "pnpm create hono@latest . --template nodejs --pm pnpm --install"
@@ -653,6 +663,7 @@
         "test": "pnpm run test",
         "build": "pnpm run build"
       },
+      "preview": "",
       "scaffold": {
         "create": [
           "pnpm dlx fastify-cli generate . --lang=ts"
@@ -683,6 +694,7 @@
         "test": "pnpm run test",
         "build": "pnpm run build"
       },
+      "preview": "",
       "scaffold": {
         "create": [
           "pnpm dlx @nestjs/cli@latest new . --package-manager pnpm --skip-git --strict"
@@ -713,6 +725,7 @@
         "test": "pnpm run test",
         "build": "pnpm run build"
       },
+      "preview": "",
       "scaffold": {
         "create": [
           "pnpm create expo-app@latest . --template blank-typescript"
@@ -742,6 +755,7 @@
         "test": "pnpm run test",
         "build": "pnpm run build"
       },
+      "preview": "",
       "scaffold": {
         "create": [
           "pnpm init",
@@ -772,6 +786,7 @@
         "test": "pnpm run test",
         "build": "pnpm run build"
       },
+      "preview": "",
       "scaffold": {
         "create": [
           "pnpm init",
@@ -802,6 +817,7 @@
         "test": "uv run pytest",
         "build": "uv run python -m compileall -q ."
       },
+      "preview": "",
       "scaffold": {
         "create": [
           "uv init --app .",
@@ -833,6 +849,7 @@
         "test": "uv run pytest",
         "build": "uv run python -m compileall -q ."
       },
+      "preview": "",
       "scaffold": {
         "create": [
           "uv init --app .",
@@ -866,6 +883,7 @@
         "test": "go test ./...",
         "build": "go build ./..."
       },
+      "preview": "",
       "scaffold": {
         "create": [
           "go mod init <module path>",
@@ -896,6 +914,7 @@
         "test": "flutter test",
         "build": "flutter build apk --debug"
       },
+      "preview": "",
       "scaffold": {
         "create": [
           "flutter create --project-name <name> --platforms android,ios ."
@@ -925,6 +944,7 @@
         "test": "uv run pytest",
         "build": "uv build"
       },
+      "preview": "",
       "scaffold": {
         "create": [
           "uv init --lib .",

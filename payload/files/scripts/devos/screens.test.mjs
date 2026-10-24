@@ -1,4 +1,5 @@
-// Self-test for screens.mjs (PR-35). No app build and no .devos file: a synthetic server and Chromium.
+// Self-test for screens.mjs (PR-35, PR-51). No app build and no .devos file: a synthetic server and Chromium.
+// The accessibility test needs @axe-core/playwright in the project, as every UI project has from T01.
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
@@ -42,6 +43,10 @@ const PAGES = {
 <script>
   document.getElementById("go").addEventListener("click", () => document.getElementById("box").classList.add("on"));
 </script>`,
+  "/clean": `<!doctype html><html lang="en"><meta charset="utf-8"><title>clean</title><main><h1>Clean</h1><p>Plain text.</p></main></html>`,
+  "/broken": `<!doctype html><html lang="en"><meta charset="utf-8"><title>broken</title>
+<main><h1>Broken</h1><img src="/pixel.svg"><button></button></main>
+<script>console.error("boom"); fetch("/nowhere");</script></html>`,
 };
 
 const FILM = [0, 80, 160, 320, 640];
@@ -49,11 +54,14 @@ let server;
 let browser;
 let dir;
 let manifest;
+let axeCaptures = null;
+let bareCaptures;
 
 before(async () => {
   server = createServer((req, res) => {
     const path = (req.url ?? "/").split("?")[0];
     res.setHeader("content-type", "text/html; charset=utf-8");
+    res.statusCode = PAGES[path] ? 200 : 404;
     res.end(PAGES[path] ?? "missing");
   });
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
@@ -77,6 +85,17 @@ before(async () => {
     states: [{ name: "press", path: "/press", action: { type: "click", selector: "#go" } }],
     widths: [390],
   });
+  const checked = [
+    { name: "clean", path: "/clean", action: null },
+    { name: "broken", path: "/broken", action: null },
+  ];
+  bareCaptures = await captureStates({ ...shared, states: checked, widths: [390] });
+  let AxeBuilder = null;
+  try {
+    const axe = require("@axe-core/playwright");
+    AxeBuilder = axe.AxeBuilder ?? axe.default ?? axe;
+  } catch { /* the accessibility test is skipped */ }
+  if (AxeBuilder) axeCaptures = await captureStates({ ...shared, states: checked, widths: [390], AxeBuilder });
   manifest = {
     source: "synthetic",
     task: "T08",
@@ -185,4 +204,30 @@ test("motionSummary and motionCounts describe the seven captures", () => {
   assert.equal(counts.captures, 7);
   assert.equal(counts.frames, 35);
   assert.equal(counts.shifted, 2);
+});
+
+test("console errors and failed requests are recorded, and axe is reported as not run without its package", () => {
+  const clean = bareCaptures.find((c) => c.state === "clean");
+  const broken = bareCaptures.find((c) => c.state === "broken");
+  assert.deepEqual(clean.console_errors, [], clean.console_errors.join("; "));
+  assert.deepEqual(clean.failed_requests, [], clean.failed_requests.join("; "));
+  assert.ok(broken.console_errors.some((text) => text.includes("boom")), broken.console_errors.join("; "));
+  assert.ok(broken.failed_requests.some((text) => text.startsWith("404 GET") && text.endsWith("/nowhere")), broken.failed_requests.join("; "));
+  assert.ok(broken.failed_requests.some((text) => text.endsWith("/pixel.svg")), broken.failed_requests.join("; "));
+  assert.equal(broken.a11y.ran, false);
+  assert.match(broken.a11y.reason, /@axe-core\/playwright/);
+});
+
+test("axe finds no violation on a clean page and names them on a broken one", (t) => {
+  if (!axeCaptures) {
+    t.skip("@axe-core/playwright is not installed in this project");
+    return;
+  }
+  const clean = axeCaptures.find((c) => c.state === "clean");
+  const broken = axeCaptures.find((c) => c.state === "broken");
+  assert.equal(clean.a11y.ran, true);
+  assert.deepEqual(clean.a11y.violations, []);
+  const ids = broken.a11y.violations.map((v) => v.id);
+  assert.ok(ids.includes("image-alt"), ids.join(", "));
+  assert.ok(ids.includes("button-name"), ids.join(", "));
 });

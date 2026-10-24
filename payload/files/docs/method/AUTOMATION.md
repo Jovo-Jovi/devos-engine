@@ -58,7 +58,7 @@ runs once, after the last stage. Intake splits big work into separate ledger row
    id → `modules.mjs start` brings up the local services → Grok builds (`accounts.sh` switches
    Cursor accounts on a limit, PR-29; `agent-watchdog.sh` stops a hung CLI inside the step) → `guard-surfaces.mjs builder` + the method-file guard (from
    main's workflow) → commit, `sync-main.sh`, push → PR → `builder-status.mjs` (ok / park / halt) →
-   `run-checks.mjs` + `checks-status.sh` (status `devos/checks`) → preview + `screens.mjs` (settled screenshot, filmstrip, reduced-motion screenshot and layout shift, written to `.devos/screens/motion.json`) →
+   `run-checks.mjs` + `checks-status.sh` (status `devos/checks`) → preview + `screens.mjs` (settled screenshot, filmstrip, reduced-motion screenshot, layout shift, console errors, failed requests and axe, written to `.devos/screens/motion.json`) → `ui-evidence.mjs` (a UI fence's `ui-evidence` and `a11y` checks, PR-51) + `checks-status.sh` again →
    `review-mode.mjs` (light/deep) + `evidence.mjs` → Claude reviews (account switch, PR-29) →
    `guard-surfaces.mjs reviewer` → `verdict.mjs` decides → review commit, sync, re-check if main
    moved (PR-25), statuses → act.
@@ -146,8 +146,9 @@ workflow may start late.
 | `run-checks.mjs` | module checks, then guards, typecheck, lint, test, build, e2e → `.devos/ci-results.json`; a Node stack runs its `package.json` scripts with pnpm, any other toolchain runs `stack.commands` once its manifest exists, after `install` (PR-48); `--install-only` runs just the install, before the builder |
 | `checks-status.sh` | posts `devos/checks` |
 | `vercel-deploy.sh` | git-less prebuilt upload, prints only a real URL |
-| `screens.mjs` · `probe.mjs` | motion evidence for the visual check: settled screenshot, filmstrip, reduced-motion screenshot and layout shift in `.devos/screens/motion.json` (PR-35); strict reachability probe |
-| `screens.test.mjs` | self-test of that capture (the fence `- Screens:` line, frame pick, filmstrip, layout shift) |
+| `screens.mjs` · `probe.mjs` | motion evidence for the visual check: settled screenshot, filmstrip, reduced-motion screenshot and layout shift in `.devos/screens/motion.json` (PR-35), with each capture's console errors, failed requests and axe result (PR-51); the local build is served by `stack.preview` (`next start` when it is empty); strict reachability probe |
+| `screens.test.mjs` | self-test of that capture (the fence `- Screens:` line, frame pick, filmstrip, layout shift, console errors, failed requests, axe) |
+| `ui-evidence.mjs` | for a UI fence, turns the captures into the required checks `ui-evidence` and `a11y` in `.devos/ci-results.json`: missing evidence is a failed check (PR-51) |
 | `review-mode.mjs` | light or deep review, model, effort, turns, critical paths |
 | `evidence.mjs` | `.devos/evidence.md`, the reviewer's evidence pack |
 | `render-prompt.mjs` | fills `devos/prompts/*.md` |
@@ -163,14 +164,15 @@ workflow may start late.
 with a gate) · `naming` · `design` (tokens, no raw colours, logical properties) · `i18n` (identical
 catalogues) · `boundary` (no visitor data outside declared zones) · `literals` (no hard-coded contact
 or locale) · `data` (migrations, RLS, grants, server-only secret key, synthetic seed, pgTAP) ·
-`services` (R2 and Firebase rules) · `manual` (this file names every part of the automation) · `config` (the generated configuration is current) · `design-spec` (every open UI fence has a design specification whose states match its `- Screens:` line and whose criteria are rows of `docs/design/UI_ACCEPTANCE.md`, PR-50).
+`services` (R2 and Firebase rules) · `manual` (this file names every part of the automation) · `config` (the generated configuration is current) · `design-spec` (every open UI fence has a design specification whose states match its `- Screens:` line and whose criteria are rows of `docs/design/UI_ACCEPTANCE.md`, PR-50) · `skills` (every design skill in `devos/skills/` is listed in its manifest, pinned to a full commit, licensed for its use with its licence and notices beside it, and unchanged, PR-51).
 
 ## 6. Prompts, schemas, rules
 
 `devos/prompts/`: `builder.md`, `reviewer.md`, `intake.md`, `method.md`, `revise.md`, `doctor.md`, `supervisor.md`,
 `blueprint.md` (`devos init`'s blueprint: the `/devos-new-project` flow, headless).
 `devos/schemas/`: verdict, intake (also revise and method), doctor, supervisor.
-`docs/method/DESIGN_METHOD.md`: the UI/UX gate — the design contract, the lifecycle, the design specification, the acceptance gate and the resource catalogue (PR-50).
+`docs/method/DESIGN_METHOD.md`: the UI/UX gate — the design contract, the lifecycle, the design specification, the acceptance gate and the resource catalogue (PR-50); the evidence checks, automated failures and design findings, and the design skills (PR-51).
+`devos/skills/`: the pinned design skills the agents read, `README.md` (who reads what) and `manifest.json` (source, commit, licence, obligations and hash of each; `local.json` for a project's own) (PR-51).
 
 `.gitattributes` merges `docs/DEVELOPMENT_JOURNAL.md` by union.
 

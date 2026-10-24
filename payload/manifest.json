@@ -134,7 +134,7 @@
     {
       "path": ".cursor/skills/devos-compose-ui/SKILL.md",
       "stored": "dot-cursor/skills/devos-compose-ui/SKILL.md",
-      "sha256": "5ad63d0fce17986e48ad88ce84549714dd0382217354cf628578cf749d8968e4",
+      "sha256": "b6d9652f8877ed12a66895fc0292cb5f27e25b7ca4a3498cd9ed941debfe9e5a",
       "owner": "engine"
     },
     {
@@ -188,7 +188,7 @@
     {
       "path": ".github/workflows/devos-cycle.yml",
       "stored": "dot-github/workflows/devos-cycle.yml",
-      "sha256": "bbf2f7056e9712c905cb6e3ea728585995219ab3b70f17f6d9f97d6b96dd5886",
+      "sha256": "f6970cf35c2580484f22c6824e93e239468907398eb7fddfea78d87201d4e8b7",
       "owner": "engine"
     },
     {
@@ -254,19 +254,19 @@
     {
       "path": "devos/engine.defaults.json",
       "stored": "devos/engine.defaults.json",
-      "sha256": "3a9066318221b8e00eecfedb4f66227707fdef9af7051045c50b5ccb1ffc3f5f",
+      "sha256": "f855da22578b524d1f67bf707492d6e2a0f6da9220bc8ad402c68cc220fd6eb0",
       "owner": "engine"
     },
     {
       "path": "devos/prompts/blueprint.md",
       "stored": "devos/prompts/blueprint.md",
-      "sha256": "6296f1dd707b81d8bfc5be3985f1a88330f59d8e1cc2126563217780423826ac",
+      "sha256": "144d946fe2b78fc16869d50c9d570a66141adcb38af557df3a2b1f53be6cd37a",
       "owner": "engine"
     },
     {
       "path": "devos/prompts/builder.md",
       "stored": "devos/prompts/builder.md",
-      "sha256": "4ecdd43f42cff6cf63d046bfe51f5c42f1dec5202a0096e2aed68a727247213f",
+      "sha256": "5de2f88e1c44471d1cec78cd8f47d7e23c1258c8d7525a81e34bfbecaa9738f1",
       "owner": "engine"
     },
     {
@@ -290,7 +290,7 @@
     {
       "path": "devos/prompts/reviewer.md",
       "stored": "devos/prompts/reviewer.md",
-      "sha256": "aad4144bca3745f60fa4a62aa2e918d253952e44657d027a99f7be36942d31e4",
+      "sha256": "071f18670de89282b3d915332f984f7cfe41cfb9ef2a78d498299508cc7cc72d",
       "owner": "engine"
     },
     {
@@ -378,15 +378,213 @@
       "owner": "engine"
     },
     {
+      "path": "devos/skills/README.md",
+      "stored": "devos/skills/README.md",
+      "sha256": "47d38eda764f23b4e4261f01eeb48a0c14025b241e3f7be2da5f1a411126a810",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/emil-design-eng/LICENSE",
+      "stored": "devos/skills/emil-design-eng/LICENSE",
+      "sha256": "4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/emil-design-eng/SKILL.md",
+      "stored": "devos/skills/emil-design-eng/SKILL.md",
+      "sha256": "ffbe68e6007fb42cb8149f089b400a1ca007d59ba23e8948e2be4476f3175939",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/fixing-accessibility/LICENSE",
+      "stored": "devos/skills/fixing-accessibility/LICENSE",
+      "sha256": "c615621c4cc1676ccde194e7a01b6469ba477780251bd71e007fc473a49c2c2b",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/fixing-accessibility/SKILL.md",
+      "stored": "devos/skills/fixing-accessibility/SKILL.md",
+      "sha256": "549261e8a53b53a1a20c0ddbf736821e5fc0876ad82eee76e0efab8e9ee9dadf",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/frontend-design/LICENSE.txt",
+      "stored": "devos/skills/frontend-design/LICENSE.txt",
+      "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/frontend-design/SKILL.md",
+      "stored": "devos/skills/frontend-design/SKILL.md",
+      "sha256": "d91970639e9f5c37682ac7ab60094d35f1c7c1f38d731bd56396563aee10c1d3",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/impeccable/LICENSE",
+      "stored": "devos/skills/impeccable/LICENSE",
+      "sha256": "02bb8c3b4e70190e3986c0404ad2fd8d639b4f534252d82379cc1b502b6d1812",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/impeccable/NOTICE.md",
+      "stored": "devos/skills/impeccable/NOTICE.md",
+      "sha256": "c60a093c2845fd9fb82f9c6f742ece31f379f8190b535309d32d66c45ccffdcb",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/impeccable/reference/adapt.md",
+      "stored": "devos/skills/impeccable/reference/adapt.md",
+      "sha256": "5826bb4bca75d7b891bed17ff03bd3b685dff0e4f26d387fa6190d4ba3f065e4",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/impeccable/reference/animate.md",
+      "stored": "devos/skills/impeccable/reference/animate.md",
+      "sha256": "94b4ce6299fea93d9f256b2d25705961a76bc5ea940c56db4145686ebc99df1b",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/impeccable/reference/audit.md",
+      "stored": "devos/skills/impeccable/reference/audit.md",
+      "sha256": "a24d86f22f23ac594c87dfffce68b03cb475efbae48a84652ad9023d96295df5",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/impeccable/reference/clarify.md",
+      "stored": "devos/skills/impeccable/reference/clarify.md",
+      "sha256": "6c382f8283756e8a693d832b750f7e4cbff1ca5bdcc3825b2b4ef4da9f21876a",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/impeccable/reference/colorize.md",
+      "stored": "devos/skills/impeccable/reference/colorize.md",
+      "sha256": "d1fbd55074abb2251bdaa03749d34acc42c38e46e47549f18f5848df57d43c42",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/impeccable/reference/craft-floor.md",
+      "stored": "devos/skills/impeccable/reference/craft-floor.md",
+      "sha256": "ba01bbab98671095b76c2170324abdcceb55fd39fd281bc46daddc2b3c2b0753",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/impeccable/reference/harden.md",
+      "stored": "devos/skills/impeccable/reference/harden.md",
+      "sha256": "98244db22d907a134cac0c94ffb829ba480ba61cfac67ae155ac2f46444da7c9",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/impeccable/reference/layout.md",
+      "stored": "devos/skills/impeccable/reference/layout.md",
+      "sha256": "64802d14087fc96b38ef3881fef8098b36068d07f3b942031637b18eef3dd2af",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/impeccable/reference/onboard.md",
+      "stored": "devos/skills/impeccable/reference/onboard.md",
+      "sha256": "eb713f3d6686bac6431dd874f7b02358b4cf08e879e11bf747d75660dedd685a",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/impeccable/reference/operate.md",
+      "stored": "devos/skills/impeccable/reference/operate.md",
+      "sha256": "a9d2203acd45ca33a13d5c68b02b23ed512425ac15f0e8438318ed124b43729d",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/impeccable/reference/typeset.md",
+      "stored": "devos/skills/impeccable/reference/typeset.md",
+      "sha256": "c9943e06ca311258d8aa5a5c65f5beb7a46c57c5e9a2075d2a246bf1337f00bb",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/manifest.json",
+      "stored": "devos/skills/manifest.json",
+      "sha256": "e5f1aff55768fe2a776af2fd2548a69e434e86ed37bc2facac2f2fea6819ba23",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/review-animations/LICENSE",
+      "stored": "devos/skills/review-animations/LICENSE",
+      "sha256": "4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/review-animations/SKILL.md",
+      "stored": "devos/skills/review-animations/SKILL.md",
+      "sha256": "6ff590d29e436766135aa3d137be1fac2a867165c7257fc315b189361f1873af",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/review-animations/STANDARDS.md",
+      "stored": "devos/skills/review-animations/STANDARDS.md",
+      "sha256": "e7d3605034acda54ca13e43aec9e64d65b53de20f75b11b8d694e373012fbe07",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/taste/LICENSE",
+      "stored": "devos/skills/taste/LICENSE",
+      "sha256": "4575a543ab88dad12ccea7d97e563d0bce5b448b06072e65d3264497dad326df",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/taste/references/colour.md",
+      "stored": "devos/skills/taste/references/colour.md",
+      "sha256": "6556bcc7eed48b7bc2d0d281c28bf57c1b75e94d7ca0bde49f5d9df8c6a09351",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/taste/references/critique.md",
+      "stored": "devos/skills/taste/references/critique.md",
+      "sha256": "9c2f4392674530b3f02ac529fba53d82ab37b85f401c4c1989fbe98d6217f0b4",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/taste/references/layout.md",
+      "stored": "devos/skills/taste/references/layout.md",
+      "sha256": "40080640719b07737afb94a8868afef87767a1ab4892814d9b6882e2d283453b",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/taste/references/tells.md",
+      "stored": "devos/skills/taste/references/tells.md",
+      "sha256": "8e6de4411c43d3108f832b3f33bb1a2a838148a72b92a176df893b67d99a0da9",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/taste/references/type.md",
+      "stored": "devos/skills/taste/references/type.md",
+      "sha256": "6353ff1d0ce2f9913628c88fbcb7dad3cc3877e61196848bce99e33a17d20611",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/web-interface-guidelines/LICENSE",
+      "stored": "devos/skills/web-interface-guidelines/LICENSE",
+      "sha256": "6cd1609c9c12233507cdd2ce0d32e9a721e3c27494951be06b90090deeeb7af2",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/web-interface-guidelines/SKILL.md",
+      "stored": "devos/skills/web-interface-guidelines/SKILL.md",
+      "sha256": "eefd971484d8e75df1e3bc84dae4088b8b9513344bca079df7b506e45e2366ba",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/web-interface-guidelines/command.md",
+      "stored": "devos/skills/web-interface-guidelines/command.md",
+      "sha256": "d246b026f4f29b5823a9cc857f9edf3d2507002e055e32040cadeaf3b38e0234",
+      "owner": "engine"
+    },
+    {
       "path": "docs/method/AUTOMATION.md",
       "stored": "docs/method/AUTOMATION.md",
-      "sha256": "42866b7b394100fa3f92b6dcf69ec01bef1556ce179ce9dd9bbadb503a77b253",
+      "sha256": "6e2fe55bcdeb7269790876f53b535ef90d90c8411fb07f92238a93995bd21088",
       "owner": "engine"
     },
     {
       "path": "docs/method/DESIGN_METHOD.md",
       "stored": "docs/method/DESIGN_METHOD.md",
-      "sha256": "6801ce50fc8f43112f94138375f75fb9d32784c1bdf213f85e37b5de642947c4",
+      "sha256": "9b35bf4fdaeb8f2035cdb657ac503c4f8d531aa5a88da63ed0dc9857b19471a7",
       "owner": "engine"
     },
     {
@@ -404,7 +602,7 @@
     {
       "path": "docs/method/PRECEDENTS.md",
       "stored": "docs/method/PRECEDENTS.md",
-      "sha256": "aee9cbd497b1d562d951a519cc8dbd1f3805410d909eb15d19ec0f573e7ef302",
+      "sha256": "0ec6d53223d92562ab2a8b3be70672301480dafe3811651effe5b1d45dbadaa6",
       "owner": "engine"
     },
     {
@@ -584,13 +782,13 @@
     {
       "path": "scripts/devos/screens.mjs",
       "stored": "scripts/devos/screens.mjs",
-      "sha256": "6ff53520253bd8d8aeea112ebc7d9d40b45a2c0a326c895c6f0e85bd3a995293",
+      "sha256": "4c2bd9286e40720dcae4f1e9bf382b22c481fdbaa4feb5d93e3dccc238a12f4a",
       "owner": "engine"
     },
     {
       "path": "scripts/devos/screens.test.mjs",
       "stored": "scripts/devos/screens.test.mjs",
-      "sha256": "33c494a452bef3c6789b85abbc28e52874587e5437b884664ff28c2023b40708",
+      "sha256": "713fb7f2904ab1b45047226608ce23641a8ebfc359032286b0334f6d9b32c567",
       "owner": "engine"
     },
     {
@@ -621,6 +819,12 @@
       "path": "scripts/devos/sync-main.sh",
       "stored": "scripts/devos/sync-main.sh",
       "sha256": "4b3864995ff354ab08a1f8788270fbf685d5fc63745546b6db0078ddff2600e0",
+      "owner": "engine"
+    },
+    {
+      "path": "scripts/devos/ui-evidence.mjs",
+      "stored": "scripts/devos/ui-evidence.mjs",
+      "sha256": "710402df7dce0f727c4b9719f3cf5d9eafda7fe6e7bc4a8cdb9320593c68ac2c",
       "owner": "engine"
     },
     {
@@ -704,7 +908,7 @@
     {
       "path": "scripts/guards/run-all.mjs",
       "stored": "scripts/guards/run-all.mjs",
-      "sha256": "b31581bdb4220a20e752a23084bfdab7e4f7657279db5ec9fb24d2849c77c717",
+      "sha256": "796ad67041e1986446258cfc9d65ace63218ae8fc5a0bed4b0d449a1ae6ba2ec",
       "owner": "engine"
     },
     {
@@ -717,6 +921,12 @@
       "path": "scripts/guards/services.mjs",
       "stored": "scripts/guards/services.mjs",
       "sha256": "efa28a3aa10d61748f6a0cf1ca1b5cae53f0777f099198935a079e2d0e62a425",
+      "owner": "engine"
+    },
+    {
+      "path": "scripts/guards/skills.mjs",
+      "stored": "scripts/guards/skills.mjs",
+      "sha256": "a0c75911c964b120d5fc30181b4806b9ed8ab2da0ed8b30be22846e8f9e102ac",
       "owner": "engine"
     }
   ]

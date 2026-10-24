@@ -1,0 +1,22 @@
+{
+  "README.md": "05436413e6ac44bcbcfaec2faab4b9c8638f52f047fc9c3ed7145f8e8d9470f8",
+  "lib/adapters.mjs": "1e0ae38cba5443b966a20d09469696c2d89ff107cc8e05c11fa745ec90efdfff",
+  "lib/continue.mjs": "a7030f98a52804cbceb7251037f323a136d00beea590166370ed518ffa08a732",
+  "lib/engine.mjs": "459edde4b795c18b2d616ddd0e1d835bad1da621a29653aaebac3ae8572382c8",
+  "lib/init.mjs": "f6f1ddc3647e626433f7f844b7c423fa27a544839f67a3cdb364ca05d2cedb7b",
+  "lib/plan.mjs": "98ace3b60b1dc892089f0735f76b6d1e23d7c32bedbf963c0ea8d07e79b215df",
+  "lib/probes.mjs": "de599ce00dcd704028896ea038715ceaf2befbdeea102b34a57c7d1642cf8375",
+  "lib/progress.mjs": "0a9eba3b3fe36057d0945b9bac41e4aba3187e2552e782d78ff68c9289d352f1",
+  "lib/roster.mjs": "845b61fd4ac0f8e12a80d8eebcd06a2effc746796189a759b7e7190706a74fd0",
+  "lib/ui-server.mjs": "1907d2b93096c8997cdace73b5d320a482ff537360ef608c14fef4e191a2dbef",
+  "lib/ui/app.css": "2ed838c284c61efa5aaf68f174f37fb2944bc86fbb0c12bf15113bebc23c32e5",
+  "lib/ui/app.js": "acfa57a590ed0e206283e7bde4888a7b19e5c52332d53ccaec55aee428bb16aa",
+  "test/agents-kit.test.mjs": "77760955b483458f2642cba519b82e0a49b7ce276b87360bb7478d9b6a710514",
+  "test/continue.test.mjs": "de90258ff0a55060dcd0fa0aeb9a956e58ea700e6e90bed5b93c38f371ba406b",
+  "test/fixtures/agents/fake-cli.mjs": "1e6c666c8a02611717a9f91a489e46337b25b4ac1e7c1cb61a4b2260d4a1c8d6",
+  "test/harness.mjs": "eea1ba79acd9d2c7ac308be6128f11c3b7fa2e20324956e0851680c97abb0061",
+  "test/init.test.mjs": "8f223e4081f4c57689e9a9e2b465ca7315588b03b841da3f61d1991639d24c16",
+  "test/plan.test.mjs": "4c5ff4f47ac6c80924fbd1de5436ca9bbf9811b04da8cabb13eab4294f366b64",
+  "test/ui-page.test.mjs": "df6f5400f3f8d84ec6d9746a00080f5f2a670808b357613e1f53edd3fa0cbaed",
+  "test/ui-server.test.mjs": "ae5987e20dc6a3e9788d65548ef1671042a7aa70545d1706be944e78d30ec13c"
+}

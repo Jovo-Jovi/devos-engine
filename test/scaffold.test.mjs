@@ -35,6 +35,7 @@ test("scaffold.test.mjs (b) a default init writes the Next recipe", () => {
       assert.equal(file.stack.scaffold.health, "/api/health");
       assert.equal(file.stack.scaffold.logger, "pino");
       assert.equal(file.stack.scaffold.tests, "vitest");
+      assert.equal(file.stack.preview, "pnpm exec next start -H 127.0.0.1 -p {port}");
     }
   } finally {
     cleanup(staged.parent);
@@ -46,4 +47,16 @@ test("scaffold.test.mjs (c) merge keeps the recipe array and an empty health rou
   const merged = merge(defaults, { stack: { scaffold: { create: ["x"], health: "" } } });
   assert.deepEqual(merged.stack.scaffold.create, ["x"]);
   assert.equal(merged.stack.scaffold.health, "");
+});
+
+test("scaffold.test.mjs (d) a stack that serves a web interface has a preview command", () => {
+  const catalogue = loadCatalogue();
+  const ui = new Set(catalogue.types.filter((type) => type.ui).map((type) => type.id));
+  let previews = 0;
+  for (const stack of catalogue.stacks) {
+    assert.equal(typeof stack.preview, "string", stack.id);
+    assert.equal(stack.preview !== "", stack.fits.some((type) => ui.has(type)), stack.id);
+    if (stack.preview !== "") previews += 1;
+  }
+  assert.equal(previews, 9);
 });

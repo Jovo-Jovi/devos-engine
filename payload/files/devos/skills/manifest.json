@@ -1,0 +1,520 @@
+{
+  "$comment": "Design skills the agents read (docs/method/DESIGN_METHOD.md §7, PR-51). licence.class: free (a permissive licence; ship its licence and notices), conditions (allowed with conditions beyond notices), approval (needs the author's permission or a separate licence first), unsuitable (redistribution not allowed). delivery: vendored (files here, pinned), external (not shipped; a developer may use it interactively), principles (nothing copied; the ideas are written independently). Each source file records the path it was copied from (from); guard:skills checks every vendored file's sha256 (LF line endings).",
+  "version": 1,
+  "reviewed": "2026-10-24",
+  "entries": [
+    {
+      "id": "frontend-design",
+      "kind": "skill",
+      "title": "Frontend design",
+      "source": {
+        "repo": "https://github.com/anthropics/skills",
+        "commit": "dbd4588f9e1033efb41dad4bef2f7947c8993d44",
+        "path": "skills/frontend-design",
+        "version": "last changed in 41bbe19 (2026-09-03)"
+      },
+      "licence": {
+        "spdx": "Apache-2.0",
+        "class": "free",
+        "file": "LICENSE.txt",
+        "notices": [],
+        "copyright": "Anthropic (the licence file names no holder)"
+      },
+      "delivery": "vendored",
+      "obligations": [
+        "The Apache-2.0 licence ships as LICENSE.txt beside the skill",
+        "The repository has no NOTICE file for this skill (its THIRD_PARTY_NOTICES.md covers other skills' libraries)",
+        "The file is copied unchanged; a change would be marked in the file and in this entry"
+      ],
+      "changes": "none",
+      "roles": [
+        "blueprint",
+        "builder",
+        "reviewer"
+      ],
+      "use": "Visual direction and the anti-template checks for every new screen.",
+      "files": [
+        {
+          "path": "LICENSE.txt",
+          "origin": "source",
+          "from": "skills/frontend-design/LICENSE.txt",
+          "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594"
+        },
+        {
+          "path": "SKILL.md",
+          "origin": "source",
+          "from": "skills/frontend-design/SKILL.md",
+          "sha256": "d91970639e9f5c37682ac7ab60094d35f1c7c1f38d731bd56396563aee10c1d3"
+        }
+      ]
+    },
+    {
+      "id": "web-interface-guidelines",
+      "kind": "skill",
+      "title": "Web Interface Guidelines",
+      "source": {
+        "repo": "https://github.com/vercel-labs/web-interface-guidelines",
+        "commit": "434b7f91364665f2f733b310ec54809bf8f37937",
+        "path": "",
+        "version": "command.md last changed in 4ecfb9f (2026-10-05)"
+      },
+      "licence": {
+        "spdx": "MIT",
+        "class": "free",
+        "file": "LICENSE",
+        "notices": [],
+        "copyright": "Copyright (c) 2025 Vercel Labs"
+      },
+      "delivery": "vendored",
+      "obligations": [
+        "The copyright and permission notice ships in LICENSE beside the files",
+        "The files are copied unchanged; a change would be marked in the file and in this entry",
+        "SKILL.md is written by DEV_OS (origin devos) and points at the pinned command.md instead of fetching it"
+      ],
+      "changes": "none to the source files; SKILL.md is DEV_OS's own",
+      "roles": [
+        "builder",
+        "reviewer"
+      ],
+      "use": "Concrete interface rules: the builder's self-check and the reviewer's citations.",
+      "files": [
+        {
+          "path": "LICENSE",
+          "origin": "source",
+          "from": "LICENSE",
+          "sha256": "6cd1609c9c12233507cdd2ce0d32e9a721e3c27494951be06b90090deeeb7af2"
+        },
+        {
+          "path": "SKILL.md",
+          "origin": "devos",
+          "sha256": "eefd971484d8e75df1e3bc84dae4088b8b9513344bca079df7b506e45e2366ba"
+        },
+        {
+          "path": "command.md",
+          "origin": "source",
+          "from": "command.md",
+          "sha256": "d246b026f4f29b5823a9cc857f9edf3d2507002e055e32040cadeaf3b38e0234"
+        }
+      ]
+    },
+    {
+      "id": "emil-design-eng",
+      "kind": "skill",
+      "title": "Design engineering (Emil Kowalski)",
+      "source": {
+        "repo": "https://github.com/emilkowalski/skills",
+        "commit": "2d228630ba1446365f614a108cb8252f1feda202",
+        "path": "skills/emil-design-eng",
+        "version": ""
+      },
+      "licence": {
+        "spdx": "MIT",
+        "class": "free",
+        "file": "LICENSE",
+        "notices": [],
+        "copyright": "Copyright (c) 2026 Emil Kowalski"
+      },
+      "delivery": "vendored",
+      "obligations": [
+        "The copyright and permission notice ships in LICENSE beside the files",
+        "The files are copied unchanged; a change would be marked in the file and in this entry"
+      ],
+      "changes": "none",
+      "roles": [
+        "builder",
+        "reviewer"
+      ],
+      "use": "Component polish, interaction details and animation decisions.",
+      "files": [
+        {
+          "path": "LICENSE",
+          "origin": "source",
+          "from": "LICENSE",
+          "sha256": "4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b"
+        },
+        {
+          "path": "SKILL.md",
+          "origin": "source",
+          "from": "skills/emil-design-eng/SKILL.md",
+          "sha256": "ffbe68e6007fb42cb8149f089b400a1ca007d59ba23e8948e2be4476f3175939"
+        }
+      ]
+    },
+    {
+      "id": "review-animations",
+      "kind": "skill",
+      "title": "Review animations (Emil Kowalski)",
+      "source": {
+        "repo": "https://github.com/emilkowalski/skills",
+        "commit": "2d228630ba1446365f614a108cb8252f1feda202",
+        "path": "skills/review-animations",
+        "version": ""
+      },
+      "licence": {
+        "spdx": "MIT",
+        "class": "free",
+        "file": "LICENSE",
+        "notices": [],
+        "copyright": "Copyright (c) 2026 Emil Kowalski"
+      },
+      "delivery": "vendored",
+      "obligations": [
+        "The copyright and permission notice ships in LICENSE beside the files",
+        "The files are copied unchanged; a change would be marked in the file and in this entry"
+      ],
+      "changes": "none",
+      "roles": [
+        "reviewer"
+      ],
+      "use": "The motion row of the reviewer's design ledger.",
+      "files": [
+        {
+          "path": "LICENSE",
+          "origin": "source",
+          "from": "LICENSE",
+          "sha256": "4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b"
+        },
+        {
+          "path": "SKILL.md",
+          "origin": "source",
+          "from": "skills/review-animations/SKILL.md",
+          "sha256": "6ff590d29e436766135aa3d137be1fac2a867165c7257fc315b189361f1873af"
+        },
+        {
+          "path": "STANDARDS.md",
+          "origin": "source",
+          "from": "skills/review-animations/STANDARDS.md",
+          "sha256": "e7d3605034acda54ca13e43aec9e64d65b53de20f75b11b8d694e373012fbe07"
+        }
+      ]
+    },
+    {
+      "id": "fixing-accessibility",
+      "kind": "skill",
+      "title": "Fixing accessibility (ui-skills)",
+      "source": {
+        "repo": "https://github.com/ibelick/ui-skills",
+        "commit": "55363c305097d4c84487bd5f323d29b3f067bf72",
+        "path": "skills/fixing-accessibility",
+        "version": ""
+      },
+      "licence": {
+        "spdx": "MIT",
+        "class": "free",
+        "file": "LICENSE",
+        "notices": [],
+        "copyright": "Copyright (c) 2026 Julien Thibeaut"
+      },
+      "delivery": "vendored",
+      "obligations": [
+        "The copyright and permission notice ships in LICENSE beside the files",
+        "The files are copied unchanged; a change would be marked in the file and in this entry"
+      ],
+      "changes": "none",
+      "roles": [
+        "builder"
+      ],
+      "use": "Targeted fixes when the a11y check is red.",
+      "files": [
+        {
+          "path": "LICENSE",
+          "origin": "source",
+          "from": "LICENSE",
+          "sha256": "c615621c4cc1676ccde194e7a01b6469ba477780251bd71e007fc473a49c2c2b"
+        },
+        {
+          "path": "SKILL.md",
+          "origin": "source",
+          "from": "skills/fixing-accessibility/SKILL.md",
+          "sha256": "549261e8a53b53a1a20c0ddbf736821e5fc0876ad82eee76e0efab8e9ee9dadf"
+        }
+      ]
+    },
+    {
+      "id": "impeccable",
+      "kind": "reference",
+      "title": "Impeccable references (Paul Bakaus)",
+      "source": {
+        "repo": "https://github.com/pbakaus/impeccable",
+        "commit": "936867543ac2576920d663cc9803597f6044f3ac",
+        "path": ".claude/skills/impeccable/reference",
+        "version": "4.7.1"
+      },
+      "licence": {
+        "spdx": "Apache-2.0",
+        "class": "free",
+        "file": "LICENSE",
+        "notices": [
+          "NOTICE.md"
+        ],
+        "copyright": "Copyright 2025 Paul Bakaus"
+      },
+      "delivery": "vendored",
+      "obligations": [
+        "The Apache-2.0 licence ships as LICENSE beside the files",
+        "The project's NOTICE.md ships unchanged beside the files",
+        "Eleven reference files are copied unchanged; a change would be marked in the file and in this entry"
+      ],
+      "changes": "a subset: SKILL.md, critique.md, polish.md, the other references, the launcher and its scripts are not shipped (the launcher runs a binary that it downloads on first run, and those files depend on it)",
+      "roles": [
+        "blueprint",
+        "builder",
+        "reviewer"
+      ],
+      "use": "The craft floor, product-UI depth, and focused playbooks for type, layout, colour, motion, copy, onboarding, hardening, small screens and the technical audit.",
+      "files": [
+        {
+          "path": "LICENSE",
+          "origin": "source",
+          "from": "LICENSE",
+          "sha256": "02bb8c3b4e70190e3986c0404ad2fd8d639b4f534252d82379cc1b502b6d1812"
+        },
+        {
+          "path": "NOTICE.md",
+          "origin": "source",
+          "from": "NOTICE.md",
+          "sha256": "c60a093c2845fd9fb82f9c6f742ece31f379f8190b535309d32d66c45ccffdcb"
+        },
+        {
+          "path": "reference/adapt.md",
+          "origin": "source",
+          "from": ".claude/skills/impeccable/reference/adapt.md",
+          "sha256": "5826bb4bca75d7b891bed17ff03bd3b685dff0e4f26d387fa6190d4ba3f065e4"
+        },
+        {
+          "path": "reference/animate.md",
+          "origin": "source",
+          "from": ".claude/skills/impeccable/reference/animate.md",
+          "sha256": "94b4ce6299fea93d9f256b2d25705961a76bc5ea940c56db4145686ebc99df1b"
+        },
+        {
+          "path": "reference/audit.md",
+          "origin": "source",
+          "from": ".claude/skills/impeccable/reference/audit.md",
+          "sha256": "a24d86f22f23ac594c87dfffce68b03cb475efbae48a84652ad9023d96295df5"
+        },
+        {
+          "path": "reference/clarify.md",
+          "origin": "source",
+          "from": ".claude/skills/impeccable/reference/clarify.md",
+          "sha256": "6c382f8283756e8a693d832b750f7e4cbff1ca5bdcc3825b2b4ef4da9f21876a"
+        },
+        {
+          "path": "reference/colorize.md",
+          "origin": "source",
+          "from": ".claude/skills/impeccable/reference/colorize.md",
+          "sha256": "d1fbd55074abb2251bdaa03749d34acc42c38e46e47549f18f5848df57d43c42"
+        },
+        {
+          "path": "reference/craft-floor.md",
+          "origin": "source",
+          "from": ".claude/skills/impeccable/reference/craft-floor.md",
+          "sha256": "ba01bbab98671095b76c2170324abdcceb55fd39fd281bc46daddc2b3c2b0753"
+        },
+        {
+          "path": "reference/harden.md",
+          "origin": "source",
+          "from": ".claude/skills/impeccable/reference/harden.md",
+          "sha256": "98244db22d907a134cac0c94ffb829ba480ba61cfac67ae155ac2f46444da7c9"
+        },
+        {
+          "path": "reference/layout.md",
+          "origin": "source",
+          "from": ".claude/skills/impeccable/reference/layout.md",
+          "sha256": "64802d14087fc96b38ef3881fef8098b36068d07f3b942031637b18eef3dd2af"
+        },
+        {
+          "path": "reference/onboard.md",
+          "origin": "source",
+          "from": ".claude/skills/impeccable/reference/onboard.md",
+          "sha256": "eb713f3d6686bac6431dd874f7b02358b4cf08e879e11bf747d75660dedd685a"
+        },
+        {
+          "path": "reference/operate.md",
+          "origin": "source",
+          "from": ".claude/skills/impeccable/reference/operate.md",
+          "sha256": "a9d2203acd45ca33a13d5c68b02b23ed512425ac15f0e8438318ed124b43729d"
+        },
+        {
+          "path": "reference/typeset.md",
+          "origin": "source",
+          "from": ".claude/skills/impeccable/reference/typeset.md",
+          "sha256": "c9943e06ca311258d8aa5a5c65f5beb7a46c57c5e9a2075d2a246bf1337f00bb"
+        }
+      ]
+    },
+    {
+      "id": "taste",
+      "kind": "reference",
+      "title": "tasteskill references (Leonxlnx)",
+      "source": {
+        "repo": "https://github.com/Leonxlnx/taste-skill",
+        "commit": "6010f91a9935f1c167dfc500fb1a475681892e6b",
+        "path": "skills/taste-skill/references",
+        "version": "v2"
+      },
+      "licence": {
+        "spdx": "MIT",
+        "class": "free",
+        "file": "LICENSE",
+        "notices": [],
+        "copyright": "Copyright (c) 2026 Leonxlnx"
+      },
+      "delivery": "vendored",
+      "obligations": [
+        "The copyright and permission notice ships in LICENSE beside the files",
+        "The files are copied unchanged; a change would be marked in the file and in this entry"
+      ],
+      "changes": "a subset: SKILL.md, the scripts, the library and the assets are not shipped (the scripts drive a browser and download pictures at run time)",
+      "roles": [
+        "blueprint",
+        "builder",
+        "reviewer"
+      ],
+      "use": "Type, colour and layout for public pages, the critique of a render, and the tells of a generated page.",
+      "files": [
+        {
+          "path": "LICENSE",
+          "origin": "source",
+          "from": "LICENSE",
+          "sha256": "4575a543ab88dad12ccea7d97e563d0bce5b448b06072e65d3264497dad326df"
+        },
+        {
+          "path": "references/colour.md",
+          "origin": "source",
+          "from": "skills/taste-skill/references/colour.md",
+          "sha256": "6556bcc7eed48b7bc2d0d281c28bf57c1b75e94d7ca0bde49f5d9df8c6a09351"
+        },
+        {
+          "path": "references/critique.md",
+          "origin": "source",
+          "from": "skills/taste-skill/references/critique.md",
+          "sha256": "9c2f4392674530b3f02ac529fba53d82ab37b85f401c4c1989fbe98d6217f0b4"
+        },
+        {
+          "path": "references/layout.md",
+          "origin": "source",
+          "from": "skills/taste-skill/references/layout.md",
+          "sha256": "40080640719b07737afb94a8868afef87767a1ab4892814d9b6882e2d283453b"
+        },
+        {
+          "path": "references/tells.md",
+          "origin": "source",
+          "from": "skills/taste-skill/references/tells.md",
+          "sha256": "8e6de4411c43d3108f832b3f33bb1a2a838148a72b92a176df893b67d99a0da9"
+        },
+        {
+          "path": "references/type.md",
+          "origin": "source",
+          "from": "skills/taste-skill/references/type.md",
+          "sha256": "6353ff1d0ce2f9913628c88fbcb7dad3cc3877e61196848bce99e33a17d20611"
+        }
+      ]
+    },
+    {
+      "id": "vercel-web-design-guidelines-skill",
+      "kind": "skill",
+      "title": "web-design-guidelines (vercel-labs/agent-skills)",
+      "source": {
+        "repo": "https://github.com/vercel-labs/agent-skills",
+        "commit": "063bee94c3f4df8453406c830b0a7df0f2860278",
+        "path": "skills/web-design-guidelines",
+        "version": "1.0.0"
+      },
+      "licence": {
+        "spdx": "unknown",
+        "class": "approval",
+        "file": "",
+        "notices": [],
+        "copyright": ""
+      },
+      "delivery": "principles",
+      "reason": "The README says MIT but the repository has no licence file at this commit, and the skill fetches its rules from the network on every run. DEV_OS copies nothing from it: its own wrapper (web-interface-guidelines/SKILL.md) points at the pinned MIT rules.",
+      "files": []
+    },
+    {
+      "id": "ui-ux-pro-max",
+      "kind": "skill",
+      "title": "UI/UX Pro Max",
+      "source": {
+        "repo": "https://github.com/nextlevelbuilder/ui-ux-pro-max-skill",
+        "commit": "d14efff8ed1faa4187f004f79926f428c8074ec7",
+        "path": "",
+        "version": ""
+      },
+      "licence": {
+        "spdx": "MIT",
+        "class": "free",
+        "file": "",
+        "notices": [],
+        "copyright": "Copyright (c) 2024 Next Level Builder"
+      },
+      "delivery": "external",
+      "reason": "Licensed for inclusion, but it is a Python search engine over CSV data that the agent runs at design time, and the cycle runs no code from a skill. A developer may install it for interactive work.",
+      "files": []
+    },
+    {
+      "id": "baseline-ui",
+      "kind": "skill",
+      "title": "baseline-ui (ui-skills)",
+      "source": {
+        "repo": "https://github.com/ibelick/ui-skills",
+        "commit": "55363c305097d4c84487bd5f323d29b3f067bf72",
+        "path": "skills/baseline-ui",
+        "version": ""
+      },
+      "licence": {
+        "spdx": "MIT",
+        "class": "free",
+        "file": "",
+        "notices": [],
+        "copyright": "Copyright (c) 2026 Julien Thibeaut"
+      },
+      "delivery": "external",
+      "reason": "Licensed for inclusion, but it requires Tailwind CSS and motion/react and forbids animation unless asked, which would force one look on every project; DESIGN_METHOD.md §5 decides those per project.",
+      "files": []
+    },
+    {
+      "id": "refactoring-ui-plugin",
+      "kind": "skill",
+      "title": "Refactoring UI plugin",
+      "source": {
+        "repo": "https://github.com/gnurio/refactoring-ui-plugin",
+        "commit": "00781eab1dde7fdb720d63f8d6c8148bf5835a31",
+        "path": "",
+        "version": ""
+      },
+      "licence": {
+        "spdx": "LicenseRef-all-rights-reserved",
+        "class": "unsuitable",
+        "file": "",
+        "notices": [],
+        "copyright": "Copyright (c) 2026 George Nurijanian"
+      },
+      "delivery": "principles",
+      "reason": "All rights reserved: not licensed for reuse, redistribution or modification. Nothing is copied; the shipped skills and DESIGN_METHOD.md cover hierarchy, spacing, type and colour in their own words.",
+      "files": []
+    },
+    {
+      "id": "axe-core-playwright",
+      "kind": "tool",
+      "title": "@axe-core/playwright",
+      "source": {
+        "repo": "https://github.com/dequelabs/axe-core-npm",
+        "commit": "",
+        "path": "packages/playwright",
+        "version": "the project's lockfile pins it"
+      },
+      "licence": {
+        "spdx": "MPL-2.0",
+        "class": "conditions",
+        "file": "",
+        "notices": [],
+        "copyright": "Deque Systems, Inc. (the package author)"
+      },
+      "delivery": "external",
+      "reason": "The accessibility check of every capture (PR-51). A UI project installs it as a dev dependency from T01; DEV_OS copies none of its files, and MPL-2.0's file-level conditions apply only to a changed copy of its files.",
+      "files": []
+    }
+  ]
+}

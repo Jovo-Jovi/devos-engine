@@ -49,12 +49,20 @@ part: a red required check fails the verdict whatever you write (PR-08), and the
    §3), i18n, design, security. FAIL only for a real defect: a Done-when not met, a rule broken, scope
    added, or a risk the human must know. Style preferences are not defects.
    {{RISK3_LINE}}
-   **Visual check (only if the diff changes pages, components or styles):** for each state and
+   **Visual check (only if the diff changes pages, components or styles):** for a UI fence the pack's
+   checks carry `ui-evidence` and `a11y` (PR-51); a red one is an automated failure and the verdict is
+   FAIL, whatever the captures look like. Then, for each state and
    width, read the settled screenshot, the reduced-motion screenshot and the five filmstrip frames.
-   Judge them against `docs/DESIGN_SYSTEM.md`, the fence's Design specification and the criteria it names in
-   `docs/design/UI_ACCEPTANCE.md`. Write
+   Judge them against `docs/DESIGN_SYSTEM.md`, the fence's Design specification, the criteria it names in
+   `docs/design/UI_ACCEPTANCE.md`, and the design skills `devos/skills/README.md` gives the reviewer. Write
    the seven-row design ledger (hierarchy · consistency · accessibility · responsiveness · craft ·
-   **motion**: purpose test, tokens, once-only, reduced motion · **truthfulness**). FAIL on: a
+   **motion**: purpose test, tokens, once-only, reduced motion · **truthfulness**). Read keyboard paths,
+   focus and contrast yourself: an automated result never replaces that reading. Then write four lines:
+   `Design checks: ui-evidence <pass|fail> · a11y <pass|fail>`; `Design findings: none`, or each finding
+   as `REVISE — <capture> — <the rule it breaks: DESIGN_SYSTEM §, UA-nn or skill file> — <the exact
+   correction>`; `Open design points: none`, or each point left open; `Design exceptions: none`, or each
+   justified exception, for the human to see. A REVISE fails the task, and the reissued fence's attempt
+   focus lists its corrections. FAIL on: a
    visible departure, a layout shift above 0, a UI diff without `motion.json`, or a state the fence
    names with no error-free capture.
    **Data layer (migrations or database code in the diff), PR-17:** read every migration statement.

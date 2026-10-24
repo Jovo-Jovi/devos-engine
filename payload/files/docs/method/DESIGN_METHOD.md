@@ -18,13 +18,18 @@ and they change only through decisions:
 
 Agents work from these files, never from a past conversation.
 
+T01 of such a project also adds the evidence tools as dev dependencies: `@playwright/test` and `@axe-core/playwright`.
+The runner serves the production build with the stack's preview command (`devos.config.json` `stack.preview`) to
+capture it.
+
 ## 2. The lifecycle of a UI task
 
 Design brief → visual direction → design specification (in the fence) → implementation → browser verification →
 reviewer design verdict → remediation and re-verification.
 
 The reviewer owns direction and acceptance. The builder implements and checks its own work. Only rendered evidence
-counts: the runner's captures (`scripts/devos/screens.mjs`, PR-35), never a description of a screen.
+counts: the runner's captures (`scripts/devos/screens.mjs`, PR-35), never a description of a screen. Both read the
+design skills of §7 that `devos/skills/README.md` gives their role.
 
 ## 3. The design specification
 
@@ -53,8 +58,25 @@ A UI task passes only when all of these hold:
 6. material defects were fixed and re-captured;
 7. the verdict states the known limitations.
 
-An automated failure always fails the task. A design finding fails it with exact corrections. A point left open is
-recorded in the verdict; a justified exception is written there, visible to the owner, never a silent bypass.
+**Missing evidence is a failed check (PR-51).** After the captures, `scripts/devos/ui-evidence.mjs` adds two required
+checks for a UI fence, so a red one overrides a PASS (PR-08):
+
+- `ui-evidence` fails when a state on the `- Screens:` line has no capture at 1280 or 390, when a capture failed or
+  lacks its settled or reduced-motion screenshot, or when it shows a layout shift, a console error or a failed request
+  (an HTTP status of 400 or more, or a request that never completed);
+- `a11y` fails when axe (`@axe-core/playwright`, the WCAG 2.0, 2.1 and 2.2 A and AA rules) did not run on a capture,
+  or found a violation.
+
+**Two kinds of finding.** The verdict keeps them apart:
+
+- **Automated failures** — a red check, `ui-evidence` or `a11y` among them. They always fail the task, whatever the
+  captures look like.
+- **Design findings** — what the reviewer sees in the captures against `docs/DESIGN_SYSTEM.md`, the criteria and the
+  skills of §7. Each is a REVISE: the capture, the rule it breaks, and the exact correction. A REVISE fails the task,
+  and the reissued fence's attempt focus lists the corrections.
+
+A point the reviewer leaves open is written in the verdict. A justified exception is written there too, visible to the
+owner, never a silent bypass.
 
 ## 5. Resource catalogue
 
@@ -77,3 +99,33 @@ does the job wins.
 Playwright, shadcn and Chrome DevTools MCP servers help when the developer works interactively. The automated cycle
 never depends on one: the runner captures the real browser itself, and the repository holds the contract, the tests
 and the proof.
+
+## 7. Design skills
+
+The agents read pinned design skills from outside DEV_OS: `devos/skills/`, indexed for each role by
+`devos/skills/README.md`. `docs/DESIGN_SYSTEM.md`, the acceptance criteria and the fence always win over a skill.
+
+**Licence-aware, not licence-limited.** A skill is chosen for its quality and its licence together, under any licence.
+Before anything is copied, the licence is read at the exact commit and classed:
+
+| Class | Meaning | What DEV_OS may do |
+|---|---|---|
+| `free` | a permissive licence (MIT, Apache-2.0, BSD, ISC) | ship the files with their licence and notices |
+| `conditions` | allowed with conditions beyond keeping notices (attribution shown to users, share-alike, file-level copyleft, no resale, a subset only) | ship them once every condition is met and recorded |
+| `approval` | a custom, proprietary or unclear licence | nothing, until the author's written permission or a separate licence is recorded |
+| `unsuitable` | redistribution is not allowed | nothing |
+
+A skill DEV_OS may not ship is not dropped for that alone: it stays **external** (a developer may use it
+interactively), or its general principles are written in DEV_OS's own words without copying it (**principles**).
+
+**Auditable.** `devos/skills/manifest.json` records every skill evaluated, shipped or not: the source and the full
+commit, the version, the licence and its class, the copyright, the notices, how each condition is met, any change
+made, the roles that read it, and the sha256 of every file. Licence files and notices ship beside the files they
+cover. `guard:skills` fails the run when a file is changed, missing or not listed, when a vendored entry lacks its
+licence, its obligations or a full commit, or when a licence that needs approval is vendored without it.
+
+**Pinned, never fetched.** A skill is read from its pinned copy. Nothing is fetched or installed from a skill at run
+time, and the cycle runs no code that a skill ships.
+
+**Adaptable.** A new skill, tool or framework joins with a manifest entry and its files: for every project through an
+engine task, for one project through `devos/skills/local.json` and its own folder. Neither needs a change to the engine.

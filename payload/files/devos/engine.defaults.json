@@ -341,7 +341,7 @@
     "policy": "reviewer-picks"
   },
   "stack": {
-    "$comment": "PR-48: the stack devos init chose. node runs package.json scripts with pnpm, as before; any other toolchain runs these commands once its manifest exists.",
+    "$comment": "PR-48: the stack devos init chose. node runs package.json scripts with pnpm, as before; any other toolchain runs these commands once its manifest exists. PR-51: preview serves the production build for screens.mjs ({port} is replaced, PORT is set); empty means next start.",
     "id": "",
     "toolchain": "node",
     "manifest": "package.json",
@@ -352,6 +352,7 @@
       "test": "pnpm run test",
       "build": "pnpm run build"
     },
+    "preview": "",
     "scaffold": {
       "create": [],
       "health": "",

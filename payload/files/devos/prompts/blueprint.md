@@ -47,6 +47,7 @@ Work in this order.
    `method/CARRY_FORWARDS.md` (empty). When `devos/project.json` `ui` is `true`, `DESIGN_SYSTEM.md` is the design
    contract of `docs/method/DESIGN_METHOD.md` §1: write every part that section lists, including a decision (adopt,
    optional or reject, with the reason) for each resource of its §5, and also write `docs/design/UI_ACCEPTANCE.md`.
+   Choose the visual direction with the design skills `devos/skills/README.md` gives the blueprint.
    Two formats are read by guards and must be exact:
    - `docs/PHASES.md`: the header `| Task | Phase | Station | Name | Risk | Gate | Done | Verdict |`, a separator
      row, then one row per task — `T01` first, ids ascending, Risk 1, 2 or 3, Done `[ ]`, Verdict `—`.
@@ -64,7 +65,9 @@ Work in this order.
    commands (where a flag has changed, the generator's current documentation wins and the builder reports the
    change), make each of the five `stack.commands` run, add one structured logger (`logger`) that every log line
    goes through, error handling that logs the error and returns a safe message, the health route when `health` is
-   set, and one architecture test that proves the `architecture` rule with the test runner (`tests`). Its Done-when
+   set, and one architecture test that proves the `architecture` rule with the test runner (`tests`). When `ui` is
+   `true`, it also adds `@playwright/test` and `@axe-core/playwright` as dev dependencies, the tools of the
+   runner's UI evidence (`docs/method/DESIGN_METHOD.md` §4). Its Done-when
    is `node scripts/devos/run-checks.mjs --strict` exiting 0. T01 is not a UI fence: it carries no `- Screens:` line.
    Every later fence that builds a screen carries one and a `### Design specification` (`docs/method/DESIGN_METHOD.md`
    §3).

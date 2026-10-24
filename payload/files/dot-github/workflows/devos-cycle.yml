@@ -722,6 +722,15 @@ jobs:
             echo "No Playwright in the project; no screenshots."
           fi
 
+      - name: UI evidence and accessibility checks (PR-51)
+        # A UI fence's captures become the required checks ui-evidence and a11y; devos/checks is posted again.
+        if: steps.bs.outputs.state == 'ok'
+        run: |
+          node scripts/devos/ui-evidence.mjs --task "$TASK"
+          bash scripts/devos/checks-status.sh "$(git rev-parse HEAD)"
+        env:
+          GH_TOKEN: ${{ secrets.DEVOS_PAT || github.token }}
+
       - name: Review plan and evidence pack (PR-22)
         id: rp
         if: steps.bs.outputs.state == 'ok'

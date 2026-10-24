@@ -9,8 +9,9 @@ The design is decided before the build (Dev OS J3). Your job is to reproduce it 
 improve it. A gap or a contradiction is reported, never improvised.
 
 1. **Read the sources, in order:** the fence; `docs/DESIGN_SYSTEM.md` (tokens, type, components,
-   compositions, catalogue keys); `docs/design/mockup.html` for the intended rendering. Where they
-   disagree, the design system wins; note the difference in the report.
+   compositions, catalogue keys); `docs/design/mockup.html` for the intended rendering; then the design
+   skills `devos/skills/README.md` gives the builder. Where they disagree, the design system wins; note the
+   difference in the report.
 2. **Tokens first.** Every colour, size, space and radius comes from `src/styles/tokens.css`. Copy the
    token block exactly as the design system gives it. Raw values anywhere else fail `guard:design`.
 3. **One CSS module per component** (`Component.module.css` beside `Component.tsx`). Logical properties
@@ -29,3 +30,7 @@ improve it. A gap or a contradiction is reported, never improvised.
    and 390px with docs/DESIGN_SYSTEM.md. In the IDE use the Playwright MCP to take screenshots; in automated runs
    `node scripts/devos/screens.mjs` writes them to `.devos/screens/`. List every visible difference
    you could not remove in the report under "Notes for the reviewer".
+9. **The runner's checks fail missing evidence (PR-51).** Every state on the `- Screens:` line needs an
+   error-free capture at 1280 and 390 with no layout shift, no console error, no failed request and no
+   axe violation. After `screens.mjs`, `node scripts/devos/ui-evidence.mjs --task <task>` prints what the
+   runner will find; fix it before you report.
