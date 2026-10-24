@@ -73,6 +73,9 @@ process.stdin.on("end", () => {
   writeFileSync(path.join(docs, "PHASES.md"), readFileSync(path.join(fixtureDir, "PHASES.md")));
   writeFileSync(path.join(docs, "GLOSSARY.md"), readFileSync(path.join(fixtureDir, "GLOSSARY.md")));
   writeFileSync(path.join(docs, "fences", "T01.md"), "# T01\\n");
+  mkdirSync(path.join(docs, "design"), { recursive: true });
+  writeFileSync(path.join(docs, "DESIGN_SYSTEM.md"), "# Design system\\n");
+  writeFileSync(path.join(docs, "design", "UI_ACCEPTANCE.md"), "| Id | Criterion | Checked by |\\n|---|---|---|\\n| UA-01 | Text contrast meets WCAG 2.2 AA | automated |\\n");
   if (mode === "omit-questions" && args.includes("--continue")) {
     writeFileSync(path.join(docs, "OPEN_QUESTIONS.md"), "# Open questions\\n");
   }
@@ -109,6 +112,9 @@ process.stdin.on("end", () => {
   writeFileSync(path.join(docs, "PHASES.md"), readFileSync(path.join(fixtureDir, "PHASES.md")));
   writeFileSync(path.join(docs, "GLOSSARY.md"), readFileSync(path.join(fixtureDir, "GLOSSARY.md")));
   writeFileSync(path.join(docs, "fences", "T01.md"), "# T01\\n");
+  mkdirSync(path.join(docs, "design"), { recursive: true });
+  writeFileSync(path.join(docs, "DESIGN_SYSTEM.md"), "# Design system\\n");
+  writeFileSync(path.join(docs, "design", "UI_ACCEPTANCE.md"), "| Id | Criterion | Checked by |\\n|---|---|---|\\n| UA-01 | Text contrast meets WCAG 2.2 AA | automated |\\n");
   process.stdout.write('{"result":"stub summary"}');
 });
 `;

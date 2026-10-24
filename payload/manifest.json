@@ -260,7 +260,7 @@
     {
       "path": "devos/prompts/blueprint.md",
       "stored": "devos/prompts/blueprint.md",
-      "sha256": "cfb58f40402099df8bb858b12bf16ab98cb9668950aa4393c2f23aab3b6e8d88",
+      "sha256": "6296f1dd707b81d8bfc5be3985f1a88330f59d8e1cc2126563217780423826ac",
       "owner": "engine"
     },
     {
@@ -278,7 +278,7 @@
     {
       "path": "devos/prompts/intake.md",
       "stored": "devos/prompts/intake.md",
-      "sha256": "9f29640371c821b7060dfa1aae5ff5947ff10bbe5b2003d928f8f2e75047152b",
+      "sha256": "71cec84d8a01e0e5025f48ded0c5ab13c33dde802b4b619317eb099d637fe6b5",
       "owner": "engine"
     },
     {
@@ -290,7 +290,7 @@
     {
       "path": "devos/prompts/reviewer.md",
       "stored": "devos/prompts/reviewer.md",
-      "sha256": "a8bb94833ec3517a45219a21590086a8aa2ac7706907c367453356a7d1d22094",
+      "sha256": "aad4144bca3745f60fa4a62aa2e918d253952e44657d027a99f7be36942d31e4",
       "owner": "engine"
     },
     {
@@ -380,7 +380,13 @@
     {
       "path": "docs/method/AUTOMATION.md",
       "stored": "docs/method/AUTOMATION.md",
-      "sha256": "47772126dea275c5b61b1ef6477a3d4b23258c1fea1e6e2a212f46e0799b399d",
+      "sha256": "42866b7b394100fa3f92b6dcf69ec01bef1556ce179ce9dd9bbadb503a77b253",
+      "owner": "engine"
+    },
+    {
+      "path": "docs/method/DESIGN_METHOD.md",
+      "stored": "docs/method/DESIGN_METHOD.md",
+      "sha256": "6801ce50fc8f43112f94138375f75fb9d32784c1bdf213f85e37b5de642947c4",
       "owner": "engine"
     },
     {
@@ -398,7 +404,7 @@
     {
       "path": "docs/method/PRECEDENTS.md",
       "stored": "docs/method/PRECEDENTS.md",
-      "sha256": "29357f44e132949ce246e47e20c3f735a620cff4ce52738f76e53b9511c48461",
+      "sha256": "aee9cbd497b1d562d951a519cc8dbd1f3805410d909eb15d19ec0f573e7ef302",
       "owner": "engine"
     },
     {
@@ -648,6 +654,12 @@
       "owner": "engine"
     },
     {
+      "path": "scripts/guards/design-spec.mjs",
+      "stored": "scripts/guards/design-spec.mjs",
+      "sha256": "f58f3bccf2cb0ff128496353678c20171681f83526b6f9d9a047080c5ebd659c",
+      "owner": "engine"
+    },
+    {
       "path": "scripts/guards/design.mjs",
       "stored": "scripts/guards/design.mjs",
       "sha256": "65e1feaf892d34198164a3a949fd84db1add5340c2b45ae4491381ea1fd2b377",
@@ -692,7 +704,7 @@
     {
       "path": "scripts/guards/run-all.mjs",
       "stored": "scripts/guards/run-all.mjs",
-      "sha256": "3812ddc562aff5ad91b68abe3580be06a3bc9c29c5b1562ed0cc741aa76759de",
+      "sha256": "b31581bdb4220a20e752a23084bfdab7e4f7657279db5ec9fb24d2849c77c717",
       "owner": "engine"
     },
     {

@@ -51,7 +51,8 @@ part: a red required check fails the verdict whatever you write (PR-08), and the
    {{RISK3_LINE}}
    **Visual check (only if the diff changes pages, components or styles):** for each state and
    width, read the settled screenshot, the reduced-motion screenshot and the five filmstrip frames.
-   Judge them against `docs/DESIGN_SYSTEM.md` (§5, §7) and the fence's Design specification. Write
+   Judge them against `docs/DESIGN_SYSTEM.md`, the fence's Design specification and the criteria it names in
+   `docs/design/UI_ACCEPTANCE.md`. Write
    the seven-row design ledger (hierarchy · consistency · accessibility · responsiveness · craft ·
    **motion**: purpose test, tokens, once-only, reduced motion · **truthfulness**). FAIL on: a
    visible departure, a layout shift above 0, a UI diff without `motion.json`, or a state the fence
@@ -97,7 +98,7 @@ part: a red required check fails the verdict whatever you write (PR-08), and the
      **low** for copy and one-line fixes, **medium** for small contained code, **high** (default) for
      features and tests, **xhigh** for risk 3, cross-cutting work, and a reissue after high failed.
      **Fast: yes** only for low/medium mechanical work.
-   - A UI fence carries `- Screens: \`<name> <path>[ click|hover|focus <selector>]\` · …` in its header, naming every page, state and interaction to capture.
+   - A UI fence carries `- Screens: \`<name> <path>[ click|hover|focus <selector>]\` · …` in its header, naming every page, state and interaction to capture. It also carries a `### Design specification` (`docs/method/DESIGN_METHOD.md` §3) whose `- States:` are exactly those names and whose `- Criteria:` are rows of `docs/design/UI_ACCEPTANCE.md`; `guard:design-spec` fails the run otherwise.
    - **Judge its size first and split a big task into stages (PR-38).** Follow the
      `devos-fence-writing` skill: count steps, files, concerns and Done-when items; when the task does
      not fit one builder run (about 60 minutes of work), add `- Stages: N` (2–4) and group the steps

@@ -33,7 +33,7 @@ Exactly one of three outcomes, then the structured answer the output schema requ
    {{BUILDER_POOL}}
    Rehearse it against the current tree: every path, script and component name it cites must exist
    or be created by its own steps.
-   A UI task's first fence carries `- Screens: \`<name> <path>[ click|hover|focus <selector>]\` · …` in its header, naming every page, state and interaction to capture.
+   A UI task's first fence carries `- Screens: \`<name> <path>[ click|hover|focus <selector>]\` · …` in its header, naming every page, state and interaction to capture. It also carries a `### Design specification` (`docs/method/DESIGN_METHOD.md` §3) whose `- States:` are exactly those names and whose `- Criteria:` are rows of `docs/design/UI_ACCEPTANCE.md`; `guard:design-spec` fails the run otherwise.
 6. Copy the request and your interpretation to `docs/requests/issue-{{ISSUE}}.md` (what was asked,
    what you decided, what you left out and why).
 

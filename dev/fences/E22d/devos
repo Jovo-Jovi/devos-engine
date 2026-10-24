@@ -1,0 +1,3 @@
+#!/bin/sh
+# The devos command, from the engine folder: ./devos ui
+exec node "$(dirname "$0")/bin/devos.mjs" "$@"

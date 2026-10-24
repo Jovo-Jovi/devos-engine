@@ -163,13 +163,14 @@ workflow may start late.
 with a gate) · `naming` · `design` (tokens, no raw colours, logical properties) · `i18n` (identical
 catalogues) · `boundary` (no visitor data outside declared zones) · `literals` (no hard-coded contact
 or locale) · `data` (migrations, RLS, grants, server-only secret key, synthetic seed, pgTAP) ·
-`services` (R2 and Firebase rules) · `manual` (this file names every part of the automation) · `config` (the generated configuration is current).
+`services` (R2 and Firebase rules) · `manual` (this file names every part of the automation) · `config` (the generated configuration is current) · `design-spec` (every open UI fence has a design specification whose states match its `- Screens:` line and whose criteria are rows of `docs/design/UI_ACCEPTANCE.md`, PR-50).
 
 ## 6. Prompts, schemas, rules
 
 `devos/prompts/`: `builder.md`, `reviewer.md`, `intake.md`, `method.md`, `revise.md`, `doctor.md`, `supervisor.md`,
 `blueprint.md` (`devos init`'s blueprint: the `/devos-new-project` flow, headless).
 `devos/schemas/`: verdict, intake (also revise and method), doctor, supervisor.
+`docs/method/DESIGN_METHOD.md`: the UI/UX gate — the design contract, the lifecycle, the design specification, the acceptance gate and the resource catalogue (PR-50).
 
 `.gitattributes` merges `docs/DEVELOPMENT_JOURNAL.md` by union.
 
