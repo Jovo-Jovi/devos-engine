@@ -1,13 +1,14 @@
 import { spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import http from "node:http";
-import { mkdtempSync, readFileSync, readdirSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
 import { CONTRACT_VERSION } from "../lib/contract.mjs";
+import { engineRoot } from "../lib/engine.mjs";
 import { startUiServer } from "../lib/ui-server.mjs";
 import { cleanup, flow, init, processGone, stage } from "./harness.mjs";
 
@@ -479,7 +480,65 @@ async function workerQ() {
   }
 }
 
-const workers = { l: workerL, n: workerN, m: workerM, o: workerO, p: workerP, q: workerQ };
+async function workerS() {
+  const terminal = stage();
+  const planned = stage();
+  Object.assign(process.env, planned.env);
+  let server;
+  try {
+    const plan = planFrom(terminal);
+    server = await startUiServer({ folder: null, port: 0 });
+    const origin = `http://127.0.0.1:${server.port}`;
+    const headers = { "Content-Type": "application/json", Origin: origin, "X-DEVOS-Token": server.token };
+    const state = await fetch(`${origin}/api/state`, { headers: { "X-DEVOS-Token": server.token } });
+    const body = await state.json();
+    if (state.status !== 200 || body.folder !== null || body.choose !== true) throw new Error("choose mode was not announced");
+    if (typeof body.suggest !== "string" || !path.isAbsolute(body.suggest) || path.basename(body.suggest) !== "devos-projects") {
+      throw new Error("suggest was wrong");
+    }
+    const refusals = [
+      [plan, "Choose a folder for the project."],
+      [{ ...plan, folder: "relative/app" }, "The project folder must be a full path."],
+      [{ ...plan, folder: path.join(engineRoot(), "inside-app") }, "The project folder cannot be inside the engine's folder."],
+      [{ ...plan, folder: terminal.project }, "That folder already has files. Choose a new folder."],
+    ];
+    for (const [payload, sentence] of refusals) {
+      const response = await fetch(`${origin}/api/plan`, { method: "POST", headers, body: JSON.stringify(payload) });
+      const json = await response.json();
+      if (response.status !== 400 || !json.errors?.includes(sentence)) throw new Error(`expected ${sentence}`);
+    }
+    const still = await fetch(`${origin}/api/state`, { headers: { "X-DEVOS-Token": server.token } });
+    const stillBody = await still.json();
+    if (stillBody.folder !== null) throw new Error("a refused plan chose a folder");
+    const chosen = path.resolve(planned.parent, "chosen", "my-app");
+    const posted = await fetch(`${origin}/api/plan`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ ...plan, folder: chosen }),
+    });
+    if (posted.status !== 200) throw new Error(`the chosen folder was not accepted ${posted.status}`);
+    await posted.arrayBuffer();
+    const next = await fetch(`${origin}/api/state`, { headers: { "X-DEVOS-Token": server.token } });
+    const nextBody = await next.json();
+    if (next.status !== 200 || nextBody.folder !== chosen) throw new Error("the folder was not kept");
+    const started = await fetch(`${origin}/api/start`, { method: "POST", headers });
+    if (started.status !== 202) throw new Error("start was not accepted");
+    const events = await readEvents(server.port, server.token, async (event) => {
+      if (event.kind !== "approve") return;
+      if (!existsSync(path.join(chosen, "devos", "project.json"))) throw new Error("project.json was not written");
+      const stopped = await fetch(`${origin}/api/stop`, { method: "POST", headers });
+      if (stopped.status !== 204) throw new Error("stop was not accepted");
+    });
+    const done = events.find((event) => event.type === "done");
+    if (!done || done.code !== 130) throw new Error("stop did not finish");
+  } finally {
+    if (server) await server.close();
+    cleanup(terminal.parent);
+    cleanup(planned.parent);
+  }
+}
+
+const workers = { l: workerL, n: workerN, m: workerM, o: workerO, p: workerP, q: workerQ, s: workerS };
 const workerName = process.env.DEVOS_UI_WORKER;
 if (workers[workerName]) {
   workers[workerName]().then(() => process.exit(0)).catch((error) => {
@@ -654,6 +713,11 @@ if (workers[workerName]) {
 
   test("ui-server.test.mjs (q) an answer is one line and a finished stream ends", { timeout: 180000 }, () => {
     const result = runWorker("q");
+    assert.equal(result.status, 0, result.stderr);
+  });
+
+  test("ui-server.test.mjs (s) a plan names the project folder", { timeout: 180000 }, () => {
+    const result = runWorker("s");
     assert.equal(result.status, 0, result.stderr);
   });
 

@@ -71,7 +71,7 @@ flowchart LR
 
 ## The guided setup
 
-`devos ui my-app` opens the setup as a page on this computer. Every screen below is the real page, captured during a test run with stand-in agents.
+`Start DEV_OS` (or `devos ui`) opens the setup as a page on this computer. Every screen below is the real page, captured during a test run with stand-in agents.
 
 <table>
   <tr>
@@ -129,17 +129,24 @@ flowchart LR
 
 ## Install
 
-```
-git clone https://github.com/Jovo-Jovi/devos-engine.git
-cd devos-engine
-npm link
-devos --version
-```
+1. **Get the engine.** Clone it, or download the ZIP from GitHub and unzip it anywhere:
 
-- **Access.** The repository is private until the release, so you need access to clone it.
-- **`npm link`** adds the `devos` command and downloads nothing.
-- **Update:** run `git pull` in the clone. **Remove:** `npm uninstall -g devos-engine`.
-- **Without `npm link`:** run `node <path to devos-engine>/bin/devos.mjs <command>`.
+   ```
+   git clone https://github.com/Jovo-Jovi/devos-engine.git
+   ```
+
+   The repository is private until the release, so you need access to it.
+2. **Start it.** Nothing else to install: the engine has no dependencies.
+   - **Windows:** double-click `Start DEV_OS.cmd` in the engine folder.
+   - **macOS:** double-click `Start DEV_OS.command`. The first time, right-click it and choose **Open**.
+   - **Linux, or any terminal:** run `./devos ui` in the engine folder (on Windows, `devos ui`).
+
+   The guided setup opens in your browser and asks for the project's name and where to create it. Keep the window
+   that opened with it until the setup is done.
+
+- **Update:** `git pull` in the engine folder, or download the ZIP again.
+- **The `devos` command anywhere (optional).** Run `npm link` once in the engine folder. If `devos` is still not
+  found, the folder that `npm prefix -g` prints is not on your PATH: add it, or keep using the launchers above.
 
 ## Create a project
 
@@ -151,14 +158,15 @@ devos init my-app
 `my-app` must be a new or empty folder. In every menu, type a number (or several, separated by commas) or a name.
 Enter takes the default shown.
 
-**In the browser.** `devos ui my-app` runs the same setup as a guided page:
+**In the browser.** The launchers of *Install* run `devos ui`, the same setup as a guided page:
 
 ```
-devos ui my-app
+devos ui            the page asks where to create the project
+devos ui my-app     the page sets up my-app, a new or empty folder
 ```
 
 - The page opens in your browser. It runs on this computer only, at `127.0.0.1`, behind a one-time link the
-  terminal prints.
+  terminal prints. It follows your system's light or dark setting; the button at the top right switches it.
 - Every answer goes to the same steps as `devos init`, and keys typed on the page reach GitHub the same way.
 - Keep the terminal open until the page says it is done. Ctrl-C in the terminal stops the page.
 
@@ -259,7 +267,7 @@ it.
 |---|---|
 | `devos doctor` | Checks the GitHub CLI, its sign-in and its token scopes, and prints the exact fix. It changes nothing. |
 | `devos init [folder]` | Guided setup of a new project in an empty folder. |
-| `devos ui [folder] [--no-open]` | The same setup as a guided page in your browser, on this computer only. `--no-open` prints the link without opening it. |
+| `devos ui [folder] [--no-open]` | The same setup as a guided page in your browser, on this computer only. Without a folder, the page asks where to create the project. `--no-open` prints the link without opening it. |
 | `devos continue [folder]` | Shows what is done and finishes what is missing. |
 | `devos status` | In a project folder: shows the project and your saved roster. |
 | `devos agents detect` | Lists the AI CLIs on this computer, their versions, and whether each one is signed in. |
@@ -312,6 +320,8 @@ it, and the owner commits. The plan is `dev/PLAN.md`, the decisions are `dev/DEC
 bin/devos.mjs          the command
 lib/                   command internals; lib/data/tools.json lists the AI CLIs and their models
 lib/ui/                the guided page that devos ui serves (IBM Plex fonts under the OFL, lib/ui/fonts/OFL.txt)
+Start DEV_OS.cmd       Windows launcher of the guided page (Start DEV_OS.command on macOS)
+devos, devos.cmd       the devos command from the engine folder, without npm link
 payload/files/         the method, installed and upgraded (dot-directories are stored as dot-*)
 payload/templates/     project-owned starting points, written once at install
 payload/contract/      the contract shown by devos init

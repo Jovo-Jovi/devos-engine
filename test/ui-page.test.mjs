@@ -138,3 +138,13 @@ test("ui-page.test.mjs (d) the page texts stay inside the fence", () => {
     at += 4;
   }
 });
+
+test("ui-page.test.mjs (e) the page has a theme toggle and a light theme", () => {
+  const html = readFileSync(path.join(ui, "index.html"), "utf8");
+  const css = readFileSync(path.join(ui, "app.css"), "utf8");
+  const js = readFileSync(path.join(ui, "app.js"), "utf8");
+  assert.equal(html.includes('id="theme"'), true);
+  assert.equal(css.includes(':root[data-theme="light"] {'), true);
+  assert.equal(css.includes("@media (prefers-color-scheme: light)"), true);
+  assert.equal(js.includes('const THEME_KEY = "devos.theme";'), true);
+});
