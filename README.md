@@ -219,6 +219,8 @@ takes the default shown.
    - With Cursor and Claude Code, the page shows each step as the agent takes it: the file it reads or writes, the
      command it runs. The terminal's heartbeat line shows the latest one.
    - When a check of the documents fails, the agent fixes only what failed, in the same session.
+   - If the agent makes no progress for 15 minutes (no step, no output, no file written), the round is stopped.
+     Documents that pass the checks then go to your review; otherwise the agent fixes what fails.
    - Stopping keeps what was written.
    - When it finishes, approve, or describe the changes you want. You get up to five rounds.
 10. **Keys.** DEV_OS lists every key this project needs, for the agents and for the modules you picked, and where to
@@ -280,6 +282,11 @@ it.
   - **Start a new project** and **Close DEV_OS**.
 - **Later.** Start DEV_OS again. The first screen lists your projects in `devos-projects`, each with the step it picks
   up at. For a project in another folder, paste its full path under **A project in another folder**, then **Find it**.
+  While a project continues, the page shows that project's own choices.
+- **A blueprint already written** is not drafted again. When its documents pass the checks, Continue goes straight to
+  your review; otherwise the agent fixes only what fails, in its earlier session.
+- **Your choices are kept.** A new project starts from the choices of your last one: the agents and models, the type,
+  stack, modules and scope, the languages, the visibility and the projects folder.
 - **In a terminal.** `devos continue <folder>` prints a checklist: answers, engine files, blueprint approved, local
   commit, repository, keys, first cycle. Each line is marked done (`✓`) or open (`·`), and the first open step is
   finished for you. `devos init --continue <folder>` does the same.
@@ -312,7 +319,8 @@ it.
 
 - **Keys.** DEV_OS never stores a secret value. The keys you type stay in the engine's memory only until each one is
   handed to GitHub over standard input. No model, file, log or answer receives one.
-- **Your computer.** The files under `~/.devos/` hold names and choices only.
+- **Your computer.** The files under `~/.devos/` hold names and choices only, such as `choices.json`, the choices of
+  your last project (never a key, a name or a brief).
 - **The project.** Your answers are in `devos/answers.json` and your agents are in `devos/project.json`. The method's
   settings are generated into `devos.config.json`; do not edit that file by hand.
 - **Reporting.** The contract describes a registry. Registration is not built yet, so nothing is sent to any DEV_OS

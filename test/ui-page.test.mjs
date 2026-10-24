@@ -168,3 +168,10 @@ test("ui-page.test.mjs (g) the page shows the agent at work and ends a run with 
   assert.equal(css.includes("@keyframes now-pulse"), true);
   assert.equal(css.includes(".agent-now, .now-pulse { animation: none; }"), true);
 });
+
+test("ui-page.test.mjs (h) a new start offers the last choices, and a continued project shows its own", () => {
+  const js = readFileSync(path.join(ui, "app.js"), "utf8");
+  for (const text of ["return withRemembered(draft, st.choices);", "app.draft = withChoices(app.draft, found.choices, found.folder);", 'readiness(blueprint.tool) === "ready"']) {
+    assert.equal(js.includes(text), true, text);
+  }
+});

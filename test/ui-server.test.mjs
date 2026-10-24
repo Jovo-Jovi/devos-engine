@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import http from "node:http";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -9,7 +9,7 @@ import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
 import { CONTRACT_VERSION } from "../lib/contract.mjs";
 import { engineRoot } from "../lib/engine.mjs";
-import { startUiServer } from "../lib/ui-server.mjs";
+import { readChoices, rememberChoices, savedChoices, startUiServer } from "../lib/ui-server.mjs";
 import { cleanup, flow, init, processGone, stage } from "./harness.mjs";
 
 const here = fileURLToPath(import.meta.url);
@@ -493,6 +493,7 @@ async function workerS() {
     const state = await fetch(`${origin}/api/state`, { headers: { "X-DEVOS-Token": server.token } });
     const body = await state.json();
     if (state.status !== 200 || body.folder !== null || body.choose !== true) throw new Error("choose mode was not announced");
+    if (body.choices !== null) throw new Error("a fresh home offered remembered choices");
     if (typeof body.suggest !== "string" || !path.isAbsolute(body.suggest) || path.basename(body.suggest) !== "devos-projects") {
       throw new Error("suggest was wrong");
     }
@@ -521,6 +522,11 @@ async function workerS() {
     const next = await fetch(`${origin}/api/state`, { headers: { "X-DEVOS-Token": server.token } });
     const nextBody = await next.json();
     if (next.status !== 200 || nextBody.folder !== chosen) throw new Error("the folder was not kept");
+    // The accepted plan's choices are offered to the next start, without the project's own text.
+    const offered = nextBody.choices;
+    if (offered?.project?.type !== plan.project.type || offered?.parent !== path.dirname(chosen) || JSON.stringify(offered).includes(plan.fields.brief)) {
+      throw new Error(`choices ${JSON.stringify(offered)}`);
+    }
     const started = await fetch(`${origin}/api/start`, { method: "POST", headers });
     if (started.status !== 202) throw new Error("start was not accepted");
     const events = await readEvents(server.port, server.token, async (event) => {
@@ -672,7 +678,8 @@ async function workerV() {
       if (got.status !== 200 || got.body.ok !== false || !got.body.errors?.includes(sentence)) throw new Error(`project ${folder}: ${JSON.stringify(got)}`);
     }
     const found = await project(oldApp);
-    const expected = { ok: true, folder: oldApp, name: "old-app", started: true, approved: false, step: "write the blueprint" };
+    const choices = { name: "", type: "", stack: "", modules: {}, scope: "", languages: [], visibility: "", blueprint: { tool: "agent", model: "x" } };
+    const expected = { ok: true, folder: oldApp, name: "old-app", started: true, approved: false, step: "write the blueprint", choices };
     if (found.status !== 200 || JSON.stringify(found.body) !== JSON.stringify(expected)) throw new Error(`project: ${JSON.stringify(found)}`);
     const change = async (blueprint) => {
       const response = await fetch(`${origin}/api/continue`, { method: "POST", headers, body: JSON.stringify({ folder: oldApp, blueprint }) });
@@ -958,5 +965,65 @@ if (workers[workerName]) {
   test("ui-server.test.mjs (w) the agent's steps stream to the page and the last 40 replay", { timeout: 180000 }, () => {
     const result = runWorker("w");
     assert.equal(result.status, 0, result.stderr);
+  });
+
+  test("ui-server.test.mjs (y) a started project's saved choices, with no key", () => {
+    const dir = mkdtempSync(path.join(tmpdir(), "devos-choices-"));
+    try {
+      mkdirSync(path.join(dir, "devos"));
+      writeFileSync(path.join(dir, "devos", "answers.json"), JSON.stringify({
+        name: "Hello CLI", key: "HELLO-CLI", brief: "A greeting.", users: "Developers", languages: ["en", "ar"], visibility: "private",
+        type: "cli", stack: "node-cli", modules: { ai: "none" }, scope: "mvp", blueprint_agent: { tool: "cursor", model: "grok-4.7-xhigh-fast" },
+      }));
+      assert.deepEqual(savedChoices(dir), {
+        name: "Hello CLI", type: "cli", stack: "node-cli", modules: { ai: "none" }, scope: "mvp", languages: ["en", "ar"], visibility: "private",
+        blueprint: { tool: "cursor", model: "grok-4.7-xhigh-fast" },
+      });
+      assert.equal(savedChoices(path.join(dir, "nope")), null);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("ui-server.test.mjs (x) an accepted plan's choices are offered next time, with no key and no project text", async () => {
+    const home = mkdtempSync(path.join(tmpdir(), "devos-remember-"));
+    const before = process.env.DEVOS_HOME;
+    process.env.DEVOS_HOME = home;
+    try {
+      assert.equal(readChoices(), null);
+      const plan = {
+        accepted: true,
+        agents: {
+          reviewer: { id: "r", tool: "claude", model: "claude-opus-5-5" },
+          reviewer_light: null,
+          pool: [{ id: "g", tool: "cursor", model: "grok-4.7", default: true, note: "strengths: ui, tests" }],
+          policy: "reviewer-picks",
+        },
+        blueprint: { tool: "cursor", model: "grok-4.7-xhigh-fast" },
+        project: { type: "cli", stack: "node-cli", modules: { ai: "none" }, scope: "mvp" },
+        fields: { name: "Hello CLI", brief: "A greeting.", users: "Developers", languages: ["en", "ar"], visibility: "private" },
+        attachments: [],
+      };
+      rememberChoices(plan, path.join(home, "devos-projects", "hello-cli"));
+      const saved = readChoices();
+      assert.deepEqual(saved.agents, {
+        reviewer: { tool: "claude", model: "claude-opus-5-5" },
+        reviewer_light: null,
+        pool: [{ tool: "cursor", model: "grok-4.7", default: true, note: "strengths: ui, tests" }],
+        policy: "reviewer-picks",
+      });
+      assert.deepEqual([saved.blueprint, saved.project, saved.fields, saved.parent], [
+        { tool: "cursor", model: "grok-4.7-xhigh-fast" },
+        { type: "cli", stack: "node-cli", modules: { ai: "none" }, scope: "mvp" },
+        { languages: ["en", "ar"], visibility: "private" },
+        path.join(home, "devos-projects"),
+      ]);
+      const raw = readFileSync(path.join(home, ".devos", "choices.json"), "utf8");
+      for (const text of ["Hello CLI", "A greeting.", "Developers"]) assert.equal(raw.includes(text), false, text);
+    } finally {
+      if (before === undefined) delete process.env.DEVOS_HOME;
+      else process.env.DEVOS_HOME = before;
+      rmSync(home, { recursive: true, force: true });
+    }
   });
 }

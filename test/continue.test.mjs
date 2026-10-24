@@ -4,7 +4,8 @@ import path from "node:path";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
-import { cleanup, flow, init, runs, stage } from "./harness.mjs";
+import { cleanup, flow, init, runs, stage, toolRuns } from "./harness.mjs";
+import { BLUEPRINT_POINTER } from "../lib/init.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const bin = path.join(root, "bin", "devos.mjs");
@@ -217,6 +218,45 @@ test("continue.test.mjs (o) a model saved as a listing row is cleaned before the
     assert.equal(config.agents.pool[0].model, builder);
     const called = runs(staged.parent).at(-1);
     assert.equal(called.args[called.args.indexOf("--model") + 1], clean);
+  } finally {
+    cleanup(staged.parent);
+  }
+});
+
+// The flow up to the blueprint's review, then the input ends: the documents are written, not approved.
+const unapproved = (options) => flow(options).replace(/approve\n\n$/, "");
+
+test("continue.test.mjs (p) a written blueprint that passes its checks goes straight to review", () => {
+  const staged = stage();
+  try {
+    const first = init(staged, unapproved());
+    assert.equal(first.status, 1, first.stdout + first.stderr);
+    assert.equal(first.stdout.includes("devos: input ended before setup finished"), true, first.stdout);
+    assert.equal(runs(staged.parent).length, 1);
+    const result = resume(staged, ["continue"], "approve\n\n");
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    assert.equal(result.stdout.includes("devos: the blueprint is written and passes its checks; review it"), true, result.stdout);
+    assert.equal(result.stdout.includes("devos init: blueprint approved in"), true, result.stdout);
+    assert.equal(runs(staged.parent).length, 1);
+  } finally {
+    cleanup(staged.parent);
+  }
+});
+
+test("continue.test.mjs (q) a written blueprint that fails is repaired in the agent's saved session", () => {
+  const staged = stage({ tools: ["agent"] });
+  try {
+    const first = init(staged, unapproved({ blueprint: "Cursor CLI · grok-4.7" }));
+    assert.equal(first.status, 1, first.stdout + first.stderr);
+    writeFileSync(path.join(staged.project, "docs", "PHASES.md"), "No header here\n");
+    const result = resume(staged, ["continue"], "approve\n\n");
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    assert.equal(result.stdout.includes("devos: the written blueprint fails these checks:"), true, result.stdout);
+    assert.equal(result.stdout.includes("devos: agent fixes only what failed, in its earlier session"), true, result.stdout);
+    const called = toolRuns(staged.parent);
+    assert.equal(called.length, 2);
+    assert.deepEqual(called[1].args.slice(-3), ["--resume", "cursor-session-1", BLUEPRINT_POINTER]);
+    assert.equal(called[1].input.startsWith("Your documents and fence T01 are written, and these checks failed:"), true, called[1].input);
   } finally {
     cleanup(staged.parent);
   }

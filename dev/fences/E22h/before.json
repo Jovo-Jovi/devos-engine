@@ -1,0 +1,15 @@
+{
+  "README.md": "fae59fc0b4d41f5a6772d43bb93920cadfa5610fd1b00fe02d3c21070f1eb2d1",
+  "lib/setup.mjs": "10ace39072cf49a7c65433bfa5aa61f257659bc26f467cde2fcc32c62833e66c",
+  "package.json": "e7dd4c296e952b847c85e2e17bbd774b8b46bd9b097cbbb26a6a65f31b20bc0c",
+  "payload/files/devos/setup.json": "0f9123b5cec5fae27d6098609d12bd458af2a17c5c18e372e6ae4e14e7a68fbb",
+  "payload/files/docs/method/AUTOMATION.md": "6f0d86451103a2a204cbe9ba1717502a186fdff4b572868fe6dafb4af1c62600",
+  "payload/files/docs/method/PRECEDENTS.md": "2ce2113039045d3c667618a6e3b54e39e5ad7ace766876a3e80bb0c4d3978962",
+  "payload/files/scripts/devos/agents.mjs": "271b27d6159548f34a8551fdcd48165263865f55aa6f866039a53876bb61e5ba",
+  "payload/files/scripts/devos/modules.mjs": "6d88dcfdc9dd91fc43f7165d5a21bf36e67078734bd253e5a6b19580328bc8c5",
+  "payload/files/scripts/devos/setup-check.mjs": "56eee78a81f3a5fa577ac2564c42ba9cdfa1961b2dcc3befb7af135f10a8288e",
+  "test/install.test.mjs": "b3be3d81f73d6a931e310298ee21320b904c6a6cc56fb0c7a4ccb5fb5cafb25d",
+  "test/upgrade.test.mjs": "8047c54febbe632916ad51528979faf3e2d5589bf9fd043aa71d9e2517c8cd90",
+  "test/version.test.mjs": "2b7e2792a9308842ce59ce584e971b65a3dad008edf90c1fd7e6e6665555952c",
+  "tools/sources.mjs": "c125f912ade51b734e4a6019414c486468b850e55b6deaac06e1339b07449307"
+}

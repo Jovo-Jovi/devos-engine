@@ -156,6 +156,13 @@ process.stdin.on("end", () => {
   for (let i = 2; i <= Number(process.env.STUB_TOOL_STEPS || 1); i += 1) {
     say({ type: "tool_call", subtype: "started", call_id: "c" + i, tool_call: { readToolCall: { args: { path: path.join(docs, "step-" + i + ".md") } } } });
   }
+  // quiet: the agent starts a helper and is never heard from again (no result, no output, no file written).
+  if (process.env.STUB_TOOL_MODE === "quiet") {
+    say({ type: "tool_call", subtype: "started", call_id: "h1", tool_call: { taskToolCall: { args: { description: "Audit fence T01" } } } });
+    if (process.env.DEVOS_TOOL_PID) writeFileSync(process.env.DEVOS_TOOL_PID, String(process.pid));
+    setInterval(() => {}, 1000000);
+    return;
+  }
   say({ type: "result", subtype: "success", is_error: false, result: "stub summary", session_id: "cursor-session-1", duration_ms: 61000,
     usage: { inputTokens: 4000, outputTokens: 900, cacheReadTokens: 120000, cacheWriteTokens: 0 } });
   // linger: the process does not exit after its result, as a CLI that restarts itself would not.

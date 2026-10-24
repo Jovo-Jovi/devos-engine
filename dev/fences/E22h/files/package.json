@@ -1,0 +1,25 @@
+{
+  "name": "devos-engine",
+  "version": "0.2.1",
+  "private": true,
+  "type": "module",
+  "description": "DEV_OS Engine — from an empty folder to a GitHub project that AI agents build, review and ship task by task",
+  "bin": {
+    "devos": "bin/devos.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "files": [
+    "bin/",
+    "lib/",
+    "payload/",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node --test \"test/*.test.mjs\"",
+    "manifest": "node tools/build-manifest.mjs",
+    "manifest:check": "node tools/build-manifest.mjs --check"
+  }
+}

@@ -533,3 +533,29 @@ test("init.test.mjs (z) every blueprint round is in the project's usage record",
     cleanup(staged.parent);
   }
 });
+
+test("init.test.mjs (aa) a round that goes quiet is stopped, and documents that pass go to review", async () => {
+  const staged = stage({ tools: ["agent"] });
+  const pidFile = path.join(staged.parent, "tool.pid");
+  try {
+    const result = init(staged, flow({ blueprint: "Cursor CLI · grok-4.7" }), { STUB_TOOL_MODE: "quiet", DEVOS_TOOL_PID: pidFile, DEVOS_IDLE_LIMIT_MS: "1500" });
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    assert.equal(result.stdout.includes("devos: agent made no progress for 2 seconds (last step: Starting a helper: Audit fence T01); the round was stopped"), true, result.stdout);
+    assert.equal(result.stdout.includes("devos: the documents it wrote pass the checks; review them"), true, result.stdout);
+    assert.equal(result.stdout.includes("devos init: blueprint approved in"), true, result.stdout);
+    assert.equal(toolRuns(staged.parent).length, 1);
+    assert.equal(await processGone(Number(readFileSync(pidFile, "utf8")), 5000), true);
+    assert.deepEqual(JSON.parse(readFileSync(path.join(staged.project, ".devos", "blueprint-session.json"), "utf8")), { tool: "cursor", session: "cursor-session-1" });
+  } finally {
+    cleanup(staged.parent);
+  }
+});
+
+test("init.test.mjs (ab) a later round or a repair carries on the agent's session", () => {
+  assert.deepEqual(blueprintArgs("cursor", "grok-4.7", 1, "s-1", true).slice(-3), ["--resume", "s-1", BLUEPRINT_POINTER]);
+  assert.deepEqual(blueprintArgs("cursor", "grok-4.7", 1, "", true).slice(-2), ["--continue", BLUEPRINT_POINTER]);
+  assert.equal(blueprintArgs("cursor", "grok-4.7", 1, "s-1").includes("--resume"), false);
+  assert.equal(blueprintArgs("claude", "claude-opus-5-5", 1, "", true).at(-1), "--continue");
+  assert.equal(blueprintArgs("claude", "claude-opus-5-5", 1).includes("--continue"), false);
+  assert.equal(blueprintArgs("claude", "claude-opus-5-5", 2).at(-1), "--continue");
+});
