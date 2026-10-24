@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
 import { CONTRACT_VERSION } from "../lib/contract.mjs";
 import { doctorCommand } from "../lib/doctor.mjs";
-import { blueprintArgs } from "../lib/init.mjs";
+import { BLUEPRINT_POINTER, blueprintArgs } from "../lib/init.mjs";
 import { KEY_RE, keyFromName } from "../lib/install.mjs";
 import { checkRoster } from "../lib/roster.mjs";
 import { cleanup, flow, init, processGone, runs, stage, toolRuns } from "./harness.mjs";
@@ -245,12 +245,28 @@ test("init.test.mjs (n) blueprint on Cursor grok-4.7", () => {
     assert.equal(called[0].args.includes("--force"), true, called[0].args.join(" "));
     assert.equal(called[0].args.includes("--model"), true);
     assert.equal(called[0].args.includes("grok-4.7"), true, called[0].args.join(" "));
-    assert.equal(called[0].stdin.startsWith("# Blueprint"), true);
+    assert.equal(called[0].args.at(-1), BLUEPRINT_POINTER);
+    assert.equal(called[0].stdin, "");
+    assert.equal(called[0].input.startsWith("# Blueprint"), true);
     const kit = readFileSync(path.join(root, "payload", "files", "devos", "roles", "cursor-blueprint", "cli.json"), "utf8");
     assert.equal(called[0].cli, kit);
     const after = readFileSync(path.join(staged.project, ".cursor", "cli.json"));
     const payload = readFileSync(path.join(root, "payload", "files", "dot-cursor", "cli.json"));
     assert.deepEqual(after, payload);
+  } finally {
+    cleanup(staged.parent);
+  }
+});
+
+test("init.test.mjs (u) an agent that fails without a word gets the call to try by hand", () => {
+  const staged = stage({ tools: ["agent"] });
+  try {
+    const result = init(staged, flow({ blueprint: "Cursor CLI · grok-4.7" }), { STUB_TOOL_MODE: "silent" });
+    assert.equal(result.status, 1, result.stdout + result.stderr);
+    const output = result.stdout + result.stderr;
+    assert.equal(output.includes("devos: agent exited with 1"), true, output);
+    assert.equal(output.includes("devos: agent printed nothing. To see why, run the same call by hand in"), true, output);
+    assert.equal(output.includes('  agent --trust --force -p --model grok-4.7 --output-format json "Read the file .devos/blueprint-input.md in this folder and do exactly what it says."'), true, output);
   } finally {
     cleanup(staged.parent);
   }

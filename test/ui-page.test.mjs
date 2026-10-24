@@ -139,6 +139,15 @@ test("ui-page.test.mjs (d) the page texts stay inside the fence", () => {
   }
 });
 
+test("ui-page.test.mjs (f) the page continues a started project", () => {
+  const js = readFileSync(path.join(ui, "app.js"), "utf8");
+  const css = readFileSync(path.join(ui, "app.css"), "utf8");
+  assert.equal(js.includes("async function resume(folder) {"), true);
+  assert.equal(js.includes('"/api/continue"'), true);
+  assert.equal(js.includes("Continue this project"), true);
+  assert.equal(css.includes(".project-row {"), true);
+});
+
 test("ui-page.test.mjs (e) the page has a theme toggle and a light theme", () => {
   const html = readFileSync(path.join(ui, "index.html"), "utf8");
   const css = readFileSync(path.join(ui, "app.css"), "utf8");

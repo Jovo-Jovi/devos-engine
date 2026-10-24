@@ -540,6 +540,9 @@ code, .mono { font-family: var(--mono); font-size: 0.875em; }
 .badge { display: inline-flex; align-items: center; min-height: 22px; padding: 0 8px; border-radius: 999px; border: 1px solid var(--line-strong); color: var(--faint); font-size: 12px; font-weight: 500; }
 .badge-brass { border-color: var(--brass-line); color: var(--brass-bright); }
 .badge-ok { border-color: var(--patina-line); color: var(--patina); }
+.project-name { font-weight: 500; }
+.project-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.project-path { color: var(--dim); font-size: 13px; overflow-wrap: anywhere; }
 
 /* ---------- the blueprint sheet ---------- */
 

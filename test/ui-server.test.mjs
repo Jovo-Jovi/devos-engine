@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import http from "node:http";
-import { existsSync, mkdtempSync, readFileSync, readdirSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -538,7 +538,108 @@ async function workerS() {
   }
 }
 
-const workers = { l: workerL, n: workerN, m: workerM, o: workerO, p: workerP, q: workerQ, s: workerS };
+async function workerT() {
+  const terminal = stage();
+  const planned = stage({ mode: "fail" });
+  Object.assign(process.env, planned.env);
+  let server;
+  try {
+    const plan = planFrom(terminal);
+    server = await startUiServer({ folder: planned.project, port: 0 });
+    const origin = `http://127.0.0.1:${server.port}`;
+    const headers = { "Content-Type": "application/json", Origin: origin, "X-DEVOS-Token": server.token };
+    const early = await fetch(`${origin}/api/continue`, { method: "POST", headers });
+    const earlyBody = await early.json();
+    if (early.status !== 400 || !earlyBody.errors?.includes("That folder holds no started DEV_OS project.")) {
+      throw new Error(`continue before a run was ${early.status} ${JSON.stringify(earlyBody)}`);
+    }
+    const posted = await fetch(`${origin}/api/plan`, { method: "POST", headers, body: JSON.stringify(plan) });
+    if (posted.status !== 200) throw new Error(`plan was not accepted ${posted.status}`);
+    await posted.arrayBuffer();
+    const started = await fetch(`${origin}/api/start`, { method: "POST", headers });
+    if (started.status !== 202) throw new Error("start was not accepted");
+    const failed = await readEvents(server.port, server.token);
+    const failedDone = failed.find((event) => event.type === "done");
+    if (!failedDone || failedDone.code === 0) throw new Error(`run did not fail ${failedDone ? failedDone.code : "none"}`);
+    if (!failed.some((event) => event.type === "log" && String(event.text).includes("printed nothing"))) {
+      throw new Error(`no printed nothing in ${JSON.stringify(failed.filter((event) => event.type === "log").map((event) => event.text))}`);
+    }
+    const state = await fetch(`${origin}/api/state`, { headers: { "X-DEVOS-Token": server.token } });
+    const stateBody = await state.json();
+    if (state.status !== 200 || stateBody.started !== true) throw new Error(`started was ${JSON.stringify(stateBody.started)}`);
+    process.env.STUB_MODE = "good";
+    const continued = await fetch(`${origin}/api/continue`, { method: "POST", headers });
+    if (continued.status !== 202) {
+      const detail = await continued.text();
+      throw new Error(`continue was ${continued.status} ${detail}`);
+    }
+    const events = await readEvents(server.port, server.token, async (event) => {
+      if (event.kind !== "approve") return;
+      const stopped = await fetch(`${origin}/api/stop`, { method: "POST", headers });
+      if (stopped.status !== 204) throw new Error("stop was not accepted");
+    });
+    const done = events.find((event) => event.type === "done");
+    if (!done || done.code !== 130) throw new Error(`first done was ${done ? done.code : "none"}`);
+  } finally {
+    if (server) await server.close();
+    cleanup(terminal.parent);
+    cleanup(planned.parent);
+  }
+}
+
+async function workerU() {
+  const staged = stage();
+  const home = mkdtempSync(path.join(tmpdir(), "devos-home-"));
+  const previousHome = process.env.HOME;
+  const previousProfile = process.env.USERPROFILE;
+  process.env.HOME = home;
+  process.env.USERPROFILE = home;
+  let server;
+  try {
+    const projects = path.join(home, "devos-projects");
+    const oldApp = path.join(projects, "old-app");
+    mkdirSync(path.join(oldApp, "devos"), { recursive: true });
+    writeFileSync(path.join(oldApp, "devos", "answers.json"), "{}\n");
+    writeFileSync(path.join(oldApp, "devos", "engine.lock.json"), "{}\n");
+    const loose = path.join(projects, "loose-folder");
+    mkdirSync(loose);
+    server = await startUiServer({ folder: null, port: 0 });
+    const origin = `http://127.0.0.1:${server.port}`;
+    const headers = { "Content-Type": "application/json", Origin: origin, "X-DEVOS-Token": server.token };
+    const state = await fetch(`${origin}/api/state`, { headers: { "X-DEVOS-Token": server.token } });
+    const body = await state.json();
+    const expected = [{ name: "old-app", folder: oldApp, approved: false }];
+    if (state.status !== 200 || JSON.stringify(body.projects) !== JSON.stringify(expected)) {
+      throw new Error(`projects ${JSON.stringify(body.projects)} != ${JSON.stringify(expected)}`);
+    }
+    const refusals = [
+      ["relative/app", "The project folder must be a full path."],
+      [path.join(engineRoot(), "inside-app"), "The project folder cannot be inside the engine's folder."],
+      [loose, "That folder holds no started DEV_OS project."],
+    ];
+    for (const [folder, sentence] of refusals) {
+      const response = await fetch(`${origin}/api/continue`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ folder }),
+      });
+      const json = await response.json();
+      if (response.status !== 400 || !json.errors?.includes(sentence)) {
+        throw new Error(`expected ${sentence} got ${response.status} ${JSON.stringify(json)}`);
+      }
+    }
+  } finally {
+    if (previousHome === undefined) delete process.env.HOME;
+    else process.env.HOME = previousHome;
+    if (previousProfile === undefined) delete process.env.USERPROFILE;
+    else process.env.USERPROFILE = previousProfile;
+    if (server) await server.close();
+    cleanup(staged.parent);
+    cleanup(home);
+  }
+}
+
+const workers = { l: workerL, n: workerN, m: workerM, o: workerO, p: workerP, q: workerQ, s: workerS, t: workerT, u: workerU };
 const workerName = process.env.DEVOS_UI_WORKER;
 if (workers[workerName]) {
   workers[workerName]().then(() => process.exit(0)).catch((error) => {
@@ -718,6 +819,16 @@ if (workers[workerName]) {
 
   test("ui-server.test.mjs (s) a plan names the project folder", { timeout: 180000 }, () => {
     const result = runWorker("s");
+    assert.equal(result.status, 0, result.stderr);
+  });
+
+  test("ui-server.test.mjs (t) a failed run continues from the page", { timeout: 180000 }, () => {
+    const result = runWorker("t");
+    assert.equal(result.status, 0, result.stderr);
+  });
+
+  test("ui-server.test.mjs (u) the page lists started projects and refuses other folders", { timeout: 180000 }, () => {
+    const result = runWorker("u");
     assert.equal(result.status, 0, result.stderr);
   });
 

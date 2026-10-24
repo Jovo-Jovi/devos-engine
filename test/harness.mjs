@@ -98,6 +98,16 @@ import path from "node:path";
 const args = process.argv.slice(2);
 const prompt = args.includes("-p") || args[0] === "exec";
 if (!prompt) process.exit(0);
+if (process.env.STUB_TOOL_MODE === "silent") process.exit(1);
+const base = path.basename(process.argv[1] || "");
+if (base.startsWith("agent")) {
+  const last = args.length > 0 ? args[args.length - 1] : "";
+  const before = args.length > 1 ? args[args.length - 2] : "";
+  if (last.startsWith("-") || before === "--model" || before === "--output-format") {
+    process.stderr.write("Error: No prompt provided for print mode\\nError: command failed unexpectedly.\\n");
+    process.exit(1);
+  }
+}
 let stdin = "";
 process.stdin.setEncoding("utf8");
 process.stdin.on("data", (chunk) => { stdin += chunk; });
@@ -105,7 +115,10 @@ process.stdin.on("end", () => {
   const log = process.env.DEVOS_TOOL_LOG;
   const cliPath = path.join(process.cwd(), ".cursor", "cli.json");
   const cli = existsSync(cliPath) ? readFileSync(cliPath, "utf8") : "";
-  if (log) appendFileSync(log, JSON.stringify({ args, stdin, cli }) + "\\n");
+  let input = "";
+  const inputPath = path.join(process.cwd(), ".devos", "blueprint-input.md");
+  if (existsSync(inputPath)) input = readFileSync(inputPath, "utf8");
+  if (log) appendFileSync(log, JSON.stringify({ args, stdin, cli, input }) + "\\n");
   const docs = path.join(process.cwd(), "docs");
   mkdirSync(path.join(docs, "fences"), { recursive: true });
   const fixtureDir = process.env.DEVOS_FIXTURES;
