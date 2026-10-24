@@ -6,7 +6,8 @@ UI/UX does not pass.
 
 ## 1. The design contract
 
-Every project keeps two files. The blueprint writes them, and they change only through decisions:
+Every project with a web interface (`devos/project.json` `ui` is `true`) keeps two files. The blueprint writes them,
+and they change only through decisions:
 
 - `docs/DESIGN_SYSTEM.md`: tokens (colour, type, spacing, radius, elevation), surfaces, themes (light and dark when the
   project has both), components and their states, motion and its reduced-motion behaviour, responsive rules (1280 and

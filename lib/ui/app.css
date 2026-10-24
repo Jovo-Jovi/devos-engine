@@ -91,8 +91,8 @@ code, .mono { font-family: var(--mono); font-size: 0.875em; }
   -webkit-backdrop-filter: blur(14px) saturate(1.2);
 }
 .mark { display: flex; align-items: center; gap: 10px; width: calc(var(--rail-w) - 48px); flex: none; }
-.mark-icon { width: 22px; height: 22px; fill: none; stroke: var(--brass); stroke-width: 1.4; stroke-linecap: round; }
-.mark-dot { fill: var(--brass); stroke: none; }
+.mark-icon { width: 22px; height: 22px; fill: none; stroke: var(--brass); stroke-width: 1.5; stroke-linejoin: round; }
+.mark-wash { stroke: var(--brass-soft); stroke-width: 3; }
 .mark-name { font-weight: 600; font-size: 15px; letter-spacing: 0.04em; }
 .where {
   flex: 1; min-width: 0;
@@ -206,10 +206,10 @@ code, .mono { font-family: var(--mono); font-size: 0.875em; }
 /* ---------- boot ---------- */
 
 .boot { max-width: 560px; padding-top: 12vh; }
-.boot-mark { width: 44px; height: 44px; fill: none; stroke: var(--brass); stroke-width: 1; stroke-linecap: round; animation: turn 6s linear infinite; }
+.boot-mark { width: 48px; height: 48px; fill: none; stroke: var(--brass); stroke-width: 1.2; stroke-linejoin: round; animation: breathe 2.4s ease-in-out infinite; }
 .boot-title { margin-top: 28px; font: 300 40px/1.1 var(--serif); }
 .boot-lede { margin-top: 12px; color: var(--dim); }
-@keyframes turn { to { transform: rotate(360deg); } }
+@keyframes breathe { 50% { opacity: 0.4; } }
 
 /* ---------- buttons ---------- */
 
@@ -320,7 +320,7 @@ code, .mono { font-family: var(--mono); font-size: 0.875em; }
   border: 1px dashed var(--line-strong); border-radius: 999px;
   background: none; color: var(--faint); font-size: 13px; cursor: pointer;
 }
-.toggle[aria-pressed="true"] { border-style: solid; border-color: var(--brass-line); color: var(--brass-bright); background: var(--brass-soft); }
+.toggle[aria-pressed="true"] { border-style: solid; border-color: var(--brass); color: var(--brass-bright); }
 
 /* modules list */
 .modules { border: 1px solid var(--line); border-radius: var(--r-panel); }

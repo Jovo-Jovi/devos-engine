@@ -1,16 +1,101 @@
-# DEV_OS Engine
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/logo-dark.svg">
+    <img alt="DEV_OS Engine" src="docs/assets/logo-light.svg" width="412">
+  </picture>
+</p>
+
+<h3 align="center">From an empty folder to a GitHub project that AI agents build, review and ship.<br>You approve every step.</h3>
+
+<p align="center">
+  <img alt="Node.js 22 or newer" src="https://img.shields.io/badge/Node.js-%E2%89%A5%2022-5FA04E?style=for-the-badge&logo=nodedotjs&logoColor=white">
+  <img alt="Zero dependencies" src="https://img.shields.io/badge/dependencies-zero-2F8CFF?style=for-the-badge">
+  <img alt="Runs on GitHub Actions" src="https://img.shields.io/badge/runs%20on-GitHub%20Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white">
+  <img alt="Tested on Linux and Windows" src="https://img.shields.io/badge/tested%20on-Linux%20%7C%20Windows-6E7781?style=for-the-badge">
+</p>
+<p align="center">
+  <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-reviewer%20%26%20builder-D97757?style=flat-square&logo=claude&logoColor=white">
+  <img alt="Cursor" src="https://img.shields.io/badge/Cursor-reviewer%20%26%20builder-111111?style=flat-square&logo=cursor&logoColor=white">
+  <img alt="Codex" src="https://img.shields.io/badge/Codex-reviewer%20%26%20builder-412991?style=flat-square">
+  <img alt="Gemini" src="https://img.shields.io/badge/Gemini-reviewer%20%26%20builder-8E75B2?style=flat-square&logo=googlegemini&logoColor=white">
+</p>
+<p align="center">
+  <img alt="Pre-release 0.1.0" src="https://img.shields.io/badge/pre--release-0.1.0-C9A96E?style=flat-square">
+  <img alt="20 stacks" src="https://img.shields.io/badge/stacks-20-0C1628?style=flat-square">
+  <img alt="16 project types" src="https://img.shields.io/badge/project%20types-16-0C1628?style=flat-square">
+  <img alt="Keys never stored" src="https://img.shields.io/badge/keys-never%20stored-7CC4A8?style=flat-square">
+</p>
+
+<p align="center">
+  <a href="#install">Install</a> &nbsp;·&nbsp; <a href="#create-a-project">Create a project</a> &nbsp;·&nbsp; <a href="#the-guided-setup">Screens</a> &nbsp;·&nbsp; <a href="#commands">Commands</a> &nbsp;·&nbsp; <a href="#roadmap">Roadmap</a>
+</p>
+
+<p align="center">
+  <img alt="The guided setup drafting a project's blueprint: the stack in the middle, each module around it, and the keys to get ready" src="docs/assets/screens/blueprint.png" width="900">
+</p>
 
 DEV_OS takes you from an empty folder to a GitHub project that AI agents build task by task. You answer a few
-questions in your terminal and an AI agent on your computer writes the project's blueprint. When you approve it,
-DEV_OS creates the GitHub repository and starts the automated cycle on GitHub Actions. From then on, a builder agent
-writes each task, a reviewer agent reviews it, and you merge at the gates.
+questions in your browser or your terminal, and an AI agent on your computer writes the project's blueprint. When you
+approve it, DEV_OS creates the GitHub repository and starts the automated cycle on GitHub Actions. From then on, a
+builder agent writes each task, a reviewer agent reviews it, and you merge at the gates.
 
 Status: pre-release `0.1.0`. The repository is private and not licensed for use yet (see `LICENSE`).
 
+## Why DEV_OS
+
+<table>
+  <tr>
+    <td width="50%" valign="top"><b>Bring the agents you have.</b> Claude Code, Cursor, Codex and Gemini can each review or build. The reviewer can pick the builder whose strengths fit each task.</td>
+    <td width="50%" valign="top"><b>A blueprint you approve.</b> Your agent writes the phases, the glossary and the first task into your folder. You approve them or ask for changes, up to five rounds.</td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top"><b>Gates, not guesses.</b> Every task is reviewed against a written fence, a red check overrides a pass, and nothing merges without you.</td>
+    <td width="50%" valign="top"><b>Your keys stay yours.</b> Each key is typed once and handed to <code>gh secret set</code> over standard input. It is never stored, logged or shown to a model.</td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top"><b>Lean by default.</b> Choose an MVP or a full product. The first task builds only the skeleton of your stack and makes every check green.</td>
+    <td width="50%" valign="top"><b>Any stack it knows.</b> 16 project types and 20 stacks, from Next.js to FastAPI, Go and Flutter, with modules for data, auth, payments, email and more.</td>
+  </tr>
+</table>
+
+## How it works
+
+```mermaid
+flowchart LR
+  A["Empty folder"] --> B["Guided setup<br/>agents, stack, modules, scope"]
+  B --> C["Blueprint<br/>written on your computer"]
+  C -->|you approve| D["GitHub repository<br/>keys stored as secrets"]
+  D --> E["The cycle<br/>builder, then reviewer"]
+  E -->|you merge| E
+```
+
+## The guided setup
+
+`devos ui my-app` opens the setup as a page on this computer. Every screen below is the real page, captured during a test run with stand-in agents.
+
+<table>
+  <tr>
+    <td width="50%"><img alt="This computer: the engine, the folder and the AI tools signed in" src="docs/assets/screens/machine.png"><br><sub><b>This computer.</b> The engine, the folder and the AI tools signed in here.</sub></td>
+    <td width="50%"><img alt="Builders: models, strengths and the default builder" src="docs/assets/screens/builders.png"><br><sub><b>Builders.</b> Pick models, mark what each is good at, choose the default.</sub></td>
+  </tr>
+  <tr>
+    <td><img alt="Modules: a provider for each part of the product" src="docs/assets/screens/modules.png"><br><sub><b>Modules.</b> A provider for each part of the product, or None.</sub></td>
+    <td><img alt="Review: your answers and the keys you will need" src="docs/assets/screens/review.png"><br><sub><b>Review.</b> Your answers, and the keys to get ready.</sub></td>
+  </tr>
+  <tr>
+    <td><img alt="Approve: the documents written into your folder" src="docs/assets/screens/approve.png"><br><sub><b>Approve.</b> Read the documents in your editor, then approve or ask for changes.</sub></td>
+    <td><img alt="Keys: one at a time, sent straight to GitHub" src="docs/assets/screens/keys.png"><br><sub><b>Keys.</b> One at a time, hidden, sent straight to GitHub.</sub></td>
+  </tr>
+  <tr>
+    <td><img alt="GitHub: the repository, its variables and its secrets" src="docs/assets/screens/github.png"><br><sub><b>GitHub.</b> The repository, its variables and the keys to upload.</sub></td>
+    <td><img alt="Done: the project is on GitHub and the first cycle has started" src="docs/assets/screens/done.png"><br><sub><b>Done.</b> The first cycle has started.</sub></td>
+  </tr>
+</table>
+
 ## What you get
 
-- **Guided setup in the terminal.** It covers the contract, the agents and models for each role, eight questions about
-  the project, and optional documents for the agent to read.
+- **Guided setup, in your browser or your terminal.** It covers the contract, the agents and models for each role,
+  eight questions about the project, and optional documents for the agent to read.
 - **A blueprint written on your computer** by the agent you choose. It covers:
   - the product brief, scope and decisions;
   - the design system;
