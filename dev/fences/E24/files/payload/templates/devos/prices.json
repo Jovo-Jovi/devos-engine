@@ -1,0 +1,6 @@
+{
+  "$comment": "This file is yours. Prices for docs/USAGE.md (scripts/devos/usage.mjs): US dollars per million tokens, per model id, as your provider bills them. DEV_OS never looks prices up. Add a model by copying the example; a run whose tool reports its own cost (Claude Code) keeps that figure.",
+  "models": {
+    "example-model-id": { "input": 0, "output": 0, "cache_read": 0, "cache_write": 0 }
+  }
+}

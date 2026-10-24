@@ -19,6 +19,8 @@
 # the run is stopped), and at the end the stream is saved as <stdout>.stream.jsonl and <stdout> is
 # rewritten to the final result object, the same shape `--output-format json` prints.
 # The agent never sees DEVOS_PROGRESS_TOKEN: it is removed from the child's environment.
+# Usage (PR-52): with DEVOS_USAGE_STAGE set, every run ends with one line in the usage record
+# (scripts/devos/usage.mjs record), its tool and model read from the command line.
 set -u
 budget=$1; stall=$2; out=$3; err=$4; shift 4
 tick=${DEVOS_WATCHDOG_TICK:-20}; unit=${DEVOS_WATCHDOG_UNIT:-60}   # tests shrink these
@@ -26,7 +28,11 @@ idle_stop=${DEVOS_IDLE_STOP:-30}; report_every=${DEVOS_REPORT_EVERY:-300}; cpu_a
 last_file="$(dirname "$out")/builder-last-action"
 report=${DEVOS_WATCHDOG_REPORT:-}
 [ "${1:-}" = "--" ] && shift
+usage_command=${1:-}; usage_model=auto; prev=""
+for a in "$@"; do [ "$prev" = "--model" ] && usage_model=$a; prev=$a; done
 
+# A stream kept from an earlier run (another tool) never stands for this one.
+rm -f "$out.stream.jsonl"
 env -u DEVOS_PROGRESS_TOKEN -u GH_TOKEN -u GITHUB_TOKEN setsid "$@" > "$out" 2> "$err" &
 pid=$!
 start=$(date +%s); last_change=$start; last_sig=""; last_report=$start; last_cpu=0
@@ -67,6 +73,10 @@ finish() {  # code final-text
   action > "$last_file" 2>/dev/null || true
   say $(( (now - start) / unit )) "$(files)" $(( (now - last_change) / unit )) "$2"
   unstream
+  if [ -n "${DEVOS_USAGE_STAGE:-}" ] && [ -f scripts/devos/usage.mjs ]; then
+    node scripts/devos/usage.mjs record --stage "$DEVOS_USAGE_STAGE" --command "$usage_command" --model "$usage_model" \
+      --out "$out" --code "$1" --seconds "$(( now - start ))" || true
+  fi
   exit "$1"
 }
 

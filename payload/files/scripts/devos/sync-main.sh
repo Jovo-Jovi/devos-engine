@@ -12,6 +12,13 @@ if git merge-base --is-ancestor origin/main HEAD; then
 fi
 echo "main moved during this run; merging it into $(git branch --show-current) before pushing"
 if ! git merge --no-edit origin/main; then
+  # PR-52: docs/USAGE.md is counted from the records, so a conflict in it alone is resolved by counting again.
+  if [ "$(git diff --name-only --diff-filter=U)" = "docs/USAGE.md" ] && [ -f scripts/devos/usage.mjs ]; then
+    node scripts/devos/usage.mjs report --write && git add docs/USAGE.md && git commit --no-edit --quiet && {
+      echo "docs/USAGE.md counted again from the merged usage records"
+      exit 0
+    }
+  fi
   git merge --abort || true
   # Never lose the run's work: push it, unmerged, to a rescue branch before failing.
   branch=$(git branch --show-current)

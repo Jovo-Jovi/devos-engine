@@ -281,7 +281,7 @@ test("init.test.mjs (o) blueprint on Codex", () => {
     assert.equal(result.status, 0, result.stdout + result.stderr);
     const called = toolRuns(staged.parent);
     assert.equal(called.length, 1);
-    assert.deepEqual(called[0].args, ["exec", "--model", "gpt-5.1-codex", "--sandbox", "workspace-write"]);
+    assert.deepEqual(called[0].args, ["exec", "--model", "gpt-5.1-codex", "--sandbox", "workspace-write", "--json"]);
     assert.equal(called[0].stdin.startsWith("# Blueprint"), true);
   } finally {
     cleanup(staged.parent);
@@ -395,10 +395,10 @@ test("init.test.mjs (c) a rejected token prints gh auth login", () => {
 });
 
 test("init.test.mjs (d) Codex and Gemini blueprint args", () => {
-  assert.deepEqual(blueprintArgs("codex", "gpt-5.1-codex", 1), ["exec", "--model", "gpt-5.1-codex", "--sandbox", "workspace-write"]);
+  assert.deepEqual(blueprintArgs("codex", "gpt-5.1-codex", 1), ["exec", "--model", "gpt-5.1-codex", "--sandbox", "workspace-write", "--json"]);
   assert.deepEqual(
     blueprintArgs("gemini", "gemini-2.5-pro", 1),
-    ["--model", "gemini-2.5-pro", "--approval-mode", "yolo", "-p", "Follow the instructions given on standard input exactly."],
+    ["--model", "gemini-2.5-pro", "--approval-mode", "yolo", "--output-format", "json", "-p", "Follow the instructions given on standard input exactly."],
   );
 });
 
@@ -512,5 +512,24 @@ test("init.test.mjs (y) a project folder inside the engine is refused", () => {
     assert.equal(result.status, 1, result.stdout + result.stderr);
     assert.equal(result.stdout.startsWith(`devos: ${inside} is inside the engine's folder; create the project outside it, for example `), true, result.stdout);
     assert.equal(existsSync(inside), false);
+  }
+});
+
+test("init.test.mjs (z) every blueprint round is in the project's usage record", () => {
+  const staged = stage({ tools: ["agent"] });
+  try {
+    const result = init(staged, flow({ blueprint: "Cursor CLI · grok-4.7" }), { STUB_TOOL_MODE: "bad-then-good" });
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    assert.equal(result.stdout.includes("devos: usage: blueprint cursor grok-4.7 · in 4,000 · out 900 · cache 120,000/0"), true, result.stdout);
+    const lines = readFileSync(path.join(staged.project, "docs", "usage", "blueprint.jsonl"), "utf8").trim().split("\n").map((line) => JSON.parse(line));
+    assert.deepEqual(lines.map((line) => [line.stage, line.task, line.attempt, line.tool, line.model, line.input, line.output, line.cache_read, line.cost_usd, line.seconds, line.exit, line.reported, line.run]), [
+      ["blueprint", "blueprint", 1, "cursor", "grok-4.7", 4000, 900, 120000, null, 61, 0, true, ""],
+      ["blueprint", "blueprint", 2, "cursor", "grok-4.7", 4000, 900, 120000, null, 61, 0, true, ""],
+    ]);
+    const summary = readFileSync(path.join(staged.project, "docs", "USAGE.md"), "utf8");
+    assert.equal(summary.includes("| cursor | grok-4.7 | 2 | 8,000 | 1,800 | 240,000 | 0 | — |"), true, summary);
+    assert.equal(summary.includes("Runs: 2 · Not reported: 0"), true, summary);
+  } finally {
+    cleanup(staged.parent);
   }
 });

@@ -171,6 +171,7 @@ jobs:
               --disallowedTools "Bash(git push *),Bash(git commit *),Bash(git checkout *),Bash(git reset *),Bash(gh *),Bash(curl *),Bash(wget *)" \
               > .devos/intake.json 2> .devos/intake.err
             rc=$?
+            node scripts/devos/usage.mjs record --stage intake --task "intake-$ISSUE" --command claude --model "$MODEL" --out .devos/intake.json --code "$rc" || true
             echo "reviewer exit code: $rc (Claude account $acc)"
             if devos_limited .devos/intake.json .devos/intake.err "$rc"; then
               mkdir -p .devos/limits; cat .devos/intake.json .devos/intake.err > ".devos/limits/claude-$acc.txt"
@@ -216,6 +217,8 @@ jobs:
               : d==="guards" ? "The plan failed the intake guards (see the run log). Comment `/devos intake resume` to have the reviewer fix it, or `/devos intake` to plan afresh."
               : "The reviewer run stopped without a decision. Its partial plan is kept on the intake branch: comment `/devos intake resume` to continue it, or `/devos intake` to plan afresh.") + stats);'
           D=$(cat .devos/decision)
+          # PR-52: the planning runs' usage lines go in with the plan (a run that commits nothing keeps its usage in the comment).
+          node scripts/devos/usage.mjs flush --task "intake-$ISSUE"
           if [ "$D" = "limit" ] || [ "$D" = "error" ] || [ "$D" = "guards" ]; then
             # Keep whatever the reviewer already wrote, so a resume continues instead of starting over.
             git add -A -- docs
@@ -434,6 +437,7 @@ jobs:
               --disallowedTools "Bash(git push *),Bash(git commit *),Bash(git checkout *),Bash(git reset *),Bash(gh *),Bash(curl *),Bash(wget *)" \
               > .devos/revise.json 2> .devos/revise.err
             rc=$?
+            node scripts/devos/usage.mjs record --stage revise --command claude --model "$MODEL" --out .devos/revise.json --code "$rc" || true
             echo "reviewer exit code: $rc (Claude account $acc)"
             devos_limited .devos/revise.json .devos/revise.err "$rc" || break
           done
@@ -452,6 +456,7 @@ jobs:
             gh pr comment "$PR" --repo "$REPO" --body "Dev OS: the fence was not reissued ($D). $S"
             exit 0
           fi
+          node scripts/devos/usage.mjs flush --task "$TASK"
           git add -A
           git commit -m "$TASK: fence reissued for human revision (attempt $ATTEMPT)"
           git push "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" "HEAD:refs/heads/$BR"

@@ -106,6 +106,8 @@ jobs:
             --json-schema "$(cat devos/schemas/supervisor.schema.json)" --permission-mode dontAsk --max-turns 25 \
             --allowedTools "Read,Glob,Grep" --disallowedTools "Bash,Write,Edit,WebFetch,WebSearch" \
             > .devos/supervisor/claude.json 2> .devos/supervisor/claude.err || tail -c 1500 .devos/supervisor/claude.err
+          # PR-52: nothing here is committed, so this run's usage goes on its summary page only.
+          node scripts/devos/usage.mjs record --stage supervisor --command claude --model "$MODEL" --out .devos/supervisor/claude.json --summary || true
 
       - name: Act and report
         if: github.event_name != 'issue_comment' && steps.scan.outputs.incidents != '0'

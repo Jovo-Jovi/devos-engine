@@ -124,7 +124,9 @@
         ".cursor/rules/**",
         ".cursor/skills/**",
         "docs/method/FULLSTACK_MODULE.md",
-        "docs/method/AUTOMATION.md"
+        "docs/method/AUTOMATION.md",
+        "docs/usage/**",
+        "docs/USAGE.md"
       ]
     },
     "builder_method": {
@@ -149,7 +151,9 @@
         ".cursor/cli.json",
         ".cursor/hooks.json",
         ".cursor/hooks/**",
-        "vercel.json"
+        "vercel.json",
+        "docs/usage/**",
+        "docs/USAGE.md"
       ]
     },
     "reviewer": {

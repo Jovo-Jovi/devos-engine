@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # One Codex or Gemini run for the cycle (PR-45). The workflow reads .devos/<role>-run.env afterwards.
+# Every run is in the usage record (PR-52): a builder run through the watchdog (DEVOS_USAGE_STAGE), a reviewer run here.
 #   bash scripts/devos/run-agent.sh <builder|reviewer> <codex|gemini> <model> <effort> <prompt-file>
 role="${1:-}"
 tool="${2:-}"
@@ -88,6 +89,7 @@ else
     rm -f "$out" "$out.stream.jsonl" "$last"
     "${ARGS[@]}" "$(cat "$prompt")" > "$out" 2> "$err"
     code=$?
+    node scripts/devos/usage.mjs record --stage reviewer --command "$tool" --model "$model" --out "$out" --code "$code" || true
     if [ "$code" != "0" ] && devos_limited "$out" "$err" "$code"; then
       mkdir -p .devos/limits
       cat "$out" "$err" > ".devos/limits/${tool}-${acc}.txt"

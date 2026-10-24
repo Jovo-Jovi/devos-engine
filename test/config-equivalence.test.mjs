@@ -29,5 +29,9 @@ test("config-equivalence.test.mjs regenerates the Tower config", () => {
   delete merged.deploy;
   delete merged.agents;
   delete merged.stack;
+  // PR-52 (E24, after the Tower pin was retired): the builder may not edit the usage record.
+  for (const role of ["builder", "builder_method"]) {
+    merged.surfaces[role].deny = merged.surfaces[role].deny.filter((p) => p !== "docs/usage/**" && p !== "docs/USAGE.md");
+  }
   assert.deepEqual(stripDollar(merged), stripDollar(tower));
 });

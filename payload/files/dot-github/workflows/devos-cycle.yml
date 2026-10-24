@@ -339,6 +339,8 @@ jobs:
           # token from the agent's environment, so Cursor never sees it.
           DEVOS_PROGRESS_TOKEN: ${{ secrets.DEVOS_PAT || github.token }}
           DEVOS_WATCHDOG_REPORT: bash scripts/devos/progress.sh
+          # PR-52: every builder run (restarts, other accounts, the pool's next agent) is in the usage record.
+          DEVOS_USAGE_STAGE: builder
         run: |
           . scripts/devos/accounts.sh
           builder_tool="${{ steps.ag.outputs.builder_tool }}"
@@ -563,6 +565,8 @@ jobs:
         run: |
           rm -f .cursor/mcp.json
           REMOTE="https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git"
+          # PR-52: the builder runs' usage lines go in with the builder's commit.
+          node scripts/devos/usage.mjs flush --task "$TASK"
           if [ "$REVIEW_ONLY" != "true" ]; then
             git add -A
             slice_tag=""; [ "${{ steps.builder.outputs.exit }}" = "124" ] && slice_tag=" (time slice ${{ steps.builder.outputs.slice }})"
@@ -812,6 +816,7 @@ jobs:
               devos_use_cursor "$acc"; used="$acc"
               agent -p --force --trust --approve-mcps --model "$MODEL" --output-format stream-json "$(cat .devos/reviewer-prompt.md)" > .devos/reviewer.json 2> .devos/reviewer.err
               rc=$?
+              node scripts/devos/usage.mjs record --stage reviewer --command agent --model "$MODEL" --out .devos/reviewer.json --code "$rc" || true
               if devos_limited .devos/reviewer.json .devos/reviewer.err "$rc"; then
                 mkdir -p .devos/limits; cat .devos/reviewer.json .devos/reviewer.err > ".devos/limits/cursor-$acc.txt"
                 devos_note "Reviewer: Cursor account $acc reached its usage limit."
@@ -843,6 +848,7 @@ jobs:
               --mcp-config devos/ci/mcp.claude.json \
               --max-turns "$TURNS" > .devos/reviewer.json 2> .devos/reviewer.err
             rc=$?
+            node scripts/devos/usage.mjs record --stage reviewer --command claude --model "$MODEL" --out .devos/reviewer.json --code "$rc" || true
             if devos_limited .devos/reviewer.json .devos/reviewer.err "$rc"; then
               mkdir -p .devos/limits; cat .devos/reviewer.json .devos/reviewer.err > ".devos/limits/claude-$acc.txt"
               devos_note "Reviewer: Claude account $acc reached its usage limit."
@@ -875,11 +881,18 @@ jobs:
           GH_TOKEN: ${{ secrets.DEVOS_PAT || github.token }}
         run: |
           CHECKED=$(node -e 'try{console.log(require("./.devos/ci-results.json").head||"")}catch{console.log("")}')
+          # PR-52: the reviewer runs' usage lines and the project's totals (docs/USAGE.md) go in with the review.
+          node scripts/devos/usage.mjs flush --task "$TASK"
+          node scripts/devos/usage.mjs report --write
           git add -A
           if ! git diff --cached --quiet; then
             git commit -m "$TASK a$ATTEMPT: review — ${{ steps.v.outputs.verdict }} (${{ steps.v.outputs.action }})"
           fi
           bash scripts/devos/sync-main.sh "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git"
+          # Main may have brought other runs' lines: the totals are counted again from the merged records.
+          node scripts/devos/usage.mjs report --write
+          git add docs/USAGE.md
+          git diff --cached --quiet || git commit -m "$TASK a$ATTEMPT: usage totals"
           # PR-25: if main brought code changes while this attempt was reviewed, check the merged result
           # again before anything can merge. A red re-check stops the merge.
           moved=""

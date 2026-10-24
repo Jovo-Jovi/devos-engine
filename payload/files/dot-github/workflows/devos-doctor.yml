@@ -129,6 +129,8 @@ jobs:
             --json-schema "$(cat ../devos/schemas/doctor.schema.json)" --permission-mode dontAsk --max-turns 30 \
             --allowedTools "Read,Glob,Grep" --disallowedTools "Bash,Write,Edit,WebFetch,WebSearch" \
             > ../.devos/doctor/claude.json 2> ../.devos/doctor/claude.err || tail -c 1500 ../.devos/doctor/claude.err
+          # PR-52: nothing here is committed, so this run's usage goes on its summary page only.
+          node ../scripts/devos/usage.mjs record --stage doctor --command claude --model "$MODEL" --out ../.devos/doctor/claude.json --summary || true
 
       - name: Post the report, set devos/gate, re-run an environment failure
         id: p

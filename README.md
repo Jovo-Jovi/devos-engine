@@ -20,7 +20,7 @@
   <img alt="Gemini" src="https://img.shields.io/badge/Gemini-reviewer%20%26%20builder-8E75B2?style=flat-square&logo=googlegemini&logoColor=white">
 </p>
 <p align="center">
-  <img alt="Pre-release 0.1.0" src="https://img.shields.io/badge/pre--release-0.1.0-C9A96E?style=flat-square">
+  <img alt="Pre-release 0.2.0" src="https://img.shields.io/badge/pre--release-0.2.0-C9A96E?style=flat-square">
   <img alt="20 stacks" src="https://img.shields.io/badge/stacks-20-0C1628?style=flat-square">
   <img alt="16 project types" src="https://img.shields.io/badge/project%20types-16-0C1628?style=flat-square">
   <img alt="Keys never stored" src="https://img.shields.io/badge/keys-never%20stored-7CC4A8?style=flat-square">
@@ -39,7 +39,7 @@ questions in your browser or your terminal, and an AI agent on your computer wri
 approve it, DEV_OS creates the GitHub repository and starts the automated cycle on GitHub Actions. From then on, a
 builder agent writes each task, a reviewer agent reviews it, and you merge at the gates.
 
-Status: pre-release `0.1.0`. The repository is private and not licensed for use yet (see `LICENSE`).
+Status: pre-release `0.2.0`. The repository is private and not licensed for use yet (see `LICENSE`).
 
 ## Why DEV_OS
 
@@ -113,6 +113,9 @@ flowchart LR
   - checks run, failed attempts retry, and usage limits are waited out.
 
   You merge the pull requests.
+- **What it costs.** Every agent run, from the blueprint to the last review, adds a line with its tool, model and
+  tokens. `docs/USAGE.md` totals them by model, by stage and by task. Claude Code reports its own cost; for the other
+  tools, set your prices per model once in `devos/prices.json`.
 
 ## Requirements
 
@@ -259,6 +262,11 @@ it.
 - **`SETUP.md`** in the repository lists every setting the project uses. If the setup check reports a missing one,
   add it on GitHub, then run `devos continue <folder>`.
 - **More work later.** Open a "Dev OS change request" issue in the repository.
+- **Engine updates.** A new engine version brings its workflow, script and prompt changes to a project when you ask
+  for them. Run `git pull` in the engine folder, then `devos upgrade` in the project folder, on `main` with nothing
+  uncommitted. DEV_OS opens a pull request with every engine file that changed; merge it, and the next cycle runs
+  with the update. An engine file you edited yourself is listed as a conflict and never overwritten. Your code, your
+  project's documents, `devos/project.json` and `devos/prices.json` are never touched.
 - **The operating manual** is `docs/method/AUTOMATION.md` in your project. It covers every workflow, setting,
   comment command and what to do when something goes wrong.
 
@@ -324,12 +332,9 @@ it.
 
 ## Roadmap
 
-1. The design gate for UI projects: every capture checked for accessibility and console errors, and pinned design
-   skills.
-2. A usage ledger: the tokens and cost of every agent run, by model and stage, in one file of the project.
-3. Expert skills for every layer of a project, chosen for its stack and modules from one catalogue that any agent
+1. Expert skills for every layer of a project, chosen for its stack and modules from one catalogue that any agent
    reads.
-4. Database, storage and deploys for Python, Go and Dart stacks.
-5. The first real run and the end-to-end test, including copying app keys to the host.
-6. A link from every project to the DEV_OS Control Tower dashboard.
-7. Version 1.0 and its licence.
+2. Database, storage and deploys for Python, Go and Dart stacks.
+3. The first real run and the end-to-end test, including copying app keys to the host.
+4. A link from every project to the DEV_OS Control Tower dashboard.
+5. Version 1.0 and its licence.

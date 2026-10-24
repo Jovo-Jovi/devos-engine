@@ -1,0 +1,368 @@
+{
+  "$comment": "Dev OS automated cycle configuration. Changing a model id is a D-row.",
+  "base_branch": "main",
+  "branch_prefix": "task/",
+  "max_attempts": 3,
+  "builder": {
+    "cli": "agent",
+    "model": "grok-4.7-high",
+    "timeout_minutes": 75,
+    "model_family": "grok-4.7",
+    "default_effort": "high",
+    "effort_by_risk": {
+      "1": "medium",
+      "2": "high",
+      "3": "high"
+    },
+    "effort_note": "The reviewer sets 'Effort: low|medium|high|xhigh' and 'Fast: yes|no' in each fence header; scripts/devos/builder-model.mjs turns that into a Cursor model id (grok-4.7-<effort>[-fast]) and checks it against `agent models`, falling back to `model`.",
+    "model_note": "Cursor documents only the family id grok-4.7 (default effort high, Fast the default speed on Pro). The effort/fast ids the CLI accepts come from `agent models` on your account; each run records the Grok ids it offered in the PR's runner evidence.",
+    "max_time_slices": 4,
+    "idle_stop_minutes": 30,
+    "slices_note": "agent-watchdog.sh: a build runs in 72-minute time slices; a slice that ends while files are still changing is committed and the same attempt continues in a fresh run, up to max_time_slices. Nothing changing for idle_stop_minutes = stuck (restarted once, then halted). Live progress: scripts/devos/progress.sh on the devos:notices issue."
+  },
+  "reviewer": {
+    "cli": "claude",
+    "model_by_risk": {
+      "1": "claude-sonnet-5-5",
+      "2": "claude-sonnet-5-5",
+      "3": "claude-opus-5-5"
+    },
+    "gate_model": "claude-opus-5-5",
+    "max_turns": 150,
+    "timeout_minutes": 40,
+    "effort_by_risk": {
+      "1": "medium",
+      "2": "medium",
+      "3": "high"
+    },
+    "gate_effort": "high",
+    "intake_effort": "high",
+    "intake_effort_small": "medium",
+    "method_effort": "high",
+    "fallback_model": "claude-sonnet-5-5",
+    "model_note": "Official Claude ids (claude-opus-5-5, claude-sonnet-5-5). Opus 5.5 and Sonnet 5.5 default to medium effort in Claude Code, so the runner always passes --effort. --fallback-model only applies when the primary is overloaded or unavailable, never on usage limits.",
+    "review_note": "PR-22, evidence-first review: the builder does the work and proves it, the runner runs every check and writes .devos/evidence.md, and the reviewer judges that evidence. scripts/devos/review-mode.mjs picks the mode after the build: light (risk 1-2, nothing critical touched) or deep (risk 3, a gate, or a deep_paths file in the diff). A retry raises the effort one step.",
+    "modes": {
+      "light": {
+        "model": "claude-sonnet-5-5",
+        "effort": "medium",
+        "max_turns": 50
+      },
+      "deep": {
+        "model": "claude-opus-5-5",
+        "effort": "high",
+        "max_turns": 120
+      }
+    },
+    "deep_paths": [
+      "supabase/migrations/**",
+      "supabase/config.toml",
+      "src/lib/supabase/**",
+      "src/lib/r2/**",
+      "src/lib/firebase/**",
+      "firebase.json",
+      "*.rules",
+      "firebase/*.rules",
+      "src/proxy.ts",
+      "src/middleware.ts",
+      "src/**/auth/**",
+      "src/**/*actions.ts",
+      "next.config.ts",
+      "package.json",
+      "vercel.json",
+      ".github/**"
+    ],
+    "escalate_on_retry": true
+  },
+  "required_checks": [
+    "guards",
+    "typecheck",
+    "lint",
+    "test",
+    "build"
+  ],
+  "optional_checks": [
+    "e2e"
+  ],
+  "screens": {
+    "$comment": "Default pages when the fence has no - Screens: line. filmstrip_ms and settle_max_ms are written into .devos/screens/motion.json. Signed-in pages need the M3 fixture states (DEVOS_SCREENS=1).",
+    "pages": [
+      "/"
+    ],
+    "filmstrip_ms": [
+      0,
+      80,
+      160,
+      320,
+      640
+    ],
+    "settle_max_ms": 3000
+  },
+  "surfaces": {
+    "builder": {
+      "deny": [
+        ".github/workflows/devos-*.yml",
+        "scripts/devos/**",
+        "scripts/guards/**",
+        "devos/**",
+        "devos.config.json",
+        "docs/fences/**",
+        "docs/reviews/**",
+        "docs/DECISIONS.md",
+        "docs/method/DEVOS_FIT.md",
+        "docs/method/DEV_OS_V2_REVIEWER.md",
+        "CLAUDE.md",
+        ".claude/**",
+        ".cursor/cli.json",
+        ".cursor/hooks.json",
+        ".cursor/hooks/**",
+        "content/**",
+        "vercel.json",
+        "docs/design/**",
+        "docs/requests/**",
+        ".github/ISSUE_TEMPLATE/**",
+        ".cursor/rules/**",
+        ".cursor/skills/**",
+        "docs/method/FULLSTACK_MODULE.md",
+        "docs/method/AUTOMATION.md",
+        "docs/usage/**",
+        "docs/USAGE.md"
+      ]
+    },
+    "builder_method": {
+      "$comment": "PR-28: a method fix (Phase PM) may change workflows, runner scripts, guards, prompts and this config; never the product, the reviewer's own rules or the ledgers. The workflow from main forces the deep review and the human gate.",
+      "deny": [
+        "src/**",
+        "content/**",
+        "supabase/**",
+        "e2e/**",
+        "public/**",
+        "firebase/**",
+        "firestore.rules",
+        "firebase.json",
+        "CLAUDE.md",
+        ".claude/**",
+        "docs/fences/**",
+        "docs/reviews/**",
+        "docs/DECISIONS.md",
+        "docs/SCOPE.md",
+        "docs/design/**",
+        "docs/requests/**",
+        ".cursor/cli.json",
+        ".cursor/hooks.json",
+        ".cursor/hooks/**",
+        "vercel.json",
+        "docs/usage/**",
+        "docs/USAGE.md"
+      ]
+    },
+    "reviewer": {
+      "allow": [
+        "docs/reviews/**",
+        "docs/fences/**"
+      ]
+    },
+    "ignore": [
+      ".devos/**"
+    ],
+    "intake": {
+      "allow": [
+        "docs/DECISIONS.md",
+        "docs/SCOPE.md",
+        "docs/PHASES.md",
+        "docs/fences/**",
+        "docs/requests/**",
+        "docs/DESIGN_SYSTEM.md",
+        "docs/CONTENT_MODEL.md",
+        "docs/I18N_MODEL.md",
+        "docs/SECURITY_MODEL.md",
+        "docs/BOUNDARY_MODEL.md",
+        "docs/adr/**",
+        "docs/DATA_MODEL.md",
+        "docs/PROTECTION_MODEL.md",
+        "docs/PRODUCT_BRIEF.md",
+        "docs/setup-items.json"
+      ]
+    },
+    "revise": {
+      "allow": [
+        "docs/fences/**",
+        "docs/requests/**"
+      ]
+    }
+  },
+  "resume": {
+    "inline_wait_max_minutes": 330,
+    "default_wait_minutes": 60,
+    "relay": "public",
+    "max_backoff_minutes": 360,
+    "relay_note": "PR-31: waits longer than inline_wait_max_minutes are relayed by devos-wait (public: only on public repositories, where runner minutes are free; always; never). A limit that states no reset time is retried after default_wait_minutes, doubling on each repeat up to max_backoff_minutes."
+  },
+  "modules": {
+    "$comment": "Optional stack modules (PR-17). A module is active when its detect file exists in the tree; its checks then join required_checks.",
+    "supabase": {
+      "detect": "supabase/config.toml",
+      "required_checks": [
+        "db",
+        "db-test",
+        "types"
+      ],
+      "optional_checks": [
+        "db-lint"
+      ],
+      "types_file": "src/lib/supabase/database.types.ts",
+      "start_exclude": [
+        "studio",
+        "imgproxy",
+        "edge-runtime",
+        "logflare",
+        "vector",
+        "supavisor"
+      ],
+      "env": {
+        "NEXT_PUBLIC_SUPABASE_URL": [
+          "API_URL"
+        ],
+        "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY": [
+          "PUBLISHABLE_KEY",
+          "ANON_KEY"
+        ],
+        "SUPABASE_SECRET_KEY": [
+          "SECRET_KEY",
+          "SERVICE_ROLE_KEY"
+        ],
+        "SUPABASE_DB_URL": [
+          "DB_URL"
+        ],
+        "SUPABASE_MAIL_URL": [
+          "MAILPIT_URL",
+          "INBUCKET_URL"
+        ]
+      },
+      "env_note": "Names the app reads, mapped from `supabase status -o env`. Local keys are the CLI's throwaway demo keys; production values live only in Vercel and GitHub secrets."
+    },
+    "r2": {
+      "$comment": "PR-26. Object storage (Cloudflare R2) through the S3 API. Active when the server-only storage code exists. Every run gets a throwaway S3-compatible store in Docker (scripts/devos/r2.mjs).",
+      "detect": "src/lib/r2",
+      "fence_hint": "\\bR2\\b|modules\\.r2",
+      "required_checks": [
+        "storage"
+      ],
+      "test_script": "test:storage",
+      "emulator": {
+        "image": "chrislusf/seaweedfs:latest",
+        "container": "devos-r2",
+        "port": 8333,
+        "bucket": "devos-test",
+        "args": []
+      },
+      "env_names": [
+        "R2_ENDPOINT",
+        "R2_ACCESS_KEY_ID",
+        "R2_SECRET_ACCESS_KEY",
+        "R2_BUCKET",
+        "R2_PUBLIC_BASE_URL"
+      ],
+      "env_note": "Locally they point at the emulator with throwaway keys (.devos/r2.env). In production: Vercel Production env (the two keys marked sensitive) and the same five as GitHub secrets for the deploy's storage preflight. R2_ENDPOINT is https://<account-id>.r2.cloudflarestorage.com; R2_PUBLIC_BASE_URL is the bucket's public URL (r2.dev until the product has a custom domain)."
+    },
+    "firebase": {
+      "$comment": "PR-26. Cloud Firestore as a server-read content store, seeded from firebase/seed/*.json. Active when firebase.json exists. Every run gets the Firestore emulator under a demo project id (scripts/devos/firebase.mjs).",
+      "detect": "firebase.json",
+      "fence_hint": "Firestore|Firebase|modules\\.firebase",
+      "required_checks": [
+        "firestore-seed",
+        "firestore-rules"
+      ],
+      "rules_test_script": "test:rules",
+      "project_id_local": "demo-devos",
+      "seed_dir": "firebase/seed",
+      "seed_prune": true,
+      "client_sdk": false,
+      "env_names": [
+        "FIREBASE_PROJECT_ID",
+        "FIRESTORE_EMULATOR_HOST",
+        "FIREBASE_SERVICE_ACCOUNT"
+      ],
+      "env_note": "Locally FIREBASE_PROJECT_ID=demo-devos and FIRESTORE_EMULATOR_HOST point at the emulator (.devos/firebase.env); no credentials exist. Production: Vercel holds FIREBASE_PROJECT_ID and FIREBASE_SERVICE_ACCOUNT (a read-only key, sensitive); GitHub holds FIREBASE_PROJECT_ID and FIREBASE_DEPLOY_SERVICE_ACCOUNT for rules and seed. client_sdk false: the browser never talks to Firebase (no firebase/* web SDK; rules deny every client)."
+    }
+  },
+  "heavy": {
+    "$comment": "PR-20. A run is heavy when its review uses reviewer.gate_model or xhigh effort, or its fence builds at xhigh. Repository variable DEVOS_HEAVY: notify (default) announces it in the 'Dev OS: run notices' issue; hold also waits for '/devos go' before a heavy task's first attempt."
+  },
+  "retry_build_on": "next/font/google queries have exactly one entry|turbopack-next/internal/font/google|Failed to fetch .*Google Fonts|fonts\\.googleapis\\.com.*(ETIMEDOUT|ECONNRESET|fetch failed)",
+  "retry_build_note": "PR-24: a build failure whose log matches retry_build_on is the Google Fonts download, not the code; run-checks and devos-deploy retry it up to 3 times.",
+  "supervisor": {
+    "model": "claude-opus-5-5",
+    "max_auto_per_key": 2,
+    "max_ai_per_day": 6,
+    "idle_minutes": 20,
+    "overdue_park_minutes": 45,
+    "issue_title": "Dev OS: supervisor",
+    "issue_label": "devos:supervisor",
+    "note": "devos-supervisor.yml + scripts/devos/supervisor.mjs: notices stopped or stalled work, explains it with fixed rules (Claude, read-only, only when none fits), fixes what is safe (re-run, resume, continue, recover a rescue branch, start the next task) at most max_auto_per_key times per cause, and turns everything else into an issue, a proposal (/devos approve <id>) or setup steps. Never merges, pushes to main or handles a secret. Off: variable DEVOS_SUPERVISOR=off."
+  },
+  "guards": {
+    "design": {
+      "allowed_hosts": []
+    },
+    "i18n": {
+      "catalogues": {
+        "en": "src/i18n/messages/en.json"
+      }
+    },
+    "naming": {
+      "allow_routes": []
+    }
+  },
+  "deploy": {
+    "probe": "deployment",
+    "probe_paths": [
+      "/"
+    ],
+    "bypass": false,
+    "production_url_fallback": ""
+  },
+  "agents": {
+    "reviewer": {
+      "id": "claude-deep",
+      "tool": "claude",
+      "model": "claude-opus-5-5"
+    },
+    "reviewer_light": {
+      "id": "claude-light",
+      "tool": "claude",
+      "model": "claude-sonnet-5-5"
+    },
+    "pool": [
+      {
+        "id": "cursor-grok",
+        "tool": "cursor",
+        "model": "grok-4.7",
+        "default": true,
+        "note": "default builder"
+      }
+    ],
+    "policy": "reviewer-picks"
+  },
+  "stack": {
+    "$comment": "PR-48: the stack devos init chose. node runs package.json scripts with pnpm, as before; any other toolchain runs these commands once its manifest exists. PR-51: preview serves the production build for screens.mjs ({port} is replaced, PORT is set); empty means next start.",
+    "id": "",
+    "toolchain": "node",
+    "manifest": "package.json",
+    "commands": {
+      "install": "pnpm install --frozen-lockfile",
+      "typecheck": "pnpm run typecheck",
+      "lint": "pnpm run lint",
+      "test": "pnpm run test",
+      "build": "pnpm run build"
+    },
+    "preview": "",
+    "scaffold": {
+      "create": [],
+      "health": "",
+      "logger": "",
+      "tests": "",
+      "architecture": ""
+    }
+  }
+}

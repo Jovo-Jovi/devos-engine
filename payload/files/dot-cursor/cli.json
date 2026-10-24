@@ -48,6 +48,8 @@
       "Write(.cursor/hooks.json)",
       "Write(.cursor/hooks/**)",
       "Write(content/**)",
+      "Write(docs/usage/**)",
+      "Write(docs/USAGE.md)",
       "Shell(supabase:link)",
       "Shell(supabase:login)",
       "Shell(supabase:projects)",
