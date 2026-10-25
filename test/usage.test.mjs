@@ -7,6 +7,11 @@ import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
 import { costOf, makeRecord, parseUsage, summary, toolOf } from "../payload/files/scripts/devos/usage.mjs";
 
+// Git 2.47 and later run their automatic maintenance in the background after a commit or a fetch, and it can still be
+// writing into .git while a test removes its folder (ENOTEMPTY on the CI runner). Every git this file starts runs
+// without it.
+Object.assign(process.env, { GIT_CONFIG_COUNT: "2", GIT_CONFIG_KEY_0: "maintenance.auto", GIT_CONFIG_VALUE_0: "false", GIT_CONFIG_KEY_1: "gc.auto", GIT_CONFIG_VALUE_1: "0" });
+
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const skipWindows = process.platform === "win32";
 const LOCAL = { PATH: process.env.PATH ?? "", SystemRoot: process.env.SystemRoot ?? "", HOME: process.env.HOME ?? "" };

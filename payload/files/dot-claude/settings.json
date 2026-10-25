@@ -35,6 +35,7 @@
       "Bash(pnpm exec playwright test *)",
       "Bash(pnpm list *)",
       "Bash(node scripts/guards/*)",
+      "Bash(node scripts/devos/fence-check.mjs *)",
       "Bash(node scripts/devos/probe.mjs *)",
       "Bash(node scripts/inventory.mjs *)",
       "Bash(node -e *)",

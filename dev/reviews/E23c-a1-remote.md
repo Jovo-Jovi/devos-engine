@@ -1,0 +1,20 @@
+FIX: reissue the fence (v2). Two test files change: `test/guards-structure.test.mjs` and `test/usage.test.mjs` run git without its background maintenance, and the scope tests set `origin/main` with `git update-ref` instead of a fetch. Nothing else changes.
+
+VERDICT: FAIL
+Fetched: `task/E23c` @ ea31478 (no uncommitted changes) · Commands run: scope listing (`git diff --name-only main...HEAD`, `git diff --name-only c92e626 ea31478`), D1 (`node --test "test/*.test.mjs"` on Linux, Node 22), D2 (`build-manifest --check`, `find-specifics --check`), D3, D4 (version, PR-58 count, `fence-check.mjs` on the fixture T01 in a staged project, staged guards), engine-ci runs 40243156701 (ea31478) and 40240927931 (c92e626) with their job logs · Refused calls: none
+
+E23c adds the fence checker, the `fences`, `scope` and `imports` guards, the stacks' module conventions, the blueprint's sizing and risk rules, and the Paths line in every agent's prompt. This is a deep review: risk 3, a method change, and a payload change. The 36 copied paths are byte-identical to the package (D3). I wrote and read every line of that package before issuing the fence. The builder's commit adds only `payload/manifest.json` (rebuilt by S2, identical to the rehearsal) and its report, which I read.
+Ledger: D1 — PASS — my run on Linux: `tests 293`, `pass 293`, `fail 0`. `fence-check.test.mjs` (a)–(g), `guards-structure.test.mjs` (a)–(g) and `init.test.mjs repairs a fence T01 that fails fence-check (PR-58)` are all `ok`. The builder's report on Windows: `tests 293`, `pass 282`, `fail 0`, `skipped 11`.
+Ledger: D2 — PASS — `manifest up to date (308 files)`; `0 0`.
+Ledger: D3 — PASS — `36 files, 0 differ`.
+Ledger: D4 — PASS — `devos 0.2.6`; `Live maximum: PR-58` → `1`; `fence-check: docs/fences/T01.md OK`; staged guards exit 0 with `guard:manual    PASS  (111 names checked)`, `guard:skills    PASS  (29 skills checked, 18 vendored)` and `guard:fences`, `guard:imports`, `guard:scope` N/A with the expected notes.
+Ledger: D5 — FAIL — engine-ci run 40243156701 on ea31478: `checks` success, `test (windows-latest)` success, `test (ubuntu-latest)` failure. One test failed: `guards-structure.test.mjs (f)`, `error: "ENOTEMPTY: directory not empty, rmdir '/tmp/devos-structure-cyHSJZ/.git'"`.
+- The runner's git is 2.55, which runs its automatic maintenance in the background after a commit or a fetch. It was still writing into `.git` while the test removed its folder.
+- The same race failed `usage.test.mjs (e)` (`rmdir '/tmp/devos-usage-…/.git/objects'`) in run 40240927931, on the fence-only commit c92e626, which changes no code. That test has the flaw too.
+- Locally (git 2.43, no background maintenance) both pass.
+Ledger: D6 — PASS — `git diff --name-only main...HEAD` lists 77 paths: the 36 copied paths, their 36 package copies, `payload/manifest.json`, `dev/reports/E23c.md`, `dev/LEDGER.md`, `dev/fences/E23c.md` and `dev/fences/E23c/before.json`. Nothing else.
+Scope: in fence. No dependency added.
+Method (payload changes only): no non-waivable rule is weakened. Human gates, role surfaces, a red check overriding PASS, secrets never in files and the runner owning git are untouched. The new guards only add failures. `fence-check` adds HALTs and never removes a check. PR-58 is the next id. `AUTOMATION.md` names `fence-check.mjs`, the three guards, the Paths line, the `structure` setting and `loop.mjs`'s variables (`guard:manual` 111 names).
+Classification of non-PASS items: FENCE DEFECT — the defect is the fence's own (PR-09): its new test, and an existing test the fence did not touch, race with modern git's background maintenance. The builder did everything the fence asked.
+Owner attention: (1) Attempt 2 changes only the two test files. Fence v2 (P2, P3) verifies that the rest of attempt 1 is in the tree. (2) The same fix makes `usage.test.mjs (e)` stable on CI for every later task. (3) E23b3's fence (`task/E23b3`, v1) touches neither test file and stays valid: re-checked, nothing it cites moved.
+Next prompt: dev/fences/E23c.md (v2)

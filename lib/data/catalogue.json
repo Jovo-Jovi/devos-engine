@@ -343,7 +343,13 @@
         "health": "/api/health",
         "logger": "pino",
         "tests": "vitest",
-        "architecture": "code under src/domain imports nothing from the framework, the database client or src/app"
+        "architecture": "code under src/domain imports nothing from the framework, the database client or src/app",
+        "modules": {
+          "dir": "src/modules/<name>",
+          "public": [
+            "src/modules/<name>/index.ts"
+          ]
+        }
       }
     },
     {
@@ -377,7 +383,13 @@
         "health": "/api/health",
         "logger": "pino",
         "tests": "vitest",
-        "architecture": "code under src/domain imports nothing from the framework, the database client or src/app"
+        "architecture": "code under src/domain imports nothing from the framework, the database client or src/app",
+        "modules": {
+          "dir": "src/modules/<name>",
+          "public": [
+            "src/modules/<name>/index.ts"
+          ]
+        }
       }
     },
     {
@@ -411,7 +423,13 @@
         "health": "/api/health",
         "logger": "pino",
         "tests": "vitest",
-        "architecture": "code under src/domain imports nothing from the framework, the database client or src/app"
+        "architecture": "code under src/domain imports nothing from the framework, the database client or src/app",
+        "modules": {
+          "dir": "src/modules/<name>",
+          "public": [
+            "src/modules/<name>/index.ts"
+          ]
+        }
       }
     },
     {
@@ -445,7 +463,13 @@
         "health": "/api/health",
         "logger": "pino",
         "tests": "vitest",
-        "architecture": "code under src/domain imports nothing from the framework, the database client or src/app"
+        "architecture": "code under src/domain imports nothing from the framework, the database client or src/app",
+        "modules": {
+          "dir": "src/modules/<name>",
+          "public": [
+            "src/modules/<name>/index.ts"
+          ]
+        }
       }
     },
     {
@@ -478,7 +502,13 @@
         "health": "",
         "logger": "pino",
         "tests": "vitest",
-        "architecture": "code under src/domain imports nothing from the framework, the database client or src/app"
+        "architecture": "code under src/domain imports nothing from the framework, the database client or src/app",
+        "modules": {
+          "dir": "src/modules/<name>",
+          "public": [
+            "src/modules/<name>/index.ts"
+          ]
+        }
       }
     },
     {
@@ -509,7 +539,13 @@
         "health": "",
         "logger": "pino",
         "tests": "vitest",
-        "architecture": "code under src/domain imports nothing from the framework, the database client or src/app"
+        "architecture": "code under src/domain imports nothing from the framework, the database client or src/app",
+        "modules": {
+          "dir": "src/modules/<name>",
+          "public": [
+            "src/modules/<name>/index.ts"
+          ]
+        }
       }
     },
     {
@@ -542,7 +578,13 @@
         "health": "",
         "logger": "pino",
         "tests": "vitest",
-        "architecture": "code under src/domain imports nothing from the framework, the database client or src/app"
+        "architecture": "code under src/domain imports nothing from the framework, the database client or src/app",
+        "modules": {
+          "dir": "src/modules/<name>",
+          "public": [
+            "src/modules/<name>/index.ts"
+          ]
+        }
       }
     },
     {
@@ -575,7 +617,13 @@
         "health": "",
         "logger": "pino",
         "tests": "vitest",
-        "architecture": "code under src/domain imports nothing from the framework, the database client or src/app"
+        "architecture": "code under src/domain imports nothing from the framework, the database client or src/app",
+        "modules": {
+          "dir": "src/modules/<name>",
+          "public": [
+            "src/modules/<name>/index.ts"
+          ]
+        }
       }
     },
     {
@@ -608,7 +656,13 @@
         "health": "/api/health",
         "logger": "pino",
         "tests": "vitest",
-        "architecture": "code under src/domain imports nothing from the framework, the database client or src/app"
+        "architecture": "code under src/domain imports nothing from the framework, the database client or src/app",
+        "modules": {
+          "dir": "src/modules/<name>",
+          "public": [
+            "src/modules/<name>/index.ts"
+          ]
+        }
       }
     },
     {
@@ -640,7 +694,13 @@
         "health": "/health",
         "logger": "pino",
         "tests": "vitest",
-        "architecture": "code under src/domain imports nothing from the framework, the database client or src/app"
+        "architecture": "code under src/domain imports nothing from the framework, the database client or src/app",
+        "modules": {
+          "dir": "src/modules/<name>",
+          "public": [
+            "src/modules/<name>/index.ts"
+          ]
+        }
       }
     },
     {
@@ -671,7 +731,13 @@
         "health": "/health",
         "logger": "pino",
         "tests": "vitest",
-        "architecture": "code under src/domain imports nothing from the framework, the database client or src/app"
+        "architecture": "code under src/domain imports nothing from the framework, the database client or src/app",
+        "modules": {
+          "dir": "src/modules/<name>",
+          "public": [
+            "src/modules/<name>/index.ts"
+          ]
+        }
       }
     },
     {
@@ -702,7 +768,13 @@
         "health": "/health",
         "logger": "pino",
         "tests": "vitest",
-        "architecture": "code under src/domain imports nothing from the framework, the database client or src/app"
+        "architecture": "code under src/domain imports nothing from the framework, the database client or src/app",
+        "modules": {
+          "dir": "src/modules/<name>",
+          "public": [
+            "src/modules/<name>/index.ts"
+          ]
+        }
       }
     },
     {
@@ -733,7 +805,13 @@
         "health": "",
         "logger": "pino",
         "tests": "vitest",
-        "architecture": "code under src/domain imports nothing from the framework, the database client or src/app"
+        "architecture": "code under src/domain imports nothing from the framework, the database client or src/app",
+        "modules": {
+          "dir": "src/modules/<name>",
+          "public": [
+            "src/modules/<name>/index.ts"
+          ]
+        }
       }
     },
     {
@@ -764,7 +842,13 @@
         "health": "",
         "logger": "pino",
         "tests": "vitest",
-        "architecture": "code under src/domain imports nothing from the framework, the database client or src/app"
+        "architecture": "code under src/domain imports nothing from the framework, the database client or src/app",
+        "modules": {
+          "dir": "src/modules/<name>",
+          "public": [
+            "src/modules/<name>/index.ts"
+          ]
+        }
       }
     },
     {
@@ -795,7 +879,13 @@
         "health": "",
         "logger": "pino",
         "tests": "vitest",
-        "architecture": "code under src/domain imports nothing from the framework, the database client or src/app"
+        "architecture": "code under src/domain imports nothing from the framework, the database client or src/app",
+        "modules": {
+          "dir": "src/modules/<name>",
+          "public": [
+            "src/modules/<name>/index.ts"
+          ]
+        }
       }
     },
     {
@@ -827,7 +917,13 @@
         "health": "/health",
         "logger": "structlog",
         "tests": "pytest",
-        "architecture": "code under app/domain imports nothing from fastapi, the database client or app/api"
+        "architecture": "code under app/domain imports nothing from fastapi, the database client or app/api",
+        "modules": {
+          "dir": "app/modules/<name>",
+          "public": [
+            "app/modules/<name>/__init__.py"
+          ]
+        }
       }
     },
     {
@@ -860,7 +956,15 @@
         "health": "/health",
         "logger": "structlog",
         "tests": "pytest",
-        "architecture": "domain code (each app's domain.py or domain/) imports nothing from django.http, views or the ORM"
+        "architecture": "domain code (each app's domain.py or domain/) imports nothing from django.http, views or the ORM",
+        "modules": {
+          "dir": "apps/<name>",
+          "public": [
+            "apps/<name>/__init__.py",
+            "apps/<name>/models.py",
+            "apps/<name>/services.py"
+          ]
+        }
       }
     },
     {
@@ -892,7 +996,13 @@
         "health": "/health",
         "logger": "log/slog (JSON handler)",
         "tests": "go test",
-        "architecture": "package internal/domain imports nothing from net/http, chi or the database driver"
+        "architecture": "package internal/domain imports nothing from net/http, chi or the database driver",
+        "modules": {
+          "dir": "internal/<name>",
+          "public": [
+            "internal/<name>"
+          ]
+        }
       }
     },
     {
@@ -922,7 +1032,13 @@
         "health": "",
         "logger": "logging (package:logging)",
         "tests": "flutter test",
-        "architecture": "code under lib/domain imports nothing from package:flutter"
+        "architecture": "code under lib/domain imports nothing from package:flutter",
+        "modules": {
+          "dir": "lib/features/<name>",
+          "public": [
+            "lib/features/<name>/<name>.dart"
+          ]
+        }
       }
     },
     {
@@ -953,7 +1069,16 @@
         "health": "",
         "logger": "logging (stdlib, JSON formatter)",
         "tests": "pytest",
-        "architecture": "the public API lives in the package's __init__; internal modules are private (_name) and tests import only the public API"
+        "architecture": "the public API lives in the package's __init__; internal modules are private (_name) and tests import only the public API",
+        "modules": {
+          "dir": "src/<package>/<name>",
+          "public": [
+            "src/<package>/<name>/__init__.py"
+          ],
+          "aliases": {
+            "<package>.": "src/<package>/"
+          }
+        }
       }
     }
   ],

@@ -130,6 +130,21 @@ test("init.test.mjs repairs a failed phases check before approval", () => {
   }
 });
 
+test("init.test.mjs repairs a fence T01 that fails fence-check (PR-58)", () => {
+  const staged = stage({ mode: "bad-fence-then-good" });
+  try {
+    const result = init(staged, `${accepted}\napprove\n\n`);
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    const called = runs(staged.parent);
+    assert.equal(called.length, 2);
+    assert.equal(called[1].stdin.includes("docs/fences/T01.md: no `- Paths:` line"), true, called[1].stdin);
+    assert.equal(called[1].stdin.includes("fence-check: docs/fences/T01.md 5 finding(s)"), true, called[1].stdin);
+    assert.equal(result.stdout.includes("devos: the checks after round 1 failed:"), true, result.stdout);
+  } finally {
+    cleanup(staged.parent);
+  }
+});
+
 test("init.test.mjs stops when the blueprint fails", () => {
   const staged = stage({ mode: "fail" });
   try {

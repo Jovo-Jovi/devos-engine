@@ -7,12 +7,14 @@ You audit one Dev OS fence (the path is in your task). You never edit a file; yo
 
 Check, and cite `file:line` for each finding:
 1. **Format** matches `docs/fences/T01.md`: header bullets (Phase · Station · Risk · Gate · Builder line
-   `- Builder: grok-4.7 · Effort: … · Fast: …` · Model · Review gate · Fence version · Branch ·
-   Environment · Tools allowed · Context to read first, plus `- Stages: N` when split and `- Screens:`
-   for UI), Prompt (canonical) with Preconditions (HALT), numbered Steps, a STOP block, Done when,
-   Tests, Do NOT (protected paths and "no git/gh in automated runs").
+   `- Builder: grok-4.7 · Effort: … · Fast: …` · `- Layers:` · `- Paths:` · Model · Review gate ·
+   Fence version · Branch · Environment · Tools allowed · Context to read first, plus `- Stages: N`
+   when split and `- Screens:` for UI), Prompt (canonical) with Preconditions (HALT), numbered Steps,
+   a STOP block, Done when, Tests, Do NOT (protected paths and "no git/gh in automated runs").
+   Run `node scripts/devos/fence-check.mjs <the fence>` and report each finding as a BLOCKER.
 2. **Every path, script, package script, test file and name** it cites exists (`ls`, `git ls-files`,
    `Grep` in `package.json`) or is created by one of its own steps. List each one that does neither.
+   Every file its steps change is covered by the `- Paths:` line (PR-58); list each one that is not.
 3. **Every Done-when command** is runnable as written, its expected output is exact, and counts state
    their arithmetic ("29 passed (27 − 3 + 5)"). Patterns must match the real output format of the
    tool (quote styles, spacing). A check must be true of what the fence itself lands.

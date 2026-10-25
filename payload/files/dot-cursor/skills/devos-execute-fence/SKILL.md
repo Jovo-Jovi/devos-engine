@@ -10,12 +10,17 @@ description: Execute a Dev OS fence (docs/fences/Tnn.md) as the builder — prec
 2. **Reissue?** If the fence has an `Attempt N focus` section or the prompt says REISSUE, read the
    previous verdict in `docs/reviews/`. The earlier work is in the tree: verify it, change only
    what fails, never redo it.
-3. **Preconditions** in order. Any failure → HALT (see `.cursor/rules/50-report-halt.mdc`).
+3. **Check the fence**: `node scripts/devos/fence-check.mjs docs/fences/Tnn.md`. A finding is the
+   fence's defect: HALT with it (PR-58). Then the **preconditions** in order. Any failure → HALT (see
+   `.cursor/rules/50-report-halt.mdc`).
 4. **Steps** in order, exactly as written. Mandated text (file contents, keys, values, scripts) is
    copied byte for byte. Use Context7 for current library APIs instead of guessing; name what you
    looked up in the report.
-5. **Stay inside the fence.** If a step needs something the fence does not allow (a protected path,
-   a new dependency it does not name, a tool it does not name), HALT. Do not improvise.
+5. **Stay inside the fence.** Change only what its `- Paths:` line names, plus the report, the two
+   ledgers and a lockfile beside a listed manifest (`guard:scope`). Reach another feature module only
+   through its public entry (`guard:imports`). If a step needs something the fence does not allow (a
+   path outside Paths, a protected path, a new dependency it does not name, a tool it does not name),
+   HALT. Do not improvise.
 6. **Done when**: run every command yourself, in order, and keep the real output for the report.
    Fix what fails if the fix is inside the fence; otherwise HALT.
 7. **Guards**: `node scripts/guards/run-all.mjs` (or `pnpm guards` once a Node `package.json` defines it)

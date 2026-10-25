@@ -15,8 +15,10 @@ tell the human to file it as a change request issue instead.
    still true, and add a section `### Attempt {{ATTEMPT}} focus (human revision)` that lists exactly
    what must change, in the builder's terms (files, components, tokens, checks). Add Done-when lines
    that prove each requested change. Keep or adjust the builder line
-   `- Builder: <pool id> · Effort: <…> · Fast: <…>` for this revision, and the `- Layers:` line
-   (`devos/skills/INDEX.md`) when the revision changes the layers the task touches.
+   `- Builder: <pool id> · Effort: <…> · Fast: <…>` for this revision, the `- Layers:` line
+   (`devos/skills/INDEX.md`) when the revision changes the layers the task touches, and the `- Paths:`
+   line when it changes the files (`guard:scope`, PR-58). Run `node scripts/devos/fence-check.mjs
+   docs/fences/{{TASK}}.md` and fix every finding until it prints OK.
    Choose the pool id from this list by the task's kind, risk and size (any id not listed falls back to the default):
    {{BUILDER_POOL}}
 3. Change nothing else. One plain command per Bash call. Your final answer is the structured object.

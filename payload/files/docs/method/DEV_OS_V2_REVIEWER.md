@@ -299,6 +299,9 @@ was fence defects (impossible checks, wrong anchors, stale counts); rehearsal re
 ```
 ## T0n — <task name>
 - Phase · Risk · Model · Effort · Review gate
+- Builder: <pool id> · Effort: <low|medium|high|xhigh> · Fast: <yes|no>
+- Layers: <layer> · <layer>
+- Paths: `<glob>` · `<glob>`   (every file and folder the task may change)
 - Context to read first: <docs and sections>
 - Prompt (canonical): preconditions → numbered STEPs → STOP block
 - Done when: commands that must pass and states that must hold
@@ -308,6 +311,8 @@ was fence defects (impossible checks, wrong anchors, stale counts); rehearsal re
 
 Rules for every fence:
 - **Self-contained.** Everything it refers to is inside it, or attached with a verifiable hash.
+- **Checked by machine.** `scripts/devos/fence-check.mjs` passes before the fence is issued, and
+  `guard:scope` holds the task to its Paths (PR-58).
 - **Preconditions first.** The previous task merged (`git merge-base --is-ancestor`), a clean
   tree, the live counts it builds on.
 - **Byte-exact payloads** are staged outside the working tree and verified by

@@ -40,6 +40,9 @@ function sh(cmd, args, { capture, allowFail, env } = {}) {
 const node = (script, ...args) => sh(process.execPath, [P(script), ...args], { allowFail: true });
 
 function cycleOnce(task, attempt) {
+  // PR-58: guard:fences and guard:scope read the task; scope compares with the local base branch.
+  process.env.TASK = task;
+  process.env.DEVOS_SCOPE_BASE = BASE;
   const { rows } = parsePhases();
   const row = rows.find((r) => r.task === task);
   const br = `${cfg.branch_prefix}${task}`;

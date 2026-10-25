@@ -91,6 +91,12 @@ part: a red required check fails the verdict whatever you write (PR-08), and the
    setting) is not: classify it `SETUP`, reissue no fence, and put in the verdict's
    `human_attention` the exact names and the steps to add them (where in GitHub, Vercel or the
    provider's dashboard). The runner then waits for the human instead of spending a retry.
+   **Fence, scope and imports (PR-58):** a `guard:fences` finding, or a builder HALT on a
+   `fence-check.mjs` finding, is the fence's defect (PR-09): FAIL and reissue the whole fence with it
+   fixed. A `guard:scope` finding is a change outside the fence's `- Paths:` line: the builder's defect
+   when the task does not need it (the attempt focus undoes it), the fence's when it does (reissue with
+   the path added, and say why). A `guard:imports` finding is the builder's: reach the other module
+   through its public entry.
 4. Write `docs/reviews/{{TASK}}-a{{ATTEMPT}}.md`. **First line exactly** `VERDICT: PASS` or
    `VERDICT: FAIL`, then the Dev OS verdict format from `CLAUDE.md`. Keep it short: ledger lines cite
    evidence ("pack §Checks: test pass, 57 tests"), they do not repeat it. `Next prompt:` gives the
@@ -107,14 +113,16 @@ part: a red required check fails the verdict whatever you write (PR-08), and the
      features and tests, **xhigh** for risk 3, cross-cutting work, and a reissue after high failed.
      **Fast: yes** only for low/medium mechanical work.
    - Every fence you write carries `- Layers: <layer> · <layer>` in its header: the layers of `devos/skills/INDEX.md` the task touches (`design`, `motion`, `frontend`, `accessibility`, `architecture`, `backend`, `api`, `database`, `security`, `reliability`, `testing`, `ops`). The runner gives the builder and the reviewer the skills of those layers, and a server-side or deep task always the security layer and a code task the testing layer (PR-55, PR-56, PR-57).
+   - Every fence you write carries `- Paths: \`<glob>\` · …` in its header: every file and folder the task may change, each in backticks, with module folders from `devos.config.json` `structure.modules`. `guard:scope` fails the run on a change outside them; the report, `docs/SESSION_CONTEXT.md`, `docs/DEVELOPMENT_JOURNAL.md` and a lockfile beside a listed manifest are always allowed (PR-58).
    - A UI fence carries `- Screens: \`<name> <path>[ click|hover|focus <selector>]\` · …` in its header, naming every page, state and interaction to capture. It also carries a `### Design specification` (`docs/method/DESIGN_METHOD.md` §3) whose `- States:` are exactly those names and whose `- Criteria:` are rows of `docs/design/UI_ACCEPTANCE.md`; `guard:design-spec` fails the run otherwise.
    - **Judge its size first and split a big task into stages (PR-38).** Follow the
      `devos-fence-writing` skill: count steps, files, concerns and Done-when items; when the task does
      not fit one builder run (about 60 minutes of work), add `- Stages: N` (2–4) and group the steps
      under `### Stage k — <title>` blocks, each one concern, each leaving the tree green, each naming
      the Done-when ids it proves; the last stage runs every Done-when. Never lower the effort to save
-     time: split instead. Before the fence is final, run the `fence-auditor` agent on it and fix every
-     BLOCKER and DEFECT it reports.
+     time: split instead. Before the fence is final, run `node scripts/devos/fence-check.mjs
+     docs/fences/<task>.md` and fix every finding until it prints OK (PR-58); then, where you have it,
+     run the `fence-auditor` agent and fix every BLOCKER and DEFECT it reports.
    - **A fence is a specification, not the code.** Write what to build, the exact paths, names and
      interfaces, the rules that apply, and Done-when commands with their expected results. Give code
      only where an exact text is the requirement (a policy expression, a header value), never whole

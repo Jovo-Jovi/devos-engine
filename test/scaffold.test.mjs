@@ -8,7 +8,7 @@ import { merge } from "../payload/files/scripts/devos/config.mjs";
 import { cleanup, flow, init, stage } from "./harness.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const KEYS = ["create", "health", "logger", "tests", "architecture"];
+const KEYS = ["create", "health", "logger", "tests", "architecture", "modules"];
 
 test("scaffold.test.mjs (a) every stack has a recipe", () => {
   let healthRoutes = 0;

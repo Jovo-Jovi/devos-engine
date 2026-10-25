@@ -20,6 +20,16 @@ feature the brief asks for under **Later**, built only when the developer asks f
 `full`, the phases build every feature the brief asks for, core flow first, and the last phase before launch makes
 the product ready for production: a security review, error tracking and logging, backups when data is stored, and
 the speed of the main pages.
+**Small tasks, short phases.** Plan the smallest sequence of tasks that each leave the product working. A task is
+one reviewable change a builder finishes in one run, or in two to four stages (`devos-fence-writing` §1: about 6
+steps, 12 files, 2 concerns and 12 Done-when items per run); split anything bigger into more tasks. A phase is a
+slice the developer can use when it ends. With `scope` `mvp`, the core flow fits in about 12 tasks after T01; a plan
+that needs more says in `docs/SCOPE.md` why each extra task is needed. The task that completes the core flow adds
+one end-to-end test of it (a browser test for a UI, a request test for an API, a run of the command for a CLI) to
+the stack's `test` command, so every later task proves the core flow still works.
+**Risk is earned:** 3 for sign-in and permissions, money, personal data, a schema change, the boundary, headers or a
+deploy setting; 1 for copy, documents and one-line fixes; 2 for the rest. A risk-3 task gets the deep review and
+waits for the developer, so mark one only for one of those reasons.
 
 Work in this order.
 
@@ -56,7 +66,11 @@ Work in this order.
    Keep `docs/method/PRECEDENTS.md` as installed: its rows are the rules the runner implements. Rewrite PR-01 for
    this project's environment; new rulings continue from the live maximum.
 5. **Configure the surfaces.** Edit `devos/project.json` (never `devos.config.json`), then run
-   `node scripts/devos/config.mjs --write`. Fill `.cursor/rules/10-security-data.mdc` and
+   `node scripts/devos/config.mjs --write`. Its `structure.modules` holds one entry per feature area the phases
+   build, and no more, each `{ "dir": …, "public": [ … ] }` from `devos.config.json` `stack.scaffold.modules` with
+   `<name>` filled in (its `aliases`, when it has them, go to `structure.aliases`). Code outside a module imports it
+   only through its public entry (`guard:imports`, PR-58); the task that first builds a module creates its folder
+   and its public entry. Fill `.cursor/rules/10-security-data.mdc` and
    `.cursor/rules/30-vocabulary.mdc`. Write `.cursor/mcp.example.json` and `devos/ci/mcp.ci.json` from step 3, and
    `CLAUDE.md` from the handbook's §15.1 template. Write the `devos:boundary` line in `docs/BOUNDARY_MODEL.md`
    (PR-19). With the backend module, plan T01 or the first J4 task to create `supabase/`.
@@ -70,7 +84,14 @@ Work in this order.
    runner's UI evidence (`docs/method/DESIGN_METHOD.md` §4). Its Done-when
    is `node scripts/devos/run-checks.mjs --strict` exiting 0. T01 is not a UI fence: it carries no `- Screens:` line.
    Every fence carries `- Layers: <layer> · <layer>` in its header: the layers of `devos/skills/INDEX.md` the task touches (`design`, `motion`, `frontend`, `accessibility`, `architecture`, `backend`, `api`, `database`, `security`, `reliability`, `testing`, `ops`); T01's are usually `ops · testing`. The runner gives the builder and the reviewer the skills of those layers, and a server-side or deep task always the security layer and a code task the testing layer (PR-55, PR-56, PR-57).
-   Every later fence that builds a screen carries one and a `### Design specification` (`docs/method/DESIGN_METHOD.md`
+   Every fence also carries the builder line `- Builder: <an id of devos.config.json agents.pool> · Effort:
+   <low|medium|high|xhigh> · Fast: <yes|no>` (T01: `high`, `no`) and `- Paths: \`<glob>\` · …`: every file and
+   folder the task may change, each in backticks (T01's are the scaffold's: `*` for the files at the root, and its
+   folders such as `src/**`, `public/**` and the test folders). `guard:scope` fails a change outside them; the report,
+   `docs/SESSION_CONTEXT.md`, `docs/DEVELOPMENT_JOURNAL.md` and a lockfile beside a listed manifest are always
+   allowed. Before you finish, run `node scripts/devos/fence-check.mjs docs/fences/T01.md` and fix every finding
+   (PR-58).
+   Every later fence that builds a screen carries a `- Screens:` line and a `### Design specification` (`docs/method/DESIGN_METHOD.md`
    §3).
 7. **End with a summary** as your final message: the profile, the ODs the developer signs by approving, your
    assumptions, and the setup steps that change for this project.
