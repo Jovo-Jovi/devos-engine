@@ -10,8 +10,8 @@ improve it. A gap or a contradiction is reported, never improvised.
 
 1. **Read the sources, in order:** the fence; `docs/DESIGN_SYSTEM.md` (tokens, type, components,
    compositions, catalogue keys); `docs/design/mockup.html` for the intended rendering; then the design
-   skills `devos/skills/README.md` gives the builder. Where they disagree, the design system wins; note the
-   difference in the report.
+   skills your prompt lists for the task (`devos/skills/INDEX.md`). Where they disagree, the design system
+   wins; note the difference in the report.
 2. **Tokens first.** Every colour, size, space and radius comes from `src/styles/tokens.css`. Copy the
    token block exactly as the design system gives it. Raw values anywhere else fail `guard:design`.
 3. **One CSS module per component** (`Component.module.css` beside `Component.tsx`). Logical properties

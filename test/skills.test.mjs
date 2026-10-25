@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { appendFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { appendFileSync, cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -39,6 +39,10 @@ function localEntry(extra = {}) {
     changes: "none",
     roles: ["builder"],
     use: "House rules for this project.",
+    layers: ["frontend"],
+    stacks: ["any"],
+    trust: { runs_code: false, fetches: false, reviewed: "2026-10-25", notes: "Markdown only." },
+    reads: [{ file: "NOTES.md", roles: ["builder"], layers: ["frontend"], when: "every screen of this project" }],
     files: [
       { path: "NOTES.md", origin: "source", from: "NOTES.md", sha256: sha("# Notes\n") },
       { path: "LICENSE", origin: "source", from: "LICENSE", sha256: sha("MIT\n") },
@@ -127,8 +131,88 @@ test("skills.test.mjs (f) every vendored skill ships its licence and every evalu
       assert.deepEqual(entry.files, [], entry.id);
     }
   }
-  const readme = readFileSync(path.join(skillsDir, "README.md"), "utf8");
+  const index = readFileSync(path.join(skillsDir, "INDEX.md"), "utf8");
   for (const entry of manifest.entries.filter((item) => item.delivery === "vendored")) {
-    assert.ok(readme.includes(`\`${entry.id}/`), entry.id);
+    assert.ok(index.includes(`\`${entry.id}/`), entry.id);
+  }
+});
+
+test("skills.test.mjs (g) a vendored entry needs its layers, its trust review and its reads, and INDEX.md stays current", () => {
+  const dir = project();
+  try {
+    writeLocal(dir, localEntry({ layers: ["frontend", "styling"], trust: { runs_code: true, fetches: false, reviewed: "soon" }, reads: [{ file: "OTHER.md", roles: ["reviewer"], layers: ["database"], when: "" }] }));
+    assert.deepEqual(guard(dir).findings, [
+      "devos/skills/local.json studio-notes: layers must be some of design, motion, frontend, accessibility, backend, api, database, security, testing, ops",
+      "devos/skills/local.json studio-notes: trust.runs_code must be false (the cycle runs no code from a skill)",
+      "devos/skills/local.json studio-notes: trust.reviewed must be the date its files were read (YYYY-MM-DD)",
+      "devos/skills/local.json studio-notes: reads OTHER.md: not one of its files",
+      "devos/skills/local.json studio-notes: reads OTHER.md: roles must be some of the entry's roles",
+      "devos/skills/local.json studio-notes: reads OTHER.md: layers must be some of the entry's layers",
+      "devos/skills/local.json studio-notes: reads OTHER.md: no when",
+    ]);
+    writeLocal(dir, localEntry());
+    appendFileSync(path.join(dir, "devos", "skills", "INDEX.md"), "\nA note.\n");
+    assert.deepEqual(guard(dir).findings, ["devos/skills/INDEX.md is out of date: run node scripts/devos/skills.mjs index"]);
+    const rebuilt = spawnSync(process.execPath, ["scripts/devos/skills.mjs", "index"], { cwd: dir, encoding: "utf8", windowsHide: true });
+    assert.equal(rebuilt.stdout, "devos/skills/INDEX.md written\n", rebuilt.stderr);
+    assert.equal(guard(dir).status, "PASS");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("skills.test.mjs (h) a task gets the skills of its layers, for its role and stack, its project's own included", () => {
+  const dir = project();
+  try {
+    writeLocal(dir, localEntry({ stacks: ["node-cli"] }));
+    mkdirSync(path.join(dir, "docs", "fences"), { recursive: true });
+    writeFileSync(path.join(dir, "docs", "fences", "T01.md"), "# T01\n\n- Layers: ops · testing\n");
+    writeFileSync(path.join(dir, "docs", "fences", "T02.md"), "# T02\n\n- Screens: `home /`\n");
+    writeFileSync(path.join(dir, "docs", "fences", "T03.md"), "# T03\n\n- Layers: `frontend`, motion\n");
+    writeFileSync(path.join(dir, "docs", "fences", "T04.md"), "# T04\n\n- Surface: method — scripts/devos/x.mjs\n- Screens: `home /`\n");
+    const skills = (...args) => spawnSync(process.execPath, ["scripts/devos/skills.mjs", ...args], { cwd: dir, encoding: "utf8", windowsHide: true }).stdout.trim();
+    assert.equal(skills("layers", "--task", "T01"), "testing ops");
+    assert.equal(skills("layers", "--task", "T02"), "design motion frontend accessibility");
+    assert.equal(skills("layers", "--task", "T04"), "");
+    assert.equal(skills("select", "--task", "T01", "--role", "builder"), "");
+    assert.equal(skills("select", "--task", "T03", "--role", "reviewer"), [
+      "devos/skills/web-interface-guidelines/SKILL.md",
+      "devos/skills/emil-design-eng/SKILL.md",
+      "devos/skills/review-animations/SKILL.md",
+      "devos/skills/review-animations/STANDARDS.md",
+      "devos/skills/impeccable/reference/craft-floor.md",
+      "devos/skills/impeccable/reference/audit.md",
+    ].join("\n"));
+    // The project's own skill fits only its stack: the DEMO install has no stack id and the node toolchain, not node-cli.
+    assert.equal(skills("select", "--task", "T03", "--role", "builder").includes("studio-notes"), false);
+    writeLocal(dir, localEntry());
+    assert.equal(skills("select", "--task", "T03", "--role", "builder").split("\n").at(-1), "devos/skills/studio-notes/NOTES.md");
+    assert.match(skills("list"), /^studio-notes\tvendored\tfrontend\tlocal$/m);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("skills.test.mjs (i) the builder's and the reviewer's prompts list the task's skills, and only when it has some", () => {
+  const dir = project();
+  try {
+    cpSync(path.join(root, "test", "fixtures", "docs"), path.join(dir, "docs"), { recursive: true });
+    mkdirSync(path.join(dir, "docs", "fences"), { recursive: true });
+    const render = (role) => {
+      const run = spawnSync(process.execPath, ["scripts/devos/render-prompt.mjs", role, "T01", "1"], { cwd: dir, encoding: "utf8", windowsHide: true });
+      assert.equal(run.status, 0, run.stderr);
+      return run.stdout;
+    };
+    writeFileSync(path.join(dir, "docs", "fences", "T01.md"), "# T01\n\n- Screens: `home /`\n");
+    const builder = render("builder");
+    assert.match(builder, /^- \*\*Skills for this task\*\* \(layers design · motion · frontend · accessibility, from the fence; `devos\/skills\/INDEX.md`\)/m);
+    assert.match(builder, /^  - `devos\/skills\/frontend-design\/SKILL.md` — the visual direction in `docs\/DESIGN_SYSTEM.md`, and every new screen$/m);
+    assert.equal(builder.includes("devos/skills/taste/references/critique.md"), false);
+    assert.match(render("reviewer"), /^  - `devos\/skills\/taste\/references\/critique.md` — judging the captures of a public page$/m);
+    writeFileSync(path.join(dir, "docs", "fences", "T01.md"), "# T01\n\n- Layers: backend · database\n");
+    assert.equal(render("builder").includes("Skills for this task"), false);
+    assert.equal(render("builder").includes("{{"), false);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
   }
 });

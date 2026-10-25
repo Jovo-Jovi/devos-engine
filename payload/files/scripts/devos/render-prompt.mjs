@@ -8,6 +8,7 @@ import { readFileSync, writeFileSync, existsSync, readdirSync } from "node:fs";
 import { P, parsePhases, isHumanGate, taskAfter, config, fail } from "./lib.mjs";
 import { poolText } from "./agents.mjs";
 import { motionCounts } from "./screens.mjs";
+import { skillsBlock } from "./skills.mjs";
 
 function screensLine(screens) {
   const manifestPath = P(".devos/screens/motion.json");
@@ -74,6 +75,8 @@ export function renderPrompt(role, task, attempt) {
     REISSUE_BLOCK: hasPrev
       ? `\nThis is a REISSUE. Read the previous verdict \`${prevReview}\` and the fence's "Attempt ${attempt} focus" section first. The earlier attempt's work is already in the tree on this branch: verify it against the Done-when list and change only what fails. Never redo or duplicate it.\n`
       : "",
+    // PR-55: the skill files this role reads for the task's layers and the project's stack.
+    SKILLS_BLOCK: role === "builder" || role === "reviewer" ? skillsBlock(task, role, cfg) : "",
     PREV_REVIEW_LINE: hasPrev ? `- \`${prevReview}\`: your previous verdict on this task.\n` : "",
     RISK3_LINE: row.risk >= 3
       ? "This is **risk 3**: you are the heavyweight review (Dev OS §11). Read every changed line of the critical paths, not a sample."

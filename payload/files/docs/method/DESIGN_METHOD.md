@@ -29,7 +29,7 @@ reviewer design verdict → remediation and re-verification.
 
 The reviewer owns direction and acceptance. The builder implements and checks its own work. Only rendered evidence
 counts: the runner's captures (`scripts/devos/screens.mjs`, PR-35), never a description of a screen. Both read the
-design skills of §7 that `devos/skills/README.md` gives their role.
+skills of §7 that their prompt lists for the task's layers (`devos/skills/INDEX.md`).
 
 ## 3. The design specification
 
@@ -102,8 +102,11 @@ and the proof.
 
 ## 7. Design skills
 
-The agents read pinned design skills from outside DEV_OS: `devos/skills/`, indexed for each role by
-`devos/skills/README.md`. `docs/DESIGN_SYSTEM.md`, the acceptance criteria and the fence always win over a skill.
+The agents read pinned skills from outside DEV_OS: `devos/skills/`. Each is mapped to layers (design, motion,
+frontend, accessibility, backend, api, database, security, testing, ops), stacks and roles in
+`devos/skills/manifest.json`, and `devos/skills/INDEX.md`, generated from it, is the discovery reference. A fence
+names its layers (`- Layers:`), and the runner lists the files of those layers for the role and the stack in the
+builder's and the reviewer's prompt (`scripts/devos/skills.mjs`, PR-55). `docs/DESIGN_SYSTEM.md`, the acceptance criteria and the fence always win over a skill.
 
 **Licence-aware, not licence-limited.** A skill is chosen for its quality and its licence together, under any licence.
 Before anything is copied, the licence is read at the exact commit and classed:

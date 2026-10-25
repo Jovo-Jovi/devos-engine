@@ -1,7 +1,19 @@
 {
-  "$comment": "Design skills the agents read (docs/method/DESIGN_METHOD.md §7, PR-51). licence.class: free (a permissive licence; ship its licence and notices), conditions (allowed with conditions beyond notices), approval (needs the author's permission or a separate licence first), unsuitable (redistribution not allowed). delivery: vendored (files here, pinned), external (not shipped; a developer may use it interactively), principles (nothing copied; the ideas are written independently). Each source file records the path it was copied from (from); guard:skills checks every vendored file's sha256 (LF line endings).",
-  "version": 1,
+  "$comment": "The skills the agents read (devos/skills/README.md, docs/method/DESIGN_METHOD.md §7, PR-51, PR-55). layers: the vocabulary below; a fence names its own on a `- Layers:` line. stacks: any, a stack id or a toolchain (devos.config.json stack). reads: each file a role reads, for which layers and when. trust: runs_code and fetches are false for every vendored skill (the cycle runs no code from a skill and fetches nothing at run time), and reviewed is the date its files were read whole. licence.class: free (a permissive licence; ship its licence and notices), conditions (allowed with conditions beyond notices), approval (needs the author's permission or a separate licence first), unsuitable (redistribution not allowed). delivery: vendored (files here, pinned), external (not shipped; a developer may use it interactively), principles (nothing copied; the ideas are written independently). Each source file records the path it was copied from (from); guard:skills checks every vendored file's sha256 (LF line endings) and that INDEX.md is generated from this file.",
+  "version": 2,
   "reviewed": "2026-10-24",
+  "layers": {
+    "design": "visual direction, type, colour, spacing and layout",
+    "motion": "animation, transitions and scroll",
+    "frontend": "components, client state, copy and interaction",
+    "accessibility": "WCAG, keyboard paths, focus, contrast and assistive technology",
+    "backend": "server code, jobs and integrations",
+    "api": "HTTP and RPC contracts, validation and errors",
+    "database": "schema, migrations, queries and access rules",
+    "security": "sign-in, secrets, input, headers and data protection",
+    "testing": "unit, integration and end-to-end tests",
+    "ops": "build, deploy, CI, logging and monitoring"
+  },
   "entries": [
     {
       "id": "frontend-design",
@@ -33,6 +45,32 @@
         "reviewer"
       ],
       "use": "Visual direction and the anti-template checks for every new screen.",
+      "layers": [
+        "design"
+      ],
+      "stacks": [
+        "any"
+      ],
+      "trust": {
+        "runs_code": false,
+        "fetches": false,
+        "reviewed": "2026-10-24",
+        "notes": "Markdown guidance only: it ships no script and names nothing to fetch or install."
+      },
+      "reads": [
+        {
+          "file": "SKILL.md",
+          "roles": [
+            "blueprint",
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "design"
+          ],
+          "when": "the visual direction in `docs/DESIGN_SYSTEM.md`, and every new screen"
+        }
+      ],
       "files": [
         {
           "path": "LICENSE.txt",
@@ -77,6 +115,33 @@
         "reviewer"
       ],
       "use": "Concrete interface rules: the builder's self-check and the reviewer's citations.",
+      "layers": [
+        "frontend",
+        "accessibility"
+      ],
+      "stacks": [
+        "any"
+      ],
+      "trust": {
+        "runs_code": false,
+        "fetches": false,
+        "reviewed": "2026-10-24",
+        "notes": "Markdown guidance only: it ships no script and names nothing to fetch or install."
+      },
+      "reads": [
+        {
+          "file": "SKILL.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "frontend",
+            "accessibility"
+          ],
+          "when": "every UI task: the builder's self-check, the reviewer's citations"
+        }
+      ],
       "files": [
         {
           "path": "LICENSE",
@@ -125,6 +190,33 @@
         "reviewer"
       ],
       "use": "Component polish, interaction details and animation decisions.",
+      "layers": [
+        "motion",
+        "frontend"
+      ],
+      "stacks": [
+        "any"
+      ],
+      "trust": {
+        "runs_code": false,
+        "fetches": false,
+        "reviewed": "2026-10-24",
+        "notes": "Markdown guidance only: it ships no script and names nothing to fetch or install."
+      },
+      "reads": [
+        {
+          "file": "SKILL.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "frontend",
+            "motion"
+          ],
+          "when": "component polish and interaction details"
+        }
+      ],
       "files": [
         {
           "path": "LICENSE",
@@ -167,6 +259,40 @@
         "reviewer"
       ],
       "use": "The motion row of the reviewer's design ledger.",
+      "layers": [
+        "motion"
+      ],
+      "stacks": [
+        "any"
+      ],
+      "trust": {
+        "runs_code": false,
+        "fetches": false,
+        "reviewed": "2026-10-24",
+        "notes": "Markdown guidance only: it ships no script and names nothing to fetch or install."
+      },
+      "reads": [
+        {
+          "file": "SKILL.md",
+          "roles": [
+            "reviewer"
+          ],
+          "layers": [
+            "motion"
+          ],
+          "when": "the motion row of the design ledger"
+        },
+        {
+          "file": "STANDARDS.md",
+          "roles": [
+            "reviewer"
+          ],
+          "layers": [
+            "motion"
+          ],
+          "when": "the motion row of the design ledger"
+        }
+      ],
       "files": [
         {
           "path": "LICENSE",
@@ -215,6 +341,30 @@
         "builder"
       ],
       "use": "Targeted fixes when the a11y check is red.",
+      "layers": [
+        "accessibility"
+      ],
+      "stacks": [
+        "any"
+      ],
+      "trust": {
+        "runs_code": false,
+        "fetches": false,
+        "reviewed": "2026-10-24",
+        "notes": "Markdown guidance only: it ships no script and names nothing to fetch or install."
+      },
+      "reads": [
+        {
+          "file": "SKILL.md",
+          "roles": [
+            "builder"
+          ],
+          "layers": [
+            "accessibility"
+          ],
+          "when": "fixing a red `a11y` check"
+        }
+      ],
       "files": [
         {
           "path": "LICENSE",
@@ -262,6 +412,143 @@
         "reviewer"
       ],
       "use": "The craft floor, product-UI depth, and focused playbooks for type, layout, colour, motion, copy, onboarding, hardening, small screens and the technical audit.",
+      "layers": [
+        "design",
+        "motion",
+        "frontend",
+        "accessibility"
+      ],
+      "stacks": [
+        "any"
+      ],
+      "trust": {
+        "runs_code": false,
+        "fetches": false,
+        "reviewed": "2026-10-24",
+        "notes": "Markdown guidance only: it ships no script and names nothing to fetch or install."
+      },
+      "reads": [
+        {
+          "file": "reference/craft-floor.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "design",
+            "frontend"
+          ],
+          "when": "before any UI change: the quality floor and the defaults to refuse"
+        },
+        {
+          "file": "reference/operate.md",
+          "roles": [
+            "blueprint",
+            "builder"
+          ],
+          "layers": [
+            "design",
+            "frontend"
+          ],
+          "when": "app screens, dashboards, settings and tools"
+        },
+        {
+          "file": "reference/typeset.md",
+          "roles": [
+            "blueprint",
+            "builder"
+          ],
+          "layers": [
+            "design"
+          ],
+          "when": "type"
+        },
+        {
+          "file": "reference/layout.md",
+          "roles": [
+            "blueprint",
+            "builder"
+          ],
+          "layers": [
+            "design"
+          ],
+          "when": "spacing and layout"
+        },
+        {
+          "file": "reference/colorize.md",
+          "roles": [
+            "blueprint",
+            "builder"
+          ],
+          "layers": [
+            "design"
+          ],
+          "when": "colour"
+        },
+        {
+          "file": "reference/animate.md",
+          "roles": [
+            "builder"
+          ],
+          "layers": [
+            "motion"
+          ],
+          "when": "motion the fence asks for"
+        },
+        {
+          "file": "reference/clarify.md",
+          "roles": [
+            "builder"
+          ],
+          "layers": [
+            "frontend"
+          ],
+          "when": "copy and errors"
+        },
+        {
+          "file": "reference/onboard.md",
+          "roles": [
+            "builder"
+          ],
+          "layers": [
+            "frontend"
+          ],
+          "when": "first run and empty states"
+        },
+        {
+          "file": "reference/harden.md",
+          "roles": [
+            "builder"
+          ],
+          "layers": [
+            "frontend"
+          ],
+          "when": "edge cases"
+        },
+        {
+          "file": "reference/adapt.md",
+          "roles": [
+            "builder"
+          ],
+          "layers": [
+            "design",
+            "frontend"
+          ],
+          "when": "small screens"
+        },
+        {
+          "file": "reference/audit.md",
+          "roles": [
+            "reviewer"
+          ],
+          "layers": [
+            "design",
+            "frontend",
+            "accessibility"
+          ],
+          "when": "the technical pass of the visual check"
+        }
+      ],
       "files": [
         {
           "path": "LICENSE",
@@ -372,6 +659,73 @@
         "reviewer"
       ],
       "use": "Type, colour and layout for public pages, the critique of a render, and the tells of a generated page.",
+      "layers": [
+        "design"
+      ],
+      "stacks": [
+        "any"
+      ],
+      "trust": {
+        "runs_code": false,
+        "fetches": false,
+        "reviewed": "2026-10-24",
+        "notes": "Markdown guidance only: it ships no script and names nothing to fetch or install."
+      },
+      "reads": [
+        {
+          "file": "references/type.md",
+          "roles": [
+            "blueprint",
+            "builder"
+          ],
+          "layers": [
+            "design"
+          ],
+          "when": "type on landing, marketing and product pages"
+        },
+        {
+          "file": "references/colour.md",
+          "roles": [
+            "blueprint",
+            "builder"
+          ],
+          "layers": [
+            "design"
+          ],
+          "when": "colour on landing, marketing and product pages"
+        },
+        {
+          "file": "references/layout.md",
+          "roles": [
+            "blueprint",
+            "builder"
+          ],
+          "layers": [
+            "design"
+          ],
+          "when": "layout of landing, marketing and product pages"
+        },
+        {
+          "file": "references/critique.md",
+          "roles": [
+            "reviewer"
+          ],
+          "layers": [
+            "design"
+          ],
+          "when": "judging the captures of a public page"
+        },
+        {
+          "file": "references/tells.md",
+          "roles": [
+            "reviewer"
+          ],
+          "layers": [
+            "design"
+          ],
+          "when": "the tells of a generated page, in the captures"
+        }
+      ],
       "files": [
         {
           "path": "LICENSE",
@@ -430,6 +784,10 @@
       },
       "delivery": "principles",
       "reason": "The README says MIT but the repository has no licence file at this commit, and the skill fetches its rules from the network on every run. DEV_OS copies nothing from it: its own wrapper (web-interface-guidelines/SKILL.md) points at the pinned MIT rules.",
+      "layers": [
+        "frontend",
+        "accessibility"
+      ],
       "files": []
     },
     {
@@ -451,6 +809,9 @@
       },
       "delivery": "external",
       "reason": "Licensed for inclusion, but it is a Python search engine over CSV data that the agent runs at design time, and the cycle runs no code from a skill. A developer may install it for interactive work.",
+      "layers": [
+        "design"
+      ],
       "files": []
     },
     {
@@ -472,6 +833,11 @@
       },
       "delivery": "external",
       "reason": "Licensed for inclusion, but it requires Tailwind CSS and motion/react and forbids animation unless asked, which would force one look on every project; DESIGN_METHOD.md §5 decides those per project.",
+      "layers": [
+        "design",
+        "motion",
+        "frontend"
+      ],
       "files": []
     },
     {
@@ -493,6 +859,9 @@
       },
       "delivery": "principles",
       "reason": "All rights reserved: not licensed for reuse, redistribution or modification. Nothing is copied; the shipped skills and DESIGN_METHOD.md cover hierarchy, spacing, type and colour in their own words.",
+      "layers": [
+        "design"
+      ],
       "files": []
     },
     {
@@ -514,6 +883,10 @@
       },
       "delivery": "external",
       "reason": "The accessibility check of every capture (PR-51). A UI project installs it as a dev dependency from T01; DEV_OS copies none of its files, and MPL-2.0's file-level conditions apply only to a changed copy of its files.",
+      "layers": [
+        "accessibility",
+        "testing"
+      ],
       "files": []
     }
   ]

@@ -153,6 +153,7 @@ workflow may start late.
 | `review-mode.mjs` | light or deep review, model (the chosen reviewer's; no fallback model, PR-53), effort, turns, critical paths |
 | `evidence.mjs` | `.devos/evidence.md`, the reviewer's evidence pack |
 | `render-prompt.mjs` | fills `devos/prompts/*.md` |
+| `skills.mjs` | the skills of a task (PR-55): `layers` reads the fence's `- Layers:` line (a UI fence without one has design, frontend, accessibility and motion; a method fix none), `select` gives a role the files of those layers for the project's stack (the builder's and the reviewer's prompt list them), `list` shows every skill with the project's own (`local.json`), and `index` writes `devos/skills/INDEX.md` from `manifest.json` (`--check` for `guard:skills`) |
 | `verdict.mjs` | validates the review, applies PR-08 and the gates, records PHASES, picks the action. It reads any tool's output (its last JSON object: Claude Code's result, Cursor's last stream event, Codex's and Gemini's normalised object) and `.devos/reviewer-run.env` (the tool and its exit code, written by the reviewer step): a run that exited 0 with a finished result never counts as a limit, and a tool with no structured answer has its verdict read from the complete review file (PR-54) |
 | `limits.mjs` | limit patterns (read on the last 4000 characters of each output only, PR-54), reset parsing, `earliestNotBefore`, run cost for every tool |
 | `usage.mjs` | the usage record (PR-52): `record` adds one line per agent run to `.devos/usage/pending.jsonl` (stage, task, tool, model, input, output, cache-read and cache-write tokens, the tool's own cost, seconds); `flush` moves the lines to `docs/usage/<task>.jsonl` in the runner's commit; `report --write` rebuilds `docs/USAGE.md`, the totals by model, stage and task, priced from the tool's own cost or `devos/prices.json`. Every builder run is recorded by `agent-watchdog.sh` (`DEVOS_USAGE_STAGE`), every reviewer, intake and revise run right after its call; the gate doctor's and the supervisor's runs go on their run summary only (`--summary`). A record never fails a run |
@@ -166,7 +167,7 @@ workflow may start late.
 with a gate) · `naming` · `design` (tokens, no raw colours, logical properties) · `i18n` (identical
 catalogues) · `boundary` (no visitor data outside declared zones) · `literals` (no hard-coded contact
 or locale) · `data` (migrations, RLS, grants, server-only secret key, synthetic seed, pgTAP) ·
-`services` (R2 and Firebase rules) · `manual` (this file names every part of the automation) · `config` (the generated configuration is current) · `design-spec` (every open UI fence has a design specification whose states match its `- Screens:` line and whose criteria are rows of `docs/design/UI_ACCEPTANCE.md`, PR-50) · `skills` (every design skill in `devos/skills/` is listed in its manifest, pinned to a full commit, licensed for its use with its licence and notices beside it, and unchanged, PR-51).
+`services` (R2 and Firebase rules) · `manual` (this file names every part of the automation) · `config` (the generated configuration is current) · `design-spec` (every open UI fence has a design specification whose states match its `- Screens:` line and whose criteria are rows of `docs/design/UI_ACCEPTANCE.md`, PR-50) · `skills` (every skill in `devos/skills/` is listed in its manifest, pinned to a full commit, licensed for its use with its licence and notices beside it, and unchanged, PR-51; mapped to its layers, stacks and roles, with a trust review that says it runs no code and fetches nothing, and `INDEX.md` current, PR-55).
 
 ## 6. Prompts, schemas, rules
 
@@ -174,10 +175,11 @@ or locale) · `data` (migrations, RLS, grants, server-only secret key, synthetic
 `blueprint.md` (`devos init`'s blueprint: the `/devos-new-project` flow, headless).
 `devos/schemas/`: verdict, intake (also revise and method), doctor, supervisor.
 `docs/method/DESIGN_METHOD.md`: the UI/UX gate — the design contract, the lifecycle, the design specification, the acceptance gate and the resource catalogue (PR-50); the evidence checks, automated failures and design findings, and the design skills (PR-51).
-`devos/skills/`: the pinned design skills the agents read, `README.md` (who reads what) and `manifest.json` (source, commit, licence, obligations and hash of each; `local.json` for a project's own) (PR-51).
+`devos/skills/`: the pinned skills the agents read, `README.md` (how a task gets its skills), `INDEX.md` (the discovery reference: layers, who reads what and when, licences and trust; generated) and `manifest.json` (source, commit, licence, obligations, layers, stacks, trust, reads and hash of each; `local.json` for a project's own) (PR-51, PR-55).
 
 `.gitattributes` merges `docs/DEVELOPMENT_JOURNAL.md` by union.
 
+Every fence carries a header line `- Layers: <layer> · <layer>` naming the layers it touches; `skills.mjs` gives the builder and the reviewer the skills of those layers (PR-55).
 A UI fence carries a header line `- Screens: \`<name> <path>[ click|hover|focus <selector>]\` · …` naming every page, state and interaction to capture. `screens.mjs` reads that line; without it, `devos.config.json` `screens.pages` is used.
 
 | Surface | Files |

@@ -18,9 +18,8 @@ Rules for this run:
 - Do not edit any path the fence's "Do NOT" list protects; the runner's surface guard fails the
   task if you do.
 - If the task changes anything visible, follow the `devos-compose-ui` skill: compose the approved
-  design in `docs/DESIGN_SYSTEM.md` and `docs/design/`, never improvise a look. Read the design skills
-  `devos/skills/README.md` gives the builder; `docs/DESIGN_SYSTEM.md` and the fence win over them.
-- **Method fix** (the fence has `- Surface: method`, PR-28): change only the method files the fence
+  design in `docs/DESIGN_SYSTEM.md` and `docs/design/`, never improvise a look.
+{{SKILLS_BLOCK}}- **Method fix** (the fence has `- Surface: method`, PR-28): change only the method files the fence
   names (workflows, runner scripts, guards, prompts, config), update `docs/method/AUTOMATION.md` where
   the change lands, and add the precedent row it describes.
   Never touch product code. Prove the fix with the reproduction the fence asks for. Every other task:

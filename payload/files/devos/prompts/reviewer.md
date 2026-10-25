@@ -23,7 +23,7 @@ part: a red required check fails the verdict whatever you write (PR-08), and the
   pasted outputs (latest `## Attempt` section only).
 - The working tree is the task branch at the builder's commit (fetch, never paste: PR-02).
   `.devos/logs/*.log` holds full check logs if you need one.
-{{PREV_REVIEW_LINE}}{{PREVIEW_LINE}}{{SCREENS_LINE}}- This attempt was built with `{{BUILDER_MODEL}}` (effort {{BUILDER_EFFORT}}, fast {{BUILDER_FAST}}).
+{{PREV_REVIEW_LINE}}{{PREVIEW_LINE}}{{SCREENS_LINE}}{{SKILLS_BLOCK}}- This attempt was built with `{{BUILDER_MODEL}}` (effort {{BUILDER_EFFORT}}, fast {{BUILDER_FAST}}).
 
 ## Tool use
 
@@ -54,7 +54,7 @@ part: a red required check fails the verdict whatever you write (PR-08), and the
    FAIL, whatever the captures look like. Then, for each state and
    width, read the settled screenshot, the reduced-motion screenshot and the five filmstrip frames.
    Judge them against `docs/DESIGN_SYSTEM.md`, the fence's Design specification, the criteria it names in
-   `docs/design/UI_ACCEPTANCE.md`, and the design skills `devos/skills/README.md` gives the reviewer. Write
+   `docs/design/UI_ACCEPTANCE.md`, and the skills listed under "Evidence you have". Write
    the seven-row design ledger (hierarchy · consistency · accessibility · responsiveness · craft ·
    **motion**: purpose test, tokens, once-only, reduced motion · **truthfulness**). Read keyboard paths,
    focus and contrast yourself: an automated result never replaces that reading. Then write four lines:
@@ -106,6 +106,7 @@ part: a red required check fails the verdict whatever you write (PR-08), and the
      **low** for copy and one-line fixes, **medium** for small contained code, **high** (default) for
      features and tests, **xhigh** for risk 3, cross-cutting work, and a reissue after high failed.
      **Fast: yes** only for low/medium mechanical work.
+   - Every fence you write carries `- Layers: <layer> · <layer>` in its header: the layers of `devos/skills/INDEX.md` the task touches (`design`, `motion`, `frontend`, `accessibility`, `backend`, `api`, `database`, `security`, `testing`, `ops`). The runner gives the builder and the reviewer the skills of those layers (PR-55).
    - A UI fence carries `- Screens: \`<name> <path>[ click|hover|focus <selector>]\` · …` in its header, naming every page, state and interaction to capture. It also carries a `### Design specification` (`docs/method/DESIGN_METHOD.md` §3) whose `- States:` are exactly those names and whose `- Criteria:` are rows of `docs/design/UI_ACCEPTANCE.md`; `guard:design-spec` fails the run otherwise.
    - **Judge its size first and split a big task into stages (PR-38).** Follow the
      `devos-fence-writing` skill: count steps, files, concerns and Done-when items; when the task does

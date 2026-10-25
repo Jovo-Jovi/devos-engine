@@ -1,18 +1,21 @@
-// guard:skills — the design skills the agents read are pinned, licensed for their use and unchanged
-// (docs/method/DESIGN_METHOD.md §7, PR-51). Reads devos/skills/manifest.json (the engine's) and, when the
-// project added skills of its own, devos/skills/local.json (the same format).
+// guard:skills — the skills the agents read are pinned, licensed for their use, reviewed for trust, mapped to
+// their layers and roles, and unchanged (docs/method/DESIGN_METHOD.md §7, PR-51, PR-55). Reads
+// devos/skills/manifest.json (the engine's) and, when the project added skills of its own, devos/skills/local.json
+// (the same format). devos/skills/INDEX.md must be the one scripts/devos/skills.mjs generates from manifest.json.
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { exists, read, result, walk, P } from "./lib.mjs";
+import { renderIndex } from "../devos/skills.mjs";
 
 const DIR = "devos/skills";
 const MANIFESTS = [`${DIR}/manifest.json`, `${DIR}/local.json`];
-const OWN = new Set(["README.md", "manifest.json", "local.json"]);
+const OWN = new Set(["README.md", "INDEX.md", "manifest.json", "local.json"]);
 const CLASSES = new Set(["free", "conditions", "approval", "unsuitable"]);
 const DELIVERY = new Set(["vendored", "external", "principles"]);
 const ROLES = new Set(["blueprint", "builder", "reviewer"]);
 const ID = /^[a-z0-9][a-z0-9-]*$/;
 const COMMIT = /^[0-9a-f]{40}$/;
+const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 function sha256(rel) {
   const bytes = Buffer.from(readFileSync(P(rel)).toString("latin1").replaceAll("\r\n", "\n"), "latin1");
@@ -21,8 +24,34 @@ function sha256(rel) {
 
 const filled = (value) => typeof value === "string" && value.trim() !== "";
 
+/** Findings for one entry's layers, stacks, trust and reads (PR-55). `known` is the layer vocabulary. */
+function checkMapping(entry, name, known, paths, roles) {
+  const findings = [];
+  const layers = Array.isArray(entry?.layers) ? entry.layers : [];
+  if (layers.length === 0 || !layers.every((layer) => known.has(layer))) findings.push(`${name}: layers must be some of ${[...known].join(", ")}`);
+  if (entry?.delivery !== "vendored") return findings;
+  const stacks = Array.isArray(entry.stacks) ? entry.stacks : [];
+  if (stacks.length === 0 || !stacks.every(filled)) findings.push(`${name}: stacks must list any, stack ids or toolchains`);
+  const trust = entry.trust ?? {};
+  if (trust.runs_code !== false) findings.push(`${name}: trust.runs_code must be false (the cycle runs no code from a skill)`);
+  if (trust.fetches !== false) findings.push(`${name}: trust.fetches must be false (nothing is fetched at run time)`);
+  if (!DATE.test(trust.reviewed ?? "")) findings.push(`${name}: trust.reviewed must be the date its files were read (YYYY-MM-DD)`);
+  const reads = Array.isArray(entry.reads) ? entry.reads : [];
+  if (reads.length === 0) findings.push(`${name}: reads must say which role reads which file, for which layers`);
+  for (const item of reads) {
+    const where = `${name}: reads ${item?.file ?? "(no file)"}`;
+    if (!paths.has(item?.file)) findings.push(`${where}: not one of its files`);
+    const itemRoles = Array.isArray(item?.roles) ? item.roles : [];
+    if (itemRoles.length === 0 || !itemRoles.every((role) => roles.includes(role))) findings.push(`${where}: roles must be some of the entry's roles`);
+    const itemLayers = Array.isArray(item?.layers) ? item.layers : [];
+    if (itemLayers.length === 0 || !itemLayers.every((layer) => layers.includes(layer))) findings.push(`${where}: layers must be some of the entry's layers`);
+    if (!filled(item?.when)) findings.push(`${where}: no when`);
+  }
+  return findings;
+}
+
 /** Findings for one entry; `listed` collects the files it ships. */
-function checkEntry(entry, where, listed) {
+function checkEntry(entry, where, listed, known) {
   const findings = [];
   const id = entry?.id;
   const name = `${where} ${filled(id) ? id : "(no id)"}`;
@@ -33,6 +62,7 @@ function checkEntry(entry, where, listed) {
   if (!CLASSES.has(licence.class)) findings.push(`${name}: licence.class must be one of ${[...CLASSES].join(", ")}`);
   if (!DELIVERY.has(entry?.delivery)) findings.push(`${name}: delivery must be one of ${[...DELIVERY].join(", ")}`);
   const files = Array.isArray(entry?.files) ? entry.files : [];
+  findings.push(...checkMapping(entry, name, known, new Set(files.map((file) => file?.path)), Array.isArray(entry?.roles) ? entry.roles : []));
   if (entry?.delivery !== "vendored") {
     if (files.length > 0) findings.push(`${name}: only a vendored entry ships files`);
     if (!filled(entry?.reason)) findings.push(`${name}: no reason for not shipping it`);
@@ -79,6 +109,14 @@ export default function skills() {
   const ids = new Set();
   let count = 0;
   let vendored = 0;
+  let engine = null;
+  try {
+    engine = JSON.parse(read(`${DIR}/manifest.json`));
+  } catch {
+    engine = null;
+  }
+  const known = new Set(Object.keys(engine?.layers ?? {}));
+  if (engine && known.size === 0) findings.push(`${DIR}/manifest.json: no layers vocabulary`);
   for (const rel of MANIFESTS) {
     if (!exists(rel)) continue;
     let parsed;
@@ -98,8 +136,12 @@ export default function skills() {
       if (entry?.delivery === "vendored") vendored += 1;
       if (ids.has(entry?.id)) findings.push(`${rel}: id ${entry.id} is used twice`);
       ids.add(entry?.id);
-      findings.push(...checkEntry(entry, rel, listed));
+      findings.push(...checkEntry(entry, rel, listed, known));
     }
+  }
+  if (engine) {
+    const index = exists(`${DIR}/INDEX.md`) ? read(`${DIR}/INDEX.md`).replaceAll("\r\n", "\n") : "";
+    if (index !== renderIndex(engine)) findings.push(`${DIR}/INDEX.md is out of date: run node scripts/devos/skills.mjs index`);
   }
   for (const rel of walk(DIR)) {
     if (OWN.has(rel.slice(DIR.length + 1))) continue;
