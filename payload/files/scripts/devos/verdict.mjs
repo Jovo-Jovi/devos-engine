@@ -18,7 +18,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { P, config, parsePhases, isHumanGate, taskAfter, updatePhasesRow, changedPaths, emit, fail } from "./lib.mjs";
-import { looksLikeLimit, readText, resumeMarker, earliestNotBefore, agentStats } from "./limits.mjs";
+import { looksLikeLimit, readText, resumeMarker, earliestNotBefore, agentStats, parseJsonLoose, finishedRun } from "./limits.mjs";
 import { rulesFiles } from "./firebase.mjs";
 
 const arg = (n, d = "") => { const i = process.argv.indexOf(`--${n}`); return i >= 0 ? process.argv[i + 1] : d; };
@@ -26,6 +26,9 @@ const task = arg("task");
 const attempt = Number(arg("attempt", "1"));
 const reviewerJson = arg("reviewer-json", ".devos/reviewer.json");
 if (!/^T\d{2}$/.test(task)) fail("usage: verdict.mjs --task Tnn --attempt N");
+// PR-54: the reviewer step records which tool reviewed and how its run exited (.devos/reviewer-run.env).
+const run = Object.fromEntries(readText(".devos/reviewer-run.env").split(/\r?\n/).map((line) => /^([a-z_]+)="?([^"]*)"?$/.exec(line)).filter(Boolean).map((m) => [m[1], m[2]]));
+const reviewerTool = run.tool || "the reviewer agent";
 
 const cfg = config();
 const { rows } = parsePhases();
@@ -49,7 +52,7 @@ function finish(verdict, action, extra = {}) {
     notes.length ? "**Runner notes**\n" + notes.map((n) => `- ${n}`).join("\n") : "",
     "",
     `Review: \`${reviewFile}\` · Fence written: \`${extra.fence ?? "none"}\``,
-    agentStats(reviewerJson) ? `\n<sub>Review run: ${agentStats(reviewerJson)}.</sub>` : "",
+    agentStats(reviewerJson, run.tool || "claude") ? `\n<sub>Review run: ${agentStats(reviewerJson, run.tool || "claude")}.</sub>` : "",
     extra.human ? `\n**Human attention:** ${extra.human}` : "",
     action === "quota_wait" ? `\n${resumeMarker(task, attempt, true, extra.notBefore)}` : "",
   ].join("\n");
@@ -88,10 +91,14 @@ function verdictFromFile() {
   };
 }
 
-// 1. The reviewer's structured output.
+// 1. The reviewer's structured output. Claude Code writes one JSON object, Cursor a stream of events whose last
+// is the result, Codex and Gemini a normalised object: the last JSON object is the run's result (PR-54).
 let structured = null;
+let finalResult = null;
 try {
-  const raw = JSON.parse(readFileSync(P(reviewerJson), "utf8"));
+  const raw = parseJsonLoose(readFileSync(P(reviewerJson), "utf8"));
+  if (!raw || typeof raw !== "object") throw new Error("no JSON result in the reviewer's output");
+  finalResult = raw;
   if (raw.is_error) notes.push(`reviewer run reported an error: ${String(raw.result ?? raw.subtype ?? "").slice(0, 300)}`);
   const denials = raw.permission_denials ?? [];
   if (denials.length) notes.push(`reviewer had ${denials.length} tool call(s) refused by permissions, e.g. ${JSON.stringify(denials[0]).slice(0, 200)}`);
@@ -105,22 +112,26 @@ try {
 // PR-21: the review file is the verdict of record; the structured answer is its summary. A reviewer
 // that wrote a complete review file but stopped before its final answer (most often the turn limit)
 // keeps its verdict: it is read from the file. A usage limit still parks the run (PR-12), because a
-// review cut short by a limit may be unfinished.
-const limitHit = looksLikeLimit(readText(reviewerJson), readText(".devos/reviewer.err"));
+// review cut short by a limit may be unfinished. A run that exited 0 with a finished result, or gave its
+// structured answer, never hit a limit (PR-54), whatever words its transcript holds.
+const finished = Boolean(structured) || (run.code === "0" && finishedRun(finalResult));
+const limitHit = !finished && looksLikeLimit(readText(reviewerJson), readText(".devos/reviewer.err"));
 if ((!structured || !["PASS", "FAIL"].includes(structured.verdict)) && !limitHit) {
   const fromFile = verdictFromFile();
   if (fromFile) {
     structured = fromFile;
-    notes.push("the reviewer stopped before its structured answer (turn limit or a crash); the verdict was read from its complete review file (PR-21)");
+    notes.push(run.tool && run.tool !== "claude"
+      ? `the verdict was read from the complete review file (PR-21): ${run.tool} gives no structured answer`
+      : "the reviewer stopped before its structured answer (turn limit or a crash); the verdict was read from its complete review file (PR-21)");
   }
 }
 if (!structured || !["PASS", "FAIL"].includes(structured.verdict)) {
   if (limitHit) {
-    notes.push("the reviewer stopped on a Claude usage or rate limit");
-    const nb = earliestNotBefore("claude", `${readText(reviewerJson)}\n${readText(".devos/reviewer.err")}`, config().resume?.default_wait_minutes ?? 60);
+    notes.push(`the reviewer (${reviewerTool}) stopped on a usage or rate limit`);
+    const nb = earliestNotBefore(run.tool || "claude", `${readText(reviewerJson).slice(-4000)}\n${readText(".devos/reviewer.err")}`, config().resume?.default_wait_minutes ?? 60);
     finish("WAIT", "quota_wait", {
       notBefore: nb,
-      human: `Claude is out of plan usage. Nothing was recorded and the attempt was not used up. The runner re-runs this review (review_only) after ${nb} (UTC); remove the devos:quota-wait label to cancel that.`,
+      human: `The reviewer agent (${reviewerTool}) is out of usage on every account it has. Nothing was recorded and the attempt was not used up. The runner re-runs this review (review_only) after ${nb} (UTC); remove the devos:quota-wait label to cancel that.`,
     });
   }
   notes.push("the reviewer produced no structured verdict; a human must look at the run log");

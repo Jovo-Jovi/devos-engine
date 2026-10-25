@@ -197,7 +197,7 @@ jobs:
             const read=(f)=>{try{return fs.readFileSync(f,"utf8")}catch{return ""}};
             try { r=JSON.parse(read(".devos/intake.json")); } catch {}
             const s=r.structured_output||{};
-            const lim=Boolean(r.limited)||(!s.decision&&/usage limit|limit reached|hit your|rate.?limit|overloaded/i.test(read(".devos/intake.raw")+read(".devos/intake.err")));
+            const lim=Boolean(r.limited)||(!s.decision&&/usage limit|limit reached|hit your|rate.?limit|overloaded/i.test(read(".devos/intake.raw").slice(-4000)+read(".devos/intake.err").slice(-4000)));
             let d=s.decision||(lim?"limit":"error");
             if (d==="accept" && process.env.GUARDS!=="success") d="guards";
             const mins = r.duration_ms ? Math.round(r.duration_ms/60000) : null;

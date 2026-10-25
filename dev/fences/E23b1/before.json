@@ -1,0 +1,22 @@
+{
+  "README.md": "2318e399198672e2cc1cbacd6de8affeb83336ad2870c013e27e713779906255",
+  "package.json": "9dc6275f105d2d92dd8d3da66ce3d8d62097ad4f31078ff5edc68f7ccfc84b76",
+  "payload/files/devos/prompts/blueprint.md": "144d946fe2b78fc16869d50c9d570a66141adcb38af557df3a2b1f53be6cd37a",
+  "payload/files/devos/prompts/builder.md": "bae3605202fee661e124a9dd941768ab653d0f2b6b61e5f7acacdce75935fec1",
+  "payload/files/devos/prompts/intake.md": "71cec84d8a01e0e5025f48ded0c5ab13c33dde802b4b619317eb099d637fe6b5",
+  "payload/files/devos/prompts/reviewer.md": "09b9ae6725dbf696eecc06c44f0d6ae41bc748078f876aa79a7d4f292c6de575",
+  "payload/files/devos/prompts/revise.md": "415bfa94308bf0d78620d8081b9b96d81cd5c444c95459df28a4b666c203340b",
+  "payload/files/devos/skills/README.md": "47d38eda764f23b4e4261f01eeb48a0c14025b241e3f7be2da5f1a411126a810",
+  "payload/files/devos/skills/manifest.json": "e5f1aff55768fe2a776af2fd2548a69e434e86ed37bc2facac2f2fea6819ba23",
+  "payload/files/docs/method/AUTOMATION.md": "3eea3ec01508701064ba577671a3c217c949d7d976089e78f57ffab0b359c5ad",
+  "payload/files/docs/method/DESIGN_METHOD.md": "9b35bf4fdaeb8f2035cdb657ac503c4f8d531aa5a88da63ed0dc9857b19471a7",
+  "payload/files/docs/method/PRECEDENTS.md": "328582052fbb6f1f7c586f57094d7c0d1d9376f395282df17419ddc6f8523262",
+  "payload/files/dot-cursor/skills/devos-compose-ui/SKILL.md": "b6d9652f8877ed12a66895fc0292cb5f27e25b7ca4a3498cd9ed941debfe9e5a",
+  "payload/files/scripts/devos/render-prompt.mjs": "238967e9525b17171fcff66783184ec319f5be4fb7a89376811c0778ca7fb195",
+  "payload/files/scripts/guards/skills.mjs": "a0c75911c964b120d5fc30181b4806b9ed8ab2da0ed8b30be22846e8f9e102ac",
+  "test/install.test.mjs": "13199996fb617eef9384a6abdb4695789efb5329fe3dd06b10da430578f9e300",
+  "test/skills.test.mjs": "938dbd50607b3c7012368b215fcaa8b282badd18d002cabe2ef72494e0da2f65",
+  "test/upgrade.test.mjs": "983475652be4122c5c19c810955094708f3264cd83600e567c4672ac57b5c34a",
+  "test/version.test.mjs": "3c4fcaa9e3c67c35f7d51d160fd070e19e6bef6ad620621413847172a849f3bc",
+  "tools/sources.mjs": "e60cec6c13d2582cbeb4954699063e18ba279bb21bb2bd9303ca057023a411de"
+}

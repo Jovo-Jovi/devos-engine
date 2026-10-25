@@ -336,6 +336,7 @@ jobs:
           GEMINI_KEY_2: ${{ secrets.GEMINI_API_KEY_2 }}
           MODEL: ${{ steps.bm.outputs.model }}
           DEVOS_BUILDER_MODEL: ${{ steps.bm.outputs.model }}
+          DEVOS_BUILDER_TOOL: ${{ steps.ag.outputs.builder_tool }}
           DEVOS_BUILDER_EFFORT: ${{ steps.bm.outputs.effort }}
           DEVOS_BUILDER_FAST: ${{ steps.bm.outputs.fast }}
           # Live progress on the devos:notices issue (scripts/devos/progress.sh). The watchdog strips this
@@ -707,6 +708,7 @@ jobs:
           DEVOS_REVIEW_CRITICAL: ${{ steps.rp.outputs.critical }}
           VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
           DEVOS_BUILDER_MODEL: ${{ steps.bm.outputs.model }}
+          DEVOS_BUILDER_TOOL: ${{ steps.ag.outputs.builder_tool }}
           DEVOS_BUILDER_EFFORT: ${{ steps.bm.outputs.effort }}
           DEVOS_BUILDER_FAST: ${{ steps.bm.outputs.fast }}
         run: |
@@ -794,9 +796,11 @@ jobs:
           kill "$hb" 2>/dev/null
           [ "$used" != "${accounts%% *}" ] && devos_note "Reviewer: switched to $ran_tool account $used."
           echo "reviewer exit code: $rc ($ran_tool account $used)"
+          # PR-54: verdict.mjs reads which tool reviewed and how its run exited.
+          printf 'code=%s\nused=%s\naccounts="%s"\ntool=%s\n' "$rc" "$used" "$accounts" "$ran_tool" > .devos/reviewer-run.env
           tail -c 2000 .devos/reviewer.err || true
           # Surface any tool calls the permission layer refused, so a denial is never silent.
-          node -e 'try{const r=require("./.devos/reviewer.json");const d=r.permission_denials||[];console.log(`reviewer permission denials: ${d.length}`);for(const x of d.slice(0,20))console.log(" -",JSON.stringify(x).slice(0,300))}catch(e){console.log("reviewer.json unreadable:",e.message)}' 
+          node --input-type=module -e 'import { parseJsonLoose, readText } from "./scripts/devos/limits.mjs"; const r = parseJsonLoose(readText(".devos/reviewer.json")); if (!r) { console.log("reviewer.json: no JSON result"); process.exit(0); } const d = r.permission_denials || []; console.log(`reviewer permission denials: ${d.length}`); for (const x of d.slice(0, 20)) console.log(" -", JSON.stringify(x).slice(0, 300));' 
 
       - name: Guard — reviewer surface
         if: steps.bs.outputs.state == 'ok'

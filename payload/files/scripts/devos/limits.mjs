@@ -3,6 +3,7 @@
 // re-dispatches it hourly. Keep the patterns broad; a false positive only delays a retry by an hour.
 import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { P } from "./lib.mjs";
+import { parseUsage } from "./usage.mjs";
 
 const LIMIT_RE = new RegExp(
   [
@@ -15,8 +16,22 @@ const LIMIT_RE = new RegExp(
 
 export const readText = (rel) => (existsSync(P(rel)) ? readFileSync(P(rel), "utf8") : "");
 
+/**
+ * PR-54: only the end of each text is read. A streamed run (Cursor's stream-json) holds the whole transcript,
+ * file contents included, and the patterns are broad: a word like "quota" in a file the agent read is not a limit.
+ * A limit message is the last thing a stopped run prints.
+ */
+export const LIMIT_TAIL = 4000;
 export function looksLikeLimit(...texts) {
-  return LIMIT_RE.test(texts.filter(Boolean).join("\n"));
+  return LIMIT_RE.test(texts.filter(Boolean).map((text) => String(text).slice(-LIMIT_TAIL)).join("\n"));
+}
+
+/** True when a run's final result says it finished: a result object with no error flag and no error subtype. */
+export function finishedRun(json) {
+  if (!json || typeof json !== "object") return false;
+  if (json.is_error === true) return false;
+  if (/^error/.test(String(json.subtype ?? ""))) return false;
+  return json.type === undefined || json.type === "result";
 }
 
 /** Marker the devos-resume workflow reads from the PR comments. */
@@ -77,13 +92,29 @@ export function earliestNotBefore(tool, currentText, defaultMinutes = 60, now = 
   return stated[0] ?? notBefore("", defaultMinutes, now);
 }
 
-/** One line on what an agent run cost (PR-20): minutes, turns, tokens read and written. */
-export function agentStats(rel) {
-  const r = parseJsonLoose(readText(rel));
+/**
+ * One line on what an agent run cost (PR-20): minutes, turns, tokens read and written. A tool other than
+ * Claude Code keeps its tokens in its own events, so they come from the usage parser (PR-52, PR-54).
+ */
+export function agentStats(rel, tool = "claude") {
+  const text = readText(rel);
+  const r = parseJsonLoose(text);
   if (!r || typeof r !== "object" || r.duration_ms == null) return "";
-  const u = r.usage ?? {};
   const k = (n) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : `${Math.round((n || 0) / 1000)}k`);
-  const read = (u.input_tokens || 0) + (u.cache_read_input_tokens || 0) + (u.cache_creation_input_tokens || 0);
-  return `${Math.round(r.duration_ms / 60000)} min, ${r.num_turns ?? "?"} turns, ${k(read)} tokens read (${k(u.cache_read_input_tokens)} from cache), ${k(u.output_tokens)} written`;
+  let read;
+  let cached;
+  let written;
+  if (tool === "claude" && r.usage) {
+    const u = r.usage;
+    read = (u.input_tokens || 0) + (u.cache_read_input_tokens || 0) + (u.cache_creation_input_tokens || 0);
+    cached = u.cache_read_input_tokens || 0;
+    written = u.output_tokens || 0;
+  } else {
+    const u = parseUsage(tool, text);
+    read = (u.input || 0) + (u.cache_read || 0) + (u.cache_write || 0);
+    cached = u.cache_read || 0;
+    written = u.output || 0;
+  }
+  return `${Math.round(r.duration_ms / 60000)} min, ${r.num_turns ?? "?"} turns, ${k(read)} tokens read (${k(cached)} from cache), ${k(written)} written`;
 }
 

@@ -1,0 +1,17 @@
+{
+  "README.md": "1d64f743f31bbb169e03543688c84b21932c633b89fecde6ec92609dab3d2ae2",
+  "package.json": "fe5207444ba615f553015d8d6f70d6ad69893d4d6b7e30f86f0d707d63bc358b",
+  "payload/files/devos/prompts/builder.md": "5de2f88e1c44471d1cec78cd8f47d7e23c1258c8d7525a81e34bfbecaa9738f1",
+  "payload/files/docs/method/AUTOMATION.md": "b12dd8cba449d5d3811b8008d77fc05f8a1633d16cc2308ccdaa487bfe710e3b",
+  "payload/files/docs/method/PRECEDENTS.md": "5837f4fe56ebed5ad4bbc5689ffcf8226e9892b8a8ffb2546517ba3a898e6c72",
+  "payload/files/dot-github/workflows/devos-cycle.yml": "94b7ae76707d4b996dfdab38fd78c86026c770d8298f33f2b7b2d6409ae879e3",
+  "payload/files/dot-github/workflows/devos-intake.yml": "27367140d2e55d3edeecea5ab66b408b5484ac75d7426eff45be4449ae194090",
+  "payload/files/scripts/devos/limit-check.mjs": "7a8e8c9347e53a70e3e40d48c909b032b09a4420a05b50b93e682407bdfcd130",
+  "payload/files/scripts/devos/limits.mjs": "5a60a550a26247edf67072c601bf6faec36d5ca951e8aab519e4480a46df5991",
+  "payload/files/scripts/devos/render-prompt.mjs": "78c9fb7cae70567894837c1bf7ec00638acd28138f1a9a1ddfbaf21b92913156",
+  "payload/files/scripts/devos/verdict.mjs": "5854e83b00729fb439008fc2b59bdfcba34eca9a56447584deef7f730bf94618",
+  "test/install.test.mjs": "7df4b94f23a31b3e22fb3949f8c3663531767a8e97aa7b28d49fc3dda42c552e",
+  "test/upgrade.test.mjs": "b297b2f024a0d2b0d0151fdbf9878a8347a3a30191335adcc26d481e9ae4f2be",
+  "test/version.test.mjs": "d484eeec750e15660070ba23a3b185392dcdaedd7b8ba025318d195067ca91c0",
+  "tools/sources.mjs": "28d88d4e1c0c2087a2ebb0423506c0758be87eaa9c66c7b7f19dcd1540c711d5"
+}

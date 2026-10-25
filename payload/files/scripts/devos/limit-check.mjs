@@ -3,7 +3,8 @@
 // Exit 0 = limited (switch accounts or park), 1 = not limited.
 //   node scripts/devos/limit-check.mjs --json .devos/reviewer.json --err .devos/reviewer.err [--exit 1]
 // A run that produced its structured answer, or exited 0 without an error flag, is never "limited":
-// the limit patterns are broad, and a finished run's own text must not trigger a switch.
+// the limit patterns are broad, and a finished run's own text must not trigger a switch. Only the end of
+// the output is read (PR-54).
 import { readText, looksLikeLimit, parseJsonLoose } from "./limits.mjs";
 
 const arg = (n) => { const i = process.argv.indexOf(`--${n}`); return i >= 0 ? process.argv[i + 1] ?? "" : ""; };

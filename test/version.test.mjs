@@ -6,11 +6,11 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
-test("devos --version prints devos 0.2.1", () => {
+test("devos --version prints devos 0.2.2", () => {
   const result = spawnSync(process.execPath, [path.join(root, "bin", "devos.mjs"), "--version"], {
     encoding: "utf8",
     windowsHide: true,
   });
   assert.equal(result.status, 0);
-  assert.equal(result.stdout, "devos 0.2.1\n");
+  assert.equal(result.stdout, "devos 0.2.2\n");
 });

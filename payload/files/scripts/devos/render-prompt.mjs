@@ -3,7 +3,7 @@
 // Usage: node scripts/devos/render-prompt.mjs builder|reviewer|revise Tnn attempt [--out file]
 //        node scripts/devos/render-prompt.mjs intake - - [--out file]
 // Environment it reads when set: DEVOS_BUILDER_MODEL, DEVOS_BUILDER_EFFORT, DEVOS_BUILDER_FAST,
-// DEVOS_PREVIEW_URL, DEVOS_ISSUE, DEVOS_INTAKE_RESUME, DEVOS_REVIEW_MODE, DEVOS_REVIEW_REASONS, DEVOS_REVIEW_CRITICAL.
+// DEVOS_BUILDER_TOOL, DEVOS_PREVIEW_URL, DEVOS_ISSUE, DEVOS_INTAKE_RESUME, DEVOS_REVIEW_MODE, DEVOS_REVIEW_REASONS, DEVOS_REVIEW_CRITICAL.
 import { readFileSync, writeFileSync, existsSync, readdirSync } from "node:fs";
 import { P, parsePhases, isHumanGate, taskAfter, config, fail } from "./lib.mjs";
 import { poolText } from "./agents.mjs";
@@ -34,6 +34,8 @@ function commonVars(cfg, rows) {
     RESUME_LINE: env.DEVOS_INTAKE_RESUME === "true"
       ? "\n**This run continues an earlier one that stopped (usage limit or no decision).** Its partial files are already in the tree on this branch (`git diff --stat origin/main...HEAD`). Read them, verify them against the repository, and complete them. Do not start over, renumber, or duplicate what is there: task ids already added on this branch stand, and the next free id below applies only to tasks you still add.\n"
       : "",
+    // PR-54: the builder's tool by its name (the runner passes the pool pick's tool).
+    BUILDER_TOOL: { cursor: "Cursor", claude: "Claude Code", codex: "Codex", gemini: "Gemini" }[env.DEVOS_BUILDER_TOOL] || env.DEVOS_BUILDER_TOOL || "the builder agent",
     BUILDER_MODEL: env.DEVOS_BUILDER_MODEL || cfg.builder.model,
     BUILDER_EFFORT: env.DEVOS_BUILDER_EFFORT || cfg.builder.default_effort || "high",
     BUILDER_FAST: env.DEVOS_BUILDER_FAST || "no",

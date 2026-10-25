@@ -153,8 +153,8 @@ workflow may start late.
 | `review-mode.mjs` | light or deep review, model (the chosen reviewer's; no fallback model, PR-53), effort, turns, critical paths |
 | `evidence.mjs` | `.devos/evidence.md`, the reviewer's evidence pack |
 | `render-prompt.mjs` | fills `devos/prompts/*.md` |
-| `verdict.mjs` | validates the review, applies PR-08 and the gates, records PHASES, picks the action |
-| `limits.mjs` | limit patterns, reset parsing, `earliestNotBefore`, run cost |
+| `verdict.mjs` | validates the review, applies PR-08 and the gates, records PHASES, picks the action. It reads any tool's output (its last JSON object: Claude Code's result, Cursor's last stream event, Codex's and Gemini's normalised object) and `.devos/reviewer-run.env` (the tool and its exit code, written by the reviewer step): a run that exited 0 with a finished result never counts as a limit, and a tool with no structured answer has its verdict read from the complete review file (PR-54) |
+| `limits.mjs` | limit patterns (read on the last 4000 characters of each output only, PR-54), reset parsing, `earliestNotBefore`, run cost for every tool |
 | `usage.mjs` | the usage record (PR-52): `record` adds one line per agent run to `.devos/usage/pending.jsonl` (stage, task, tool, model, input, output, cache-read and cache-write tokens, the tool's own cost, seconds); `flush` moves the lines to `docs/usage/<task>.jsonl` in the runner's commit; `report --write` rebuilds `docs/USAGE.md`, the totals by model, stage and task, priced from the tool's own cost or `devos/prices.json`. Every builder run is recorded by `agent-watchdog.sh` (`DEVOS_USAGE_STAGE`), every reviewer, intake and revise run right after its call; the gate doctor's and the supervisor's runs go on their run summary only (`--summary`). A record never fails a run |
 | `doctor.mjs` | the gate doctor's facts, rules and comment |
 | `setup-check.mjs` · `setup-issue.mjs` | settings by name; the setup issue and resumptions (PR-27). An item applies only to what the project uses: a module it chose at `devos init` (`chosen:`, from `devos/answers.json`) or a fence names, a tool an agent runs on (PR-53) |
