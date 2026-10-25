@@ -1,11 +1,12 @@
 // guard:skills — the skills the agents read are pinned, licensed for their use, reviewed for trust, mapped to
-// their layers and roles, and unchanged (docs/method/DESIGN_METHOD.md §7, PR-51, PR-55). Reads
-// devos/skills/manifest.json (the engine's) and, when the project added skills of its own, devos/skills/local.json
-// (the same format). devos/skills/INDEX.md must be the one scripts/devos/skills.mjs generates from manifest.json.
+// their layers, roles, priorities and conditions, and unchanged (docs/method/DESIGN_METHOD.md §7, PR-51, PR-55,
+// PR-56). Reads devos/skills/manifest.json (the engine's) and, when the project added skills of its own,
+// devos/skills/local.json (the same format). devos/skills/INDEX.md must be the one scripts/devos/skills.mjs generates
+// from manifest.json.
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { exists, read, result, walk, P } from "./lib.mjs";
-import { renderIndex } from "../devos/skills.mjs";
+import { CONDITION_KEYS, PRIORITIES, renderIndex } from "../devos/skills.mjs";
 
 const DIR = "devos/skills";
 const MANIFESTS = [`${DIR}/manifest.json`, `${DIR}/local.json`];
@@ -24,14 +25,48 @@ function sha256(rel) {
 
 const filled = (value) => typeof value === "string" && value.trim() !== "";
 
-/** Findings for one entry's layers, stacks, trust and reads (PR-55). `known` is the layer vocabulary. */
-function checkMapping(entry, name, known, paths, roles) {
+/** Findings for a conditional read's `if` (PR-56): clauses of topics, modules and deep. */
+function checkIf(read, where, topics) {
+  const findings = [];
+  const priority = read?.priority ?? "recommended";
+  if (!PRIORITIES.includes(priority)) findings.push(`${where}: priority must be one of ${PRIORITIES.join(", ")}`);
+  if (priority !== "conditional") {
+    if (read?.if !== undefined) findings.push(`${where}: only a conditional read has if`);
+    return findings;
+  }
+  const clauses = Array.isArray(read?.if) ? read.if : [];
+  if (clauses.length === 0) findings.push(`${where}: a conditional read needs if, a list of clauses`);
+  for (const clause of clauses) {
+    const keys = clause && typeof clause === "object" ? Object.keys(clause) : [];
+    if (keys.length === 0 || !keys.every((key) => CONDITION_KEYS.includes(key))) {
+      findings.push(`${where}: each clause of if uses ${CONDITION_KEYS.join(", ")}`);
+      continue;
+    }
+    if (keys.includes("topics") && (!Array.isArray(clause.topics) || clause.topics.length === 0 || !clause.topics.every((topic) => topics.has(topic)))) {
+      findings.push(`${where}: topics must be some of the manifest's topics`);
+    }
+    if (keys.includes("modules") && (!Array.isArray(clause.modules) || clause.modules.length === 0 || !clause.modules.every(filled))) {
+      findings.push(`${where}: modules must list module names`);
+    }
+    if (keys.includes("deep") && clause.deep !== true) findings.push(`${where}: deep must be true`);
+  }
+  return findings;
+}
+
+/** Findings for one entry's layers, stacks, modules, notes, trust and reads (PR-55, PR-56). */
+function checkMapping(entry, name, known, paths, roles, topics, files) {
   const findings = [];
   const layers = Array.isArray(entry?.layers) ? entry.layers : [];
   if (layers.length === 0 || !layers.every((layer) => known.has(layer))) findings.push(`${name}: layers must be some of ${[...known].join(", ")}`);
   if (entry?.delivery !== "vendored") return findings;
   const stacks = Array.isArray(entry.stacks) ? entry.stacks : [];
   if (stacks.length === 0 || !stacks.every(filled)) findings.push(`${name}: stacks must list any, stack ids or toolchains`);
+  if (entry.modules !== undefined && (!Array.isArray(entry.modules) || entry.modules.length === 0 || !entry.modules.every(filled))) {
+    findings.push(`${name}: modules must list module names`);
+  }
+  if (entry.notes !== undefined && !files.some((file) => file?.path === entry.notes && file?.origin === "devos")) {
+    findings.push(`${name}: notes must be one of its files, written by DEV_OS (origin devos)`);
+  }
   const trust = entry.trust ?? {};
   if (trust.runs_code !== false) findings.push(`${name}: trust.runs_code must be false (the cycle runs no code from a skill)`);
   if (trust.fetches !== false) findings.push(`${name}: trust.fetches must be false (nothing is fetched at run time)`);
@@ -46,12 +81,13 @@ function checkMapping(entry, name, known, paths, roles) {
     const itemLayers = Array.isArray(item?.layers) ? item.layers : [];
     if (itemLayers.length === 0 || !itemLayers.every((layer) => layers.includes(layer))) findings.push(`${where}: layers must be some of the entry's layers`);
     if (!filled(item?.when)) findings.push(`${where}: no when`);
+    findings.push(...checkIf(item, where, topics));
   }
   return findings;
 }
 
 /** Findings for one entry; `listed` collects the files it ships. */
-function checkEntry(entry, where, listed, known) {
+function checkEntry(entry, where, listed, known, topics) {
   const findings = [];
   const id = entry?.id;
   const name = `${where} ${filled(id) ? id : "(no id)"}`;
@@ -62,7 +98,7 @@ function checkEntry(entry, where, listed, known) {
   if (!CLASSES.has(licence.class)) findings.push(`${name}: licence.class must be one of ${[...CLASSES].join(", ")}`);
   if (!DELIVERY.has(entry?.delivery)) findings.push(`${name}: delivery must be one of ${[...DELIVERY].join(", ")}`);
   const files = Array.isArray(entry?.files) ? entry.files : [];
-  findings.push(...checkMapping(entry, name, known, new Set(files.map((file) => file?.path)), Array.isArray(entry?.roles) ? entry.roles : []));
+  findings.push(...checkMapping(entry, name, known, new Set(files.map((file) => file?.path)), Array.isArray(entry?.roles) ? entry.roles : [], topics, files));
   if (entry?.delivery !== "vendored") {
     if (files.length > 0) findings.push(`${name}: only a vendored entry ships files`);
     if (!filled(entry?.reason)) findings.push(`${name}: no reason for not shipping it`);
@@ -117,6 +153,16 @@ export default function skills() {
   }
   const known = new Set(Object.keys(engine?.layers ?? {}));
   if (engine && known.size === 0) findings.push(`${DIR}/manifest.json: no layers vocabulary`);
+  const topics = new Set(Object.keys(engine?.topics ?? {}));
+  for (const [topic, spec] of Object.entries(engine?.topics ?? {})) {
+    if (!filled(spec?.covers)) findings.push(`${DIR}/manifest.json: topic ${topic}: no covers`);
+    try {
+      new RegExp(spec?.match, "i");
+      if (!filled(spec?.match)) throw new Error("empty");
+    } catch {
+      findings.push(`${DIR}/manifest.json: topic ${topic}: match must be a regular expression`);
+    }
+  }
   for (const rel of MANIFESTS) {
     if (!exists(rel)) continue;
     let parsed;
@@ -136,7 +182,7 @@ export default function skills() {
       if (entry?.delivery === "vendored") vendored += 1;
       if (ids.has(entry?.id)) findings.push(`${rel}: id ${entry.id} is used twice`);
       ids.add(entry?.id);
-      findings.push(...checkEntry(entry, rel, listed, known));
+      findings.push(...checkEntry(entry, rel, listed, known, topics));
     }
   }
   if (engine) {

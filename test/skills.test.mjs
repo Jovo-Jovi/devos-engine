@@ -62,7 +62,7 @@ function writeLocal(dir, entry) {
 test("skills.test.mjs (a) the shipped skills pass", () => {
   const dir = project();
   try {
-    assert.deepEqual(guard(dir), { status: "PASS", findings: [], note: "12 skills checked, 7 vendored" });
+    assert.deepEqual(guard(dir), { status: "PASS", findings: [], note: "21 skills checked, 12 vendored" });
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -86,7 +86,7 @@ test("skills.test.mjs (c) a project's own skill in local.json passes", () => {
   const dir = project();
   try {
     writeLocal(dir, localEntry());
-    assert.deepEqual(guard(dir), { status: "PASS", findings: [], note: "13 skills checked, 8 vendored" });
+    assert.deepEqual(guard(dir), { status: "PASS", findings: [], note: "22 skills checked, 13 vendored" });
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -209,9 +209,13 @@ test("skills.test.mjs (i) the builder's and the reviewer's prompts list the task
     assert.match(builder, /^  - `devos\/skills\/frontend-design\/SKILL.md` — the visual direction in `docs\/DESIGN_SYSTEM.md`, and every new screen$/m);
     assert.equal(builder.includes("devos/skills/taste/references/critique.md"), false);
     assert.match(render("reviewer"), /^  - `devos\/skills\/taste\/references\/critique.md` — judging the captures of a public page$/m);
-    writeFileSync(path.join(dir, "docs", "fences", "T01.md"), "# T01\n\n- Layers: backend · database\n");
+    writeFileSync(path.join(dir, "docs", "fences", "T01.md"), "# T01\n\n- Layers: testing\n");
     assert.equal(render("builder").includes("Skills for this task"), false);
     assert.equal(render("builder").includes("{{"), false);
+    // PR-56: a server-side layer brings the security gate's files.
+    writeFileSync(path.join(dir, "docs", "fences", "T01.md"), "# T01\n\n- Layers: backend · database\n");
+    assert.match(render("builder"), /^- \*\*Skills for this task\*\* \(layers backend · database · security, from the fence and the security gate: the backend and database layers are server-side;/m);
+    assert.match(render("builder"), /^  - `devos\/skills\/owasp-cheat-sheets\/SQL_Injection_Prevention_Cheat_Sheet.md` — every query: bind values, map identifiers$/m);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

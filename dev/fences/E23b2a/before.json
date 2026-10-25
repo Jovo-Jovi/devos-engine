@@ -1,0 +1,17 @@
+{
+  "README.md": "89eb236b3617e9c680016542ac38c6a6cb2d34badc8b9e0a65737965e0214be6",
+  "package.json": "6124ae2e8c9414341f9b5cbe56c6abef6c40163f82fa17fdae875860a1347425",
+  "payload/files/devos/skills/INDEX.md": "2de648f56abf4e3e916ba3160447d7ba4aa544b73911191c22156abdb365a6eb",
+  "payload/files/devos/skills/README.md": "4b9a0454a35807cb26874ef5b8afdcb2e2fc214bb2ef1370bbc3b6f26cd88be5",
+  "payload/files/devos/skills/manifest.json": "ac8efd055027f1d92190ab1503f08e0fcdc34743deeb8effd36d44f8ca5478a7",
+  "payload/files/docs/method/AUTOMATION.md": "6a922525ba2b54a918977940263737d14934c91be9a485f49dcfb8545f569af6",
+  "payload/files/docs/method/PRECEDENTS.md": "bea2de7854a7aebc08a5f96bc63ad8d6f479f45a826376e4b9a93cd04524aede",
+  "payload/files/scripts/devos/skills.mjs": "d99d36b432658491e73d7ccd7ece6850adf8a968b837d7e54d49cdcf84edb44e",
+  "payload/files/scripts/guards/skills.mjs": "f685bc4cf22d25291f1984819872b2a6d051d1229a5d650dd42fb43ff90cb508",
+  "test/install.test.mjs": "31b487cbe8408e38cfadd1ce7f23647d36a18ce76a61b2e02a8fa2db45062468",
+  "test/skills.test.mjs": "4351e8dec701c8880f1aab949ddab9131722c0efa0a6c4f2d3d76e49c05bf761",
+  "test/upgrade.test.mjs": "f92d33460b719330cbec7f9ad4ab960c8fac5f68998ccd8b18bc7e00d68b6c66",
+  "test/version.test.mjs": "fc4fb6d409685e6dd2feb2ce9a586a2a6a45024501eac24548061628e5c4a0c1",
+  "tools/sources.mjs": "df37e443ef9363da36afc735637a7c65cf7e2fbf0edc2966a2981eeb90585db9",
+  "tools/specifics-allow.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+}

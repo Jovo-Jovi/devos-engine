@@ -1,5 +1,5 @@
 {
-  "engine_version": "0.2.3",
+  "engine_version": "0.2.4",
   "source": {
     "repo": "Jovo-Jovi/devos-control-tower",
     "commit": "a49ca6db268b98d6558077bf3e95b8ae759d91b3"
@@ -392,13 +392,13 @@
     {
       "path": "devos/skills/INDEX.md",
       "stored": "devos/skills/INDEX.md",
-      "sha256": "2de648f56abf4e3e916ba3160447d7ba4aa544b73911191c22156abdb365a6eb",
+      "sha256": "eed887c05074212dfcd1f01d3b0683ed9bce37bca6c7b3726292e39d9aebd55b",
       "owner": "engine"
     },
     {
       "path": "devos/skills/README.md",
       "stored": "devos/skills/README.md",
-      "sha256": "4b9a0454a35807cb26874ef5b8afdcb2e2fc214bb2ef1370bbc3b6f26cd88be5",
+      "sha256": "0032445eb792ace2f685f1972664e6e0984f41ef4958c9c569623075b93a44de",
       "owner": "engine"
     },
     {
@@ -435,6 +435,48 @@
       "path": "devos/skills/frontend-design/SKILL.md",
       "stored": "devos/skills/frontend-design/SKILL.md",
       "sha256": "d91970639e9f5c37682ac7ab60094d35f1c7c1f38d731bd56396563aee10c1d3",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/google-aips/0155.md",
+      "stored": "devos/skills/google-aips/0155.md",
+      "sha256": "031a0e49e3827eb671ec972a2f03a2b1b2a9a0d1daf0bfd33584f27208827d1c",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/google-aips/0158.md",
+      "stored": "devos/skills/google-aips/0158.md",
+      "sha256": "3275e7ac12a1f9f8b3f10e36edb47d942e83293ab5a27aa3aea3107f0f0e7b76",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/google-aips/0180.md",
+      "stored": "devos/skills/google-aips/0180.md",
+      "sha256": "36d325d519ed3f1100b50156258a6bf4e81224ebef5fa277ad94dfa970d954b3",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/google-aips/0193.md",
+      "stored": "devos/skills/google-aips/0193.md",
+      "sha256": "d76399f08a3a01256f75f567596e95f57eec9deb6f6f3b28333d80e8f012018a",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/google-aips/ATTRIBUTION.md",
+      "stored": "devos/skills/google-aips/ATTRIBUTION.md",
+      "sha256": "4b34a7aec30fead1a103e2beb733cf0b593d4dbb7821bf918ba40b270f1b783d",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/google-aips/DEVOS-NOTES.md",
+      "stored": "devos/skills/google-aips/DEVOS-NOTES.md",
+      "sha256": "c69dc0a4ac98250a4dff497da3004a804bc37805faf2e7755035c58ae4d3e913",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/google-aips/LICENSE.md",
+      "stored": "devos/skills/google-aips/LICENSE.md",
+      "sha256": "c80d18310bc29da5c83a5c66dff8e43c79ae0a66b6cd1a5c5fe21df3d58aa32a",
       "owner": "engine"
     },
     {
@@ -518,7 +560,247 @@
     {
       "path": "devos/skills/manifest.json",
       "stored": "devos/skills/manifest.json",
-      "sha256": "ac8efd055027f1d92190ab1503f08e0fcdc34743deeb8effd36d44f8ca5478a7",
+      "sha256": "f55e47a0a9538f6d0971cd02f265972fe3d6261a44b430ffbb9183e558bb68ae",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/owasp-api-top10-2023/0x00-notice.md",
+      "stored": "devos/skills/owasp-api-top10-2023/0x00-notice.md",
+      "sha256": "674a7e9d3096a3957cfd5380fec4af5d335f904d514ef9b5a0397cfe8e21006e",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/owasp-api-top10-2023/0x11-t10.md",
+      "stored": "devos/skills/owasp-api-top10-2023/0x11-t10.md",
+      "sha256": "c396a9fc70a64ea6bccba608b482a99750f00f0ad6c283d6fbdd5c4d936040a3",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/owasp-api-top10-2023/0xa1-broken-object-level-authorization.md",
+      "stored": "devos/skills/owasp-api-top10-2023/0xa1-broken-object-level-authorization.md",
+      "sha256": "f5a827897509a005095c306d05e56b8dc713717a78cb5360a2ba4b3c29bf4b2b",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/owasp-api-top10-2023/0xa2-broken-authentication.md",
+      "stored": "devos/skills/owasp-api-top10-2023/0xa2-broken-authentication.md",
+      "sha256": "9c15446740599f7bcf709a406ca5627028793e701dd1798ba711a95e9b933971",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/owasp-api-top10-2023/0xa3-broken-object-property-level-authorization.md",
+      "stored": "devos/skills/owasp-api-top10-2023/0xa3-broken-object-property-level-authorization.md",
+      "sha256": "d316b89ee31f4689d4a4fafd1b97b62b7d05ac880945a478991ae4abf64a961d",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/owasp-api-top10-2023/0xa4-unrestricted-resource-consumption.md",
+      "stored": "devos/skills/owasp-api-top10-2023/0xa4-unrestricted-resource-consumption.md",
+      "sha256": "8df9df403fd0007bc28bd9a9a60e46739c6797b1f7135c7f0f683a7362f40e38",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/owasp-api-top10-2023/0xa5-broken-function-level-authorization.md",
+      "stored": "devos/skills/owasp-api-top10-2023/0xa5-broken-function-level-authorization.md",
+      "sha256": "bdaf0f1f0ec6e527c0c30aaca50a7328ed5b3c386bf6ab86e878116f4a3dd808",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/owasp-api-top10-2023/0xa6-unrestricted-access-to-sensitive-business-flows.md",
+      "stored": "devos/skills/owasp-api-top10-2023/0xa6-unrestricted-access-to-sensitive-business-flows.md",
+      "sha256": "b499f299f634b20557d0f9e335b105d6a738039fe5436b3eb09fe7f74ce63a27",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/owasp-api-top10-2023/0xa7-server-side-request-forgery.md",
+      "stored": "devos/skills/owasp-api-top10-2023/0xa7-server-side-request-forgery.md",
+      "sha256": "f1abf2f9d55a0b50a2004e44bc2ea95348c41452197bc5d1bc7dd71b70f52e6c",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/owasp-api-top10-2023/0xa8-security-misconfiguration.md",
+      "stored": "devos/skills/owasp-api-top10-2023/0xa8-security-misconfiguration.md",
+      "sha256": "13b9629746921f2ccd6fac1364cdfbb50f10d7b11faf668589d9994716c333de",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/owasp-api-top10-2023/0xa9-improper-inventory-management.md",
+      "stored": "devos/skills/owasp-api-top10-2023/0xa9-improper-inventory-management.md",
+      "sha256": "8d5d7e6130fac2b28f5808508d4f90683d99ae5a37f9d3d0d9714c853c39ca4f",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/owasp-api-top10-2023/0xaa-unsafe-consumption-of-apis.md",
+      "stored": "devos/skills/owasp-api-top10-2023/0xaa-unsafe-consumption-of-apis.md",
+      "sha256": "b5fe9034253ca2d7f7c4c9ef0a6db2b71da1689490911a5bb1f5aad2cab78706",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/owasp-api-top10-2023/ATTRIBUTION.md",
+      "stored": "devos/skills/owasp-api-top10-2023/ATTRIBUTION.md",
+      "sha256": "bb89ab47ec35143a0f121077614ce33f939c2797c31aa555f14f4c36c34b5eef",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/owasp-api-top10-2023/DEVOS-NOTES.md",
+      "stored": "devos/skills/owasp-api-top10-2023/DEVOS-NOTES.md",
+      "sha256": "c510aff3d9af5f7bdee4fcd387e2d9ad96f27a31bf3c81e2da99f31ea7c12600",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/owasp-api-top10-2023/LICENSE",
+      "stored": "devos/skills/owasp-api-top10-2023/LICENSE",
+      "sha256": "9cff5eeb59f0a5f06d7cbe4c2435e7bbbce4edaab1d97b66324104f60a527cb7",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/owasp-cheat-sheets/ATTRIBUTION.md",
+      "stored": "devos/skills/owasp-cheat-sheets/ATTRIBUTION.md",
+      "sha256": "350ba450ce358687378a1fdd1fc34c56652298eb2e55590261e8cd862d92796f",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/owasp-cheat-sheets/Authentication_Cheat_Sheet.md",
+      "stored": "devos/skills/owasp-cheat-sheets/Authentication_Cheat_Sheet.md",
+      "sha256": "92f7483b28548679917a329c7b9be1824f33e934d9eed670aaf3e9a1e7b37e83",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/owasp-cheat-sheets/Authorization_Cheat_Sheet.md",
+      "stored": "devos/skills/owasp-cheat-sheets/Authorization_Cheat_Sheet.md",
+      "sha256": "fb8b6e5c60ed783025beefb5049142fd9da02d01f5c95de18a19d26479737975",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/owasp-cheat-sheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.md",
+      "stored": "devos/skills/owasp-cheat-sheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.md",
+      "sha256": "8393658c07a3ec99c8195781a376fde895a9a230ec9fe489743bb6821920ab75",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/owasp-cheat-sheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.md",
+      "stored": "devos/skills/owasp-cheat-sheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.md",
+      "sha256": "199c484557a3d2e6732daec1d2b8d683645163ce1d7dd58f7e5590d93f5a2719",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/owasp-cheat-sheets/DEVOS-NOTES.md",
+      "stored": "devos/skills/owasp-cheat-sheets/DEVOS-NOTES.md",
+      "sha256": "fe53b5f2e4e63edce2bc752616bc0bc21262deb943ef55ee13d77633884f6761",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/owasp-cheat-sheets/Database_Security_Cheat_Sheet.md",
+      "stored": "devos/skills/owasp-cheat-sheets/Database_Security_Cheat_Sheet.md",
+      "sha256": "b5ad6125f2f908949df3a7866daa03a9f8487e94ea84f384eb852948375f15e2",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/owasp-cheat-sheets/Error_Handling_Cheat_Sheet.md",
+      "stored": "devos/skills/owasp-cheat-sheets/Error_Handling_Cheat_Sheet.md",
+      "sha256": "237bcae265acbb98434a0c5b544554c83e8a05c2de3e0d12eaf055c460d99aae",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/owasp-cheat-sheets/File_Upload_Cheat_Sheet.md",
+      "stored": "devos/skills/owasp-cheat-sheets/File_Upload_Cheat_Sheet.md",
+      "sha256": "65f9a85b72e016063d1dafdb5b366cd52a94f8e4bf855f3b6bec22afec10bb81",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/owasp-cheat-sheets/HTTP_Headers_Cheat_Sheet.md",
+      "stored": "devos/skills/owasp-cheat-sheets/HTTP_Headers_Cheat_Sheet.md",
+      "sha256": "df04323a8b10ef16cf3a248dc1431fc3d19edde6d905e70754f36ab0f3a045d6",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/owasp-cheat-sheets/Injection_Prevention_Cheat_Sheet.md",
+      "stored": "devos/skills/owasp-cheat-sheets/Injection_Prevention_Cheat_Sheet.md",
+      "sha256": "fafcc12af83a78c909a973f7e81af1a661eac709a5a6c9ddad8792c2edda7658",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/owasp-cheat-sheets/Input_Validation_Cheat_Sheet.md",
+      "stored": "devos/skills/owasp-cheat-sheets/Input_Validation_Cheat_Sheet.md",
+      "sha256": "163390e3dcf5cc965aeac5e633692682403c08067a7f2ae54bdb49372e886810",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/owasp-cheat-sheets/Insecure_Direct_Object_Reference_Prevention_Cheat_Sheet.md",
+      "stored": "devos/skills/owasp-cheat-sheets/Insecure_Direct_Object_Reference_Prevention_Cheat_Sheet.md",
+      "sha256": "3b0cef632300124beb38ba4169cc163cfce44dd768885e58fb56b4285c42da7f",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/owasp-cheat-sheets/LICENSE.md",
+      "stored": "devos/skills/owasp-cheat-sheets/LICENSE.md",
+      "sha256": "2b47ecdd5078e948395bc5980226933854228ff688f10d1dd059208be4956084",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/owasp-cheat-sheets/Logging_Cheat_Sheet.md",
+      "stored": "devos/skills/owasp-cheat-sheets/Logging_Cheat_Sheet.md",
+      "sha256": "55ed0b4e9b2a68dba0f5a26c817a20760632d91b315aa42bb33ecfe36cc7195d",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/owasp-cheat-sheets/Mass_Assignment_Cheat_Sheet.md",
+      "stored": "devos/skills/owasp-cheat-sheets/Mass_Assignment_Cheat_Sheet.md",
+      "sha256": "f325d48b32fd86e2b5450f51ccf773b639263f3c16b6daf6634587c262e5d4ea",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/owasp-cheat-sheets/Multi_Tenant_Security_Cheat_Sheet.md",
+      "stored": "devos/skills/owasp-cheat-sheets/Multi_Tenant_Security_Cheat_Sheet.md",
+      "sha256": "2dfdad6b9701f3023f3a3063435166ddafde144225ba612a5b2ded3f43991cde",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/owasp-cheat-sheets/Password_Storage_Cheat_Sheet.md",
+      "stored": "devos/skills/owasp-cheat-sheets/Password_Storage_Cheat_Sheet.md",
+      "sha256": "3869a8bf0a5144ef5c741b74fb3739bf10eb16af669c65a60a233aad943a9323",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/owasp-cheat-sheets/REST_Security_Cheat_Sheet.md",
+      "stored": "devos/skills/owasp-cheat-sheets/REST_Security_Cheat_Sheet.md",
+      "sha256": "3e2959541004f37a28d47ea1f742f30f46d06a331317eb4d9371617f2ad7a704",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/owasp-cheat-sheets/SQL_Injection_Prevention_Cheat_Sheet.md",
+      "stored": "devos/skills/owasp-cheat-sheets/SQL_Injection_Prevention_Cheat_Sheet.md",
+      "sha256": "5597b04e2a6f280e1b33a3a01c1f01884fa04fd9679168e2606fab22b6a6058b",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/owasp-cheat-sheets/Secrets_Management_Cheat_Sheet.md",
+      "stored": "devos/skills/owasp-cheat-sheets/Secrets_Management_Cheat_Sheet.md",
+      "sha256": "61f10a65e19ae5eac59a9d0d0388d32eb5cd6adbc0e3232fcb66f76984df905a",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/owasp-cheat-sheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.md",
+      "stored": "devos/skills/owasp-cheat-sheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.md",
+      "sha256": "3ae2f474449eceadd74cc2c28edfdc405d935166550b2bd67965729b7d707652",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/owasp-cheat-sheets/Session_Management_Cheat_Sheet.md",
+      "stored": "devos/skills/owasp-cheat-sheets/Session_Management_Cheat_Sheet.md",
+      "sha256": "3c38656e2be6188be4fc31d8c1fadafaaa6f37accc27e411e3345c235d44c051",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/owasp-cheat-sheets/Threat_Modeling_Cheat_Sheet.md",
+      "stored": "devos/skills/owasp-cheat-sheets/Threat_Modeling_Cheat_Sheet.md",
+      "sha256": "5102d1557d58fdc184e1cb07dbd796f063e8899318e7d83de5b6242cebf74233",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/owasp-cheat-sheets/Webhook_Security_Cheat_Sheet.md",
+      "stored": "devos/skills/owasp-cheat-sheets/Webhook_Security_Cheat_Sheet.md",
+      "sha256": "100fff81950d3e4f0ac82d6d6f11a3a18bbc14d560d3ab9848615bff811be123",
       "owner": "engine"
     },
     {
@@ -537,6 +819,228 @@
       "path": "devos/skills/review-animations/STANDARDS.md",
       "stored": "devos/skills/review-animations/STANDARDS.md",
       "sha256": "e7d3605034acda54ca13e43aec9e64d65b53de20f75b11b8d694e373012fbe07",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/supabase-postgres-best-practices/DEVOS-NOTES.md",
+      "stored": "devos/skills/supabase-postgres-best-practices/DEVOS-NOTES.md",
+      "sha256": "86f98e760608766c656f65701a53210054b1c1844a97eeb983a17168ffd04959",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/supabase-postgres-best-practices/LICENSE",
+      "stored": "devos/skills/supabase-postgres-best-practices/LICENSE",
+      "sha256": "b65e575eb4f04a13c187d64e958321298e2ab84d67aa8428819f362056ba292c",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/supabase-postgres-best-practices/SKILL.md",
+      "stored": "devos/skills/supabase-postgres-best-practices/SKILL.md",
+      "sha256": "ad65e776f45e761bafc609d3f506c77c1032225aa65e0c4c02f241b8071e5855",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/supabase-postgres-best-practices/references/advanced-full-text-search.md",
+      "stored": "devos/skills/supabase-postgres-best-practices/references/advanced-full-text-search.md",
+      "sha256": "40c2606bbb4c4dce31308f201b24cc7f58c7df05b1d9c6856fe2b888d3b7cf28",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/supabase-postgres-best-practices/references/advanced-jsonb-indexing.md",
+      "stored": "devos/skills/supabase-postgres-best-practices/references/advanced-jsonb-indexing.md",
+      "sha256": "24cacf6a8bc35901dd566d24502ce8e57f810a5c196b897e61d52726e521d106",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/supabase-postgres-best-practices/references/conn-idle-timeout.md",
+      "stored": "devos/skills/supabase-postgres-best-practices/references/conn-idle-timeout.md",
+      "sha256": "630588902c00fcec59a5988cc5d042f76dcf2c923a535abfd8c47dca205eaed5",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/supabase-postgres-best-practices/references/conn-limits.md",
+      "stored": "devos/skills/supabase-postgres-best-practices/references/conn-limits.md",
+      "sha256": "11b2a67a7c7679cbbc5d807bbb17e69c98484a581d0c8b929c03408f412b81b2",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/supabase-postgres-best-practices/references/conn-pooling.md",
+      "stored": "devos/skills/supabase-postgres-best-practices/references/conn-pooling.md",
+      "sha256": "88cf086bf98ba865d2e9d0579974e1366b14157619d6a93e7da77be91084e4a5",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/supabase-postgres-best-practices/references/conn-prepared-statements.md",
+      "stored": "devos/skills/supabase-postgres-best-practices/references/conn-prepared-statements.md",
+      "sha256": "174e9332fe3dda5c99b2b00159fb1915ae36c00bab3a7882c14e73e4344e946e",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/supabase-postgres-best-practices/references/data-batch-inserts.md",
+      "stored": "devos/skills/supabase-postgres-best-practices/references/data-batch-inserts.md",
+      "sha256": "531933b82d6a622d0fae29e0ea80be6fe5d78655adf2804c271ea84a1930de37",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/supabase-postgres-best-practices/references/data-n-plus-one.md",
+      "stored": "devos/skills/supabase-postgres-best-practices/references/data-n-plus-one.md",
+      "sha256": "21a44905e5b16a42741892ec34bb1bfef124d049b140a76934a9acd0f46f5fc2",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/supabase-postgres-best-practices/references/data-pagination.md",
+      "stored": "devos/skills/supabase-postgres-best-practices/references/data-pagination.md",
+      "sha256": "73c9fa10a3d439bedea0e11b640bd25bf30dd50f0d9006cf85baf7c3151543fa",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/supabase-postgres-best-practices/references/data-upsert.md",
+      "stored": "devos/skills/supabase-postgres-best-practices/references/data-upsert.md",
+      "sha256": "2612af83b20a2701dde30ef1f8d7efd26b7e9eef84717226b8f038a2d2150ff7",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/supabase-postgres-best-practices/references/lock-advisory.md",
+      "stored": "devos/skills/supabase-postgres-best-practices/references/lock-advisory.md",
+      "sha256": "c88d259dbf81c3771438f59a165f7eab8acd09999dd370bdf807521c73f35aab",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/supabase-postgres-best-practices/references/lock-deadlock-prevention.md",
+      "stored": "devos/skills/supabase-postgres-best-practices/references/lock-deadlock-prevention.md",
+      "sha256": "09aee46f51d7178c8e55fe056cd5a94a64ba2c122fe418e6900cd99f297b2347",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/supabase-postgres-best-practices/references/lock-short-transactions.md",
+      "stored": "devos/skills/supabase-postgres-best-practices/references/lock-short-transactions.md",
+      "sha256": "5aa7f61095916986d39644b446cdbcd2bacca7ef698a3bb50b3f82dd60207602",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/supabase-postgres-best-practices/references/lock-skip-locked.md",
+      "stored": "devos/skills/supabase-postgres-best-practices/references/lock-skip-locked.md",
+      "sha256": "6c45077f430f29cd9cd8f448c94d578e827e7bd023fcdaf717a756acb116fa4b",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/supabase-postgres-best-practices/references/monitor-explain-analyze.md",
+      "stored": "devos/skills/supabase-postgres-best-practices/references/monitor-explain-analyze.md",
+      "sha256": "4cb67ffbf8e57f2e5b380b0beb4242528b513723ce314a2c2ffcf083bd4203d7",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/supabase-postgres-best-practices/references/monitor-pg-stat-statements.md",
+      "stored": "devos/skills/supabase-postgres-best-practices/references/monitor-pg-stat-statements.md",
+      "sha256": "89dca99d4e894fcbdcac136be7ad9fbc03d1342904f065c1b198dc9cf495f098",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/supabase-postgres-best-practices/references/monitor-vacuum-analyze.md",
+      "stored": "devos/skills/supabase-postgres-best-practices/references/monitor-vacuum-analyze.md",
+      "sha256": "2892272011710eb49b3f185ec12f15ce9ce4c365792c672f6e2a9c90da426a1a",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/supabase-postgres-best-practices/references/query-composite-indexes.md",
+      "stored": "devos/skills/supabase-postgres-best-practices/references/query-composite-indexes.md",
+      "sha256": "73e42424e671f0266e74fdb220db3196790f69fb43e2b19c7b9483eb4971b554",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/supabase-postgres-best-practices/references/query-covering-indexes.md",
+      "stored": "devos/skills/supabase-postgres-best-practices/references/query-covering-indexes.md",
+      "sha256": "daf2a7f0477fb7357b62b5fb5b185b1995a77a186347e45cb780e25e7a7589b6",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/supabase-postgres-best-practices/references/query-index-types.md",
+      "stored": "devos/skills/supabase-postgres-best-practices/references/query-index-types.md",
+      "sha256": "472a74f22c2df203bd0154999b3a5a0187cca2ab3d9a3978e305bb7c32f1a282",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/supabase-postgres-best-practices/references/query-missing-indexes.md",
+      "stored": "devos/skills/supabase-postgres-best-practices/references/query-missing-indexes.md",
+      "sha256": "91ad8b0ff4365704b4830a7f077c6f140f7140fd5d3ce5cd0b92b160cf9e25f1",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/supabase-postgres-best-practices/references/query-partial-indexes.md",
+      "stored": "devos/skills/supabase-postgres-best-practices/references/query-partial-indexes.md",
+      "sha256": "6448982bc8558c6555284958edc331b29239c6a0130e6b4501dd6d4da607a6dd",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/supabase-postgres-best-practices/references/schema-constraints.md",
+      "stored": "devos/skills/supabase-postgres-best-practices/references/schema-constraints.md",
+      "sha256": "90e8efda3e9e81095e642911ad4aae2809d160f29414338fa997253238f510f8",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/supabase-postgres-best-practices/references/schema-data-types.md",
+      "stored": "devos/skills/supabase-postgres-best-practices/references/schema-data-types.md",
+      "sha256": "e01b58c14c7f3f65d8ead580b9a4fcf70b83baaab0f9a5f83c569c9fd113e8c8",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/supabase-postgres-best-practices/references/schema-foreign-key-indexes.md",
+      "stored": "devos/skills/supabase-postgres-best-practices/references/schema-foreign-key-indexes.md",
+      "sha256": "7587713d12a65a212365459b3d39e4717d8a79e4073b10bd62f1054d8192c0dd",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/supabase-postgres-best-practices/references/schema-lowercase-identifiers.md",
+      "stored": "devos/skills/supabase-postgres-best-practices/references/schema-lowercase-identifiers.md",
+      "sha256": "4bc80f70865f2390872591f326c8a6be6456a0aeb5a7e5a2475d7cd9d43059ab",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/supabase-postgres-best-practices/references/schema-partitioning.md",
+      "stored": "devos/skills/supabase-postgres-best-practices/references/schema-partitioning.md",
+      "sha256": "541e13fbeaf4bb1485c9059d4c9417dbdb766cf16f4237cd63a04ada7ec45b90",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/supabase-postgres-best-practices/references/schema-primary-keys.md",
+      "stored": "devos/skills/supabase-postgres-best-practices/references/schema-primary-keys.md",
+      "sha256": "3c8beabef82066f9a0838b926da0885117fd2d9a263aaf84cb5ca9e5f0d400e9",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/supabase-postgres-best-practices/references/security-privileges.md",
+      "stored": "devos/skills/supabase-postgres-best-practices/references/security-privileges.md",
+      "sha256": "095909274a4fb43df785d7144cf674eeb40284d2d45628f14af4108737b93663",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/supabase-postgres-best-practices/references/security-rls-basics.md",
+      "stored": "devos/skills/supabase-postgres-best-practices/references/security-rls-basics.md",
+      "sha256": "e04dd1a3a382aafdaaa73fe9f7976352acdde6e90c2a2470d281b94d4f44b096",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/supabase-postgres-best-practices/references/security-rls-performance.md",
+      "stored": "devos/skills/supabase-postgres-best-practices/references/security-rls-performance.md",
+      "sha256": "2e1faeca7d5746e246b1c78f9492fe2a9cfa41c4d7fa1e23c402d58fa18ea014",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/supabase/DEVOS-NOTES.md",
+      "stored": "devos/skills/supabase/DEVOS-NOTES.md",
+      "sha256": "598007ee79dfaa1d0e242fdca2a7d0ccac6d681c850785f5b6f0f37a4ad454e6",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/supabase/LICENSE",
+      "stored": "devos/skills/supabase/LICENSE",
+      "sha256": "b65e575eb4f04a13c187d64e958321298e2ab84d67aa8428819f362056ba292c",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/supabase/SKILL.md",
+      "stored": "devos/skills/supabase/SKILL.md",
+      "sha256": "697e0e949f97621c6fc1784169eb3ccbf673747d6bb8299a52962d3d84d93dc6",
       "owner": "engine"
     },
     {
@@ -596,7 +1100,7 @@
     {
       "path": "docs/method/AUTOMATION.md",
       "stored": "docs/method/AUTOMATION.md",
-      "sha256": "6a922525ba2b54a918977940263737d14934c91be9a485f49dcfb8545f569af6",
+      "sha256": "7002c6e7c37fc1422d750a7b20b140f8106b526183142591b4b8b52d99f1d653",
       "owner": "engine"
     },
     {
@@ -620,7 +1124,7 @@
     {
       "path": "docs/method/PRECEDENTS.md",
       "stored": "docs/method/PRECEDENTS.md",
-      "sha256": "bea2de7854a7aebc08a5f96bc63ad8d6f479f45a826376e4b9a93cd04524aede",
+      "sha256": "e14bc7c5720825fe410209e668e16506deb1f1bef9b608d49e7ff77bc2021ea9",
       "owner": "engine"
     },
     {
@@ -830,7 +1334,7 @@
     {
       "path": "scripts/devos/skills.mjs",
       "stored": "scripts/devos/skills.mjs",
-      "sha256": "d99d36b432658491e73d7ccd7ece6850adf8a968b837d7e54d49cdcf84edb44e",
+      "sha256": "da4850e6dbcb6e3b43dad58f6fc2d22777ccedc11fb02e81a02cd0e82bf1e430",
       "owner": "engine"
     },
     {
@@ -962,7 +1466,7 @@
     {
       "path": "scripts/guards/skills.mjs",
       "stored": "scripts/guards/skills.mjs",
-      "sha256": "f685bc4cf22d25291f1984819872b2a6d051d1229a5d650dd42fb43ff90cb508",
+      "sha256": "4a6a6d045ce2e86d485fab0ab762ef86fc6c8d6c39caa39f51f616e93fe00487",
       "owner": "engine"
     }
   ]
