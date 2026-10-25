@@ -232,7 +232,7 @@ takes the default shown.
     - commits the folder;
     - creates the repository;
     - pushes it;
-    - sets the workflow permissions, variables and secrets;
+    - sets the workflow permissions, the labels of the issue forms (`devos:request`, `devos:method`), variables and secrets, and turns off the Wiki and Projects tabs DEV_OS does not use;
     - runs the setup check;
     - starts the first cycle.
 
