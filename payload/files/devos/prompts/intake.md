@@ -33,7 +33,7 @@ Exactly one of three outcomes, then the structured answer the output schema requ
    {{BUILDER_POOL}}
    Rehearse it against the current tree: every path, script and component name it cites must exist
    or be created by its own steps.
-   Every fence you write carries `- Layers: <layer> · <layer>` in its header: the layers of `devos/skills/INDEX.md` the task touches (`design`, `motion`, `frontend`, `accessibility`, `backend`, `api`, `database`, `security`, `testing`, `ops`). The runner gives the builder and the reviewer the skills of those layers (PR-55).
+   Every fence you write carries `- Layers: <layer> · <layer>` in its header: the layers of `devos/skills/INDEX.md` the task touches (`design`, `motion`, `frontend`, `accessibility`, `architecture`, `backend`, `api`, `database`, `security`, `reliability`, `testing`, `ops`). The runner gives the builder and the reviewer the skills of those layers, and a server-side or deep task always the security layer and a code task the testing layer (PR-55, PR-56, PR-57).
    A UI task's first fence carries `- Screens: \`<name> <path>[ click|hover|focus <selector>]\` · …` in its header, naming every page, state and interaction to capture. It also carries a `### Design specification` (`docs/method/DESIGN_METHOD.md` §3) whose `- States:` are exactly those names and whose `- Criteria:` are rows of `docs/design/UI_ACCEPTANCE.md`; `guard:design-spec` fails the run otherwise.
 6. Copy the request and your interpretation to `docs/requests/issue-{{ISSUE}}.md` (what was asked,
    what you decided, what you left out and why).

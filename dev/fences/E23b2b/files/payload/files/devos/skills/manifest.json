@@ -1,0 +1,4741 @@
+{
+  "$comment": "The skills the agents read (devos/skills/README.md, docs/method/DESIGN_METHOD.md §7, PR-51, PR-55, PR-56, PR-57). layers: the vocabulary below; a fence names its own on a `- Layers:` line. topics: words the runner looks for in a fence (or its `- Topics:` line) to pick a conditional file; `match` is a case-insensitive regular expression. stacks: any, a stack id or a toolchain (devos.config.json stack). modules: when set, the entry applies only to a project that chose or uses one of them (devos/answers.json, an active module, or a module the fence names). reads: each file a role reads, for which layers and when, with its priority: required (every task of those layers; the security gate's files), recommended (every task of those layers) or conditional (only when one clause of `if` holds: all of a clause's keys, any of its values; keys topics, modules, deep). deep is a risk-3 task, a task with a gate, or a deep review. The gates: a task with the backend, api, database or reliability layer, or a deep task, always gets the security layer (the security gate), and a task with the frontend, architecture, backend, api, database or reliability layer always gets the testing layer (the test gate); no fence removes them. notes: a file DEV_OS wrote after the audit (origin devos); it is listed first whenever another file of the entry is selected. trust: runs_code and fetches are false for every vendored skill (the cycle runs no code from a skill and fetches nothing at run time), and reviewed is the date its files were read whole. licence.class: free (a permissive licence; ship its licence and notices), conditions (allowed with conditions beyond notices), approval (needs the author's permission or a separate licence first), unsuitable (redistribution not allowed). delivery: vendored (files here, pinned), external (not shipped; a developer may use it interactively), principles (nothing copied; the ideas are written independently). Each source file records the path it was copied from (from); excluded lists the source files deliberately not copied, with why. guard:skills checks every vendored file's sha256 (LF line endings) and that INDEX.md is generated from this file.",
+  "version": 3,
+  "reviewed": "2026-10-25",
+  "layers": {
+    "design": "visual direction, type, colour, spacing and layout",
+    "motion": "animation, transitions and scroll",
+    "frontend": "components, client state, copy and interaction",
+    "accessibility": "WCAG, keyboard paths, focus, contrast and assistive technology",
+    "architecture": "system structure, boundaries, configuration, processes and migrations between systems",
+    "backend": "server code, jobs and integrations",
+    "api": "HTTP and RPC contracts, validation and errors",
+    "database": "schema, migrations, queries and access rules",
+    "security": "sign-in, secrets, input, headers and data protection",
+    "reliability": "timeouts, retries, queues, idempotency, health checks and graceful failure",
+    "testing": "unit, integration and end-to-end tests",
+    "ops": "build, deploy, CI, containers, dependencies, logging and observability"
+  },
+  "topics": {
+    "auth": {
+      "match": "\\b(sign[- ]?(in|up|out)|log[- ]?(in|out)|passwords?|passkeys?|mfa|2fa|two[- ]factor|oauth|openid|sso|single sign-on|magic links?|authentication)\\b",
+      "covers": "sign-in, sign-up, passwords, MFA and OAuth"
+    },
+    "session": {
+      "match": "\\b(sessions?|cookies?|remember me|jwts?|access tokens?|refresh tokens?)\\b",
+      "covers": "sessions, cookies and tokens"
+    },
+    "roles": {
+      "match": "\\b(roles?|permissions?|admins?|administrators?|authori[sz]ation|access control|rbac|abac)\\b",
+      "covers": "roles, permissions and admin functions"
+    },
+    "tenant": {
+      "match": "\\b(tenants?|multi-tenan\\w*|organi[sz]ations?|workspaces?)\\b",
+      "covers": "tenants, organisations and workspaces"
+    },
+    "upload": {
+      "match": "\\b(uploads?|uploading|uploaded|file storage|attachments?|avatars?|storage buckets?)\\b",
+      "covers": "file uploads and stored files"
+    },
+    "webhook": {
+      "match": "\\b(webhooks?)\\b",
+      "covers": "webhooks received or sent"
+    },
+    "outbound": {
+      "match": "\\b(callback urls?|url previews?|link previews?|remote urls?|user[- ]supplied urls?|fetch(es|ing)? (a |the )?(remote |external |user[- ]supplied )?urls?|import(s|ing)? from (a )?urls?|ssrf|outbound requests?|proxy)\\b",
+      "covers": "the server fetching a URL"
+    },
+    "integration": {
+      "match": "\\b(third[- ]party|external (apis?|services?)|integrations?|stripe|twilio|sendgrid|resend|openai)\\b",
+      "covers": "third-party APIs the product calls"
+    },
+    "secrets": {
+      "match": "\\b(secrets?|api[- ]keys?|credentials?|service[_ ]role|private keys?|environment variables?|env vars?)\\b",
+      "covers": "secrets, keys and credentials"
+    },
+    "payment": {
+      "match": "\\b(payments?|checkout|billing|invoices?|subscriptions?|purchases?|bookings?|reservations?|coupons?|referrals?|refunds?)\\b",
+      "covers": "payments and other sensitive business flows"
+    },
+    "idempotency": {
+      "match": "\\b(idempoten\\w*|retry|retries|retried|duplicate (requests?|submissions?)|request[_ ]ids?|double[- ](submit|charge)\\w*)\\b",
+      "covers": "retries and duplicate requests"
+    },
+    "pagination": {
+      "match": "\\b(paginat\\w*|page[_ ]size|page[_ ]tokens?|cursors?|infinite scroll|load more|next page)\\b",
+      "covers": "paginated lists"
+    },
+    "compat": {
+      "match": "\\b(breaking changes?|backwards?[- ]compatib\\w*|api versions?|versioned api|deprecat\\w*|public api|sdk)\\b",
+      "covers": "API versions and compatibility"
+    },
+    "errors": {
+      "match": "\\b(error (format|responses?|codes?|model|shape|body|bodies)|status codes?|problem details|error handling)\\b",
+      "covers": "the API's error responses"
+    },
+    "html": {
+      "match": "\\b(markdown|rich[- ]text|wysiwyg|html|innerhtml|dangerouslysetinnerhtml|user[- ](generated|content|comments?)|comments? (box|section|thread)s?)\\b",
+      "covers": "rendering user content as HTML"
+    },
+    "headers": {
+      "match": "\\b(security headers|response headers|csp|content[- ]security[- ]policy|hsts|strict-transport-security|cors|clickjacking|x-frame-options|cache-control)\\b",
+      "covers": "HTTP security headers and CORS"
+    },
+    "logging": {
+      "match": "\\b(logging|logs|audit\\w*|monitoring|alerting|alerts?|telemetry|observability)\\b",
+      "covers": "logs, audit trails and monitoring"
+    },
+    "rls": {
+      "match": "\\b(rls|row[- ]level security|polic(y|ies)|grants?|revoke)\\b",
+      "covers": "row-level security, policies and grants"
+    },
+    "migration": {
+      "match": "\\b(migrations?|schemas?|tables?|columns?|constraints?|foreign keys?|primary keys?|data types?)\\b",
+      "covers": "schema changes"
+    },
+    "performance": {
+      "match": "\\b(slow|performance|latency|indexes|indexing|explain|query plans?|n\\+1|optimi[sz]\\w*|full scans?)\\b",
+      "covers": "query speed and indexes"
+    },
+    "connections": {
+      "match": "\\b(connection pool\\w*|connection limits?|pooler|pgbouncer|supavisor|max_connections|serverless|edge functions?|prepared statements?|idle (transactions?|sessions?))\\b",
+      "covers": "database connections and pooling"
+    },
+    "concurrency": {
+      "match": "\\b(locks?|locking|concurren\\w*|race conditions?|deadlocks?|queues?|background jobs?|workers?|skip locked|cron|scheduled jobs?)\\b",
+      "covers": "locks, queues and concurrent work"
+    },
+    "bulk": {
+      "match": "\\b(bulk|batch(es|ed|ing)?|upserts?|seed(s|ing)?|backfill\\w*|copy from|(data|csv) imports?|import(ing)? (data|rows|records|csv))\\b",
+      "covers": "bulk writes, imports and seeds"
+    },
+    "search": {
+      "match": "\\b(full[- ]text|search(es|ing)?)\\b",
+      "covers": "text search"
+    },
+    "jsonb": {
+      "match": "\\b(jsonb|json columns?)\\b",
+      "covers": "JSONB columns"
+    },
+    "partitioning": {
+      "match": "\\b(partition\\w*|time[- ]series)\\b",
+      "covers": "partitioned and time-series tables"
+    },
+    "db-access": {
+      "match": "\\b(database (users?|roles?|credentials?|accounts?|access)|connection strings?|least privilege|backups?|db roles?)\\b",
+      "covers": "database accounts, credentials and backups"
+    },
+    "threat": {
+      "match": "\\b(threat models?|threat modell?ing|trust boundar(y|ies)|attack surface)\\b",
+      "covers": "threat models and trust boundaries"
+    },
+    "bugfix": {
+      "match": "\\b(bugs?|bug[- ]?fix(es)?|regressions?|crash(es|ed|ing)?|defects?|broken|root cause)\\b",
+      "covers": "bug fixes and regressions"
+    },
+    "flaky": {
+      "match": "\\b(flaky|flakiness|intermittent(ly)?|sometimes fails?|timing[- ]dependent)\\b",
+      "covers": "flaky tests and timing problems"
+    },
+    "e2e": {
+      "match": "\\b(e2e|end[- ]to[- ]end|playwright|browser tests?|ui tests?)\\b",
+      "covers": "end-to-end and browser tests"
+    },
+    "ci": {
+      "match": "\\b(ci|ci/cd|continuous (integration|delivery|deployment)|github actions|workflow files?|\\.github/workflows|pipelines?)\\b",
+      "covers": "CI pipelines and workflows"
+    },
+    "deploy": {
+      "match": "\\b(deploy(s|ed|ing|ment|ments)?|release (process|pipeline|steps?)|rollbacks?|roll back|staging|preview (deploy\\w*|environments?))\\b",
+      "covers": "deploys, releases and rollbacks"
+    },
+    "container": {
+      "match": "\\b(docker\\w*|containers?|container images?|kubernetes|k8s|podman)\\b",
+      "covers": "containers and images"
+    },
+    "dependencies": {
+      "match": "\\b(dependenc(y|ies)|lockfiles?|package-lock|pnpm-lock|vulnerab\\w*|cves?|supply[- ]chain|sbom|dependabot|renovate|npm audit)\\b",
+      "covers": "dependencies and their vulnerabilities"
+    },
+    "observability": {
+      "match": "\\b(observability|opentelemetry|otel|tracing|traces|spans?|metrics|telemetry|instrument(ation|ed)?|correlation ids?|slos?|slis?)\\b",
+      "covers": "traces, metrics and service levels"
+    },
+    "resilience": {
+      "match": "\\b(timeouts?|time-outs?|circuit[- ]breakers?|fallbacks?|outages?|transient|resilien\\w*|graceful(ly)? degrad\\w*|bulkheads?|back-?off|cascading failures?)\\b",
+      "covers": "timeouts, fallbacks and failing dependencies"
+    },
+    "health": {
+      "match": "\\b(health ?checks?|health endpoints?|healthz|liveness|readiness|uptime|status page)\\b",
+      "covers": "health checks and uptime"
+    },
+    "rate-limit": {
+      "match": "\\b(rate[- ]limit\\w*|throttl\\w*|quotas?|429|too many requests|noisy neighbou?rs?)\\b",
+      "covers": "rate limits, throttling and quotas"
+    },
+    "distributed": {
+      "match": "\\b(sagas?|distributed (transactions?|systems?)|compensat\\w*|eventual(ly)? consisten\\w*|microservices?|multi-step (workflows?|operations?)|several services|across services)\\b",
+      "covers": "work that spans several services"
+    },
+    "legacy": {
+      "match": "\\b(legacy|strangler|incremental(ly)? (migration|migrate|replace)|old system|monolith)\\b",
+      "covers": "replacing or integrating an older system"
+    },
+    "config": {
+      "match": "\\b(configuration|config (files?|values?|variables?)|environment variables?|env vars?|feature flags?|\\.env)\\b",
+      "covers": "configuration and environment"
+    }
+  },
+  "entries": [
+    {
+      "id": "frontend-design",
+      "kind": "skill",
+      "title": "Frontend design",
+      "source": {
+        "repo": "https://github.com/anthropics/skills",
+        "commit": "dbd4588f9e1033efb41dad4bef2f7947c8993d44",
+        "path": "skills/frontend-design",
+        "version": "last changed in 41bbe19 (2026-09-03)"
+      },
+      "licence": {
+        "spdx": "Apache-2.0",
+        "class": "free",
+        "file": "LICENSE.txt",
+        "notices": [],
+        "copyright": "Anthropic (the licence file names no holder)"
+      },
+      "delivery": "vendored",
+      "obligations": [
+        "The Apache-2.0 licence ships as LICENSE.txt beside the skill",
+        "The repository has no NOTICE file for this skill (its THIRD_PARTY_NOTICES.md covers other skills' libraries)",
+        "The file is copied unchanged; a change would be marked in the file and in this entry"
+      ],
+      "changes": "none",
+      "roles": [
+        "blueprint",
+        "builder",
+        "reviewer"
+      ],
+      "use": "Visual direction and the anti-template checks for every new screen.",
+      "layers": [
+        "design"
+      ],
+      "stacks": [
+        "any"
+      ],
+      "trust": {
+        "runs_code": false,
+        "fetches": false,
+        "reviewed": "2026-10-24",
+        "notes": "Markdown guidance only: it ships no script and names nothing to fetch or install."
+      },
+      "reads": [
+        {
+          "file": "SKILL.md",
+          "roles": [
+            "blueprint",
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "design"
+          ],
+          "when": "the visual direction in `docs/DESIGN_SYSTEM.md`, and every new screen",
+          "priority": "recommended"
+        }
+      ],
+      "files": [
+        {
+          "path": "LICENSE.txt",
+          "origin": "source",
+          "from": "skills/frontend-design/LICENSE.txt",
+          "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594"
+        },
+        {
+          "path": "SKILL.md",
+          "origin": "source",
+          "from": "skills/frontend-design/SKILL.md",
+          "sha256": "d91970639e9f5c37682ac7ab60094d35f1c7c1f38d731bd56396563aee10c1d3"
+        }
+      ]
+    },
+    {
+      "id": "web-interface-guidelines",
+      "kind": "skill",
+      "title": "Web Interface Guidelines",
+      "source": {
+        "repo": "https://github.com/vercel-labs/web-interface-guidelines",
+        "commit": "434b7f91364665f2f733b310ec54809bf8f37937",
+        "path": "",
+        "version": "command.md last changed in 4ecfb9f (2026-10-05)"
+      },
+      "licence": {
+        "spdx": "MIT",
+        "class": "free",
+        "file": "LICENSE",
+        "notices": [],
+        "copyright": "Copyright (c) 2025 Vercel Labs"
+      },
+      "delivery": "vendored",
+      "obligations": [
+        "The copyright and permission notice ships in LICENSE beside the files",
+        "The files are copied unchanged; a change would be marked in the file and in this entry",
+        "SKILL.md is written by DEV_OS (origin devos) and points at the pinned command.md instead of fetching it"
+      ],
+      "changes": "none to the source files; SKILL.md is DEV_OS's own",
+      "roles": [
+        "builder",
+        "reviewer"
+      ],
+      "use": "Concrete interface rules: the builder's self-check and the reviewer's citations.",
+      "layers": [
+        "frontend",
+        "accessibility"
+      ],
+      "stacks": [
+        "any"
+      ],
+      "trust": {
+        "runs_code": false,
+        "fetches": false,
+        "reviewed": "2026-10-24",
+        "notes": "Markdown guidance only: it ships no script and names nothing to fetch or install."
+      },
+      "reads": [
+        {
+          "file": "SKILL.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "frontend",
+            "accessibility"
+          ],
+          "when": "every UI task: the builder's self-check, the reviewer's citations",
+          "priority": "recommended"
+        }
+      ],
+      "files": [
+        {
+          "path": "LICENSE",
+          "origin": "source",
+          "from": "LICENSE",
+          "sha256": "6cd1609c9c12233507cdd2ce0d32e9a721e3c27494951be06b90090deeeb7af2"
+        },
+        {
+          "path": "SKILL.md",
+          "origin": "devos",
+          "sha256": "eefd971484d8e75df1e3bc84dae4088b8b9513344bca079df7b506e45e2366ba"
+        },
+        {
+          "path": "command.md",
+          "origin": "source",
+          "from": "command.md",
+          "sha256": "d246b026f4f29b5823a9cc857f9edf3d2507002e055e32040cadeaf3b38e0234"
+        }
+      ]
+    },
+    {
+      "id": "emil-design-eng",
+      "kind": "skill",
+      "title": "Design engineering (Emil Kowalski)",
+      "source": {
+        "repo": "https://github.com/emilkowalski/skills",
+        "commit": "2d228630ba1446365f614a108cb8252f1feda202",
+        "path": "skills/emil-design-eng",
+        "version": ""
+      },
+      "licence": {
+        "spdx": "MIT",
+        "class": "free",
+        "file": "LICENSE",
+        "notices": [],
+        "copyright": "Copyright (c) 2026 Emil Kowalski"
+      },
+      "delivery": "vendored",
+      "obligations": [
+        "The copyright and permission notice ships in LICENSE beside the files",
+        "The files are copied unchanged; a change would be marked in the file and in this entry"
+      ],
+      "changes": "none",
+      "roles": [
+        "builder",
+        "reviewer"
+      ],
+      "use": "Component polish, interaction details and animation decisions.",
+      "layers": [
+        "motion",
+        "frontend"
+      ],
+      "stacks": [
+        "any"
+      ],
+      "trust": {
+        "runs_code": false,
+        "fetches": false,
+        "reviewed": "2026-10-24",
+        "notes": "Markdown guidance only: it ships no script and names nothing to fetch or install."
+      },
+      "reads": [
+        {
+          "file": "SKILL.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "frontend",
+            "motion"
+          ],
+          "when": "component polish and interaction details",
+          "priority": "recommended"
+        }
+      ],
+      "files": [
+        {
+          "path": "LICENSE",
+          "origin": "source",
+          "from": "LICENSE",
+          "sha256": "4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b"
+        },
+        {
+          "path": "SKILL.md",
+          "origin": "source",
+          "from": "skills/emil-design-eng/SKILL.md",
+          "sha256": "ffbe68e6007fb42cb8149f089b400a1ca007d59ba23e8948e2be4476f3175939"
+        }
+      ]
+    },
+    {
+      "id": "review-animations",
+      "kind": "skill",
+      "title": "Review animations (Emil Kowalski)",
+      "source": {
+        "repo": "https://github.com/emilkowalski/skills",
+        "commit": "2d228630ba1446365f614a108cb8252f1feda202",
+        "path": "skills/review-animations",
+        "version": ""
+      },
+      "licence": {
+        "spdx": "MIT",
+        "class": "free",
+        "file": "LICENSE",
+        "notices": [],
+        "copyright": "Copyright (c) 2026 Emil Kowalski"
+      },
+      "delivery": "vendored",
+      "obligations": [
+        "The copyright and permission notice ships in LICENSE beside the files",
+        "The files are copied unchanged; a change would be marked in the file and in this entry"
+      ],
+      "changes": "none",
+      "roles": [
+        "reviewer"
+      ],
+      "use": "The motion row of the reviewer's design ledger.",
+      "layers": [
+        "motion"
+      ],
+      "stacks": [
+        "any"
+      ],
+      "trust": {
+        "runs_code": false,
+        "fetches": false,
+        "reviewed": "2026-10-24",
+        "notes": "Markdown guidance only: it ships no script and names nothing to fetch or install."
+      },
+      "reads": [
+        {
+          "file": "SKILL.md",
+          "roles": [
+            "reviewer"
+          ],
+          "layers": [
+            "motion"
+          ],
+          "when": "the motion row of the design ledger",
+          "priority": "recommended"
+        },
+        {
+          "file": "STANDARDS.md",
+          "roles": [
+            "reviewer"
+          ],
+          "layers": [
+            "motion"
+          ],
+          "when": "the motion row of the design ledger",
+          "priority": "recommended"
+        }
+      ],
+      "files": [
+        {
+          "path": "LICENSE",
+          "origin": "source",
+          "from": "LICENSE",
+          "sha256": "4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b"
+        },
+        {
+          "path": "SKILL.md",
+          "origin": "source",
+          "from": "skills/review-animations/SKILL.md",
+          "sha256": "6ff590d29e436766135aa3d137be1fac2a867165c7257fc315b189361f1873af"
+        },
+        {
+          "path": "STANDARDS.md",
+          "origin": "source",
+          "from": "skills/review-animations/STANDARDS.md",
+          "sha256": "e7d3605034acda54ca13e43aec9e64d65b53de20f75b11b8d694e373012fbe07"
+        }
+      ]
+    },
+    {
+      "id": "fixing-accessibility",
+      "kind": "skill",
+      "title": "Fixing accessibility (ui-skills)",
+      "source": {
+        "repo": "https://github.com/ibelick/ui-skills",
+        "commit": "55363c305097d4c84487bd5f323d29b3f067bf72",
+        "path": "skills/fixing-accessibility",
+        "version": ""
+      },
+      "licence": {
+        "spdx": "MIT",
+        "class": "free",
+        "file": "LICENSE",
+        "notices": [],
+        "copyright": "Copyright (c) 2026 Julien Thibeaut"
+      },
+      "delivery": "vendored",
+      "obligations": [
+        "The copyright and permission notice ships in LICENSE beside the files",
+        "The files are copied unchanged; a change would be marked in the file and in this entry"
+      ],
+      "changes": "none",
+      "roles": [
+        "builder"
+      ],
+      "use": "Targeted fixes when the a11y check is red.",
+      "layers": [
+        "accessibility"
+      ],
+      "stacks": [
+        "any"
+      ],
+      "trust": {
+        "runs_code": false,
+        "fetches": false,
+        "reviewed": "2026-10-24",
+        "notes": "Markdown guidance only: it ships no script and names nothing to fetch or install."
+      },
+      "reads": [
+        {
+          "file": "SKILL.md",
+          "roles": [
+            "builder"
+          ],
+          "layers": [
+            "accessibility"
+          ],
+          "when": "fixing a red `a11y` check",
+          "priority": "recommended"
+        }
+      ],
+      "files": [
+        {
+          "path": "LICENSE",
+          "origin": "source",
+          "from": "LICENSE",
+          "sha256": "c615621c4cc1676ccde194e7a01b6469ba477780251bd71e007fc473a49c2c2b"
+        },
+        {
+          "path": "SKILL.md",
+          "origin": "source",
+          "from": "skills/fixing-accessibility/SKILL.md",
+          "sha256": "549261e8a53b53a1a20c0ddbf736821e5fc0876ad82eee76e0efab8e9ee9dadf"
+        }
+      ]
+    },
+    {
+      "id": "impeccable",
+      "kind": "reference",
+      "title": "Impeccable references (Paul Bakaus)",
+      "source": {
+        "repo": "https://github.com/pbakaus/impeccable",
+        "commit": "936867543ac2576920d663cc9803597f6044f3ac",
+        "path": ".claude/skills/impeccable/reference",
+        "version": "4.7.1"
+      },
+      "licence": {
+        "spdx": "Apache-2.0",
+        "class": "free",
+        "file": "LICENSE",
+        "notices": [
+          "NOTICE.md"
+        ],
+        "copyright": "Copyright 2025 Paul Bakaus"
+      },
+      "delivery": "vendored",
+      "obligations": [
+        "The Apache-2.0 licence ships as LICENSE beside the files",
+        "The project's NOTICE.md ships unchanged beside the files",
+        "Eleven reference files are copied unchanged; a change would be marked in the file and in this entry"
+      ],
+      "changes": "a subset: SKILL.md, critique.md, polish.md, the other references, the launcher and its scripts are not shipped (the launcher runs a binary that it downloads on first run, and those files depend on it)",
+      "roles": [
+        "blueprint",
+        "builder",
+        "reviewer"
+      ],
+      "use": "The craft floor, product-UI depth, and focused playbooks for type, layout, colour, motion, copy, onboarding, hardening, small screens and the technical audit.",
+      "layers": [
+        "design",
+        "motion",
+        "frontend",
+        "accessibility"
+      ],
+      "stacks": [
+        "any"
+      ],
+      "trust": {
+        "runs_code": false,
+        "fetches": false,
+        "reviewed": "2026-10-24",
+        "notes": "Markdown guidance only: it ships no script and names nothing to fetch or install."
+      },
+      "reads": [
+        {
+          "file": "reference/craft-floor.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "design",
+            "frontend"
+          ],
+          "when": "before any UI change: the quality floor and the defaults to refuse",
+          "priority": "recommended"
+        },
+        {
+          "file": "reference/operate.md",
+          "roles": [
+            "blueprint",
+            "builder"
+          ],
+          "layers": [
+            "design",
+            "frontend"
+          ],
+          "when": "app screens, dashboards, settings and tools",
+          "priority": "recommended"
+        },
+        {
+          "file": "reference/typeset.md",
+          "roles": [
+            "blueprint",
+            "builder"
+          ],
+          "layers": [
+            "design"
+          ],
+          "when": "type",
+          "priority": "recommended"
+        },
+        {
+          "file": "reference/layout.md",
+          "roles": [
+            "blueprint",
+            "builder"
+          ],
+          "layers": [
+            "design"
+          ],
+          "when": "spacing and layout",
+          "priority": "recommended"
+        },
+        {
+          "file": "reference/colorize.md",
+          "roles": [
+            "blueprint",
+            "builder"
+          ],
+          "layers": [
+            "design"
+          ],
+          "when": "colour",
+          "priority": "recommended"
+        },
+        {
+          "file": "reference/animate.md",
+          "roles": [
+            "builder"
+          ],
+          "layers": [
+            "motion"
+          ],
+          "when": "motion the fence asks for",
+          "priority": "recommended"
+        },
+        {
+          "file": "reference/clarify.md",
+          "roles": [
+            "builder"
+          ],
+          "layers": [
+            "frontend"
+          ],
+          "when": "copy and errors",
+          "priority": "recommended"
+        },
+        {
+          "file": "reference/onboard.md",
+          "roles": [
+            "builder"
+          ],
+          "layers": [
+            "frontend"
+          ],
+          "when": "first run and empty states",
+          "priority": "recommended"
+        },
+        {
+          "file": "reference/harden.md",
+          "roles": [
+            "builder"
+          ],
+          "layers": [
+            "frontend"
+          ],
+          "when": "edge cases",
+          "priority": "recommended"
+        },
+        {
+          "file": "reference/adapt.md",
+          "roles": [
+            "builder"
+          ],
+          "layers": [
+            "design",
+            "frontend"
+          ],
+          "when": "small screens",
+          "priority": "recommended"
+        },
+        {
+          "file": "reference/audit.md",
+          "roles": [
+            "reviewer"
+          ],
+          "layers": [
+            "design",
+            "frontend",
+            "accessibility"
+          ],
+          "when": "the technical pass of the visual check",
+          "priority": "recommended"
+        }
+      ],
+      "files": [
+        {
+          "path": "LICENSE",
+          "origin": "source",
+          "from": "LICENSE",
+          "sha256": "02bb8c3b4e70190e3986c0404ad2fd8d639b4f534252d82379cc1b502b6d1812"
+        },
+        {
+          "path": "NOTICE.md",
+          "origin": "source",
+          "from": "NOTICE.md",
+          "sha256": "c60a093c2845fd9fb82f9c6f742ece31f379f8190b535309d32d66c45ccffdcb"
+        },
+        {
+          "path": "reference/adapt.md",
+          "origin": "source",
+          "from": ".claude/skills/impeccable/reference/adapt.md",
+          "sha256": "5826bb4bca75d7b891bed17ff03bd3b685dff0e4f26d387fa6190d4ba3f065e4"
+        },
+        {
+          "path": "reference/animate.md",
+          "origin": "source",
+          "from": ".claude/skills/impeccable/reference/animate.md",
+          "sha256": "94b4ce6299fea93d9f256b2d25705961a76bc5ea940c56db4145686ebc99df1b"
+        },
+        {
+          "path": "reference/audit.md",
+          "origin": "source",
+          "from": ".claude/skills/impeccable/reference/audit.md",
+          "sha256": "a24d86f22f23ac594c87dfffce68b03cb475efbae48a84652ad9023d96295df5"
+        },
+        {
+          "path": "reference/clarify.md",
+          "origin": "source",
+          "from": ".claude/skills/impeccable/reference/clarify.md",
+          "sha256": "6c382f8283756e8a693d832b750f7e4cbff1ca5bdcc3825b2b4ef4da9f21876a"
+        },
+        {
+          "path": "reference/colorize.md",
+          "origin": "source",
+          "from": ".claude/skills/impeccable/reference/colorize.md",
+          "sha256": "d1fbd55074abb2251bdaa03749d34acc42c38e46e47549f18f5848df57d43c42"
+        },
+        {
+          "path": "reference/craft-floor.md",
+          "origin": "source",
+          "from": ".claude/skills/impeccable/reference/craft-floor.md",
+          "sha256": "ba01bbab98671095b76c2170324abdcceb55fd39fd281bc46daddc2b3c2b0753"
+        },
+        {
+          "path": "reference/harden.md",
+          "origin": "source",
+          "from": ".claude/skills/impeccable/reference/harden.md",
+          "sha256": "98244db22d907a134cac0c94ffb829ba480ba61cfac67ae155ac2f46444da7c9"
+        },
+        {
+          "path": "reference/layout.md",
+          "origin": "source",
+          "from": ".claude/skills/impeccable/reference/layout.md",
+          "sha256": "64802d14087fc96b38ef3881fef8098b36068d07f3b942031637b18eef3dd2af"
+        },
+        {
+          "path": "reference/onboard.md",
+          "origin": "source",
+          "from": ".claude/skills/impeccable/reference/onboard.md",
+          "sha256": "eb713f3d6686bac6431dd874f7b02358b4cf08e879e11bf747d75660dedd685a"
+        },
+        {
+          "path": "reference/operate.md",
+          "origin": "source",
+          "from": ".claude/skills/impeccable/reference/operate.md",
+          "sha256": "a9d2203acd45ca33a13d5c68b02b23ed512425ac15f0e8438318ed124b43729d"
+        },
+        {
+          "path": "reference/typeset.md",
+          "origin": "source",
+          "from": ".claude/skills/impeccable/reference/typeset.md",
+          "sha256": "c9943e06ca311258d8aa5a5c65f5beb7a46c57c5e9a2075d2a246bf1337f00bb"
+        }
+      ]
+    },
+    {
+      "id": "taste",
+      "kind": "reference",
+      "title": "tasteskill references (Leonxlnx)",
+      "source": {
+        "repo": "https://github.com/Leonxlnx/taste-skill",
+        "commit": "6010f91a9935f1c167dfc500fb1a475681892e6b",
+        "path": "skills/taste-skill/references",
+        "version": "v2"
+      },
+      "licence": {
+        "spdx": "MIT",
+        "class": "free",
+        "file": "LICENSE",
+        "notices": [],
+        "copyright": "Copyright (c) 2026 Leonxlnx"
+      },
+      "delivery": "vendored",
+      "obligations": [
+        "The copyright and permission notice ships in LICENSE beside the files",
+        "The files are copied unchanged; a change would be marked in the file and in this entry"
+      ],
+      "changes": "a subset: SKILL.md, the scripts, the library and the assets are not shipped (the scripts drive a browser and download pictures at run time)",
+      "roles": [
+        "blueprint",
+        "builder",
+        "reviewer"
+      ],
+      "use": "Type, colour and layout for public pages, the critique of a render, and the tells of a generated page.",
+      "layers": [
+        "design"
+      ],
+      "stacks": [
+        "any"
+      ],
+      "trust": {
+        "runs_code": false,
+        "fetches": false,
+        "reviewed": "2026-10-24",
+        "notes": "Markdown guidance only: it ships no script and names nothing to fetch or install."
+      },
+      "reads": [
+        {
+          "file": "references/type.md",
+          "roles": [
+            "blueprint",
+            "builder"
+          ],
+          "layers": [
+            "design"
+          ],
+          "when": "type on landing, marketing and product pages",
+          "priority": "recommended"
+        },
+        {
+          "file": "references/colour.md",
+          "roles": [
+            "blueprint",
+            "builder"
+          ],
+          "layers": [
+            "design"
+          ],
+          "when": "colour on landing, marketing and product pages",
+          "priority": "recommended"
+        },
+        {
+          "file": "references/layout.md",
+          "roles": [
+            "blueprint",
+            "builder"
+          ],
+          "layers": [
+            "design"
+          ],
+          "when": "layout of landing, marketing and product pages",
+          "priority": "recommended"
+        },
+        {
+          "file": "references/critique.md",
+          "roles": [
+            "reviewer"
+          ],
+          "layers": [
+            "design"
+          ],
+          "when": "judging the captures of a public page",
+          "priority": "recommended"
+        },
+        {
+          "file": "references/tells.md",
+          "roles": [
+            "reviewer"
+          ],
+          "layers": [
+            "design"
+          ],
+          "when": "the tells of a generated page, in the captures",
+          "priority": "recommended"
+        }
+      ],
+      "files": [
+        {
+          "path": "LICENSE",
+          "origin": "source",
+          "from": "LICENSE",
+          "sha256": "4575a543ab88dad12ccea7d97e563d0bce5b448b06072e65d3264497dad326df"
+        },
+        {
+          "path": "references/colour.md",
+          "origin": "source",
+          "from": "skills/taste-skill/references/colour.md",
+          "sha256": "6556bcc7eed48b7bc2d0d281c28bf57c1b75e94d7ca0bde49f5d9df8c6a09351"
+        },
+        {
+          "path": "references/critique.md",
+          "origin": "source",
+          "from": "skills/taste-skill/references/critique.md",
+          "sha256": "9c2f4392674530b3f02ac529fba53d82ab37b85f401c4c1989fbe98d6217f0b4"
+        },
+        {
+          "path": "references/layout.md",
+          "origin": "source",
+          "from": "skills/taste-skill/references/layout.md",
+          "sha256": "40080640719b07737afb94a8868afef87767a1ab4892814d9b6882e2d283453b"
+        },
+        {
+          "path": "references/tells.md",
+          "origin": "source",
+          "from": "skills/taste-skill/references/tells.md",
+          "sha256": "8e6de4411c43d3108f832b3f33bb1a2a838148a72b92a176df893b67d99a0da9"
+        },
+        {
+          "path": "references/type.md",
+          "origin": "source",
+          "from": "skills/taste-skill/references/type.md",
+          "sha256": "6353ff1d0ce2f9913628c88fbcb7dad3cc3877e61196848bce99e33a17d20611"
+        }
+      ]
+    },
+    {
+      "id": "owasp-cheat-sheets",
+      "kind": "reference",
+      "title": "OWASP Cheat Sheet Series (26 sheets)",
+      "source": {
+        "repo": "https://github.com/OWASP/CheatSheetSeries",
+        "commit": "a8ecf45fa88d4c90d4b4b455304b5d60aa02a258",
+        "tag": "",
+        "path": "cheatsheets",
+        "version": "repository head of 2026-10-25; the project publishes no release tags"
+      },
+      "licence": {
+        "spdx": "CC-BY-SA-4.0",
+        "class": "conditions",
+        "file": "LICENSE.md",
+        "notices": [
+          "ATTRIBUTION.md"
+        ],
+        "copyright": "the OWASP Cheat Sheet Series contributors (the licence file names no holder)"
+      },
+      "delivery": "vendored",
+      "obligations": [
+        "Attribution: ATTRIBUTION.md gives the title, the authors, the source at the pinned commit, the licence with its link, and that nothing was changed",
+        "The full CC BY-SA 4.0 text ships as LICENSE.md beside the sheets",
+        "The sheets are copied unchanged; a change would be marked in the file, in ATTRIBUTION.md and in this entry, and an adapted sheet would be shared under CC BY-SA 4.0 (ShareAlike)",
+        "DEVOS-NOTES.md is DEV_OS's own commentary, kept apart from the sheets; DEV_OS's licence does not cover the sheets and theirs does not cover DEV_OS",
+        "No technological measures restrict the copies"
+      ],
+      "changes": "none to the sheets; ATTRIBUTION.md and DEVOS-NOTES.md are DEV_OS's own",
+      "roles": [
+        "blueprint",
+        "builder",
+        "reviewer"
+      ],
+      "use": "How to build and review the security controls of a task: input, objects, access, sessions, secrets, uploads, webhooks, tenants, headers, logs, CI/CD, containers and dependencies.",
+      "layers": [
+        "security",
+        "api",
+        "backend",
+        "database",
+        "frontend",
+        "architecture",
+        "ops"
+      ],
+      "stacks": [
+        "any"
+      ],
+      "trust": {
+        "runs_code": false,
+        "fetches": false,
+        "reviewed": "2026-10-25",
+        "notes": "Markdown guidance only. No instruction to the agent; samples are illustrations in several languages, and some cannot run as printed (DEVOS-NOTES.md). Links to sheets and assets not copied do not resolve. Database_Security omits INSERT from its usual grants (corrected in DEVOS-NOTES.md). The four sheets added in E23b2b (CI/CD, Docker, vulnerable dependencies, microservices) were read whole on 2026-10-25; CI_CD_Security advises against auto-merge, which DEV_OS's method decides otherwise (DEVOS-NOTES.md)."
+      },
+      "notes": "DEVOS-NOTES.md",
+      "reads": [
+        {
+          "file": "Input_Validation_Cheat_Sheet.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "security"
+          ],
+          "when": "every server-side task: validate input where it crosses the trust boundary",
+          "priority": "required"
+        },
+        {
+          "file": "Insecure_Direct_Object_Reference_Prevention_Cheat_Sheet.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "security"
+          ],
+          "when": "every server-side task: check the caller may reach each object it names",
+          "priority": "required"
+        },
+        {
+          "file": "Authorization_Cheat_Sheet.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "security"
+          ],
+          "when": "roles, permissions, tenants and every deep task",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "roles",
+                "tenant"
+              ]
+            },
+            {
+              "deep": true
+            }
+          ]
+        },
+        {
+          "file": "Authentication_Cheat_Sheet.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "security"
+          ],
+          "when": "sign-in, sign-up, passwords, MFA and OAuth",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "auth"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "Password_Storage_Cheat_Sheet.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "security"
+          ],
+          "when": "a product that stores passwords itself",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "auth"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "Session_Management_Cheat_Sheet.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "security"
+          ],
+          "when": "sessions, cookies and tokens",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "session"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "security"
+          ],
+          "when": "cookie sessions and forms that change state",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "session"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "Injection_Prevention_Cheat_Sheet.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "backend"
+          ],
+          "when": "server code that passes input to an interpreter (shell, SQL, LDAP, templates)",
+          "priority": "recommended"
+        },
+        {
+          "file": "SQL_Injection_Prevention_Cheat_Sheet.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "database"
+          ],
+          "when": "every query: bind values, map identifiers",
+          "priority": "recommended"
+        },
+        {
+          "file": "Cross_Site_Scripting_Prevention_Cheat_Sheet.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "frontend"
+          ],
+          "when": "rendering user content as HTML",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "html"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "Server_Side_Request_Forgery_Prevention_Cheat_Sheet.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "security"
+          ],
+          "when": "the server fetching a URL, webhooks sent",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "outbound",
+                "webhook"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "Secrets_Management_Cheat_Sheet.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "security",
+            "ops"
+          ],
+          "when": "secrets, keys and credentials",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "secrets"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "Logging_Cheat_Sheet.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "security",
+            "ops"
+          ],
+          "when": "logs, audit trails and monitoring",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "logging"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "Error_Handling_Cheat_Sheet.md",
+          "roles": [
+            "reviewer"
+          ],
+          "layers": [
+            "api",
+            "backend"
+          ],
+          "when": "no stack trace or internal detail reaches the caller",
+          "priority": "recommended"
+        },
+        {
+          "file": "File_Upload_Cheat_Sheet.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "security"
+          ],
+          "when": "file uploads and stored files",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "upload"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "HTTP_Headers_Cheat_Sheet.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "security",
+            "ops"
+          ],
+          "when": "security headers, CORS and caching",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "headers"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "Mass_Assignment_Cheat_Sheet.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "api"
+          ],
+          "when": "every endpoint that binds a request body to a model",
+          "priority": "recommended"
+        },
+        {
+          "file": "Multi_Tenant_Security_Cheat_Sheet.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "security",
+            "database"
+          ],
+          "when": "tenants, organisations and workspaces",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "tenant"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "Threat_Modeling_Cheat_Sheet.md",
+          "roles": [
+            "blueprint",
+            "reviewer"
+          ],
+          "layers": [
+            "security"
+          ],
+          "when": "a feature that crosses a trust boundary, and every deep review",
+          "priority": "conditional",
+          "if": [
+            {
+              "deep": true
+            },
+            {
+              "topics": [
+                "threat"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "REST_Security_Cheat_Sheet.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "api"
+          ],
+          "when": "every HTTP endpoint: methods, content types, errors, status codes",
+          "priority": "recommended"
+        },
+        {
+          "file": "Webhook_Security_Cheat_Sheet.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "api",
+            "security"
+          ],
+          "when": "webhooks received or sent",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "webhook"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "Database_Security_Cheat_Sheet.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "database",
+            "ops"
+          ],
+          "when": "database accounts, credentials, connections and backups",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "db-access"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "CI_CD_Security_Cheat_Sheet.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "ops",
+            "security"
+          ],
+          "when": "CI pipelines, workflows and deploys",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "ci",
+                "deploy"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "Docker_Security_Cheat_Sheet.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "ops",
+            "security"
+          ],
+          "when": "containers and images",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "container"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "Vulnerable_Dependency_Management_Cheat_Sheet.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "ops",
+            "security"
+          ],
+          "when": "adding, upgrading or auditing dependencies",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "dependencies"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "Microservices_Security_Cheat_Sheet.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "architecture",
+            "security"
+          ],
+          "when": "work that spans several services",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "distributed"
+              ]
+            }
+          ]
+        }
+      ],
+      "excluded": [
+        {
+          "path": "assets/",
+          "reason": "images and third-party PDFs the sheets link to; the PDFs are not under the sheets' licence"
+        },
+        {
+          "path": "Denial_of_Service_Cheat_Sheet.md",
+          "reason": "read whole on 2026-10-25: incomplete (several 'future additions' placeholders) and mostly network-level; its application advice is in API4 of the API Top 10 and the throttling and bulkhead patterns"
+        }
+      ],
+      "files": [
+        {
+          "path": "ATTRIBUTION.md",
+          "origin": "devos",
+          "sha256": "1eec9a810298a6e7ed105537781665ded62259f9d3853c222aab0c62f0bbecd7"
+        },
+        {
+          "path": "Authentication_Cheat_Sheet.md",
+          "origin": "source",
+          "from": "cheatsheets/Authentication_Cheat_Sheet.md",
+          "sha256": "92f7483b28548679917a329c7b9be1824f33e934d9eed670aaf3e9a1e7b37e83"
+        },
+        {
+          "path": "Authorization_Cheat_Sheet.md",
+          "origin": "source",
+          "from": "cheatsheets/Authorization_Cheat_Sheet.md",
+          "sha256": "fb8b6e5c60ed783025beefb5049142fd9da02d01f5c95de18a19d26479737975"
+        },
+        {
+          "path": "CI_CD_Security_Cheat_Sheet.md",
+          "origin": "source",
+          "from": "cheatsheets/CI_CD_Security_Cheat_Sheet.md",
+          "sha256": "25b927dd92a7a0ac1acb821444c3e7df4a3ad69b75edc34c855acb20f973e593"
+        },
+        {
+          "path": "Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.md",
+          "origin": "source",
+          "from": "cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.md",
+          "sha256": "8393658c07a3ec99c8195781a376fde895a9a230ec9fe489743bb6821920ab75"
+        },
+        {
+          "path": "Cross_Site_Scripting_Prevention_Cheat_Sheet.md",
+          "origin": "source",
+          "from": "cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.md",
+          "sha256": "199c484557a3d2e6732daec1d2b8d683645163ce1d7dd58f7e5590d93f5a2719"
+        },
+        {
+          "path": "DEVOS-NOTES.md",
+          "origin": "devos",
+          "sha256": "bb0765cb07a251f542d3b9deb2e2fc5e78165e5716600f08b399124a759d830b"
+        },
+        {
+          "path": "Database_Security_Cheat_Sheet.md",
+          "origin": "source",
+          "from": "cheatsheets/Database_Security_Cheat_Sheet.md",
+          "sha256": "b5ad6125f2f908949df3a7866daa03a9f8487e94ea84f384eb852948375f15e2"
+        },
+        {
+          "path": "Docker_Security_Cheat_Sheet.md",
+          "origin": "source",
+          "from": "cheatsheets/Docker_Security_Cheat_Sheet.md",
+          "sha256": "81e50e16cbc6a3cc7a4bdb88a495f086db43bf58f518099e08913da79a4909e9"
+        },
+        {
+          "path": "Error_Handling_Cheat_Sheet.md",
+          "origin": "source",
+          "from": "cheatsheets/Error_Handling_Cheat_Sheet.md",
+          "sha256": "237bcae265acbb98434a0c5b544554c83e8a05c2de3e0d12eaf055c460d99aae"
+        },
+        {
+          "path": "File_Upload_Cheat_Sheet.md",
+          "origin": "source",
+          "from": "cheatsheets/File_Upload_Cheat_Sheet.md",
+          "sha256": "65f9a85b72e016063d1dafdb5b366cd52a94f8e4bf855f3b6bec22afec10bb81"
+        },
+        {
+          "path": "HTTP_Headers_Cheat_Sheet.md",
+          "origin": "source",
+          "from": "cheatsheets/HTTP_Headers_Cheat_Sheet.md",
+          "sha256": "df04323a8b10ef16cf3a248dc1431fc3d19edde6d905e70754f36ab0f3a045d6"
+        },
+        {
+          "path": "Injection_Prevention_Cheat_Sheet.md",
+          "origin": "source",
+          "from": "cheatsheets/Injection_Prevention_Cheat_Sheet.md",
+          "sha256": "fafcc12af83a78c909a973f7e81af1a661eac709a5a6c9ddad8792c2edda7658"
+        },
+        {
+          "path": "Input_Validation_Cheat_Sheet.md",
+          "origin": "source",
+          "from": "cheatsheets/Input_Validation_Cheat_Sheet.md",
+          "sha256": "163390e3dcf5cc965aeac5e633692682403c08067a7f2ae54bdb49372e886810"
+        },
+        {
+          "path": "Insecure_Direct_Object_Reference_Prevention_Cheat_Sheet.md",
+          "origin": "source",
+          "from": "cheatsheets/Insecure_Direct_Object_Reference_Prevention_Cheat_Sheet.md",
+          "sha256": "3b0cef632300124beb38ba4169cc163cfce44dd768885e58fb56b4285c42da7f"
+        },
+        {
+          "path": "LICENSE.md",
+          "origin": "source",
+          "from": "LICENSE.md",
+          "sha256": "2b47ecdd5078e948395bc5980226933854228ff688f10d1dd059208be4956084"
+        },
+        {
+          "path": "Logging_Cheat_Sheet.md",
+          "origin": "source",
+          "from": "cheatsheets/Logging_Cheat_Sheet.md",
+          "sha256": "55ed0b4e9b2a68dba0f5a26c817a20760632d91b315aa42bb33ecfe36cc7195d"
+        },
+        {
+          "path": "Mass_Assignment_Cheat_Sheet.md",
+          "origin": "source",
+          "from": "cheatsheets/Mass_Assignment_Cheat_Sheet.md",
+          "sha256": "f325d48b32fd86e2b5450f51ccf773b639263f3c16b6daf6634587c262e5d4ea"
+        },
+        {
+          "path": "Microservices_Security_Cheat_Sheet.md",
+          "origin": "source",
+          "from": "cheatsheets/Microservices_Security_Cheat_Sheet.md",
+          "sha256": "8536aca65d330baad4aae41498b0ee1e8dec4732c71905db73c0786b37cac455"
+        },
+        {
+          "path": "Multi_Tenant_Security_Cheat_Sheet.md",
+          "origin": "source",
+          "from": "cheatsheets/Multi_Tenant_Security_Cheat_Sheet.md",
+          "sha256": "2dfdad6b9701f3023f3a3063435166ddafde144225ba612a5b2ded3f43991cde"
+        },
+        {
+          "path": "Password_Storage_Cheat_Sheet.md",
+          "origin": "source",
+          "from": "cheatsheets/Password_Storage_Cheat_Sheet.md",
+          "sha256": "3869a8bf0a5144ef5c741b74fb3739bf10eb16af669c65a60a233aad943a9323"
+        },
+        {
+          "path": "REST_Security_Cheat_Sheet.md",
+          "origin": "source",
+          "from": "cheatsheets/REST_Security_Cheat_Sheet.md",
+          "sha256": "3e2959541004f37a28d47ea1f742f30f46d06a331317eb4d9371617f2ad7a704"
+        },
+        {
+          "path": "SQL_Injection_Prevention_Cheat_Sheet.md",
+          "origin": "source",
+          "from": "cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.md",
+          "sha256": "5597b04e2a6f280e1b33a3a01c1f01884fa04fd9679168e2606fab22b6a6058b"
+        },
+        {
+          "path": "Secrets_Management_Cheat_Sheet.md",
+          "origin": "source",
+          "from": "cheatsheets/Secrets_Management_Cheat_Sheet.md",
+          "sha256": "61f10a65e19ae5eac59a9d0d0388d32eb5cd6adbc0e3232fcb66f76984df905a"
+        },
+        {
+          "path": "Server_Side_Request_Forgery_Prevention_Cheat_Sheet.md",
+          "origin": "source",
+          "from": "cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.md",
+          "sha256": "3ae2f474449eceadd74cc2c28edfdc405d935166550b2bd67965729b7d707652"
+        },
+        {
+          "path": "Session_Management_Cheat_Sheet.md",
+          "origin": "source",
+          "from": "cheatsheets/Session_Management_Cheat_Sheet.md",
+          "sha256": "3c38656e2be6188be4fc31d8c1fadafaaa6f37accc27e411e3345c235d44c051"
+        },
+        {
+          "path": "Threat_Modeling_Cheat_Sheet.md",
+          "origin": "source",
+          "from": "cheatsheets/Threat_Modeling_Cheat_Sheet.md",
+          "sha256": "5102d1557d58fdc184e1cb07dbd796f063e8899318e7d83de5b6242cebf74233"
+        },
+        {
+          "path": "Vulnerable_Dependency_Management_Cheat_Sheet.md",
+          "origin": "source",
+          "from": "cheatsheets/Vulnerable_Dependency_Management_Cheat_Sheet.md",
+          "sha256": "77e7a460c4072442d524394109125391317d61961db78c3cdc2dd771c006872a"
+        },
+        {
+          "path": "Webhook_Security_Cheat_Sheet.md",
+          "origin": "source",
+          "from": "cheatsheets/Webhook_Security_Cheat_Sheet.md",
+          "sha256": "100fff81950d3e4f0ac82d6d6f11a3a18bbc14d560d3ab9848615bff811be123"
+        }
+      ]
+    },
+    {
+      "id": "owasp-api-top10-2023",
+      "kind": "reference",
+      "title": "OWASP API Security Top 10 – 2023",
+      "source": {
+        "repo": "https://github.com/OWASP/API-Security",
+        "commit": "33cea37b2ffde3e2e62f6b5d79a029a22a846633",
+        "tag": "",
+        "path": "editions/2023/en",
+        "version": "the 2023 edition at the repository head of 2026-09-21; the repository's tags are of the 2019 edition"
+      },
+      "licence": {
+        "spdx": "CC-BY-SA-4.0",
+        "class": "conditions",
+        "file": "LICENSE",
+        "notices": [
+          "0x00-notice.md",
+          "ATTRIBUTION.md"
+        ],
+        "copyright": "the OWASP API Security Project (leaders named in 0x00-notice.md)"
+      },
+      "delivery": "vendored",
+      "obligations": [
+        "Attribution: ATTRIBUTION.md gives the title, the authors, the source at the pinned commit, the licence with its link, and that nothing was changed; 0x00-notice.md names the project leaders",
+        "The full CC BY-SA 4.0 text ships as LICENSE beside the files",
+        "The files are copied unchanged; a change would be marked in the file, in ATTRIBUTION.md and in this entry, and an adapted file would be shared under CC BY-SA 4.0 (ShareAlike)",
+        "DEVOS-NOTES.md is DEV_OS's own commentary, kept apart from the files; DEV_OS's licence does not cover them and theirs does not cover DEV_OS"
+      ],
+      "changes": "none to the files; ATTRIBUTION.md and DEVOS-NOTES.md are DEV_OS's own",
+      "roles": [
+        "builder",
+        "reviewer"
+      ],
+      "use": "The ten API risks: a checklist for every server-side task, and the reviewer's detail for the risks a task touches.",
+      "layers": [
+        "security",
+        "api"
+      ],
+      "stacks": [
+        "any"
+      ],
+      "trust": {
+        "runs_code": false,
+        "fetches": false,
+        "reviewed": "2026-10-25",
+        "notes": "Markdown risk descriptions only. No instruction to the agent. Attack scenarios are illustrations, some not valid as printed (the GraphQL mutation in 0xa1)."
+      },
+      "notes": "DEVOS-NOTES.md",
+      "reads": [
+        {
+          "file": "0x11-t10.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "security"
+          ],
+          "when": "every server-side task: the ten risks as a checklist",
+          "priority": "required"
+        },
+        {
+          "file": "0xa1-broken-object-level-authorization.md",
+          "roles": [
+            "reviewer"
+          ],
+          "layers": [
+            "api"
+          ],
+          "when": "objects reached by an id, on a deep review",
+          "priority": "conditional",
+          "if": [
+            {
+              "deep": true
+            }
+          ]
+        },
+        {
+          "file": "0xa2-broken-authentication.md",
+          "roles": [
+            "reviewer"
+          ],
+          "layers": [
+            "api"
+          ],
+          "when": "sign-in and tokens",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "auth",
+                "session"
+              ]
+            },
+            {
+              "deep": true
+            }
+          ]
+        },
+        {
+          "file": "0xa3-broken-object-property-level-authorization.md",
+          "roles": [
+            "reviewer"
+          ],
+          "layers": [
+            "api"
+          ],
+          "when": "fields a caller may read or write, on a deep review",
+          "priority": "conditional",
+          "if": [
+            {
+              "deep": true
+            }
+          ]
+        },
+        {
+          "file": "0xa4-unrestricted-resource-consumption.md",
+          "roles": [
+            "reviewer"
+          ],
+          "layers": [
+            "api"
+          ],
+          "when": "uploads, large lists and bulk work",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "upload",
+                "pagination",
+                "bulk"
+              ]
+            },
+            {
+              "deep": true
+            }
+          ]
+        },
+        {
+          "file": "0xa5-broken-function-level-authorization.md",
+          "roles": [
+            "reviewer"
+          ],
+          "layers": [
+            "api"
+          ],
+          "when": "roles and admin functions",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "roles"
+              ]
+            },
+            {
+              "deep": true
+            }
+          ]
+        },
+        {
+          "file": "0xa6-unrestricted-access-to-sensitive-business-flows.md",
+          "roles": [
+            "reviewer"
+          ],
+          "layers": [
+            "api"
+          ],
+          "when": "payments and other flows worth automating",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "payment"
+              ]
+            },
+            {
+              "deep": true
+            }
+          ]
+        },
+        {
+          "file": "0xa7-server-side-request-forgery.md",
+          "roles": [
+            "reviewer"
+          ],
+          "layers": [
+            "api"
+          ],
+          "when": "the server fetching a URL",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "outbound",
+                "webhook"
+              ]
+            },
+            {
+              "deep": true
+            }
+          ]
+        },
+        {
+          "file": "0xa8-security-misconfiguration.md",
+          "roles": [
+            "reviewer"
+          ],
+          "layers": [
+            "api"
+          ],
+          "when": "headers, CORS and configuration",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "headers"
+              ]
+            },
+            {
+              "deep": true
+            }
+          ]
+        },
+        {
+          "file": "0xa9-improper-inventory-management.md",
+          "roles": [
+            "reviewer"
+          ],
+          "layers": [
+            "api"
+          ],
+          "when": "API versions and old endpoints",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "compat"
+              ]
+            },
+            {
+              "deep": true
+            }
+          ]
+        },
+        {
+          "file": "0xaa-unsafe-consumption-of-apis.md",
+          "roles": [
+            "reviewer"
+          ],
+          "layers": [
+            "api"
+          ],
+          "when": "third-party APIs the product calls",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "integration"
+              ]
+            },
+            {
+              "deep": true
+            }
+          ]
+        }
+      ],
+      "files": [
+        {
+          "path": "0x00-notice.md",
+          "origin": "source",
+          "from": "editions/2023/en/0x00-notice.md",
+          "sha256": "674a7e9d3096a3957cfd5380fec4af5d335f904d514ef9b5a0397cfe8e21006e"
+        },
+        {
+          "path": "0x11-t10.md",
+          "origin": "source",
+          "from": "editions/2023/en/0x11-t10.md",
+          "sha256": "c396a9fc70a64ea6bccba608b482a99750f00f0ad6c283d6fbdd5c4d936040a3"
+        },
+        {
+          "path": "0xa1-broken-object-level-authorization.md",
+          "origin": "source",
+          "from": "editions/2023/en/0xa1-broken-object-level-authorization.md",
+          "sha256": "f5a827897509a005095c306d05e56b8dc713717a78cb5360a2ba4b3c29bf4b2b"
+        },
+        {
+          "path": "0xa2-broken-authentication.md",
+          "origin": "source",
+          "from": "editions/2023/en/0xa2-broken-authentication.md",
+          "sha256": "9c15446740599f7bcf709a406ca5627028793e701dd1798ba711a95e9b933971"
+        },
+        {
+          "path": "0xa3-broken-object-property-level-authorization.md",
+          "origin": "source",
+          "from": "editions/2023/en/0xa3-broken-object-property-level-authorization.md",
+          "sha256": "d316b89ee31f4689d4a4fafd1b97b62b7d05ac880945a478991ae4abf64a961d"
+        },
+        {
+          "path": "0xa4-unrestricted-resource-consumption.md",
+          "origin": "source",
+          "from": "editions/2023/en/0xa4-unrestricted-resource-consumption.md",
+          "sha256": "8df9df403fd0007bc28bd9a9a60e46739c6797b1f7135c7f0f683a7362f40e38"
+        },
+        {
+          "path": "0xa5-broken-function-level-authorization.md",
+          "origin": "source",
+          "from": "editions/2023/en/0xa5-broken-function-level-authorization.md",
+          "sha256": "bdaf0f1f0ec6e527c0c30aaca50a7328ed5b3c386bf6ab86e878116f4a3dd808"
+        },
+        {
+          "path": "0xa6-unrestricted-access-to-sensitive-business-flows.md",
+          "origin": "source",
+          "from": "editions/2023/en/0xa6-unrestricted-access-to-sensitive-business-flows.md",
+          "sha256": "b499f299f634b20557d0f9e335b105d6a738039fe5436b3eb09fe7f74ce63a27"
+        },
+        {
+          "path": "0xa7-server-side-request-forgery.md",
+          "origin": "source",
+          "from": "editions/2023/en/0xa7-server-side-request-forgery.md",
+          "sha256": "f1abf2f9d55a0b50a2004e44bc2ea95348c41452197bc5d1bc7dd71b70f52e6c"
+        },
+        {
+          "path": "0xa8-security-misconfiguration.md",
+          "origin": "source",
+          "from": "editions/2023/en/0xa8-security-misconfiguration.md",
+          "sha256": "13b9629746921f2ccd6fac1364cdfbb50f10d7b11faf668589d9994716c333de"
+        },
+        {
+          "path": "0xa9-improper-inventory-management.md",
+          "origin": "source",
+          "from": "editions/2023/en/0xa9-improper-inventory-management.md",
+          "sha256": "8d5d7e6130fac2b28f5808508d4f90683d99ae5a37f9d3d0d9714c853c39ca4f"
+        },
+        {
+          "path": "0xaa-unsafe-consumption-of-apis.md",
+          "origin": "source",
+          "from": "editions/2023/en/0xaa-unsafe-consumption-of-apis.md",
+          "sha256": "b5fe9034253ca2d7f7c4c9ef0a6db2b71da1689490911a5bb1f5aad2cab78706"
+        },
+        {
+          "path": "ATTRIBUTION.md",
+          "origin": "devos",
+          "sha256": "bb89ab47ec35143a0f121077614ce33f939c2797c31aa555f14f4c36c34b5eef"
+        },
+        {
+          "path": "DEVOS-NOTES.md",
+          "origin": "devos",
+          "sha256": "c510aff3d9af5f7bdee4fcd387e2d9ad96f27a31bf3c81e2da99f31ea7c12600"
+        },
+        {
+          "path": "LICENSE",
+          "origin": "source",
+          "from": "LICENSE",
+          "sha256": "9cff5eeb59f0a5f06d7cbe4c2435e7bbbce4edaab1d97b66324104f60a527cb7"
+        }
+      ]
+    },
+    {
+      "id": "google-aips",
+      "kind": "reference",
+      "title": "Google API Improvement Proposals 155, 158, 180 and 193",
+      "source": {
+        "repo": "https://github.com/googleapis/aip",
+        "commit": "2ccc61a4e09882bdd63aea1a42dceebc37bf3bd5",
+        "tag": "",
+        "path": "aip/general",
+        "version": "repository head of 2026-10-15; the project publishes no release tags"
+      },
+      "licence": {
+        "spdx": "CC-BY-4.0 AND Apache-2.0",
+        "class": "conditions",
+        "file": "LICENSE.md",
+        "notices": [
+          "ATTRIBUTION.md"
+        ],
+        "copyright": "the AIP authors (the licence file names no holder)"
+      },
+      "delivery": "vendored",
+      "obligations": [
+        "Attribution (CC BY 4.0, the text): ATTRIBUTION.md gives the titles, the authors, the source at the pinned commit, the licence with its link, and that nothing was changed",
+        "Apache-2.0 (the code samples): the licence text ships in LICENSE.md; the repository has no NOTICE file; the samples are unchanged",
+        "The files are copied unchanged; a change would be marked in the file, in ATTRIBUTION.md and in this entry",
+        "DEVOS-NOTES.md is DEV_OS's own commentary; DEV_OS's licence does not cover the AIPs and theirs does not cover DEV_OS"
+      ],
+      "changes": "none to the AIPs; ATTRIBUTION.md and DEVOS-NOTES.md are DEV_OS's own",
+      "roles": [
+        "builder",
+        "reviewer"
+      ],
+      "use": "API contract rules: request ids for safe retries, pagination, backwards compatibility and error responses.",
+      "layers": [
+        "api"
+      ],
+      "stacks": [
+        "any"
+      ],
+      "trust": {
+        "runs_code": false,
+        "fetches": false,
+        "reviewed": "2026-10-25",
+        "notes": "Markdown with Protocol Buffers and JSON samples. No instruction to the agent. Google's gRPC conventions are adopted only as principles (DEVOS-NOTES.md); one AIP-180 sample is not valid Protocol Buffers."
+      },
+      "notes": "DEVOS-NOTES.md",
+      "reads": [
+        {
+          "file": "0155.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "api"
+          ],
+          "when": "a create, payment or webhook a retry could repeat",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "idempotency",
+                "payment",
+                "webhook"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "0158.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "api"
+          ],
+          "when": "every list endpoint",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "pagination"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "0180.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "api"
+          ],
+          "when": "changing an API that has users",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "compat"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "0193.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "api"
+          ],
+          "when": "the API's error responses",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "errors"
+              ]
+            }
+          ]
+        }
+      ],
+      "files": [
+        {
+          "path": "0155.md",
+          "origin": "source",
+          "from": "aip/general/0155.md",
+          "sha256": "031a0e49e3827eb671ec972a2f03a2b1b2a9a0d1daf0bfd33584f27208827d1c"
+        },
+        {
+          "path": "0158.md",
+          "origin": "source",
+          "from": "aip/general/0158.md",
+          "sha256": "3275e7ac12a1f9f8b3f10e36edb47d942e83293ab5a27aa3aea3107f0f0e7b76"
+        },
+        {
+          "path": "0180.md",
+          "origin": "source",
+          "from": "aip/general/0180.md",
+          "sha256": "36d325d519ed3f1100b50156258a6bf4e81224ebef5fa277ad94dfa970d954b3"
+        },
+        {
+          "path": "0193.md",
+          "origin": "source",
+          "from": "aip/general/0193.md",
+          "sha256": "d76399f08a3a01256f75f567596e95f57eec9deb6f6f3b28333d80e8f012018a"
+        },
+        {
+          "path": "ATTRIBUTION.md",
+          "origin": "devos",
+          "sha256": "4b34a7aec30fead1a103e2beb733cf0b593d4dbb7821bf918ba40b270f1b783d"
+        },
+        {
+          "path": "DEVOS-NOTES.md",
+          "origin": "devos",
+          "sha256": "c69dc0a4ac98250a4dff497da3004a804bc37805faf2e7755035c58ae4d3e913"
+        },
+        {
+          "path": "LICENSE.md",
+          "origin": "source",
+          "from": "LICENSE.md",
+          "sha256": "c80d18310bc29da5c83a5c66dff8e43c79ae0a66b6cd1a5c5fe21df3d58aa32a"
+        }
+      ]
+    },
+    {
+      "id": "supabase-postgres-best-practices",
+      "kind": "skill",
+      "title": "Supabase Postgres Best Practices",
+      "source": {
+        "repo": "https://github.com/supabase/agent-skills",
+        "commit": "544bfc56c89afe2b87b20017a59b2c6e9502a1fb",
+        "tag": "v0.1.9",
+        "path": "skills/supabase-postgres-best-practices",
+        "version": "release v0.1.9 (skill version 1.1.1)"
+      },
+      "licence": {
+        "spdx": "MIT",
+        "class": "free",
+        "file": "LICENSE",
+        "notices": [],
+        "copyright": "Copyright (c) 2026 Supabase"
+      },
+      "delivery": "vendored",
+      "obligations": [
+        "The copyright and permission notice ships in LICENSE beside the files",
+        "The files are copied unchanged; a change would be marked in the file and in this entry",
+        "DEVOS-NOTES.md is DEV_OS's own: the audit's verified correction and notes"
+      ],
+      "changes": "none to the source files; DEVOS-NOTES.md is DEV_OS's own",
+      "roles": [
+        "builder",
+        "reviewer"
+      ],
+      "use": "Postgres rules for schemas, RLS, queries, indexes, connections, locks and data access, picked by what the task touches.",
+      "layers": [
+        "database",
+        "security"
+      ],
+      "stacks": [
+        "any"
+      ],
+      "modules": [
+        "supabase"
+      ],
+      "trust": {
+        "runs_code": false,
+        "fetches": false,
+        "reviewed": "2026-10-25",
+        "notes": "Markdown and SQL samples. No instruction to fetch or run anything. One sample breaks its own policy (the EXECUTE revoke in security-rls-performance.md; verified on PostgreSQL 16, corrected in DEVOS-NOTES.md); the conn- rules use alter system, which managed Supabase does not allow."
+      },
+      "notes": "DEVOS-NOTES.md",
+      "reads": [
+        {
+          "file": "SKILL.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "database"
+          ],
+          "when": "every database task: the rule categories, by impact",
+          "priority": "recommended"
+        },
+        {
+          "file": "references/security-rls-basics.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "database",
+            "security"
+          ],
+          "when": "every table in an exposed schema has RLS",
+          "priority": "required"
+        },
+        {
+          "file": "references/security-rls-performance.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "database"
+          ],
+          "when": "policies on large tables, helper functions in policies",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "rls",
+                "performance"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "references/security-privileges.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "database"
+          ],
+          "when": "grants, revokes and database roles",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "rls",
+                "db-access",
+                "roles"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "references/schema-constraints.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "database"
+          ],
+          "when": "schema changes: constraints",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "migration"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "references/schema-data-types.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "database"
+          ],
+          "when": "schema changes: column types",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "migration"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "references/schema-foreign-key-indexes.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "database"
+          ],
+          "when": "schema changes: index every foreign key",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "migration"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "references/schema-lowercase-identifiers.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "database"
+          ],
+          "when": "schema changes: identifiers",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "migration"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "references/schema-primary-keys.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "database"
+          ],
+          "when": "schema changes: primary keys",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "migration"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "references/schema-partitioning.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "database"
+          ],
+          "when": "very large or time-series tables",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "partitioning"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "references/query-missing-indexes.md",
+          "roles": [
+            "reviewer"
+          ],
+          "layers": [
+            "database"
+          ],
+          "when": "every new query: is there an index for it",
+          "priority": "recommended"
+        },
+        {
+          "file": "references/query-composite-indexes.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "database"
+          ],
+          "when": "query speed: multi-column indexes",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "performance"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "references/query-covering-indexes.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "database"
+          ],
+          "when": "query speed: index-only scans",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "performance"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "references/query-index-types.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "database"
+          ],
+          "when": "query speed: B-tree, GIN, GiST, BRIN",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "performance"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "references/query-partial-indexes.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "database"
+          ],
+          "when": "query speed: partial indexes",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "performance"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "references/conn-pooling.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "database"
+          ],
+          "when": "connections: pooling",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "connections"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "references/conn-limits.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "database"
+          ],
+          "when": "connections: limits",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "connections"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "references/conn-idle-timeout.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "database"
+          ],
+          "when": "connections: idle timeouts",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "connections"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "references/conn-prepared-statements.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "database"
+          ],
+          "when": "connections: prepared statements with a pooler",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "connections"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "references/lock-short-transactions.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "database"
+          ],
+          "when": "transactions around slow work, such as a call to a payment API",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "concurrency",
+                "payment",
+                "integration"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "references/lock-deadlock-prevention.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "database"
+          ],
+          "when": "concurrent writes",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "concurrency"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "references/lock-skip-locked.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "database"
+          ],
+          "when": "queues and workers",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "concurrency"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "references/lock-advisory.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "database"
+          ],
+          "when": "application-level locks",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "concurrency"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "references/data-n-plus-one.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "database"
+          ],
+          "when": "lists and pages that load related rows",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "performance",
+                "pagination"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "references/data-pagination.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "database"
+          ],
+          "when": "paginated lists",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "pagination"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "references/data-batch-inserts.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "database"
+          ],
+          "when": "bulk inserts, imports and seeds",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "bulk"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "references/data-upsert.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "database"
+          ],
+          "when": "insert-or-update",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "bulk",
+                "idempotency"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "references/monitor-explain-analyze.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "database"
+          ],
+          "when": "diagnosing a slow query",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "performance"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "references/monitor-pg-stat-statements.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "database"
+          ],
+          "when": "finding the slowest queries",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "performance"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "references/monitor-vacuum-analyze.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "database"
+          ],
+          "when": "table bloat and statistics",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "performance"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "references/advanced-full-text-search.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "database"
+          ],
+          "when": "text search",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "search"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "references/advanced-jsonb-indexing.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "database"
+          ],
+          "when": "JSONB columns",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "jsonb"
+              ]
+            }
+          ]
+        }
+      ],
+      "excluded": [
+        {
+          "path": "CHANGELOG.md",
+          "reason": "release history, not guidance"
+        },
+        {
+          "path": "references/_sections.md",
+          "reason": "the authors' category template; it says to replace its own examples"
+        },
+        {
+          "path": "references/_contributing.md",
+          "reason": "how to write a rule, for the skill's authors"
+        },
+        {
+          "path": "references/_template.md",
+          "reason": "the blank rule template"
+        }
+      ],
+      "files": [
+        {
+          "path": "DEVOS-NOTES.md",
+          "origin": "devos",
+          "sha256": "86f98e760608766c656f65701a53210054b1c1844a97eeb983a17168ffd04959"
+        },
+        {
+          "path": "LICENSE",
+          "origin": "source",
+          "from": "LICENSE",
+          "sha256": "b65e575eb4f04a13c187d64e958321298e2ab84d67aa8428819f362056ba292c"
+        },
+        {
+          "path": "SKILL.md",
+          "origin": "source",
+          "from": "skills/supabase-postgres-best-practices/SKILL.md",
+          "sha256": "ad65e776f45e761bafc609d3f506c77c1032225aa65e0c4c02f241b8071e5855"
+        },
+        {
+          "path": "references/advanced-full-text-search.md",
+          "origin": "source",
+          "from": "skills/supabase-postgres-best-practices/references/advanced-full-text-search.md",
+          "sha256": "40c2606bbb4c4dce31308f201b24cc7f58c7df05b1d9c6856fe2b888d3b7cf28"
+        },
+        {
+          "path": "references/advanced-jsonb-indexing.md",
+          "origin": "source",
+          "from": "skills/supabase-postgres-best-practices/references/advanced-jsonb-indexing.md",
+          "sha256": "24cacf6a8bc35901dd566d24502ce8e57f810a5c196b897e61d52726e521d106"
+        },
+        {
+          "path": "references/conn-idle-timeout.md",
+          "origin": "source",
+          "from": "skills/supabase-postgres-best-practices/references/conn-idle-timeout.md",
+          "sha256": "630588902c00fcec59a5988cc5d042f76dcf2c923a535abfd8c47dca205eaed5"
+        },
+        {
+          "path": "references/conn-limits.md",
+          "origin": "source",
+          "from": "skills/supabase-postgres-best-practices/references/conn-limits.md",
+          "sha256": "11b2a67a7c7679cbbc5d807bbb17e69c98484a581d0c8b929c03408f412b81b2"
+        },
+        {
+          "path": "references/conn-pooling.md",
+          "origin": "source",
+          "from": "skills/supabase-postgres-best-practices/references/conn-pooling.md",
+          "sha256": "88cf086bf98ba865d2e9d0579974e1366b14157619d6a93e7da77be91084e4a5"
+        },
+        {
+          "path": "references/conn-prepared-statements.md",
+          "origin": "source",
+          "from": "skills/supabase-postgres-best-practices/references/conn-prepared-statements.md",
+          "sha256": "174e9332fe3dda5c99b2b00159fb1915ae36c00bab3a7882c14e73e4344e946e"
+        },
+        {
+          "path": "references/data-batch-inserts.md",
+          "origin": "source",
+          "from": "skills/supabase-postgres-best-practices/references/data-batch-inserts.md",
+          "sha256": "531933b82d6a622d0fae29e0ea80be6fe5d78655adf2804c271ea84a1930de37"
+        },
+        {
+          "path": "references/data-n-plus-one.md",
+          "origin": "source",
+          "from": "skills/supabase-postgres-best-practices/references/data-n-plus-one.md",
+          "sha256": "21a44905e5b16a42741892ec34bb1bfef124d049b140a76934a9acd0f46f5fc2"
+        },
+        {
+          "path": "references/data-pagination.md",
+          "origin": "source",
+          "from": "skills/supabase-postgres-best-practices/references/data-pagination.md",
+          "sha256": "73c9fa10a3d439bedea0e11b640bd25bf30dd50f0d9006cf85baf7c3151543fa"
+        },
+        {
+          "path": "references/data-upsert.md",
+          "origin": "source",
+          "from": "skills/supabase-postgres-best-practices/references/data-upsert.md",
+          "sha256": "2612af83b20a2701dde30ef1f8d7efd26b7e9eef84717226b8f038a2d2150ff7"
+        },
+        {
+          "path": "references/lock-advisory.md",
+          "origin": "source",
+          "from": "skills/supabase-postgres-best-practices/references/lock-advisory.md",
+          "sha256": "c88d259dbf81c3771438f59a165f7eab8acd09999dd370bdf807521c73f35aab"
+        },
+        {
+          "path": "references/lock-deadlock-prevention.md",
+          "origin": "source",
+          "from": "skills/supabase-postgres-best-practices/references/lock-deadlock-prevention.md",
+          "sha256": "09aee46f51d7178c8e55fe056cd5a94a64ba2c122fe418e6900cd99f297b2347"
+        },
+        {
+          "path": "references/lock-short-transactions.md",
+          "origin": "source",
+          "from": "skills/supabase-postgres-best-practices/references/lock-short-transactions.md",
+          "sha256": "5aa7f61095916986d39644b446cdbcd2bacca7ef698a3bb50b3f82dd60207602"
+        },
+        {
+          "path": "references/lock-skip-locked.md",
+          "origin": "source",
+          "from": "skills/supabase-postgres-best-practices/references/lock-skip-locked.md",
+          "sha256": "6c45077f430f29cd9cd8f448c94d578e827e7bd023fcdaf717a756acb116fa4b"
+        },
+        {
+          "path": "references/monitor-explain-analyze.md",
+          "origin": "source",
+          "from": "skills/supabase-postgres-best-practices/references/monitor-explain-analyze.md",
+          "sha256": "4cb67ffbf8e57f2e5b380b0beb4242528b513723ce314a2c2ffcf083bd4203d7"
+        },
+        {
+          "path": "references/monitor-pg-stat-statements.md",
+          "origin": "source",
+          "from": "skills/supabase-postgres-best-practices/references/monitor-pg-stat-statements.md",
+          "sha256": "89dca99d4e894fcbdcac136be7ad9fbc03d1342904f065c1b198dc9cf495f098"
+        },
+        {
+          "path": "references/monitor-vacuum-analyze.md",
+          "origin": "source",
+          "from": "skills/supabase-postgres-best-practices/references/monitor-vacuum-analyze.md",
+          "sha256": "2892272011710eb49b3f185ec12f15ce9ce4c365792c672f6e2a9c90da426a1a"
+        },
+        {
+          "path": "references/query-composite-indexes.md",
+          "origin": "source",
+          "from": "skills/supabase-postgres-best-practices/references/query-composite-indexes.md",
+          "sha256": "73e42424e671f0266e74fdb220db3196790f69fb43e2b19c7b9483eb4971b554"
+        },
+        {
+          "path": "references/query-covering-indexes.md",
+          "origin": "source",
+          "from": "skills/supabase-postgres-best-practices/references/query-covering-indexes.md",
+          "sha256": "daf2a7f0477fb7357b62b5fb5b185b1995a77a186347e45cb780e25e7a7589b6"
+        },
+        {
+          "path": "references/query-index-types.md",
+          "origin": "source",
+          "from": "skills/supabase-postgres-best-practices/references/query-index-types.md",
+          "sha256": "472a74f22c2df203bd0154999b3a5a0187cca2ab3d9a3978e305bb7c32f1a282"
+        },
+        {
+          "path": "references/query-missing-indexes.md",
+          "origin": "source",
+          "from": "skills/supabase-postgres-best-practices/references/query-missing-indexes.md",
+          "sha256": "91ad8b0ff4365704b4830a7f077c6f140f7140fd5d3ce5cd0b92b160cf9e25f1"
+        },
+        {
+          "path": "references/query-partial-indexes.md",
+          "origin": "source",
+          "from": "skills/supabase-postgres-best-practices/references/query-partial-indexes.md",
+          "sha256": "6448982bc8558c6555284958edc331b29239c6a0130e6b4501dd6d4da607a6dd"
+        },
+        {
+          "path": "references/schema-constraints.md",
+          "origin": "source",
+          "from": "skills/supabase-postgres-best-practices/references/schema-constraints.md",
+          "sha256": "90e8efda3e9e81095e642911ad4aae2809d160f29414338fa997253238f510f8"
+        },
+        {
+          "path": "references/schema-data-types.md",
+          "origin": "source",
+          "from": "skills/supabase-postgres-best-practices/references/schema-data-types.md",
+          "sha256": "e01b58c14c7f3f65d8ead580b9a4fcf70b83baaab0f9a5f83c569c9fd113e8c8"
+        },
+        {
+          "path": "references/schema-foreign-key-indexes.md",
+          "origin": "source",
+          "from": "skills/supabase-postgres-best-practices/references/schema-foreign-key-indexes.md",
+          "sha256": "7587713d12a65a212365459b3d39e4717d8a79e4073b10bd62f1054d8192c0dd"
+        },
+        {
+          "path": "references/schema-lowercase-identifiers.md",
+          "origin": "source",
+          "from": "skills/supabase-postgres-best-practices/references/schema-lowercase-identifiers.md",
+          "sha256": "4bc80f70865f2390872591f326c8a6be6456a0aeb5a7e5a2475d7cd9d43059ab"
+        },
+        {
+          "path": "references/schema-partitioning.md",
+          "origin": "source",
+          "from": "skills/supabase-postgres-best-practices/references/schema-partitioning.md",
+          "sha256": "541e13fbeaf4bb1485c9059d4c9417dbdb766cf16f4237cd63a04ada7ec45b90"
+        },
+        {
+          "path": "references/schema-primary-keys.md",
+          "origin": "source",
+          "from": "skills/supabase-postgres-best-practices/references/schema-primary-keys.md",
+          "sha256": "3c8beabef82066f9a0838b926da0885117fd2d9a263aaf84cb5ca9e5f0d400e9"
+        },
+        {
+          "path": "references/security-privileges.md",
+          "origin": "source",
+          "from": "skills/supabase-postgres-best-practices/references/security-privileges.md",
+          "sha256": "095909274a4fb43df785d7144cf674eeb40284d2d45628f14af4108737b93663"
+        },
+        {
+          "path": "references/security-rls-basics.md",
+          "origin": "source",
+          "from": "skills/supabase-postgres-best-practices/references/security-rls-basics.md",
+          "sha256": "e04dd1a3a382aafdaaa73fe9f7976352acdde6e90c2a2470d281b94d4f44b096"
+        },
+        {
+          "path": "references/security-rls-performance.md",
+          "origin": "source",
+          "from": "skills/supabase-postgres-best-practices/references/security-rls-performance.md",
+          "sha256": "2e1faeca7d5746e246b1c78f9492fe2a9cfa41c4d7fa1e23c402d58fa18ea014"
+        }
+      ]
+    },
+    {
+      "id": "supabase",
+      "kind": "skill",
+      "title": "Supabase",
+      "source": {
+        "repo": "https://github.com/supabase/agent-skills",
+        "commit": "544bfc56c89afe2b87b20017a59b2c6e9502a1fb",
+        "tag": "v0.1.9",
+        "path": "skills/supabase",
+        "version": "release v0.1.9 (skill version 0.1.2)"
+      },
+      "licence": {
+        "spdx": "MIT",
+        "class": "free",
+        "file": "LICENSE",
+        "notices": [],
+        "copyright": "Copyright (c) 2026 Supabase"
+      },
+      "delivery": "vendored",
+      "obligations": [
+        "The copyright and permission notice ships in LICENSE beside the file",
+        "SKILL.md is copied unchanged; a change would be marked in the file and in this entry",
+        "DEVOS-NOTES.md is DEV_OS's own: which parts to read and which to skip"
+      ],
+      "changes": "none to SKILL.md; DEVOS-NOTES.md is DEV_OS's own",
+      "roles": [
+        "builder",
+        "reviewer"
+      ],
+      "use": "Supabase's own security checklist: the Data API, RLS, JWT claims, keys, views, SECURITY DEFINER and Storage.",
+      "layers": [
+        "database",
+        "backend",
+        "security"
+      ],
+      "stacks": [
+        "any"
+      ],
+      "modules": [
+        "supabase"
+      ],
+      "trust": {
+        "runs_code": false,
+        "fetches": false,
+        "reviewed": "2026-10-25",
+        "notes": "SKILL.md tells an agent to fetch the changelog and documentation, run the Supabase CLI and MCP server, and file feedback issues. DEV_OS ships SKILL.md alone and DEVOS-NOTES.md says to skip those parts; nothing is fetched or run at run time."
+      },
+      "notes": "DEVOS-NOTES.md",
+      "reads": [
+        {
+          "file": "SKILL.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "database",
+            "backend",
+            "security"
+          ],
+          "when": "every task on a Supabase project's data, auth or storage",
+          "priority": "recommended"
+        }
+      ],
+      "excluded": [
+        {
+          "path": "CHANGELOG.md",
+          "reason": "release history, not guidance"
+        },
+        {
+          "path": "assets/feedback-issue-template.md",
+          "reason": "a template for filing issues on Supabase's repository"
+        },
+        {
+          "path": "references/skill-feedback.md",
+          "reason": "tells the agent to file feedback issues"
+        }
+      ],
+      "files": [
+        {
+          "path": "DEVOS-NOTES.md",
+          "origin": "devos",
+          "sha256": "598007ee79dfaa1d0e242fdca2a7d0ccac6d681c850785f5b6f0f37a4ad454e6"
+        },
+        {
+          "path": "LICENSE",
+          "origin": "source",
+          "from": "LICENSE",
+          "sha256": "b65e575eb4f04a13c187d64e958321298e2ab84d67aa8428819f362056ba292c"
+        },
+        {
+          "path": "SKILL.md",
+          "origin": "source",
+          "from": "skills/supabase/SKILL.md",
+          "sha256": "697e0e949f97621c6fc1784169eb3ccbf673747d6bb8299a52962d3d84d93dc6"
+        }
+      ]
+    },
+    {
+      "id": "superpowers",
+      "kind": "skill",
+      "title": "Superpowers: testing, debugging and verification",
+      "source": {
+        "repo": "https://github.com/obra/superpowers",
+        "commit": "2ce8aa15d05bd57213e6f746f953aafb7ded7a8b",
+        "tag": "v7.0.1",
+        "path": "skills",
+        "version": "release v7.0.1"
+      },
+      "licence": {
+        "spdx": "MIT",
+        "class": "free",
+        "file": "LICENSE",
+        "notices": [],
+        "copyright": "Copyright (c) 2025 Jesse Vincent"
+      },
+      "delivery": "vendored",
+      "obligations": [
+        "The copyright and permission notice ships in LICENSE beside the files",
+        "The files are copied unchanged; a change would be marked in the file and in this entry",
+        "DEVOS-NOTES.md is DEV_OS's own: where the skills meet DEV_OS's rules (no deleted work, no git, no human mid-run)"
+      ],
+      "changes": "none to the source files; DEVOS-NOTES.md is DEV_OS's own",
+      "roles": [
+        "builder",
+        "reviewer"
+      ],
+      "use": "Tests that catch real breaks, the failing test first for a bug, root cause before a fix, and evidence before every claim.",
+      "layers": [
+        "testing"
+      ],
+      "stacks": [
+        "any"
+      ],
+      "trust": {
+        "runs_code": false,
+        "fetches": false,
+        "reviewed": "2026-10-25",
+        "notes": "Markdown with TypeScript and shell samples. The skills tell an agent to delete code written before its test, to ask a human, and to use git; DEVOS-NOTES.md replaces those parts. The script find-polluter.sh and the example code file are not copied."
+      },
+      "notes": "DEVOS-NOTES.md",
+      "reads": [
+        {
+          "file": "test-driven-development/writing-good-tests.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "testing"
+          ],
+          "when": "every test written or changed: name the break it catches, exercise the real code",
+          "priority": "required"
+        },
+        {
+          "file": "verification-before-completion/SKILL.md",
+          "roles": [
+            "builder"
+          ],
+          "layers": [
+            "testing"
+          ],
+          "when": "before the report: every claim has its command and real output",
+          "priority": "required"
+        },
+        {
+          "file": "test-driven-development/SKILL.md",
+          "roles": [
+            "builder"
+          ],
+          "layers": [
+            "testing"
+          ],
+          "when": "a bug fix: the failing test first",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "bugfix"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "systematic-debugging/SKILL.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "testing"
+          ],
+          "when": "a bug, a failing test or a flaky one: root cause before the fix",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "bugfix",
+                "flaky"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "systematic-debugging/root-cause-tracing.md",
+          "roles": [
+            "builder"
+          ],
+          "layers": [
+            "testing"
+          ],
+          "when": "tracing a bad value back to where it starts",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "bugfix"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "systematic-debugging/defense-in-depth.md",
+          "roles": [
+            "builder"
+          ],
+          "layers": [
+            "testing"
+          ],
+          "when": "after the fix: validation at each layer the data crosses",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "bugfix"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "systematic-debugging/condition-based-waiting.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "testing"
+          ],
+          "when": "tests that wait: wait for the condition, not a guessed delay",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "flaky",
+                "e2e"
+              ]
+            }
+          ]
+        }
+      ],
+      "excluded": [
+        {
+          "path": "systematic-debugging/find-polluter.sh",
+          "reason": "a script; the cycle runs no code from a skill"
+        },
+        {
+          "path": "systematic-debugging/condition-based-waiting-example.ts",
+          "reason": "example code; the pattern is in condition-based-waiting.md"
+        },
+        {
+          "path": "systematic-debugging/test-academic.md",
+          "reason": "the authors' evaluation scenario"
+        },
+        {
+          "path": "systematic-debugging/test-pressure-1.md",
+          "reason": "the authors' evaluation scenario"
+        },
+        {
+          "path": "systematic-debugging/test-pressure-2.md",
+          "reason": "the authors' evaluation scenario"
+        },
+        {
+          "path": "systematic-debugging/test-pressure-3.md",
+          "reason": "the authors' evaluation scenario"
+        },
+        {
+          "path": "systematic-debugging/CREATION-LOG.md",
+          "reason": "the authors' notes on writing the skill"
+        },
+        {
+          "path": "using-git-worktrees/",
+          "reason": "drives the agent's own git workflow; the builder never runs git"
+        },
+        {
+          "path": "finishing-a-development-branch/",
+          "reason": "drives the agent's own git workflow; the builder never runs git"
+        }
+      ],
+      "files": [
+        {
+          "path": "DEVOS-NOTES.md",
+          "origin": "devos",
+          "sha256": "eb12f9b8684c0eeaba834c81dcb94404632741c5821e972c18b8f7da5d365277"
+        },
+        {
+          "path": "LICENSE",
+          "origin": "source",
+          "from": "LICENSE",
+          "sha256": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400"
+        },
+        {
+          "path": "systematic-debugging/SKILL.md",
+          "origin": "source",
+          "from": "skills/systematic-debugging/SKILL.md",
+          "sha256": "51c6435d98c83c42c96ba7c35725a0b2c376cd487fb1a4e6bd0ddbe7e33ef202"
+        },
+        {
+          "path": "systematic-debugging/condition-based-waiting.md",
+          "origin": "source",
+          "from": "skills/systematic-debugging/condition-based-waiting.md",
+          "sha256": "e89fec8400d6cd50f43407cec9fab50976ba4d55d0ec2eb51c0bd68036b54c26"
+        },
+        {
+          "path": "systematic-debugging/defense-in-depth.md",
+          "origin": "source",
+          "from": "skills/systematic-debugging/defense-in-depth.md",
+          "sha256": "1e175fb86fc357e58c6aebf5441e481e1b7868b4380c0456b63a17eefbd18ba7"
+        },
+        {
+          "path": "systematic-debugging/root-cause-tracing.md",
+          "origin": "source",
+          "from": "skills/systematic-debugging/root-cause-tracing.md",
+          "sha256": "75b933b6a8c40bdb2031b10f21654395b56ec6ab6bc7b018c18d3fe57aeb7fb8"
+        },
+        {
+          "path": "test-driven-development/SKILL.md",
+          "origin": "source",
+          "from": "skills/test-driven-development/SKILL.md",
+          "sha256": "64b03fce4aee5a97a93160cea8111f3ba13a17b7c001db4bd5836d67fd10705d"
+        },
+        {
+          "path": "test-driven-development/writing-good-tests.md",
+          "origin": "source",
+          "from": "skills/test-driven-development/writing-good-tests.md",
+          "sha256": "51471c853306ff92ca8bb41dcaea05f31c0e46b03651f8f3c99754b7172f4ae1"
+        },
+        {
+          "path": "verification-before-completion/SKILL.md",
+          "origin": "source",
+          "from": "skills/verification-before-completion/SKILL.md",
+          "sha256": "2befe7fc55bcadaa3d97dd9e8efeb633d2561c0ebe74c5a8b17c4d9e7e4520b3"
+        }
+      ]
+    },
+    {
+      "id": "playwright-best-practices",
+      "kind": "reference",
+      "title": "Playwright best practices",
+      "source": {
+        "repo": "https://github.com/microsoft/playwright",
+        "commit": "cfe490d941f992655948eee8fd4fd94e1c4234bf",
+        "tag": "v1.64.1",
+        "path": "docs/src/best-practices-js.md",
+        "version": "release v1.64.1"
+      },
+      "licence": {
+        "spdx": "Apache-2.0",
+        "class": "free",
+        "file": "LICENSE",
+        "notices": [
+          "NOTICE"
+        ],
+        "copyright": "Copyright (c) Microsoft Corporation (NOTICE)"
+      },
+      "delivery": "vendored",
+      "obligations": [
+        "The Apache-2.0 licence ships as LICENSE and the repository's NOTICE ships as NOTICE beside the file",
+        "best-practices-js.md is copied unchanged; LICENSE is the upstream text with its CRLF line endings normalised to LF (the repository stores text with LF)",
+        "DEVOS-NOTES.md is DEV_OS's own"
+      ],
+      "changes": "none to best-practices-js.md and NOTICE; LICENSE line endings normalised to LF; DEVOS-NOTES.md is DEV_OS's own",
+      "roles": [
+        "builder",
+        "reviewer"
+      ],
+      "use": "End-to-end tests in Playwright: user-visible behaviour, isolated tests, role locators, web-first assertions.",
+      "layers": [
+        "testing",
+        "frontend"
+      ],
+      "stacks": [
+        "node"
+      ],
+      "trust": {
+        "runs_code": false,
+        "fetches": false,
+        "reviewed": "2026-10-25",
+        "notes": "Markdown with JavaScript and shell samples, and remote image links. It suggests staging environments, @latest upgrades and interactive tools; DEVOS-NOTES.md says what applies in a run."
+      },
+      "notes": "DEVOS-NOTES.md",
+      "reads": [
+        {
+          "file": "best-practices-js.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "testing"
+          ],
+          "when": "end-to-end tests in Playwright",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "e2e"
+              ]
+            }
+          ]
+        }
+      ],
+      "files": [
+        {
+          "path": "DEVOS-NOTES.md",
+          "origin": "devos",
+          "sha256": "5a84f4781fd1923a051e1d4147d849513cf9f5472bd14d04fd04e4ade2016b37"
+        },
+        {
+          "path": "LICENSE",
+          "origin": "source",
+          "from": "LICENSE",
+          "sha256": "7fab1461b41970ff376f1c9303a637076bfaaeb71cd12dd3a1c44aaf59a1a2b9"
+        },
+        {
+          "path": "NOTICE",
+          "origin": "source",
+          "from": "NOTICE",
+          "sha256": "6d602191187b35b9b01d2cffa01c8469c2c8d9de8a96f1bf868e0f264f51c81d"
+        },
+        {
+          "path": "best-practices-js.md",
+          "origin": "source",
+          "from": "docs/src/best-practices-js.md",
+          "sha256": "785e6244815ed457ceb0a9109e0ead34a114fd89b09c0689174a5b421eed8512"
+        }
+      ]
+    },
+    {
+      "id": "azure-cloud-patterns",
+      "kind": "reference",
+      "title": "Cloud design patterns (Azure Architecture Center), 10 patterns",
+      "source": {
+        "repo": "https://github.com/MicrosoftDocs/architecture-center",
+        "commit": "b60c2b4526bab9b5e77cba2d779e695ed9d6ab9a",
+        "tag": "",
+        "path": "docs/patterns",
+        "version": "repository head of 2026-10-24; the documentation publishes no release tags"
+      },
+      "licence": {
+        "spdx": "CC-BY-4.0 AND MIT",
+        "class": "conditions",
+        "file": "LICENSE",
+        "notices": [
+          "LICENSE-CODE",
+          "ThirdPartyNotices",
+          "ATTRIBUTION.md"
+        ],
+        "copyright": "Microsoft and the contributors (ThirdPartyNotices)"
+      },
+      "delivery": "vendored",
+      "obligations": [
+        "Attribution (CC BY 4.0, the documentation): ATTRIBUTION.md gives the titles, the authors, the source at the pinned commit, the licence with its link, and that nothing was changed",
+        "MIT (the code in the pages): the licence text ships as LICENSE-CODE",
+        "ThirdPartyNotices ships unchanged: the licences grant no right to Microsoft's names, logos or trademarks",
+        "The pages are copied unchanged; a change would be marked in the file, in ATTRIBUTION.md and in this entry",
+        "DEVOS-NOTES.md is DEV_OS's own commentary; DEV_OS's licence does not cover the pages and theirs does not cover DEV_OS"
+      ],
+      "changes": "none to the pages; ATTRIBUTION.md and DEVOS-NOTES.md are DEV_OS's own",
+      "roles": [
+        "blueprint",
+        "builder",
+        "reviewer"
+      ],
+      "use": "Reliability and architecture patterns: retry, circuit breaker, bulkhead, health endpoints, queues, idempotent consumers, throttling, compensation, strangler fig and anti-corruption layer.",
+      "layers": [
+        "reliability",
+        "architecture",
+        "ops"
+      ],
+      "stacks": [
+        "any"
+      ],
+      "trust": {
+        "runs_code": false,
+        "fetches": false,
+        "reviewed": "2026-10-25",
+        "notes": "Markdown with YAML samples, Azure-specific examples and image blocks. No instruction to the agent. One example contradicts its page's rule (Circuit Breaker), and links to the .yml pages and to images do not resolve (DEVOS-NOTES.md)."
+      },
+      "notes": "DEVOS-NOTES.md",
+      "reads": [
+        {
+          "file": "retry-content.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "reliability"
+          ],
+          "when": "every call to a remote service: which faults to retry, and how",
+          "priority": "recommended"
+        },
+        {
+          "file": "circuit-breaker.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "reliability"
+          ],
+          "when": "a dependency that can fail for a long time",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "resilience"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "bulkhead.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "reliability"
+          ],
+          "when": "isolating one dependency's failure from the rest",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "resilience"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "health-endpoint-monitoring.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "reliability",
+            "ops"
+          ],
+          "when": "health checks, liveness and readiness",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "health",
+                "deploy"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "queue-based-load-leveling.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "reliability"
+          ],
+          "when": "absorbing load spikes with a queue",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "concurrency",
+                "rate-limit"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "idempotent-consumer.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "reliability"
+          ],
+          "when": "messages, jobs and webhooks that can arrive twice",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "concurrency",
+                "webhook",
+                "idempotency"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "throttling.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "reliability"
+          ],
+          "when": "limiting what one caller or tenant can consume",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "rate-limit"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "compensating-transaction.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "reliability",
+            "architecture"
+          ],
+          "when": "undoing steps of an operation that spans services",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "distributed"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "strangler-fig.md",
+          "roles": [
+            "blueprint",
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "architecture"
+          ],
+          "when": "replacing an older system step by step",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "legacy"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "anti-corruption-layer.md",
+          "roles": [
+            "blueprint",
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "architecture"
+          ],
+          "when": "integrating a system whose model differs from yours",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "legacy",
+                "integration"
+              ]
+            }
+          ]
+        }
+      ],
+      "files": [
+        {
+          "path": "ATTRIBUTION.md",
+          "origin": "devos",
+          "sha256": "a00d2932ae7b3673084ce79e6e8ddebad7a388ea0f5932c1dff42978dc128116"
+        },
+        {
+          "path": "DEVOS-NOTES.md",
+          "origin": "devos",
+          "sha256": "aa887aa7b464d63f22f70cbca9c201ab7f60b89b5e374bf7efc3a9b256d7369a"
+        },
+        {
+          "path": "LICENSE",
+          "origin": "source",
+          "from": "LICENSE",
+          "sha256": "7183ef9749eb9b75e710a81a4c812a9405cc184f087500581a973e5929ac3f5e"
+        },
+        {
+          "path": "LICENSE-CODE",
+          "origin": "source",
+          "from": "LICENSE-CODE",
+          "sha256": "91f7258203fd43ba6d6f7f72b644eaedee9e3430f035c053beb6f34052f045e2"
+        },
+        {
+          "path": "ThirdPartyNotices",
+          "origin": "source",
+          "from": "ThirdPartyNotices",
+          "sha256": "f90a4ebe55a146d29bae7ce11cb57faf7346beab9dd9db5f15b533ac6c48a37f"
+        },
+        {
+          "path": "anti-corruption-layer.md",
+          "origin": "source",
+          "from": "docs/patterns/anti-corruption-layer.md",
+          "sha256": "2c2f1586eb46629a57470c70ef645bfaf60428125654171780dfcfdf2380e48a"
+        },
+        {
+          "path": "bulkhead.md",
+          "origin": "source",
+          "from": "docs/patterns/bulkhead.md",
+          "sha256": "2024b432e7477e0ebd068ca7ab4457a8e17c3f46aa82e256a7652422fb5d4ce1"
+        },
+        {
+          "path": "circuit-breaker.md",
+          "origin": "source",
+          "from": "docs/patterns/circuit-breaker.md",
+          "sha256": "29baeab9e19c54c9fdae01dfa4c431bae0c6811e0c5267a1d6c8c78267b8146e"
+        },
+        {
+          "path": "compensating-transaction.md",
+          "origin": "source",
+          "from": "docs/patterns/compensating-transaction.md",
+          "sha256": "18d9aca47cba63058af04b44ffe4d40485ff786c71c6ec6059870eefd0ed4c50"
+        },
+        {
+          "path": "health-endpoint-monitoring.md",
+          "origin": "source",
+          "from": "docs/patterns/health-endpoint-monitoring.md",
+          "sha256": "2ffed47249e9c6e6dd5a2d2b36c73fcb2adcbd217377e60f3466c98cf9f9d08f"
+        },
+        {
+          "path": "idempotent-consumer.md",
+          "origin": "source",
+          "from": "docs/patterns/idempotent-consumer.md",
+          "sha256": "c4650525eb0380f519ada5e18793ef474b466bac66f91672a5072ce4ed4e153d"
+        },
+        {
+          "path": "queue-based-load-leveling.md",
+          "origin": "source",
+          "from": "docs/patterns/queue-based-load-leveling.md",
+          "sha256": "9ce566aa87c58aa74c6af4e42ffd2d61e40e893164e72b33139923946211d9f0"
+        },
+        {
+          "path": "retry-content.md",
+          "origin": "source",
+          "from": "docs/patterns/retry-content.md",
+          "sha256": "619b34a5b1eaf6508715080192feb9fcd85447d402f29816e9f3ffaf294f91a8"
+        },
+        {
+          "path": "strangler-fig.md",
+          "origin": "source",
+          "from": "docs/patterns/strangler-fig.md",
+          "sha256": "433101cd85942a5c3e9fb410d8fdf53d5c10e50851d3821caebf56db0954bb51"
+        },
+        {
+          "path": "throttling.md",
+          "origin": "source",
+          "from": "docs/patterns/throttling.md",
+          "sha256": "8d63758dc5e81606a9d58a4c3b028a4298da807b073f40126d5db7862295cba7"
+        }
+      ]
+    },
+    {
+      "id": "twelve-factor",
+      "kind": "reference",
+      "title": "The Twelve-Factor App",
+      "source": {
+        "repo": "https://github.com/heroku/12factor",
+        "commit": "1385d2c80bac38c25647651f6f5ec769561828dc",
+        "tag": "",
+        "path": "content/en",
+        "version": "repository head of 2026-05-18; the project publishes no release tags"
+      },
+      "licence": {
+        "spdx": "MIT",
+        "class": "free",
+        "file": "LICENSE",
+        "notices": [],
+        "copyright": "Copyright (c) 2012 Adam Wiggins"
+      },
+      "delivery": "vendored",
+      "obligations": [
+        "The copyright and permission notice ships in LICENSE beside the pages (the README releases the project under the MIT licence)",
+        "The pages are copied unchanged; a change would be marked in the file and in this entry",
+        "DEVOS-NOTES.md is DEV_OS's own"
+      ],
+      "changes": "none to the pages; DEVOS-NOTES.md is DEV_OS's own",
+      "roles": [
+        "blueprint",
+        "builder",
+        "reviewer"
+      ],
+      "use": "How a service is structured and run: config in the environment, backing services, stateless processes, disposability, logs as streams, admin processes.",
+      "layers": [
+        "architecture",
+        "ops",
+        "reliability"
+      ],
+      "stacks": [
+        "any"
+      ],
+      "trust": {
+        "runs_code": false,
+        "fetches": false,
+        "reviewed": "2026-10-25",
+        "notes": "Markdown written in 2011-2012; dated tool examples and image links. It suggests consoles on the live database; DEVOS-NOTES.md says production is never touched from a task."
+      },
+      "notes": "DEVOS-NOTES.md",
+      "reads": [
+        {
+          "file": "intro.md",
+          "roles": [
+            "blueprint"
+          ],
+          "layers": [
+            "architecture"
+          ],
+          "when": "planning a service: what the twelve factors are for",
+          "priority": "recommended"
+        },
+        {
+          "file": "codebase.md",
+          "roles": [
+            "blueprint"
+          ],
+          "layers": [
+            "architecture"
+          ],
+          "when": "planning a service: one codebase, many deploys",
+          "priority": "recommended"
+        },
+        {
+          "file": "backing-services.md",
+          "roles": [
+            "blueprint",
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "architecture"
+          ],
+          "when": "databases, queues and third-party services as attached resources",
+          "priority": "recommended"
+        },
+        {
+          "file": "processes.md",
+          "roles": [
+            "blueprint",
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "architecture",
+            "reliability"
+          ],
+          "when": "stateless processes; state in a backing service",
+          "priority": "recommended"
+        },
+        {
+          "file": "port-binding.md",
+          "roles": [
+            "blueprint"
+          ],
+          "layers": [
+            "architecture"
+          ],
+          "when": "planning a service: self-contained, exported by port",
+          "priority": "recommended"
+        },
+        {
+          "file": "disposability.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "reliability"
+          ],
+          "when": "fast start, graceful shutdown, jobs safe to rerun",
+          "priority": "recommended"
+        },
+        {
+          "file": "config.md",
+          "roles": [
+            "blueprint",
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "architecture",
+            "ops"
+          ],
+          "when": "configuration and secrets in the environment",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "config",
+                "secrets",
+                "deploy"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "concurrency.md",
+          "roles": [
+            "blueprint",
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "architecture"
+          ],
+          "when": "scaling out with process types; web and worker",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "concurrency"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "dependencies.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "ops"
+          ],
+          "when": "declaring and isolating dependencies",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "dependencies"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "build-release-run.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "ops"
+          ],
+          "when": "separate build, release and run; releases are immutable",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "deploy",
+                "ci"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "dev-prod-parity.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "ops"
+          ],
+          "when": "the same backing services in development and production",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "deploy",
+                "config"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "logs.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "ops"
+          ],
+          "when": "logs as an event stream to standard output",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "logging",
+                "observability"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "admin-processes.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "ops"
+          ],
+          "when": "migrations and one-off tasks",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "migration",
+                "deploy"
+              ]
+            }
+          ]
+        }
+      ],
+      "excluded": [
+        {
+          "path": "background.md",
+          "reason": "the authors' background, not guidance"
+        },
+        {
+          "path": "who.md",
+          "reason": "who the document is for, not guidance"
+        },
+        {
+          "path": "toc.md",
+          "reason": "the site's table of contents"
+        }
+      ],
+      "files": [
+        {
+          "path": "DEVOS-NOTES.md",
+          "origin": "devos",
+          "sha256": "a921fe43a5c7a6c1d3316ee9b1ce7b0811067d8a6538ae2fc229d70662cadfb8"
+        },
+        {
+          "path": "LICENSE",
+          "origin": "source",
+          "from": "LICENSE",
+          "sha256": "bffa134a9c134b41d3f33e0c76dd9a91cee1a4e67912216d441c6e7584970b71"
+        },
+        {
+          "path": "admin-processes.md",
+          "origin": "source",
+          "from": "content/en/admin-processes.md",
+          "sha256": "fc496eaf191463a22fa4a04e4eca2bab35889f966688e024959ea320c310a7cd"
+        },
+        {
+          "path": "backing-services.md",
+          "origin": "source",
+          "from": "content/en/backing-services.md",
+          "sha256": "092e74d60e59001d0f70e39024c6bbac67188907f677431c1081b80f20b37695"
+        },
+        {
+          "path": "build-release-run.md",
+          "origin": "source",
+          "from": "content/en/build-release-run.md",
+          "sha256": "f5eababf567dfe7a3ea7740d32372aeffb22fb660c4e296c8c4701b179bb517b"
+        },
+        {
+          "path": "codebase.md",
+          "origin": "source",
+          "from": "content/en/codebase.md",
+          "sha256": "aafead6b0d15bd56a80521bd783094d5bf2d7381cf4dec2c15716ea8f2798e9a"
+        },
+        {
+          "path": "concurrency.md",
+          "origin": "source",
+          "from": "content/en/concurrency.md",
+          "sha256": "d4a22e2db87f45c04f78bcec5fe3dd69075359e9a76d724039ce110b0acfc996"
+        },
+        {
+          "path": "config.md",
+          "origin": "source",
+          "from": "content/en/config.md",
+          "sha256": "eb1dd6799ee8a82ca0074727432138234f40841952392406aa05c76fb35fcd27"
+        },
+        {
+          "path": "dependencies.md",
+          "origin": "source",
+          "from": "content/en/dependencies.md",
+          "sha256": "636df45c364d8abc3fa2418be2e913dda1c97eca62c199048827bac2d91a8c87"
+        },
+        {
+          "path": "dev-prod-parity.md",
+          "origin": "source",
+          "from": "content/en/dev-prod-parity.md",
+          "sha256": "0964d7249df65f78f7a50fa066f80f99ca1125c3e64a25d07582905292a20e6d"
+        },
+        {
+          "path": "disposability.md",
+          "origin": "source",
+          "from": "content/en/disposability.md",
+          "sha256": "8ee1f8a0acb60b75f1d2c761ba14234fd578d66c5c64a59347d48680bc09ee53"
+        },
+        {
+          "path": "intro.md",
+          "origin": "source",
+          "from": "content/en/intro.md",
+          "sha256": "21a1fc883d6fa0a6bfb577d63047294bb7cfe64921824d233c9dbdf2416713e3"
+        },
+        {
+          "path": "logs.md",
+          "origin": "source",
+          "from": "content/en/logs.md",
+          "sha256": "7dcb48b93385aca9fb8a8087ba592f3c588bb3937ffee7ac1514ecb377932146"
+        },
+        {
+          "path": "port-binding.md",
+          "origin": "source",
+          "from": "content/en/port-binding.md",
+          "sha256": "21aba4d1b47a5cf15dfdb90ec6ef8473193dbbd7d84a563d5998e70cf90ff7ed"
+        },
+        {
+          "path": "processes.md",
+          "origin": "source",
+          "from": "content/en/processes.md",
+          "sha256": "77f8721bde123f9f63e86f6ebb953ce77705582cce76b8d2e64272788ad429b7"
+        }
+      ]
+    },
+    {
+      "id": "github-actions-security",
+      "kind": "reference",
+      "title": "GitHub Actions: secure use reference",
+      "source": {
+        "repo": "https://github.com/github/docs",
+        "commit": "02c25d16369fe27f9bdb28d1201f6b452f0d21dd",
+        "tag": "",
+        "path": "content/actions/reference/security/secure-use.md",
+        "version": "repository head of 2026-10-23; the documentation publishes no release tags"
+      },
+      "licence": {
+        "spdx": "CC-BY-4.0 AND MIT",
+        "class": "conditions",
+        "file": "LICENSE",
+        "notices": [
+          "LICENSE-CODE",
+          "ATTRIBUTION.md"
+        ],
+        "copyright": "GitHub and the contributors (LICENSE-CODE: Copyright 2026 GitHub)"
+      },
+      "delivery": "vendored",
+      "obligations": [
+        "Attribution (CC BY 4.0, the documentation): ATTRIBUTION.md gives the title, the authors, the source at the pinned commit, the licence with its link, and that nothing was changed",
+        "MIT (the code): the licence text ships as LICENSE-CODE",
+        "The page is copied unchanged; a change would be marked in the file, in ATTRIBUTION.md and in this entry",
+        "DEVOS-NOTES.md is DEV_OS's own commentary; DEV_OS's licence does not cover the page and its licences do not cover DEV_OS"
+      ],
+      "changes": "none to the page; ATTRIBUTION.md and DEVOS-NOTES.md are DEV_OS's own",
+      "roles": [
+        "builder",
+        "reviewer"
+      ],
+      "use": "Writing the project's own GitHub Actions workflows safely: secrets, script injection, untrusted checkouts, pinned actions, runners.",
+      "layers": [
+        "ops",
+        "security"
+      ],
+      "stacks": [
+        "any"
+      ],
+      "trust": {
+        "runs_code": false,
+        "fetches": false,
+        "reviewed": "2026-10-25",
+        "notes": "The page's Liquid source: template variables, included text that is missing here, version blocks and AUTOTITLE links (DEVOS-NOTES.md explains them). No instruction to the agent."
+      },
+      "notes": "DEVOS-NOTES.md",
+      "reads": [
+        {
+          "file": "secure-use.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "ops"
+          ],
+          "when": "the project's own CI workflows",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "ci"
+              ]
+            }
+          ]
+        }
+      ],
+      "excluded": [
+        {
+          "path": "securely-using-pull_request_target.md",
+          "reason": "not copied in this task; secure-use.md gives the rule for pull_request_target and links to it"
+        }
+      ],
+      "files": [
+        {
+          "path": "ATTRIBUTION.md",
+          "origin": "devos",
+          "sha256": "ba765db361cdb1ccf0b752885aef234f1bee5821673cac16c9174b72ab692e0b"
+        },
+        {
+          "path": "DEVOS-NOTES.md",
+          "origin": "devos",
+          "sha256": "ed21473ce2b88d65845eaee78408bf6e287a4b8b34f5859020fe3a58fc94d036"
+        },
+        {
+          "path": "LICENSE",
+          "origin": "source",
+          "from": "LICENSE",
+          "sha256": "12d3a82a7d1378e6f597ec23d63a081aeb6ec4bc8de2a76ee9dc96c34c6d7a1b"
+        },
+        {
+          "path": "LICENSE-CODE",
+          "origin": "source",
+          "from": "LICENSE-CODE",
+          "sha256": "938cb3c100a34b9a1965b69cfe4b82287074e4fe1b9fbacaddaf23f57fd5698a"
+        },
+        {
+          "path": "secure-use.md",
+          "origin": "source",
+          "from": "content/actions/reference/security/secure-use.md",
+          "sha256": "0b2d692984fae55eff6334aabb52ca3c97bd38757cca1e2cc3437460cbc4b1d5"
+        }
+      ]
+    },
+    {
+      "id": "opentelemetry-concepts",
+      "kind": "reference",
+      "title": "OpenTelemetry concepts: primer, traces, logs, metrics",
+      "source": {
+        "repo": "https://github.com/open-telemetry/opentelemetry.io",
+        "commit": "bb4e55d88ba78a18aa732e40a76cc0066cbab286",
+        "tag": "",
+        "path": "content/en/docs/concepts",
+        "version": "repository head of 2026-10-25; the website publishes no release tags"
+      },
+      "licence": {
+        "spdx": "CC-BY-4.0 AND Apache-2.0",
+        "class": "conditions",
+        "file": "LICENSE",
+        "notices": [
+          "LICENSE-CODE",
+          "ATTRIBUTION.md"
+        ],
+        "copyright": "the OpenTelemetry authors (the licence files name no holder)"
+      },
+      "delivery": "vendored",
+      "obligations": [
+        "Attribution (CC BY 4.0, the documentation): ATTRIBUTION.md gives the titles, the authors, the source at the pinned commit, the licence with its link, and that nothing was changed",
+        "Apache-2.0 (the code): the licence text ships as LICENSE-CODE; the repository has no NOTICE file",
+        "The pages are copied unchanged; a change would be marked in the file, in ATTRIBUTION.md and in this entry",
+        "DEVOS-NOTES.md is DEV_OS's own commentary; DEV_OS's licence does not cover the pages and theirs does not cover DEV_OS"
+      ],
+      "changes": "none to the pages; ATTRIBUTION.md and DEVOS-NOTES.md are DEV_OS's own",
+      "roles": [
+        "builder",
+        "reviewer"
+      ],
+      "use": "What to emit so a running service can be understood: traces, spans, metrics, structured logs and their correlation.",
+      "layers": [
+        "ops",
+        "reliability"
+      ],
+      "stacks": [
+        "any"
+      ],
+      "trust": {
+        "runs_code": false,
+        "fetches": false,
+        "reviewed": "2026-10-25",
+        "notes": "Markdown with JSON samples and site templates. No instruction to the agent. A log sample records a token and personal data (corrected in DEVOS-NOTES.md)."
+      },
+      "notes": "DEVOS-NOTES.md",
+      "reads": [
+        {
+          "file": "observability-primer.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "ops"
+          ],
+          "when": "logging, metrics or tracing: the concepts first",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "observability",
+                "logging"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "signals/traces.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "ops"
+          ],
+          "when": "traces and spans",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "observability"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "signals/logs.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "ops"
+          ],
+          "when": "structured logs and their correlation with traces",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "logging",
+                "observability"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "signals/metrics.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "ops"
+          ],
+          "when": "metrics, instruments and cardinality",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "observability"
+              ]
+            }
+          ]
+        }
+      ],
+      "files": [
+        {
+          "path": "ATTRIBUTION.md",
+          "origin": "devos",
+          "sha256": "5ff67ed66c7035018f59d8c2ee47ff9837879f98db557dda6109427b6cfc3023"
+        },
+        {
+          "path": "DEVOS-NOTES.md",
+          "origin": "devos",
+          "sha256": "93d285e7aba41dfa663c6dcd88a36628b7365fdc466e01fd8df73d8744ce55ab"
+        },
+        {
+          "path": "LICENSE",
+          "origin": "source",
+          "from": "LICENSE",
+          "sha256": "6f9997b6f85f473f853aeef19b5f16504dd228ba99cee70e5a19211df947a2b3"
+        },
+        {
+          "path": "LICENSE-CODE",
+          "origin": "source",
+          "from": "LICENSE-CODE",
+          "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+        },
+        {
+          "path": "observability-primer.md",
+          "origin": "source",
+          "from": "content/en/docs/concepts/observability-primer.md",
+          "sha256": "dc03eacab8e562649cfc648081d23fe08fff34c4abae8d8418db45c587877f5e"
+        },
+        {
+          "path": "signals/logs.md",
+          "origin": "source",
+          "from": "content/en/docs/concepts/signals/logs.md",
+          "sha256": "20950feea860a7ce64b1d51b7e96e95f1bafb354f6a8e35021eb0ca058c2427d"
+        },
+        {
+          "path": "signals/metrics.md",
+          "origin": "source",
+          "from": "content/en/docs/concepts/signals/metrics.md",
+          "sha256": "891112f4c81851850b2d732f68c3ba58adf7d5e0017df5233408324307e18951"
+        },
+        {
+          "path": "signals/traces.md",
+          "origin": "source",
+          "from": "content/en/docs/concepts/signals/traces.md",
+          "sha256": "e114163e1eecc33e146a502784c484ca482648a1f278c24ab4809262d2cc0061"
+        }
+      ]
+    },
+    {
+      "id": "vercel-web-design-guidelines-skill",
+      "kind": "skill",
+      "title": "web-design-guidelines (vercel-labs/agent-skills)",
+      "source": {
+        "repo": "https://github.com/vercel-labs/agent-skills",
+        "commit": "063bee94c3f4df8453406c830b0a7df0f2860278",
+        "path": "skills/web-design-guidelines",
+        "version": "1.0.0"
+      },
+      "licence": {
+        "spdx": "unknown",
+        "class": "approval",
+        "file": "",
+        "notices": [],
+        "copyright": ""
+      },
+      "delivery": "principles",
+      "reason": "The README says MIT but the repository has no licence file at this commit, and the skill fetches its rules from the network on every run. DEV_OS copies nothing from it: its own wrapper (web-interface-guidelines/SKILL.md) points at the pinned MIT rules.",
+      "layers": [
+        "frontend",
+        "accessibility"
+      ],
+      "files": []
+    },
+    {
+      "id": "ui-ux-pro-max",
+      "kind": "skill",
+      "title": "UI/UX Pro Max",
+      "source": {
+        "repo": "https://github.com/nextlevelbuilder/ui-ux-pro-max-skill",
+        "commit": "d14efff8ed1faa4187f004f79926f428c8074ec7",
+        "path": "",
+        "version": ""
+      },
+      "licence": {
+        "spdx": "MIT",
+        "class": "free",
+        "file": "",
+        "notices": [],
+        "copyright": "Copyright (c) 2024 Next Level Builder"
+      },
+      "delivery": "external",
+      "reason": "Licensed for inclusion, but it is a Python search engine over CSV data that the agent runs at design time, and the cycle runs no code from a skill. A developer may install it for interactive work.",
+      "layers": [
+        "design"
+      ],
+      "files": []
+    },
+    {
+      "id": "baseline-ui",
+      "kind": "skill",
+      "title": "baseline-ui (ui-skills)",
+      "source": {
+        "repo": "https://github.com/ibelick/ui-skills",
+        "commit": "55363c305097d4c84487bd5f323d29b3f067bf72",
+        "path": "skills/baseline-ui",
+        "version": ""
+      },
+      "licence": {
+        "spdx": "MIT",
+        "class": "free",
+        "file": "",
+        "notices": [],
+        "copyright": "Copyright (c) 2026 Julien Thibeaut"
+      },
+      "delivery": "external",
+      "reason": "Licensed for inclusion, but it requires Tailwind CSS and motion/react and forbids animation unless asked, which would force one look on every project; DESIGN_METHOD.md §5 decides those per project.",
+      "layers": [
+        "design",
+        "motion",
+        "frontend"
+      ],
+      "files": []
+    },
+    {
+      "id": "refactoring-ui-plugin",
+      "kind": "skill",
+      "title": "Refactoring UI plugin",
+      "source": {
+        "repo": "https://github.com/gnurio/refactoring-ui-plugin",
+        "commit": "00781eab1dde7fdb720d63f8d6c8148bf5835a31",
+        "path": "",
+        "version": ""
+      },
+      "licence": {
+        "spdx": "LicenseRef-all-rights-reserved",
+        "class": "unsuitable",
+        "file": "",
+        "notices": [],
+        "copyright": "Copyright (c) 2026 George Nurijanian"
+      },
+      "delivery": "principles",
+      "reason": "All rights reserved: not licensed for reuse, redistribution or modification. Nothing is copied; the shipped skills and DESIGN_METHOD.md cover hierarchy, spacing, type and colour in their own words.",
+      "layers": [
+        "design"
+      ],
+      "files": []
+    },
+    {
+      "id": "axe-core-playwright",
+      "kind": "tool",
+      "title": "@axe-core/playwright",
+      "source": {
+        "repo": "https://github.com/dequelabs/axe-core-npm",
+        "commit": "",
+        "path": "packages/playwright",
+        "version": "the project's lockfile pins it"
+      },
+      "licence": {
+        "spdx": "MPL-2.0",
+        "class": "conditions",
+        "file": "",
+        "notices": [],
+        "copyright": "Deque Systems, Inc. (the package author)"
+      },
+      "delivery": "external",
+      "reason": "The accessibility check of every capture (PR-51). A UI project installs it as a dev dependency from T01; DEV_OS copies none of its files, and MPL-2.0's file-level conditions apply only to a changed copy of its files.",
+      "layers": [
+        "accessibility",
+        "testing"
+      ],
+      "files": []
+    },
+    {
+      "id": "wshobson-api-design-principles",
+      "kind": "skill",
+      "title": "API design principles (wshobson/agents)",
+      "source": {
+        "repo": "https://github.com/wshobson/agents",
+        "commit": "0874a27b17a22e2b7c2e2bcd725768e0803cad06",
+        "path": "plugins/backend-development/skills/api-design-principles"
+      },
+      "licence": {
+        "spdx": "MIT",
+        "class": "free"
+      },
+      "delivery": "external",
+      "reason": "Evaluated on 2026-10-25 from its SKILL.md: generic REST and GraphQL advice (naming, verbs, versioning styles) that the OWASP REST sheet and the AIPs cover with more precision. It also ships a Python template. Its references were not audited, so nothing of it is shipped.",
+      "layers": [
+        "api"
+      ],
+      "files": []
+    },
+    {
+      "id": "trailofbits-supply-chain-risk-auditor",
+      "kind": "skill",
+      "title": "Supply-chain risk auditor (Trail of Bits)",
+      "source": {
+        "repo": "https://github.com/trailofbits/skills",
+        "commit": "196a9073ab10d35bacf111f945e02c00b2c6883a",
+        "path": "plugins/supply-chain-risk-auditor"
+      },
+      "licence": {
+        "spdx": "CC-BY-SA-4.0",
+        "class": "conditions"
+      },
+      "delivery": "external",
+      "reason": "Its SKILL.md runs Python scripts with uv (scripts/collect.py, render.py) that query OSV, the npm, PyPI and Go registries and deps.dev, and the cycle runs no code from a skill and fetches nothing at run time. A developer may run it by hand.",
+      "layers": [
+        "security",
+        "ops"
+      ],
+      "files": []
+    },
+    {
+      "id": "trailofbits-sharp-edges",
+      "kind": "skill",
+      "title": "Sharp edges (Trail of Bits)",
+      "source": {
+        "repo": "https://github.com/trailofbits/skills",
+        "commit": "196a9073ab10d35bacf111f945e02c00b2c6883a",
+        "path": "plugins/sharp-edges"
+      },
+      "licence": {
+        "spdx": "CC-BY-SA-4.0",
+        "class": "conditions"
+      },
+      "delivery": "external",
+      "reason": "A review aid for dangerous APIs and defaults, about 19,000 words of Markdown across 22 files and mostly language-specific. It is not shipped unread: as a security review aid, its full audit belongs to the production-readiness gates (E23b4).",
+      "layers": [
+        "security"
+      ],
+      "files": []
+    },
+    {
+      "id": "owasp-asvs",
+      "kind": "reference",
+      "title": "OWASP Application Security Verification Standard",
+      "source": {
+        "repo": "https://github.com/OWASP/ASVS",
+        "commit": "2b47a9dd16760ee484a6672d197f1f7e25d9c632",
+        "path": ""
+      },
+      "licence": {
+        "spdx": "CC-BY-SA-4.0",
+        "class": "conditions"
+      },
+      "delivery": "external",
+      "reason": "A verification standard, not build guidance: its requirement levels belong to the production-readiness gates (E23b4), which will map them per layer.",
+      "layers": [
+        "security"
+      ],
+      "files": []
+    },
+    {
+      "id": "wshobson-slo-implementation",
+      "kind": "skill",
+      "title": "SLO implementation (wshobson/agents)",
+      "source": {
+        "repo": "https://github.com/wshobson/agents",
+        "commit": "0874a27b17a22e2b7c2e2bcd725768e0803cad06",
+        "path": "plugins/observability-monitoring/skills/slo-implementation"
+      },
+      "licence": {
+        "spdx": "MIT",
+        "class": "free"
+      },
+      "delivery": "external",
+      "reason": "Evaluated on 2026-10-25 from its SKILL.md: Prometheus recording rules and alert templates that assume monitoring infrastructure a DEV_OS project does not run; the concepts are in the OpenTelemetry primer. Its references were not audited, so nothing of it is shipped.",
+      "layers": [
+        "ops"
+      ],
+      "files": []
+    },
+    {
+      "id": "wshobson-github-actions-templates",
+      "kind": "skill",
+      "title": "GitHub Actions templates (wshobson/agents)",
+      "source": {
+        "repo": "https://github.com/wshobson/agents",
+        "commit": "0874a27b17a22e2b7c2e2bcd725768e0803cad06",
+        "path": "plugins/cicd-automation/skills/github-actions-templates"
+      },
+      "licence": {
+        "spdx": "MIT",
+        "class": "free"
+      },
+      "delivery": "external",
+      "reason": "Evaluated on 2026-10-25 from its SKILL.md: its workflow templates pin actions to tags such as @v4, which GitHub's secure use reference advises against (pin to a full commit SHA), and target Docker registries and Kubernetes; github-actions-security ships the rules instead.",
+      "layers": [
+        "ops"
+      ],
+      "files": []
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "README.md": "fc5831ba56f115abafedbc2e8a898339a706758b20d370aea50bf89d7db3aa48",
+  "package.json": "f640fd50fad243019db92e3c626bba16bc8577cdac18c70d14b8b4dc99878169",
+  "payload/files/devos/prompts/blueprint.md": "58268305fb76f583bbf949a6bb8076f53c6711807cac4773eea914c5fac6f46a",
+  "payload/files/devos/prompts/intake.md": "a1b6e8db25f608c6afdbaa427e14f269a588d61d71766edc60eaa7d167a6f6fe",
+  "payload/files/devos/prompts/reviewer.md": "79b5c00a2d92d3e89a0e14e5cfb37a7f7787d177d6f5ec0d92d50feae56d4985",
+  "payload/files/devos/skills/INDEX.md": "eed887c05074212dfcd1f01d3b0683ed9bce37bca6c7b3726292e39d9aebd55b",
+  "payload/files/devos/skills/README.md": "0032445eb792ace2f685f1972664e6e0984f41ef4958c9c569623075b93a44de",
+  "payload/files/devos/skills/manifest.json": "f55e47a0a9538f6d0971cd02f265972fe3d6261a44b430ffbb9183e558bb68ae",
+  "payload/files/devos/skills/owasp-cheat-sheets/ATTRIBUTION.md": "350ba450ce358687378a1fdd1fc34c56652298eb2e55590261e8cd862d92796f",
+  "payload/files/devos/skills/owasp-cheat-sheets/DEVOS-NOTES.md": "fe53b5f2e4e63edce2bc752616bc0bc21262deb943ef55ee13d77633884f6761",
+  "payload/files/docs/method/AUTOMATION.md": "7002c6e7c37fc1422d750a7b20b140f8106b526183142591b4b8b52d99f1d653",
+  "payload/files/docs/method/DESIGN_METHOD.md": "4bfbca5321303604253e2711cfbf9cb4729932dab3b57df40047bdcc107991d0",
+  "payload/files/docs/method/PRECEDENTS.md": "e14bc7c5720825fe410209e668e16506deb1f1bef9b608d49e7ff77bc2021ea9",
+  "payload/files/scripts/devos/skills.mjs": "da4850e6dbcb6e3b43dad58f6fc2d22777ccedc11fb02e81a02cd0e82bf1e430",
+  "test/install.test.mjs": "ab6c9ba5a607b81fcb977e9435b5b30c9cd452ef5c423ace9d96c72173fb8f1d",
+  "test/skills-select.test.mjs": "57454335b5f6a2297912d646a27c614bce8cb1adb080638975730257c2afaf67",
+  "test/skills.test.mjs": "11533bcffd3202785c7b7b336ea9481fbc941467aac405e0f97ecdab2b6afce0",
+  "test/upgrade.test.mjs": "337c4c9a6d0dbcfd8586bae2bf29caa3334bd4b22288bda6ae7bb11470c24075",
+  "test/version.test.mjs": "b1606c90cff54c8819390b1d9382a3f42c9ca313cc2cc12952648c0c9ca0216c",
+  "tools/sources.mjs": "4780e692b5876785981ff9f1992feb6f927a8cc0635b9c818c9f014b0b75a9c8"
+}

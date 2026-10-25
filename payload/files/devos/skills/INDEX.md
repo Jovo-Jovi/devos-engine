@@ -5,8 +5,10 @@ when it is out of date. A project's own skills (`local.json`) are listed by `nod
 
 **How a task gets its skills.** A fence names its layers on a header line, `- Layers: <layer> · <layer>`. A UI fence
 (`- Screens:`) without that line has the design, frontend, accessibility and motion layers; any other fence without
-it has none, and a method fix has none. **The security gate:** a task with the backend, api or database layer, and
-every risk-3 task or task with a gate, also has the security layer, and no fence removes it. The runner gives the
+it has none, and a method fix has none. **The gates:** a task with the backend, api, database or reliability layer,
+and every risk-3 task or task with a gate, also has the security layer (the security gate); a task with the
+frontend, architecture, backend, api, database or reliability layer also has the testing layer (the test gate). No
+fence removes a gate, and a method fix is outside both. The runner gives the
 builder and the reviewer the files below for the task's layers, the project's stack (`devos.config.json` `stack`)
 and modules, in their prompts: every **required** and **recommended** file of those layers, and a **conditional**
 file only when its condition holds (a topic the fence touches, a module the project uses, or a deep task). A skill's
@@ -22,12 +24,14 @@ Blueprint column. The fence, `docs/DECISIONS.md` and `docs/DESIGN_SYSTEM.md` win
 | `motion` | animation, transitions and scroll | 4 |
 | `frontend` | components, client state, copy and interaction | 10 |
 | `accessibility` | WCAG, keyboard paths, focus, contrast and assistive technology | 3 |
+| `architecture` | system structure, boundaries, configuration, processes and migrations between systems | 11 |
 | `backend` | server code, jobs and integrations | 3 |
 | `api` | HTTP and RPC contracts, validation and errors | 18 |
 | `database` | schema, migrations, queries and access rules | 36 |
-| `security` | sign-in, secrets, input, headers and data protection | 18 |
-| `testing` | unit, integration and end-to-end tests | 0 |
-| `ops` | build, deploy, CI, logging and monitoring | 4 |
+| `security` | sign-in, secrets, input, headers and data protection | 22 |
+| `reliability` | timeouts, retries, queues, idempotency, health checks and graceful failure | 10 |
+| `testing` | unit, integration and end-to-end tests | 8 |
+| `ops` | build, deploy, CI, containers, dependencies, logging and observability | 19 |
 
 ## Topics
 
@@ -63,6 +67,20 @@ A fence touches a topic when its `- Topics:` line names it or its text has one o
 | `partitioning` | partitioned and time-series tables |
 | `db-access` | database accounts, credentials and backups |
 | `threat` | threat models and trust boundaries |
+| `bugfix` | bug fixes and regressions |
+| `flaky` | flaky tests and timing problems |
+| `e2e` | end-to-end and browser tests |
+| `ci` | CI pipelines and workflows |
+| `deploy` | deploys, releases and rollbacks |
+| `container` | containers and images |
+| `dependencies` | dependencies and their vulnerabilities |
+| `observability` | traces, metrics and service levels |
+| `resilience` | timeouts, fallbacks and failing dependencies |
+| `health` | health checks and uptime |
+| `rate-limit` | rate limits, throttling and quotas |
+| `distributed` | work that spans several services |
+| `legacy` | replacing or integrating an older system |
+| `config` | configuration and environment |
 
 ## design
 
@@ -113,6 +131,22 @@ A fence touches a topic when its `- Topics:` line names it or its text has one o
 | `web-interface-guidelines/SKILL.md` |  | yes | yes | recommended | every UI task: the builder's self-check, the reviewer's citations | any |
 | `fixing-accessibility/SKILL.md` |  | yes |  | recommended | fixing a red `a11y` check | any |
 | `impeccable/reference/audit.md` |  |  | yes | recommended | the technical pass of the visual check | any |
+
+## architecture
+
+| File | Blueprint | Builder | Reviewer | Priority | When | Fits |
+|---|---|---|---|---|---|---|
+| `owasp-cheat-sheets/Microservices_Security_Cheat_Sheet.md` |  | yes | yes | conditional: topic distributed | work that spans several services | any |
+| `azure-cloud-patterns/compensating-transaction.md` |  | yes | yes | conditional: topic distributed | undoing steps of an operation that spans services | any |
+| `azure-cloud-patterns/strangler-fig.md` | yes | yes | yes | conditional: topic legacy | replacing an older system step by step | any |
+| `azure-cloud-patterns/anti-corruption-layer.md` | yes | yes | yes | conditional: topic legacy or integration | integrating a system whose model differs from yours | any |
+| `twelve-factor/intro.md` | yes |  |  | recommended | planning a service: what the twelve factors are for | any |
+| `twelve-factor/codebase.md` | yes |  |  | recommended | planning a service: one codebase, many deploys | any |
+| `twelve-factor/backing-services.md` | yes | yes | yes | recommended | databases, queues and third-party services as attached resources | any |
+| `twelve-factor/processes.md` | yes | yes | yes | recommended | stateless processes; state in a backing service | any |
+| `twelve-factor/port-binding.md` | yes |  |  | recommended | planning a service: self-contained, exported by port | any |
+| `twelve-factor/config.md` | yes | yes | yes | conditional: topic config or secrets or deploy | configuration and secrets in the environment | any |
+| `twelve-factor/concurrency.md` | yes | yes | yes | conditional: topic concurrency | scaling out with process types; web and worker | any |
 
 ## backend
 
@@ -205,13 +239,41 @@ A fence touches a topic when its `- Topics:` line names it or its text has one o
 | `owasp-cheat-sheets/Multi_Tenant_Security_Cheat_Sheet.md` |  | yes | yes | conditional: topic tenant | tenants, organisations and workspaces | any |
 | `owasp-cheat-sheets/Threat_Modeling_Cheat_Sheet.md` | yes |  | yes | conditional: a deep task; or topic threat | a feature that crosses a trust boundary, and every deep review | any |
 | `owasp-cheat-sheets/Webhook_Security_Cheat_Sheet.md` |  | yes | yes | conditional: topic webhook | webhooks received or sent | any |
+| `owasp-cheat-sheets/CI_CD_Security_Cheat_Sheet.md` |  | yes | yes | conditional: topic ci or deploy | CI pipelines, workflows and deploys | any |
+| `owasp-cheat-sheets/Docker_Security_Cheat_Sheet.md` |  | yes | yes | conditional: topic container | containers and images | any |
+| `owasp-cheat-sheets/Vulnerable_Dependency_Management_Cheat_Sheet.md` |  | yes | yes | conditional: topic dependencies | adding, upgrading or auditing dependencies | any |
+| `owasp-cheat-sheets/Microservices_Security_Cheat_Sheet.md` |  | yes | yes | conditional: topic distributed | work that spans several services | any |
 | `owasp-api-top10-2023/0x11-t10.md` |  | yes | yes | required | every server-side task: the ten risks as a checklist | any |
 | `supabase-postgres-best-practices/references/security-rls-basics.md` |  | yes | yes | required | every table in an exposed schema has RLS | any; module supabase |
 | `supabase/SKILL.md` |  | yes | yes | recommended | every task on a Supabase project's data, auth or storage | any; module supabase |
 
+## reliability
+
+| File | Blueprint | Builder | Reviewer | Priority | When | Fits |
+|---|---|---|---|---|---|---|
+| `azure-cloud-patterns/retry-content.md` |  | yes | yes | recommended | every call to a remote service: which faults to retry, and how | any |
+| `azure-cloud-patterns/circuit-breaker.md` |  | yes | yes | conditional: topic resilience | a dependency that can fail for a long time | any |
+| `azure-cloud-patterns/bulkhead.md` |  | yes | yes | conditional: topic resilience | isolating one dependency's failure from the rest | any |
+| `azure-cloud-patterns/health-endpoint-monitoring.md` |  | yes | yes | conditional: topic health or deploy | health checks, liveness and readiness | any |
+| `azure-cloud-patterns/queue-based-load-leveling.md` |  | yes | yes | conditional: topic concurrency or rate-limit | absorbing load spikes with a queue | any |
+| `azure-cloud-patterns/idempotent-consumer.md` |  | yes | yes | conditional: topic concurrency or webhook or idempotency | messages, jobs and webhooks that can arrive twice | any |
+| `azure-cloud-patterns/throttling.md` |  | yes | yes | conditional: topic rate-limit | limiting what one caller or tenant can consume | any |
+| `azure-cloud-patterns/compensating-transaction.md` |  | yes | yes | conditional: topic distributed | undoing steps of an operation that spans services | any |
+| `twelve-factor/processes.md` | yes | yes | yes | recommended | stateless processes; state in a backing service | any |
+| `twelve-factor/disposability.md` |  | yes | yes | recommended | fast start, graceful shutdown, jobs safe to rerun | any |
+
 ## testing
 
-No skill yet.
+| File | Blueprint | Builder | Reviewer | Priority | When | Fits |
+|---|---|---|---|---|---|---|
+| `superpowers/test-driven-development/writing-good-tests.md` |  | yes | yes | required | every test written or changed: name the break it catches, exercise the real code | any |
+| `superpowers/verification-before-completion/SKILL.md` |  | yes |  | required | before the report: every claim has its command and real output | any |
+| `superpowers/test-driven-development/SKILL.md` |  | yes |  | conditional: topic bugfix | a bug fix: the failing test first | any |
+| `superpowers/systematic-debugging/SKILL.md` |  | yes | yes | conditional: topic bugfix or flaky | a bug, a failing test or a flaky one: root cause before the fix | any |
+| `superpowers/systematic-debugging/root-cause-tracing.md` |  | yes |  | conditional: topic bugfix | tracing a bad value back to where it starts | any |
+| `superpowers/systematic-debugging/defense-in-depth.md` |  | yes |  | conditional: topic bugfix | after the fix: validation at each layer the data crosses | any |
+| `superpowers/systematic-debugging/condition-based-waiting.md` |  | yes | yes | conditional: topic flaky or e2e | tests that wait: wait for the condition, not a guessed delay | any |
+| `playwright-best-practices/best-practices-js.md` |  | yes | yes | conditional: topic e2e | end-to-end tests in Playwright | node |
 
 ## ops
 
@@ -221,6 +283,21 @@ No skill yet.
 | `owasp-cheat-sheets/Logging_Cheat_Sheet.md` |  | yes | yes | conditional: topic logging | logs, audit trails and monitoring | any |
 | `owasp-cheat-sheets/HTTP_Headers_Cheat_Sheet.md` |  | yes | yes | conditional: topic headers | security headers, CORS and caching | any |
 | `owasp-cheat-sheets/Database_Security_Cheat_Sheet.md` |  | yes | yes | conditional: topic db-access | database accounts, credentials, connections and backups | any |
+| `owasp-cheat-sheets/CI_CD_Security_Cheat_Sheet.md` |  | yes | yes | conditional: topic ci or deploy | CI pipelines, workflows and deploys | any |
+| `owasp-cheat-sheets/Docker_Security_Cheat_Sheet.md` |  | yes | yes | conditional: topic container | containers and images | any |
+| `owasp-cheat-sheets/Vulnerable_Dependency_Management_Cheat_Sheet.md` |  | yes | yes | conditional: topic dependencies | adding, upgrading or auditing dependencies | any |
+| `azure-cloud-patterns/health-endpoint-monitoring.md` |  | yes | yes | conditional: topic health or deploy | health checks, liveness and readiness | any |
+| `twelve-factor/config.md` | yes | yes | yes | conditional: topic config or secrets or deploy | configuration and secrets in the environment | any |
+| `twelve-factor/dependencies.md` |  | yes | yes | conditional: topic dependencies | declaring and isolating dependencies | any |
+| `twelve-factor/build-release-run.md` |  | yes | yes | conditional: topic deploy or ci | separate build, release and run; releases are immutable | any |
+| `twelve-factor/dev-prod-parity.md` |  | yes | yes | conditional: topic deploy or config | the same backing services in development and production | any |
+| `twelve-factor/logs.md` |  | yes | yes | conditional: topic logging or observability | logs as an event stream to standard output | any |
+| `twelve-factor/admin-processes.md` |  | yes | yes | conditional: topic migration or deploy | migrations and one-off tasks | any |
+| `github-actions-security/secure-use.md` |  | yes | yes | conditional: topic ci | the project's own CI workflows | any |
+| `opentelemetry-concepts/observability-primer.md` |  | yes | yes | conditional: topic observability or logging | logging, metrics or tracing: the concepts first | any |
+| `opentelemetry-concepts/signals/traces.md` |  | yes | yes | conditional: topic observability | traces and spans | any |
+| `opentelemetry-concepts/signals/logs.md` |  | yes | yes | conditional: topic logging or observability | structured logs and their correlation with traces | any |
+| `opentelemetry-concepts/signals/metrics.md` |  | yes | yes | conditional: topic observability | metrics, instruments and cardinality | any |
 
 ## Shipped skills
 
@@ -233,11 +310,17 @@ No skill yet.
 | `fixing-accessibility` — Fixing accessibility (ui-skills) | https://github.com/ibelick/ui-skills @ `55363c3` | MIT (free) | no code run, nothing fetched; read 2026-10-24 | accessibility |
 | `impeccable` — Impeccable references (Paul Bakaus) | https://github.com/pbakaus/impeccable @ `9368675` | Apache-2.0 (free) | no code run, nothing fetched; read 2026-10-24 | design, motion, frontend, accessibility |
 | `taste` — tasteskill references (Leonxlnx) | https://github.com/Leonxlnx/taste-skill @ `6010f91` | MIT (free) | no code run, nothing fetched; read 2026-10-24 | design |
-| `owasp-cheat-sheets` — OWASP Cheat Sheet Series (22 sheets) | https://github.com/OWASP/CheatSheetSeries @ `a8ecf45` | CC-BY-SA-4.0 (conditions) | no code run, nothing fetched; read 2026-10-25; notes in `DEVOS-NOTES.md` | security, api, backend, database, frontend, ops |
+| `owasp-cheat-sheets` — OWASP Cheat Sheet Series (26 sheets) | https://github.com/OWASP/CheatSheetSeries @ `a8ecf45` | CC-BY-SA-4.0 (conditions) | no code run, nothing fetched; read 2026-10-25; notes in `DEVOS-NOTES.md` | security, api, backend, database, frontend, architecture, ops |
 | `owasp-api-top10-2023` — OWASP API Security Top 10 – 2023 | https://github.com/OWASP/API-Security @ `33cea37` | CC-BY-SA-4.0 (conditions) | no code run, nothing fetched; read 2026-10-25; notes in `DEVOS-NOTES.md` | security, api |
 | `google-aips` — Google API Improvement Proposals 155, 158, 180 and 193 | https://github.com/googleapis/aip @ `2ccc61a` | CC-BY-4.0 AND Apache-2.0 (conditions) | no code run, nothing fetched; read 2026-10-25; notes in `DEVOS-NOTES.md` | api |
 | `supabase-postgres-best-practices` — Supabase Postgres Best Practices | https://github.com/supabase/agent-skills @ `544bfc5` (v0.1.9) | MIT (free) | no code run, nothing fetched; read 2026-10-25; notes in `DEVOS-NOTES.md` | database, security |
 | `supabase` — Supabase | https://github.com/supabase/agent-skills @ `544bfc5` (v0.1.9) | MIT (free) | no code run, nothing fetched; read 2026-10-25; notes in `DEVOS-NOTES.md` | database, backend, security |
+| `superpowers` — Superpowers: testing, debugging and verification | https://github.com/obra/superpowers @ `2ce8aa1` (v7.0.1) | MIT (free) | no code run, nothing fetched; read 2026-10-25; notes in `DEVOS-NOTES.md` | testing |
+| `playwright-best-practices` — Playwright best practices | https://github.com/microsoft/playwright @ `cfe490d` (v1.64.1) | Apache-2.0 (free) | no code run, nothing fetched; read 2026-10-25; notes in `DEVOS-NOTES.md` | testing, frontend |
+| `azure-cloud-patterns` — Cloud design patterns (Azure Architecture Center), 10 patterns | https://github.com/MicrosoftDocs/architecture-center @ `b60c2b4` | CC-BY-4.0 AND MIT (conditions) | no code run, nothing fetched; read 2026-10-25; notes in `DEVOS-NOTES.md` | reliability, architecture, ops |
+| `twelve-factor` — The Twelve-Factor App | https://github.com/heroku/12factor @ `1385d2c` | MIT (free) | no code run, nothing fetched; read 2026-10-25; notes in `DEVOS-NOTES.md` | architecture, ops, reliability |
+| `github-actions-security` — GitHub Actions: secure use reference | https://github.com/github/docs @ `02c25d1` | CC-BY-4.0 AND MIT (conditions) | no code run, nothing fetched; read 2026-10-25; notes in `DEVOS-NOTES.md` | ops, security |
+| `opentelemetry-concepts` — OpenTelemetry concepts: primer, traces, logs, metrics | https://github.com/open-telemetry/opentelemetry.io @ `bb4e55d` | CC-BY-4.0 AND Apache-2.0 (conditions) | no code run, nothing fetched; read 2026-10-25; notes in `DEVOS-NOTES.md` | ops, reliability |
 
 ## Evaluated, not shipped
 
@@ -250,5 +333,7 @@ No skill yet.
 | `axe-core-playwright` | https://github.com/dequelabs/axe-core-npm | MPL-2.0 (conditions) | external | The accessibility check of every capture (PR-51). A UI project installs it as a dev dependency from T01; DEV_OS copies none of its files, and MPL-2.0's file-level conditions apply only to a changed copy of its files. |
 | `wshobson-api-design-principles` | https://github.com/wshobson/agents | MIT (free) | external | Evaluated on 2026-10-25 from its SKILL.md: generic REST and GraphQL advice (naming, verbs, versioning styles) that the OWASP REST sheet and the AIPs cover with more precision. It also ships a Python template. Its references were not audited, so nothing of it is shipped. |
 | `trailofbits-supply-chain-risk-auditor` | https://github.com/trailofbits/skills | CC-BY-SA-4.0 (conditions) | external | Its SKILL.md runs Python scripts with uv (scripts/collect.py, render.py) that query OSV, the npm, PyPI and Go registries and deps.dev, and the cycle runs no code from a skill and fetches nothing at run time. A developer may run it by hand. |
-| `trailofbits-sharp-edges` | https://github.com/trailofbits/skills | CC-BY-SA-4.0 (conditions) | external | A review aid for dangerous APIs and defaults, about 19,000 words of Markdown across 22 files and mostly language-specific. It is not shipped unread: its full audit belongs to E23b2b with the testing and reliability layers. |
+| `trailofbits-sharp-edges` | https://github.com/trailofbits/skills | CC-BY-SA-4.0 (conditions) | external | A review aid for dangerous APIs and defaults, about 19,000 words of Markdown across 22 files and mostly language-specific. It is not shipped unread: as a security review aid, its full audit belongs to the production-readiness gates (E23b4). |
 | `owasp-asvs` | https://github.com/OWASP/ASVS | CC-BY-SA-4.0 (conditions) | external | A verification standard, not build guidance: its requirement levels belong to the production-readiness gates (E23b4), which will map them per layer. |
+| `wshobson-slo-implementation` | https://github.com/wshobson/agents | MIT (free) | external | Evaluated on 2026-10-25 from its SKILL.md: Prometheus recording rules and alert templates that assume monitoring infrastructure a DEV_OS project does not run; the concepts are in the OpenTelemetry primer. Its references were not audited, so nothing of it is shipped. |
+| `wshobson-github-actions-templates` | https://github.com/wshobson/agents | MIT (free) | external | Evaluated on 2026-10-25 from its SKILL.md: its workflow templates pin actions to tags such as @v4, which GitHub's secure use reference advises against (pin to a full commit SHA), and target Docker registries and Kubernetes; github-actions-security ships the rules instead. |

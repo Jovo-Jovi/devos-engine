@@ -62,7 +62,7 @@ function writeLocal(dir, entry) {
 test("skills.test.mjs (a) the shipped skills pass", () => {
   const dir = project();
   try {
-    assert.deepEqual(guard(dir), { status: "PASS", findings: [], note: "21 skills checked, 12 vendored" });
+    assert.deepEqual(guard(dir), { status: "PASS", findings: [], note: "29 skills checked, 18 vendored" });
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -86,7 +86,7 @@ test("skills.test.mjs (c) a project's own skill in local.json passes", () => {
   const dir = project();
   try {
     writeLocal(dir, localEntry());
-    assert.deepEqual(guard(dir), { status: "PASS", findings: [], note: "22 skills checked, 13 vendored" });
+    assert.deepEqual(guard(dir), { status: "PASS", findings: [], note: "30 skills checked, 19 vendored" });
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -142,7 +142,7 @@ test("skills.test.mjs (g) a vendored entry needs its layers, its trust review an
   try {
     writeLocal(dir, localEntry({ layers: ["frontend", "styling"], trust: { runs_code: true, fetches: false, reviewed: "soon" }, reads: [{ file: "OTHER.md", roles: ["reviewer"], layers: ["database"], when: "" }] }));
     assert.deepEqual(guard(dir).findings, [
-      "devos/skills/local.json studio-notes: layers must be some of design, motion, frontend, accessibility, backend, api, database, security, testing, ops",
+      "devos/skills/local.json studio-notes: layers must be some of design, motion, frontend, accessibility, architecture, backend, api, database, security, reliability, testing, ops",
       "devos/skills/local.json studio-notes: trust.runs_code must be false (the cycle runs no code from a skill)",
       "devos/skills/local.json studio-notes: trust.reviewed must be the date its files were read (YYYY-MM-DD)",
       "devos/skills/local.json studio-notes: reads OTHER.md: not one of its files",
@@ -172,9 +172,14 @@ test("skills.test.mjs (h) a task gets the skills of its layers, for its role and
     writeFileSync(path.join(dir, "docs", "fences", "T04.md"), "# T04\n\n- Surface: method — scripts/devos/x.mjs\n- Screens: `home /`\n");
     const skills = (...args) => spawnSync(process.execPath, ["scripts/devos/skills.mjs", ...args], { cwd: dir, encoding: "utf8", windowsHide: true }).stdout.trim();
     assert.equal(skills("layers", "--task", "T01"), "testing ops");
-    assert.equal(skills("layers", "--task", "T02"), "design motion frontend accessibility");
+    // PR-57: a UI fence's frontend layer brings the test gate.
+    assert.equal(skills("layers", "--task", "T02"), "design motion frontend accessibility testing");
     assert.equal(skills("layers", "--task", "T04"), "");
-    assert.equal(skills("select", "--task", "T01", "--role", "builder"), "");
+    assert.equal(skills("select", "--task", "T01", "--role", "builder"), [
+      "devos/skills/superpowers/DEVOS-NOTES.md",
+      "devos/skills/superpowers/test-driven-development/writing-good-tests.md",
+      "devos/skills/superpowers/verification-before-completion/SKILL.md",
+    ].join("\n"));
     assert.equal(skills("select", "--task", "T03", "--role", "reviewer"), [
       "devos/skills/web-interface-guidelines/SKILL.md",
       "devos/skills/emil-design-eng/SKILL.md",
@@ -182,6 +187,8 @@ test("skills.test.mjs (h) a task gets the skills of its layers, for its role and
       "devos/skills/review-animations/STANDARDS.md",
       "devos/skills/impeccable/reference/craft-floor.md",
       "devos/skills/impeccable/reference/audit.md",
+      "devos/skills/superpowers/DEVOS-NOTES.md",
+      "devos/skills/superpowers/test-driven-development/writing-good-tests.md",
     ].join("\n"));
     // The project's own skill fits only its stack: the DEMO install has no stack id and the node toolchain, not node-cli.
     assert.equal(skills("select", "--task", "T03", "--role", "builder").includes("studio-notes"), false);
@@ -205,16 +212,16 @@ test("skills.test.mjs (i) the builder's and the reviewer's prompts list the task
     };
     writeFileSync(path.join(dir, "docs", "fences", "T01.md"), "# T01\n\n- Screens: `home /`\n");
     const builder = render("builder");
-    assert.match(builder, /^- \*\*Skills for this task\*\* \(layers design · motion · frontend · accessibility, from the fence; `devos\/skills\/INDEX.md`\)/m);
+    assert.match(builder, /^- \*\*Skills for this task\*\* \(layers design · motion · frontend · accessibility · testing, from the fence and the test gate: the frontend layer changes code; `devos\/skills\/INDEX.md`\)/m);
     assert.match(builder, /^  - `devos\/skills\/frontend-design\/SKILL.md` — the visual direction in `docs\/DESIGN_SYSTEM.md`, and every new screen$/m);
     assert.equal(builder.includes("devos/skills/taste/references/critique.md"), false);
     assert.match(render("reviewer"), /^  - `devos\/skills\/taste\/references\/critique.md` — judging the captures of a public page$/m);
-    writeFileSync(path.join(dir, "docs", "fences", "T01.md"), "# T01\n\n- Layers: testing\n");
+    writeFileSync(path.join(dir, "docs", "fences", "T01.md"), "# T01\n\nA note.\n");
     assert.equal(render("builder").includes("Skills for this task"), false);
     assert.equal(render("builder").includes("{{"), false);
     // PR-56: a server-side layer brings the security gate's files.
     writeFileSync(path.join(dir, "docs", "fences", "T01.md"), "# T01\n\n- Layers: backend · database\n");
-    assert.match(render("builder"), /^- \*\*Skills for this task\*\* \(layers backend · database · security, from the fence and the security gate: the backend and database layers are server-side;/m);
+    assert.match(render("builder"), /^- \*\*Skills for this task\*\* \(layers backend · database · security · testing, from the fence and the security gate: the backend and database layers are server-side; the test gate: the backend and database layers change code;/m);
     assert.match(render("builder"), /^  - `devos\/skills\/owasp-cheat-sheets\/SQL_Injection_Prevention_Cheat_Sheet.md` — every query: bind values, map identifiers$/m);
   } finally {
     rmSync(dir, { recursive: true, force: true });

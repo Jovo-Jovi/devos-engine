@@ -42,6 +42,8 @@ const record = (dir, task, role, env) => JSON.parse(skills(dir, ["select", "--ta
 const paths = (rec) => rec.files.map((file) => file.path.slice(S.length));
 const row = (task, risk, gate = "—") => `| ${task} | P1 | S1 | ${task} | ${risk} | ${gate} | [ ] | — |`;
 const GATE = ["owasp-cheat-sheets/Input_Validation_Cheat_Sheet.md", "owasp-cheat-sheets/Insecure_Direct_Object_Reference_Prevention_Cheat_Sheet.md", "owasp-api-top10-2023/0x11-t10.md"];
+// PR-57: the test gate's files for the builder, after every other skill in catalogue order.
+const TESTING = ["superpowers/DEVOS-NOTES.md", "superpowers/test-driven-development/writing-good-tests.md", "superpowers/verification-before-completion/SKILL.md"];
 
 test("skills-select.test.mjs (a) scenario A: a Next.js and Supabase tenant API gets the API, database and Supabase rules it touches", () => {
   const dir = project({
@@ -52,7 +54,14 @@ test("skills-select.test.mjs (a) scenario A: a Next.js and Supabase tenant API g
   });
   try {
     const rec = record(dir, "T01", "builder");
-    assert.deepEqual(rec.layers, { fence: ["api", "database"], added: [{ layer: "security", reason: "the security gate: the api and database layers are server-side" }], all: ["api", "database", "security"] });
+    assert.deepEqual(rec.layers, {
+      fence: ["api", "database"],
+      added: [
+        { layer: "security", reason: "the security gate: the api and database layers are server-side" },
+        { layer: "testing", reason: "the test gate: the api and database layers change code" },
+      ],
+      all: ["api", "database", "security", "testing"],
+    });
     assert.deepEqual(rec.topics.map((item) => item.topic), ["tenant", "pagination", "rls", "migration"]);
     assert.deepEqual(rec.inputs.modules, ["supabase"]);
     assert.deepEqual(paths(rec), [
@@ -82,6 +91,7 @@ test("skills-select.test.mjs (a) scenario A: a Next.js and Supabase tenant API g
       "supabase-postgres-best-practices/references/data-pagination.md",
       "supabase/DEVOS-NOTES.md",
       "supabase/SKILL.md",
+      ...TESTING,
     ]);
     assert.equal(rec.files.find((file) => file.path.endsWith("Multi_Tenant_Security_Cheat_Sheet.md")).reason, "the fence says \"workspace\"");
     assert.equal(rec.files.find((file) => file.path.endsWith("0x11-t10.md")).reason, "the security gate: the api and database layers are server-side");
@@ -114,10 +124,12 @@ test("skills-select.test.mjs (b) scenario B: a FastAPI risk-3 webhook receiver g
       GATE[2],
       "google-aips/DEVOS-NOTES.md",
       "google-aips/0155.md",
+      ...TESTING,
     ]);
     assert.deepEqual(builder.not_selected, [
       { id: "supabase-postgres-best-practices", reason: "needs the module supabase, which this project does not use" },
       { id: "supabase", reason: "needs the module supabase, which this project does not use" },
+      { id: "playwright-best-practices", reason: "fits the stacks node, not this project's" },
     ]);
     const reviewer = paths(record(dir, "T01", "reviewer"));
     assert.equal(reviewer.filter((file) => /^owasp-api-top10-2023\/0xa/.test(file)).length, 10);
@@ -138,7 +150,7 @@ test("skills-select.test.mjs (c) scenario C: an Expo and Firebase upload gets th
   try {
     const rec = record(dir, "T01", "builder");
     assert.deepEqual(rec.inputs.modules, ["firebase"]);
-    assert.deepEqual(rec.layers.added, []);
+    assert.deepEqual(rec.layers.added, [{ layer: "testing", reason: "the test gate: the backend layer changes code" }]);
     assert.deepEqual(paths(rec), [
       "owasp-cheat-sheets/DEVOS-NOTES.md",
       ...GATE.slice(0, 2),
@@ -146,6 +158,7 @@ test("skills-select.test.mjs (c) scenario C: an Expo and Firebase upload gets th
       "owasp-cheat-sheets/File_Upload_Cheat_Sheet.md",
       "owasp-api-top10-2023/DEVOS-NOTES.md",
       GATE[2],
+      ...TESTING,
     ]);
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -164,8 +177,8 @@ test("skills-select.test.mjs (d) scenario D: a SvelteKit screen gets its design 
   });
   try {
     const comments = record(dir, "T01", "builder");
-    assert.deepEqual(comments.layers.all, ["design", "motion", "frontend", "accessibility"]);
-    assert.deepEqual(paths(comments).slice(-2), ["owasp-cheat-sheets/DEVOS-NOTES.md", "owasp-cheat-sheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.md"]);
+    assert.deepEqual(comments.layers.all, ["design", "motion", "frontend", "accessibility", "testing"]);
+    assert.deepEqual(paths(comments).slice(-5), ["owasp-cheat-sheets/DEVOS-NOTES.md", "owasp-cheat-sheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.md", ...TESTING]);
     assert.equal(paths(comments).some((file) => GATE.includes(file)), false);
     const pricing = paths(record(dir, "T02", "builder"));
     assert.equal(pricing.some((file) => file.startsWith("owasp")), false);
@@ -187,7 +200,7 @@ test("skills-select.test.mjs (e) scenario E: a one-line Go change keeps the secu
     },
   });
   try {
-    assert.equal(skills(dir, ["layers", "--task", "T01"]).trim(), "backend security");
+    assert.equal(skills(dir, ["layers", "--task", "T01"]).trim(), "backend security testing");
     const small = record(dir, "T01", "builder");
     for (const file of GATE) assert.equal(small.files.find((item) => item.path === S + file).priority, "required", file);
     assert.match(skills(dir, ["select", "--task", "T02", "--role", "builder"]), /^devos\/skills\/owasp-cheat-sheets\/Secrets_Management_Cheat_Sheet.md$/m);
@@ -196,7 +209,7 @@ test("skills-select.test.mjs (e) scenario E: a one-line Go change keeps the secu
     assert.equal(skills(dir, ["select", "--task", "T03", "--role", "reviewer"]), "");
     const prompt = spawnSync(process.execPath, ["scripts/devos/render-prompt.mjs", "builder", "T01", "1"], { cwd: dir, encoding: "utf8", windowsHide: true });
     assert.equal(prompt.status, 0, prompt.stderr);
-    assert.match(prompt.stdout, /^- \*\*Skills for this task\*\* \(layers backend · security, from the fence and the security gate: the backend layer is server-side; `devos\/skills\/INDEX.md`\): .*A \*\*required\*\* file belongs to the security gate: never skip it\./m);
+    assert.match(prompt.stdout, /^- \*\*Skills for this task\*\* \(layers backend · security · testing, from the fence and the security gate: the backend layer is server-side; the test gate: the backend layer changes code; `devos\/skills\/INDEX.md`\): .*A \*\*required\*\* file comes with its layer or a gate: never skip it\./m);
     assert.match(prompt.stdout, /^  - `devos\/skills\/owasp-cheat-sheets\/Input_Validation_Cheat_Sheet.md` — every server-side task: validate input where it crosses the trust boundary \*\*\(required\)\*\*$/m);
     assert.match(prompt.stdout, /^  - `devos\/skills\/owasp-cheat-sheets\/DEVOS-NOTES.md` — read first: where DEV_OS's audit found this skill wrong or out of scope$/m);
   } finally {

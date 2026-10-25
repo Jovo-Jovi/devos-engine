@@ -38,9 +38,22 @@ own text. They are not part of the sheets, which are copied unchanged under thei
   first. Do not invent a signature scheme when the provider already defines one.
 - **Rate limits and tiers (`Multi_Tenant_Security`).** The numbers in the samples are illustrations. Limits come from
   the fence or `docs/DECISIONS.md`.
+- **Merging and repository settings (`CI_CD_Security`).** The sheet advises against auto-merge. DEV_OS's runner merges
+  a task only after its review passes and its required checks are green, and the human gate holds risk-3 tasks, gates
+  and migrations. The method wins. Signed commits, MFA, branch protection and the other repository settings are the
+  owner's to choose: propose them in the report, never change them from a task. DEV_OS keeps its workflows in the
+  repository, and any change to them gets the deep review and the human gate (PR-28).
+- **Containers (`Docker_Security`).** The Kubernetes parts apply only when the project runs Kubernetes. Keeping the
+  host and Docker up to date is operations work, outside a task. The tools listed are examples.
+- **Vulnerable dependencies (`Vulnerable_Dependency_Management`).** Where the sheet says a risk officer accepts a risk,
+  in DEV_OS the owner decides: record the finding and the options in the report. Never open an issue or a pull request
+  on another project. Upgrading, replacing or patching a dependency is a decision for the fence.
+- **Microservices (`Microservices_Security`).** It points to sheets that are not copied (Authorization Patterns,
+  Identity Propagation). A DEV_OS project starts as one service (lean by default, PR-47); use the sheet only when the
+  fence names several services.
 
 ## Not copied
 
-The OWASP Cheat Sheet Series has more than one hundred sheets. These 22 cover the security, api, database, backend and
-ops layers. Further sheets (for example JSON Web Tokens, Content Security Policy, Transport Layer Security) may come in
-a later engine task.
+The OWASP Cheat Sheet Series has more than one hundred sheets. These 26 cover the security, api, database, backend,
+architecture and ops layers. Further sheets (for example JSON Web Tokens, Content Security Policy, Transport Layer
+Security) may come in a later engine task.

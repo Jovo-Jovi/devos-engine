@@ -69,7 +69,7 @@ Work in this order.
    `true`, it also adds `@playwright/test` and `@axe-core/playwright` as dev dependencies, the tools of the
    runner's UI evidence (`docs/method/DESIGN_METHOD.md` §4). Its Done-when
    is `node scripts/devos/run-checks.mjs --strict` exiting 0. T01 is not a UI fence: it carries no `- Screens:` line.
-   Every fence carries `- Layers: <layer> · <layer>` in its header: the layers of `devos/skills/INDEX.md` the task touches (`design`, `motion`, `frontend`, `accessibility`, `backend`, `api`, `database`, `security`, `testing`, `ops`); T01's are usually `ops · testing`. The runner gives the builder and the reviewer the skills of those layers (PR-55).
+   Every fence carries `- Layers: <layer> · <layer>` in its header: the layers of `devos/skills/INDEX.md` the task touches (`design`, `motion`, `frontend`, `accessibility`, `architecture`, `backend`, `api`, `database`, `security`, `reliability`, `testing`, `ops`); T01's are usually `ops · testing`. The runner gives the builder and the reviewer the skills of those layers, and a server-side or deep task always the security layer and a code task the testing layer (PR-55, PR-56, PR-57).
    Every later fence that builds a screen carries one and a `### Design specification` (`docs/method/DESIGN_METHOD.md`
    §3).
 7. **End with a summary** as your final message: the profile, the ODs the developer signs by approving, your

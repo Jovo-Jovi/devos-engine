@@ -103,7 +103,7 @@ and the proof.
 ## 7. Design skills
 
 The agents read pinned skills from outside DEV_OS: `devos/skills/`. Each is mapped to layers (design, motion,
-frontend, accessibility, backend, api, database, security, testing, ops), stacks and roles in
+frontend, accessibility, architecture, backend, api, database, security, reliability, testing, ops), stacks and roles in
 `devos/skills/manifest.json`, and `devos/skills/INDEX.md`, generated from it, is the discovery reference. A fence
 names its layers (`- Layers:`), and the runner lists the files of those layers for the role and the stack in the
 builder's and the reviewer's prompt (`scripts/devos/skills.mjs`, PR-55). `docs/DESIGN_SYSTEM.md`, the acceptance criteria and the fence always win over a skill.

@@ -1,5 +1,5 @@
 {
-  "engine_version": "0.2.4",
+  "engine_version": "0.2.5",
   "source": {
     "repo": "Jovo-Jovi/devos-control-tower",
     "commit": "a49ca6db268b98d6558077bf3e95b8ae759d91b3"
@@ -260,7 +260,7 @@
     {
       "path": "devos/prompts/blueprint.md",
       "stored": "devos/prompts/blueprint.md",
-      "sha256": "58268305fb76f583bbf949a6bb8076f53c6711807cac4773eea914c5fac6f46a",
+      "sha256": "e10a0de20c16d41f4852411f04e4e63037e8e5aca2a7b3a89fa99c3c7bf3141f",
       "owner": "engine"
     },
     {
@@ -278,7 +278,7 @@
     {
       "path": "devos/prompts/intake.md",
       "stored": "devos/prompts/intake.md",
-      "sha256": "a1b6e8db25f608c6afdbaa427e14f269a588d61d71766edc60eaa7d167a6f6fe",
+      "sha256": "463ba294a9fe1f51cff648107be7d0e27f1af1ac1c263f13269feae4996381a9",
       "owner": "engine"
     },
     {
@@ -290,7 +290,7 @@
     {
       "path": "devos/prompts/reviewer.md",
       "stored": "devos/prompts/reviewer.md",
-      "sha256": "79b5c00a2d92d3e89a0e14e5cfb37a7f7787d177d6f5ec0d92d50feae56d4985",
+      "sha256": "e145b8e073fc7f23260886b3dcab03764eee55e1d988df7a0f86a72c13a2367c",
       "owner": "engine"
     },
     {
@@ -392,13 +392,103 @@
     {
       "path": "devos/skills/INDEX.md",
       "stored": "devos/skills/INDEX.md",
-      "sha256": "eed887c05074212dfcd1f01d3b0683ed9bce37bca6c7b3726292e39d9aebd55b",
+      "sha256": "393ce4737907ebcc040ced88d57039d5bfa8b0e17214ed90086cd5ea03a535c4",
       "owner": "engine"
     },
     {
       "path": "devos/skills/README.md",
       "stored": "devos/skills/README.md",
-      "sha256": "0032445eb792ace2f685f1972664e6e0984f41ef4958c9c569623075b93a44de",
+      "sha256": "1f6a15460f0a6a8cc27b71458e1bc67f9246532a2d88aa8875bfeb45e571041d",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/azure-cloud-patterns/ATTRIBUTION.md",
+      "stored": "devos/skills/azure-cloud-patterns/ATTRIBUTION.md",
+      "sha256": "a00d2932ae7b3673084ce79e6e8ddebad7a388ea0f5932c1dff42978dc128116",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/azure-cloud-patterns/DEVOS-NOTES.md",
+      "stored": "devos/skills/azure-cloud-patterns/DEVOS-NOTES.md",
+      "sha256": "aa887aa7b464d63f22f70cbca9c201ab7f60b89b5e374bf7efc3a9b256d7369a",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/azure-cloud-patterns/LICENSE",
+      "stored": "devos/skills/azure-cloud-patterns/LICENSE",
+      "sha256": "7183ef9749eb9b75e710a81a4c812a9405cc184f087500581a973e5929ac3f5e",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/azure-cloud-patterns/LICENSE-CODE",
+      "stored": "devos/skills/azure-cloud-patterns/LICENSE-CODE",
+      "sha256": "91f7258203fd43ba6d6f7f72b644eaedee9e3430f035c053beb6f34052f045e2",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/azure-cloud-patterns/ThirdPartyNotices",
+      "stored": "devos/skills/azure-cloud-patterns/ThirdPartyNotices",
+      "sha256": "f90a4ebe55a146d29bae7ce11cb57faf7346beab9dd9db5f15b533ac6c48a37f",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/azure-cloud-patterns/anti-corruption-layer.md",
+      "stored": "devos/skills/azure-cloud-patterns/anti-corruption-layer.md",
+      "sha256": "2c2f1586eb46629a57470c70ef645bfaf60428125654171780dfcfdf2380e48a",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/azure-cloud-patterns/bulkhead.md",
+      "stored": "devos/skills/azure-cloud-patterns/bulkhead.md",
+      "sha256": "2024b432e7477e0ebd068ca7ab4457a8e17c3f46aa82e256a7652422fb5d4ce1",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/azure-cloud-patterns/circuit-breaker.md",
+      "stored": "devos/skills/azure-cloud-patterns/circuit-breaker.md",
+      "sha256": "29baeab9e19c54c9fdae01dfa4c431bae0c6811e0c5267a1d6c8c78267b8146e",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/azure-cloud-patterns/compensating-transaction.md",
+      "stored": "devos/skills/azure-cloud-patterns/compensating-transaction.md",
+      "sha256": "18d9aca47cba63058af04b44ffe4d40485ff786c71c6ec6059870eefd0ed4c50",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/azure-cloud-patterns/health-endpoint-monitoring.md",
+      "stored": "devos/skills/azure-cloud-patterns/health-endpoint-monitoring.md",
+      "sha256": "2ffed47249e9c6e6dd5a2d2b36c73fcb2adcbd217377e60f3466c98cf9f9d08f",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/azure-cloud-patterns/idempotent-consumer.md",
+      "stored": "devos/skills/azure-cloud-patterns/idempotent-consumer.md",
+      "sha256": "c4650525eb0380f519ada5e18793ef474b466bac66f91672a5072ce4ed4e153d",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/azure-cloud-patterns/queue-based-load-leveling.md",
+      "stored": "devos/skills/azure-cloud-patterns/queue-based-load-leveling.md",
+      "sha256": "9ce566aa87c58aa74c6af4e42ffd2d61e40e893164e72b33139923946211d9f0",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/azure-cloud-patterns/retry-content.md",
+      "stored": "devos/skills/azure-cloud-patterns/retry-content.md",
+      "sha256": "619b34a5b1eaf6508715080192feb9fcd85447d402f29816e9f3ffaf294f91a8",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/azure-cloud-patterns/strangler-fig.md",
+      "stored": "devos/skills/azure-cloud-patterns/strangler-fig.md",
+      "sha256": "433101cd85942a5c3e9fb410d8fdf53d5c10e50851d3821caebf56db0954bb51",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/azure-cloud-patterns/throttling.md",
+      "stored": "devos/skills/azure-cloud-patterns/throttling.md",
+      "sha256": "8d63758dc5e81606a9d58a4c3b028a4298da807b073f40126d5db7862295cba7",
       "owner": "engine"
     },
     {
@@ -435,6 +525,36 @@
       "path": "devos/skills/frontend-design/SKILL.md",
       "stored": "devos/skills/frontend-design/SKILL.md",
       "sha256": "d91970639e9f5c37682ac7ab60094d35f1c7c1f38d731bd56396563aee10c1d3",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/github-actions-security/ATTRIBUTION.md",
+      "stored": "devos/skills/github-actions-security/ATTRIBUTION.md",
+      "sha256": "ba765db361cdb1ccf0b752885aef234f1bee5821673cac16c9174b72ab692e0b",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/github-actions-security/DEVOS-NOTES.md",
+      "stored": "devos/skills/github-actions-security/DEVOS-NOTES.md",
+      "sha256": "ed21473ce2b88d65845eaee78408bf6e287a4b8b34f5859020fe3a58fc94d036",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/github-actions-security/LICENSE",
+      "stored": "devos/skills/github-actions-security/LICENSE",
+      "sha256": "12d3a82a7d1378e6f597ec23d63a081aeb6ec4bc8de2a76ee9dc96c34c6d7a1b",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/github-actions-security/LICENSE-CODE",
+      "stored": "devos/skills/github-actions-security/LICENSE-CODE",
+      "sha256": "938cb3c100a34b9a1965b69cfe4b82287074e4fe1b9fbacaddaf23f57fd5698a",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/github-actions-security/secure-use.md",
+      "stored": "devos/skills/github-actions-security/secure-use.md",
+      "sha256": "0b2d692984fae55eff6334aabb52ca3c97bd38757cca1e2cc3437460cbc4b1d5",
       "owner": "engine"
     },
     {
@@ -560,7 +680,55 @@
     {
       "path": "devos/skills/manifest.json",
       "stored": "devos/skills/manifest.json",
-      "sha256": "f55e47a0a9538f6d0971cd02f265972fe3d6261a44b430ffbb9183e558bb68ae",
+      "sha256": "e115bae4242c5a9875014eba1fee33b601fd047f2716f566e1f1352faf5e8791",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/opentelemetry-concepts/ATTRIBUTION.md",
+      "stored": "devos/skills/opentelemetry-concepts/ATTRIBUTION.md",
+      "sha256": "5ff67ed66c7035018f59d8c2ee47ff9837879f98db557dda6109427b6cfc3023",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/opentelemetry-concepts/DEVOS-NOTES.md",
+      "stored": "devos/skills/opentelemetry-concepts/DEVOS-NOTES.md",
+      "sha256": "93d285e7aba41dfa663c6dcd88a36628b7365fdc466e01fd8df73d8744ce55ab",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/opentelemetry-concepts/LICENSE",
+      "stored": "devos/skills/opentelemetry-concepts/LICENSE",
+      "sha256": "6f9997b6f85f473f853aeef19b5f16504dd228ba99cee70e5a19211df947a2b3",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/opentelemetry-concepts/LICENSE-CODE",
+      "stored": "devos/skills/opentelemetry-concepts/LICENSE-CODE",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/opentelemetry-concepts/observability-primer.md",
+      "stored": "devos/skills/opentelemetry-concepts/observability-primer.md",
+      "sha256": "dc03eacab8e562649cfc648081d23fe08fff34c4abae8d8418db45c587877f5e",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/opentelemetry-concepts/signals/logs.md",
+      "stored": "devos/skills/opentelemetry-concepts/signals/logs.md",
+      "sha256": "20950feea860a7ce64b1d51b7e96e95f1bafb354f6a8e35021eb0ca058c2427d",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/opentelemetry-concepts/signals/metrics.md",
+      "stored": "devos/skills/opentelemetry-concepts/signals/metrics.md",
+      "sha256": "891112f4c81851850b2d732f68c3ba58adf7d5e0017df5233408324307e18951",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/opentelemetry-concepts/signals/traces.md",
+      "stored": "devos/skills/opentelemetry-concepts/signals/traces.md",
+      "sha256": "e114163e1eecc33e146a502784c484ca482648a1f278c24ab4809262d2cc0061",
       "owner": "engine"
     },
     {
@@ -656,7 +824,7 @@
     {
       "path": "devos/skills/owasp-cheat-sheets/ATTRIBUTION.md",
       "stored": "devos/skills/owasp-cheat-sheets/ATTRIBUTION.md",
-      "sha256": "350ba450ce358687378a1fdd1fc34c56652298eb2e55590261e8cd862d92796f",
+      "sha256": "1eec9a810298a6e7ed105537781665ded62259f9d3853c222aab0c62f0bbecd7",
       "owner": "engine"
     },
     {
@@ -669,6 +837,12 @@
       "path": "devos/skills/owasp-cheat-sheets/Authorization_Cheat_Sheet.md",
       "stored": "devos/skills/owasp-cheat-sheets/Authorization_Cheat_Sheet.md",
       "sha256": "fb8b6e5c60ed783025beefb5049142fd9da02d01f5c95de18a19d26479737975",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/owasp-cheat-sheets/CI_CD_Security_Cheat_Sheet.md",
+      "stored": "devos/skills/owasp-cheat-sheets/CI_CD_Security_Cheat_Sheet.md",
+      "sha256": "25b927dd92a7a0ac1acb821444c3e7df4a3ad69b75edc34c855acb20f973e593",
       "owner": "engine"
     },
     {
@@ -686,13 +860,19 @@
     {
       "path": "devos/skills/owasp-cheat-sheets/DEVOS-NOTES.md",
       "stored": "devos/skills/owasp-cheat-sheets/DEVOS-NOTES.md",
-      "sha256": "fe53b5f2e4e63edce2bc752616bc0bc21262deb943ef55ee13d77633884f6761",
+      "sha256": "bb0765cb07a251f542d3b9deb2e2fc5e78165e5716600f08b399124a759d830b",
       "owner": "engine"
     },
     {
       "path": "devos/skills/owasp-cheat-sheets/Database_Security_Cheat_Sheet.md",
       "stored": "devos/skills/owasp-cheat-sheets/Database_Security_Cheat_Sheet.md",
       "sha256": "b5ad6125f2f908949df3a7866daa03a9f8487e94ea84f384eb852948375f15e2",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/owasp-cheat-sheets/Docker_Security_Cheat_Sheet.md",
+      "stored": "devos/skills/owasp-cheat-sheets/Docker_Security_Cheat_Sheet.md",
+      "sha256": "81e50e16cbc6a3cc7a4bdb88a495f086db43bf58f518099e08913da79a4909e9",
       "owner": "engine"
     },
     {
@@ -750,6 +930,12 @@
       "owner": "engine"
     },
     {
+      "path": "devos/skills/owasp-cheat-sheets/Microservices_Security_Cheat_Sheet.md",
+      "stored": "devos/skills/owasp-cheat-sheets/Microservices_Security_Cheat_Sheet.md",
+      "sha256": "8536aca65d330baad4aae41498b0ee1e8dec4732c71905db73c0786b37cac455",
+      "owner": "engine"
+    },
+    {
       "path": "devos/skills/owasp-cheat-sheets/Multi_Tenant_Security_Cheat_Sheet.md",
       "stored": "devos/skills/owasp-cheat-sheets/Multi_Tenant_Security_Cheat_Sheet.md",
       "sha256": "2dfdad6b9701f3023f3a3063435166ddafde144225ba612a5b2ded3f43991cde",
@@ -798,9 +984,39 @@
       "owner": "engine"
     },
     {
+      "path": "devos/skills/owasp-cheat-sheets/Vulnerable_Dependency_Management_Cheat_Sheet.md",
+      "stored": "devos/skills/owasp-cheat-sheets/Vulnerable_Dependency_Management_Cheat_Sheet.md",
+      "sha256": "77e7a460c4072442d524394109125391317d61961db78c3cdc2dd771c006872a",
+      "owner": "engine"
+    },
+    {
       "path": "devos/skills/owasp-cheat-sheets/Webhook_Security_Cheat_Sheet.md",
       "stored": "devos/skills/owasp-cheat-sheets/Webhook_Security_Cheat_Sheet.md",
       "sha256": "100fff81950d3e4f0ac82d6d6f11a3a18bbc14d560d3ab9848615bff811be123",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/playwright-best-practices/DEVOS-NOTES.md",
+      "stored": "devos/skills/playwright-best-practices/DEVOS-NOTES.md",
+      "sha256": "5a84f4781fd1923a051e1d4147d849513cf9f5472bd14d04fd04e4ade2016b37",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/playwright-best-practices/LICENSE",
+      "stored": "devos/skills/playwright-best-practices/LICENSE",
+      "sha256": "7fab1461b41970ff376f1c9303a637076bfaaeb71cd12dd3a1c44aaf59a1a2b9",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/playwright-best-practices/NOTICE",
+      "stored": "devos/skills/playwright-best-practices/NOTICE",
+      "sha256": "6d602191187b35b9b01d2cffa01c8469c2c8d9de8a96f1bf868e0f264f51c81d",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/playwright-best-practices/best-practices-js.md",
+      "stored": "devos/skills/playwright-best-practices/best-practices-js.md",
+      "sha256": "785e6244815ed457ceb0a9109e0ead34a114fd89b09c0689174a5b421eed8512",
       "owner": "engine"
     },
     {
@@ -1044,6 +1260,60 @@
       "owner": "engine"
     },
     {
+      "path": "devos/skills/superpowers/DEVOS-NOTES.md",
+      "stored": "devos/skills/superpowers/DEVOS-NOTES.md",
+      "sha256": "eb12f9b8684c0eeaba834c81dcb94404632741c5821e972c18b8f7da5d365277",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/superpowers/LICENSE",
+      "stored": "devos/skills/superpowers/LICENSE",
+      "sha256": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/superpowers/systematic-debugging/SKILL.md",
+      "stored": "devos/skills/superpowers/systematic-debugging/SKILL.md",
+      "sha256": "51c6435d98c83c42c96ba7c35725a0b2c376cd487fb1a4e6bd0ddbe7e33ef202",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/superpowers/systematic-debugging/condition-based-waiting.md",
+      "stored": "devos/skills/superpowers/systematic-debugging/condition-based-waiting.md",
+      "sha256": "e89fec8400d6cd50f43407cec9fab50976ba4d55d0ec2eb51c0bd68036b54c26",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/superpowers/systematic-debugging/defense-in-depth.md",
+      "stored": "devos/skills/superpowers/systematic-debugging/defense-in-depth.md",
+      "sha256": "1e175fb86fc357e58c6aebf5441e481e1b7868b4380c0456b63a17eefbd18ba7",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/superpowers/systematic-debugging/root-cause-tracing.md",
+      "stored": "devos/skills/superpowers/systematic-debugging/root-cause-tracing.md",
+      "sha256": "75b933b6a8c40bdb2031b10f21654395b56ec6ab6bc7b018c18d3fe57aeb7fb8",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/superpowers/test-driven-development/SKILL.md",
+      "stored": "devos/skills/superpowers/test-driven-development/SKILL.md",
+      "sha256": "64b03fce4aee5a97a93160cea8111f3ba13a17b7c001db4bd5836d67fd10705d",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/superpowers/test-driven-development/writing-good-tests.md",
+      "stored": "devos/skills/superpowers/test-driven-development/writing-good-tests.md",
+      "sha256": "51471c853306ff92ca8bb41dcaea05f31c0e46b03651f8f3c99754b7172f4ae1",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/superpowers/verification-before-completion/SKILL.md",
+      "stored": "devos/skills/superpowers/verification-before-completion/SKILL.md",
+      "sha256": "2befe7fc55bcadaa3d97dd9e8efeb633d2561c0ebe74c5a8b17c4d9e7e4520b3",
+      "owner": "engine"
+    },
+    {
       "path": "devos/skills/taste/LICENSE",
       "stored": "devos/skills/taste/LICENSE",
       "sha256": "4575a543ab88dad12ccea7d97e563d0bce5b448b06072e65d3264497dad326df",
@@ -1080,6 +1350,96 @@
       "owner": "engine"
     },
     {
+      "path": "devos/skills/twelve-factor/DEVOS-NOTES.md",
+      "stored": "devos/skills/twelve-factor/DEVOS-NOTES.md",
+      "sha256": "a921fe43a5c7a6c1d3316ee9b1ce7b0811067d8a6538ae2fc229d70662cadfb8",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/twelve-factor/LICENSE",
+      "stored": "devos/skills/twelve-factor/LICENSE",
+      "sha256": "bffa134a9c134b41d3f33e0c76dd9a91cee1a4e67912216d441c6e7584970b71",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/twelve-factor/admin-processes.md",
+      "stored": "devos/skills/twelve-factor/admin-processes.md",
+      "sha256": "fc496eaf191463a22fa4a04e4eca2bab35889f966688e024959ea320c310a7cd",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/twelve-factor/backing-services.md",
+      "stored": "devos/skills/twelve-factor/backing-services.md",
+      "sha256": "092e74d60e59001d0f70e39024c6bbac67188907f677431c1081b80f20b37695",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/twelve-factor/build-release-run.md",
+      "stored": "devos/skills/twelve-factor/build-release-run.md",
+      "sha256": "f5eababf567dfe7a3ea7740d32372aeffb22fb660c4e296c8c4701b179bb517b",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/twelve-factor/codebase.md",
+      "stored": "devos/skills/twelve-factor/codebase.md",
+      "sha256": "aafead6b0d15bd56a80521bd783094d5bf2d7381cf4dec2c15716ea8f2798e9a",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/twelve-factor/concurrency.md",
+      "stored": "devos/skills/twelve-factor/concurrency.md",
+      "sha256": "d4a22e2db87f45c04f78bcec5fe3dd69075359e9a76d724039ce110b0acfc996",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/twelve-factor/config.md",
+      "stored": "devos/skills/twelve-factor/config.md",
+      "sha256": "eb1dd6799ee8a82ca0074727432138234f40841952392406aa05c76fb35fcd27",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/twelve-factor/dependencies.md",
+      "stored": "devos/skills/twelve-factor/dependencies.md",
+      "sha256": "636df45c364d8abc3fa2418be2e913dda1c97eca62c199048827bac2d91a8c87",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/twelve-factor/dev-prod-parity.md",
+      "stored": "devos/skills/twelve-factor/dev-prod-parity.md",
+      "sha256": "0964d7249df65f78f7a50fa066f80f99ca1125c3e64a25d07582905292a20e6d",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/twelve-factor/disposability.md",
+      "stored": "devos/skills/twelve-factor/disposability.md",
+      "sha256": "8ee1f8a0acb60b75f1d2c761ba14234fd578d66c5c64a59347d48680bc09ee53",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/twelve-factor/intro.md",
+      "stored": "devos/skills/twelve-factor/intro.md",
+      "sha256": "21a1fc883d6fa0a6bfb577d63047294bb7cfe64921824d233c9dbdf2416713e3",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/twelve-factor/logs.md",
+      "stored": "devos/skills/twelve-factor/logs.md",
+      "sha256": "7dcb48b93385aca9fb8a8087ba592f3c588bb3937ffee7ac1514ecb377932146",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/twelve-factor/port-binding.md",
+      "stored": "devos/skills/twelve-factor/port-binding.md",
+      "sha256": "21aba4d1b47a5cf15dfdb90ec6ef8473193dbbd7d84a563d5998e70cf90ff7ed",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/skills/twelve-factor/processes.md",
+      "stored": "devos/skills/twelve-factor/processes.md",
+      "sha256": "77f8721bde123f9f63e86f6ebb953ce77705582cce76b8d2e64272788ad429b7",
+      "owner": "engine"
+    },
+    {
       "path": "devos/skills/web-interface-guidelines/LICENSE",
       "stored": "devos/skills/web-interface-guidelines/LICENSE",
       "sha256": "6cd1609c9c12233507cdd2ce0d32e9a721e3c27494951be06b90090deeeb7af2",
@@ -1100,13 +1460,13 @@
     {
       "path": "docs/method/AUTOMATION.md",
       "stored": "docs/method/AUTOMATION.md",
-      "sha256": "7002c6e7c37fc1422d750a7b20b140f8106b526183142591b4b8b52d99f1d653",
+      "sha256": "0ebafaecdd8d3eaec1e4115f9026e3a38edcf6b2f65718fe0d1d59856bafafb8",
       "owner": "engine"
     },
     {
       "path": "docs/method/DESIGN_METHOD.md",
       "stored": "docs/method/DESIGN_METHOD.md",
-      "sha256": "4bfbca5321303604253e2711cfbf9cb4729932dab3b57df40047bdcc107991d0",
+      "sha256": "2fb987af8e841b52d2bca8f88ac776f0e49c8f53bb08d8b29d1fd392d4c47d50",
       "owner": "engine"
     },
     {
@@ -1124,7 +1484,7 @@
     {
       "path": "docs/method/PRECEDENTS.md",
       "stored": "docs/method/PRECEDENTS.md",
-      "sha256": "e14bc7c5720825fe410209e668e16506deb1f1bef9b608d49e7ff77bc2021ea9",
+      "sha256": "3c2e94a087a48642bac2881189297586f6ce8bc4437dc39a85a96d4714e582e8",
       "owner": "engine"
     },
     {
@@ -1334,7 +1694,7 @@
     {
       "path": "scripts/devos/skills.mjs",
       "stored": "scripts/devos/skills.mjs",
-      "sha256": "da4850e6dbcb6e3b43dad58f6fc2d22777ccedc11fb02e81a02cd0e82bf1e430",
+      "sha256": "2d7922cfd81ba7519a5231b198e2bd1a46c8cf7eae166f9c67c1f6b8aa217edc",
       "owner": "engine"
     },
     {

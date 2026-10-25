@@ -1,6 +1,6 @@
 # Attribution
 
-The 22 `*_Cheat_Sheet.md` files in this folder are copies of sheets from the OWASP Cheat Sheet Series.
+The 26 `*_Cheat_Sheet.md` files in this folder are copies of sheets from the OWASP Cheat Sheet Series.
 
 - **Title:** OWASP Cheat Sheet Series. The sheets copied are listed under `owasp-cheat-sheets` in `../manifest.json`.
 - **Author:** the OWASP Cheat Sheet Series project and its contributors,

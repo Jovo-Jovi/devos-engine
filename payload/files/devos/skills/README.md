@@ -1,7 +1,7 @@
 # Skills
 
 Pinned skills from outside DEV_OS, read by the blueprint, the builder and the reviewer (`docs/method/DESIGN_METHOD.md`
-§7, PR-51, PR-55, PR-56). They are mapped to the layers of a product, so any project, on any stack, gets the ones its
+§7, PR-51, PR-55, PR-56, PR-57). They are mapped to the layers of a product, so any project, on any stack, gets the ones its
 task needs:
 
 - `INDEX.md` is the discovery reference. It lists every layer and topic, the files each role reads and when, with their
@@ -19,16 +19,19 @@ task needs:
 ## How a task gets its skills
 
 1. **The fence names its layers** on a header line: `- Layers: frontend · api · database`. The layers are
-   `design`, `motion`, `frontend`, `accessibility`, `backend`, `api`, `database`, `security`, `testing` and `ops`
+   `design`, `motion`, `frontend`, `accessibility`, `architecture`, `backend`, `api`, `database`, `security`,
+   `reliability`, `testing` and `ops`
    (`manifest.json` `layers` says what each covers). A UI fence (`- Screens:`) without that line has the design,
    frontend, accessibility and motion layers; any other fence without it has none, and a method fix has none.
-2. **The security gate** adds the `security` layer to every task with the `backend`, `api` or `database` layer, and to
-   every deep task (risk 3, a gate, or a deep review). No fence removes it, however small the task looks. A method fix
-   is outside it.
+2. **The gates.** The security gate adds the `security` layer to every task with the `backend`, `api`, `database` or
+   `reliability` layer, and to every deep task (risk 3, a gate, or a deep review). The test gate adds the `testing`
+   layer to every task with the `frontend`, `architecture`, `backend`, `api`, `database` or `reliability` layer: a
+   task that changes code proves its Done-when with tests (PR-22). No fence removes a gate, however small the task
+   looks. A method fix is outside both.
 3. **The runner selects** the files of those layers for the role, the project's stack (`devos.config.json` `stack`: a
    skill fits `any` stack, a stack id or a toolchain) and its modules (a skill that names `modules` applies only to a
    project that chose or uses one of them):
-   - every **required** file (the security gate's: never skipped) and every **recommended** file of those layers;
+   - every **required** file (never skipped; the gates bring theirs) and every **recommended** file of those layers;
    - a **conditional** file only when one clause of its `if` holds: a **topic** the fence touches (its text has one of
      the topic's words, or its `- Topics: <topic> · <topic>` line names it; `manifest.json` `topics`), a **module** the
      project uses, or a **deep** task;

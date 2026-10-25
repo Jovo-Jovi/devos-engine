@@ -1,5 +1,5 @@
 {
-  "$comment": "The skills the agents read (devos/skills/README.md, docs/method/DESIGN_METHOD.md §7, PR-51, PR-55, PR-56). layers: the vocabulary below; a fence names its own on a `- Layers:` line. topics: words the runner looks for in a fence (or its `- Topics:` line) to pick a conditional file; `match` is a case-insensitive regular expression. stacks: any, a stack id or a toolchain (devos.config.json stack). modules: when set, the entry applies only to a project that chose or uses one of them (devos/answers.json, an active module, or a module the fence names). reads: each file a role reads, for which layers and when, with its priority: required (every task of those layers; the security gate's files), recommended (every task of those layers) or conditional (only when one clause of `if` holds: all of a clause's keys, any of its values; keys topics, modules, deep). deep is a risk-3 task, a task with a gate, or a deep review. The security gate: a task with the backend, api or database layer, or a deep task, always gets the security layer; no fence removes it. notes: a file DEV_OS wrote after the audit (origin devos); it is listed first whenever another file of the entry is selected. trust: runs_code and fetches are false for every vendored skill (the cycle runs no code from a skill and fetches nothing at run time), and reviewed is the date its files were read whole. licence.class: free (a permissive licence; ship its licence and notices), conditions (allowed with conditions beyond notices), approval (needs the author's permission or a separate licence first), unsuitable (redistribution not allowed). delivery: vendored (files here, pinned), external (not shipped; a developer may use it interactively), principles (nothing copied; the ideas are written independently). Each source file records the path it was copied from (from); excluded lists the source files deliberately not copied, with why. guard:skills checks every vendored file's sha256 (LF line endings) and that INDEX.md is generated from this file.",
+  "$comment": "The skills the agents read (devos/skills/README.md, docs/method/DESIGN_METHOD.md §7, PR-51, PR-55, PR-56, PR-57). layers: the vocabulary below; a fence names its own on a `- Layers:` line. topics: words the runner looks for in a fence (or its `- Topics:` line) to pick a conditional file; `match` is a case-insensitive regular expression. stacks: any, a stack id or a toolchain (devos.config.json stack). modules: when set, the entry applies only to a project that chose or uses one of them (devos/answers.json, an active module, or a module the fence names). reads: each file a role reads, for which layers and when, with its priority: required (every task of those layers; the security gate's files), recommended (every task of those layers) or conditional (only when one clause of `if` holds: all of a clause's keys, any of its values; keys topics, modules, deep). deep is a risk-3 task, a task with a gate, or a deep review. The gates: a task with the backend, api, database or reliability layer, or a deep task, always gets the security layer (the security gate), and a task with the frontend, architecture, backend, api, database or reliability layer always gets the testing layer (the test gate); no fence removes them. notes: a file DEV_OS wrote after the audit (origin devos); it is listed first whenever another file of the entry is selected. trust: runs_code and fetches are false for every vendored skill (the cycle runs no code from a skill and fetches nothing at run time), and reviewed is the date its files were read whole. licence.class: free (a permissive licence; ship its licence and notices), conditions (allowed with conditions beyond notices), approval (needs the author's permission or a separate licence first), unsuitable (redistribution not allowed). delivery: vendored (files here, pinned), external (not shipped; a developer may use it interactively), principles (nothing copied; the ideas are written independently). Each source file records the path it was copied from (from); excluded lists the source files deliberately not copied, with why. guard:skills checks every vendored file's sha256 (LF line endings) and that INDEX.md is generated from this file.",
   "version": 3,
   "reviewed": "2026-10-25",
   "layers": {
@@ -7,12 +7,14 @@
     "motion": "animation, transitions and scroll",
     "frontend": "components, client state, copy and interaction",
     "accessibility": "WCAG, keyboard paths, focus, contrast and assistive technology",
+    "architecture": "system structure, boundaries, configuration, processes and migrations between systems",
     "backend": "server code, jobs and integrations",
     "api": "HTTP and RPC contracts, validation and errors",
     "database": "schema, migrations, queries and access rules",
     "security": "sign-in, secrets, input, headers and data protection",
+    "reliability": "timeouts, retries, queues, idempotency, health checks and graceful failure",
     "testing": "unit, integration and end-to-end tests",
-    "ops": "build, deploy, CI, logging and monitoring"
+    "ops": "build, deploy, CI, containers, dependencies, logging and observability"
   },
   "topics": {
     "auth": {
@@ -126,6 +128,62 @@
     "threat": {
       "match": "\\b(threat models?|threat modell?ing|trust boundar(y|ies)|attack surface)\\b",
       "covers": "threat models and trust boundaries"
+    },
+    "bugfix": {
+      "match": "\\b(bugs?|bug[- ]?fix(es)?|regressions?|crash(es|ed|ing)?|defects?|broken|root cause)\\b",
+      "covers": "bug fixes and regressions"
+    },
+    "flaky": {
+      "match": "\\b(flaky|flakiness|intermittent(ly)?|sometimes fails?|timing[- ]dependent)\\b",
+      "covers": "flaky tests and timing problems"
+    },
+    "e2e": {
+      "match": "\\b(e2e|end[- ]to[- ]end|playwright|browser tests?|ui tests?)\\b",
+      "covers": "end-to-end and browser tests"
+    },
+    "ci": {
+      "match": "\\b(ci|ci/cd|continuous (integration|delivery|deployment)|github actions|workflow files?|\\.github/workflows|pipelines?)\\b",
+      "covers": "CI pipelines and workflows"
+    },
+    "deploy": {
+      "match": "\\b(deploy(s|ed|ing|ment|ments)?|release (process|pipeline|steps?)|rollbacks?|roll back|staging|preview (deploy\\w*|environments?))\\b",
+      "covers": "deploys, releases and rollbacks"
+    },
+    "container": {
+      "match": "\\b(docker\\w*|containers?|container images?|kubernetes|k8s|podman)\\b",
+      "covers": "containers and images"
+    },
+    "dependencies": {
+      "match": "\\b(dependenc(y|ies)|lockfiles?|package-lock|pnpm-lock|vulnerab\\w*|cves?|supply[- ]chain|sbom|dependabot|renovate|npm audit)\\b",
+      "covers": "dependencies and their vulnerabilities"
+    },
+    "observability": {
+      "match": "\\b(observability|opentelemetry|otel|tracing|traces|spans?|metrics|telemetry|instrument(ation|ed)?|correlation ids?|slos?|slis?)\\b",
+      "covers": "traces, metrics and service levels"
+    },
+    "resilience": {
+      "match": "\\b(timeouts?|time-outs?|circuit[- ]breakers?|fallbacks?|outages?|transient|resilien\\w*|graceful(ly)? degrad\\w*|bulkheads?|back-?off|cascading failures?)\\b",
+      "covers": "timeouts, fallbacks and failing dependencies"
+    },
+    "health": {
+      "match": "\\b(health ?checks?|health endpoints?|healthz|liveness|readiness|uptime|status page)\\b",
+      "covers": "health checks and uptime"
+    },
+    "rate-limit": {
+      "match": "\\b(rate[- ]limit\\w*|throttl\\w*|quotas?|429|too many requests|noisy neighbou?rs?)\\b",
+      "covers": "rate limits, throttling and quotas"
+    },
+    "distributed": {
+      "match": "\\b(sagas?|distributed (transactions?|systems?)|compensat\\w*|eventual(ly)? consisten\\w*|microservices?|multi-step (workflows?|operations?)|several services|across services)\\b",
+      "covers": "work that spans several services"
+    },
+    "legacy": {
+      "match": "\\b(legacy|strangler|incremental(ly)? (migration|migrate|replace)|old system|monolith)\\b",
+      "covers": "replacing or integrating an older system"
+    },
+    "config": {
+      "match": "\\b(configuration|config (files?|values?|variables?)|environment variables?|env vars?|feature flags?|\\.env)\\b",
+      "covers": "configuration and environment"
     }
   },
   "entries": [
@@ -904,7 +962,7 @@
     {
       "id": "owasp-cheat-sheets",
       "kind": "reference",
-      "title": "OWASP Cheat Sheet Series (22 sheets)",
+      "title": "OWASP Cheat Sheet Series (26 sheets)",
       "source": {
         "repo": "https://github.com/OWASP/CheatSheetSeries",
         "commit": "a8ecf45fa88d4c90d4b4b455304b5d60aa02a258",
@@ -935,13 +993,14 @@
         "builder",
         "reviewer"
       ],
-      "use": "How to build and review the security controls of a server-side task: input, objects, access, sessions, secrets, uploads, webhooks, tenants, headers and logs.",
+      "use": "How to build and review the security controls of a task: input, objects, access, sessions, secrets, uploads, webhooks, tenants, headers, logs, CI/CD, containers and dependencies.",
       "layers": [
         "security",
         "api",
         "backend",
         "database",
         "frontend",
+        "architecture",
         "ops"
       ],
       "stacks": [
@@ -951,7 +1010,7 @@
         "runs_code": false,
         "fetches": false,
         "reviewed": "2026-10-25",
-        "notes": "Markdown guidance only. No instruction to the agent; samples are illustrations in several languages, and some cannot run as printed (DEVOS-NOTES.md). Links to sheets and assets not copied do not resolve. Database_Security omits INSERT from its usual grants (corrected in DEVOS-NOTES.md)."
+        "notes": "Markdown guidance only. No instruction to the agent; samples are illustrations in several languages, and some cannot run as printed (DEVOS-NOTES.md). Links to sheets and assets not copied do not resolve. Database_Security omits INSERT from its usual grants (corrected in DEVOS-NOTES.md). The four sheets added in E23b2b (CI/CD, Docker, vulnerable dependencies, microservices) were read whole on 2026-10-25; CI_CD_Security advises against auto-merge, which DEV_OS's method decides otherwise (DEVOS-NOTES.md)."
       },
       "notes": "DEVOS-NOTES.md",
       "reads": [
@@ -1337,19 +1396,104 @@
               ]
             }
           ]
+        },
+        {
+          "file": "CI_CD_Security_Cheat_Sheet.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "ops",
+            "security"
+          ],
+          "when": "CI pipelines, workflows and deploys",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "ci",
+                "deploy"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "Docker_Security_Cheat_Sheet.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "ops",
+            "security"
+          ],
+          "when": "containers and images",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "container"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "Vulnerable_Dependency_Management_Cheat_Sheet.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "ops",
+            "security"
+          ],
+          "when": "adding, upgrading or auditing dependencies",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "dependencies"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "Microservices_Security_Cheat_Sheet.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "architecture",
+            "security"
+          ],
+          "when": "work that spans several services",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "distributed"
+              ]
+            }
+          ]
         }
       ],
       "excluded": [
         {
           "path": "assets/",
           "reason": "images and third-party PDFs the sheets link to; the PDFs are not under the sheets' licence"
+        },
+        {
+          "path": "Denial_of_Service_Cheat_Sheet.md",
+          "reason": "read whole on 2026-10-25: incomplete (several 'future additions' placeholders) and mostly network-level; its application advice is in API4 of the API Top 10 and the throttling and bulkhead patterns"
         }
       ],
       "files": [
         {
           "path": "ATTRIBUTION.md",
           "origin": "devos",
-          "sha256": "350ba450ce358687378a1fdd1fc34c56652298eb2e55590261e8cd862d92796f"
+          "sha256": "1eec9a810298a6e7ed105537781665ded62259f9d3853c222aab0c62f0bbecd7"
         },
         {
           "path": "Authentication_Cheat_Sheet.md",
@@ -1362,6 +1506,12 @@
           "origin": "source",
           "from": "cheatsheets/Authorization_Cheat_Sheet.md",
           "sha256": "fb8b6e5c60ed783025beefb5049142fd9da02d01f5c95de18a19d26479737975"
+        },
+        {
+          "path": "CI_CD_Security_Cheat_Sheet.md",
+          "origin": "source",
+          "from": "cheatsheets/CI_CD_Security_Cheat_Sheet.md",
+          "sha256": "25b927dd92a7a0ac1acb821444c3e7df4a3ad69b75edc34c855acb20f973e593"
         },
         {
           "path": "Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.md",
@@ -1378,13 +1528,19 @@
         {
           "path": "DEVOS-NOTES.md",
           "origin": "devos",
-          "sha256": "fe53b5f2e4e63edce2bc752616bc0bc21262deb943ef55ee13d77633884f6761"
+          "sha256": "bb0765cb07a251f542d3b9deb2e2fc5e78165e5716600f08b399124a759d830b"
         },
         {
           "path": "Database_Security_Cheat_Sheet.md",
           "origin": "source",
           "from": "cheatsheets/Database_Security_Cheat_Sheet.md",
           "sha256": "b5ad6125f2f908949df3a7866daa03a9f8487e94ea84f384eb852948375f15e2"
+        },
+        {
+          "path": "Docker_Security_Cheat_Sheet.md",
+          "origin": "source",
+          "from": "cheatsheets/Docker_Security_Cheat_Sheet.md",
+          "sha256": "81e50e16cbc6a3cc7a4bdb88a495f086db43bf58f518099e08913da79a4909e9"
         },
         {
           "path": "Error_Handling_Cheat_Sheet.md",
@@ -1441,6 +1597,12 @@
           "sha256": "f325d48b32fd86e2b5450f51ccf773b639263f3c16b6daf6634587c262e5d4ea"
         },
         {
+          "path": "Microservices_Security_Cheat_Sheet.md",
+          "origin": "source",
+          "from": "cheatsheets/Microservices_Security_Cheat_Sheet.md",
+          "sha256": "8536aca65d330baad4aae41498b0ee1e8dec4732c71905db73c0786b37cac455"
+        },
+        {
           "path": "Multi_Tenant_Security_Cheat_Sheet.md",
           "origin": "source",
           "from": "cheatsheets/Multi_Tenant_Security_Cheat_Sheet.md",
@@ -1487,6 +1649,12 @@
           "origin": "source",
           "from": "cheatsheets/Threat_Modeling_Cheat_Sheet.md",
           "sha256": "5102d1557d58fdc184e1cb07dbd796f063e8899318e7d83de5b6242cebf74233"
+        },
+        {
+          "path": "Vulnerable_Dependency_Management_Cheat_Sheet.md",
+          "origin": "source",
+          "from": "cheatsheets/Vulnerable_Dependency_Management_Cheat_Sheet.md",
+          "sha256": "77e7a460c4072442d524394109125391317d61961db78c3cdc2dd771c006872a"
         },
         {
           "path": "Webhook_Security_Cheat_Sheet.md",
@@ -2988,6 +3156,1343 @@
       ]
     },
     {
+      "id": "superpowers",
+      "kind": "skill",
+      "title": "Superpowers: testing, debugging and verification",
+      "source": {
+        "repo": "https://github.com/obra/superpowers",
+        "commit": "2ce8aa15d05bd57213e6f746f953aafb7ded7a8b",
+        "tag": "v7.0.1",
+        "path": "skills",
+        "version": "release v7.0.1"
+      },
+      "licence": {
+        "spdx": "MIT",
+        "class": "free",
+        "file": "LICENSE",
+        "notices": [],
+        "copyright": "Copyright (c) 2025 Jesse Vincent"
+      },
+      "delivery": "vendored",
+      "obligations": [
+        "The copyright and permission notice ships in LICENSE beside the files",
+        "The files are copied unchanged; a change would be marked in the file and in this entry",
+        "DEVOS-NOTES.md is DEV_OS's own: where the skills meet DEV_OS's rules (no deleted work, no git, no human mid-run)"
+      ],
+      "changes": "none to the source files; DEVOS-NOTES.md is DEV_OS's own",
+      "roles": [
+        "builder",
+        "reviewer"
+      ],
+      "use": "Tests that catch real breaks, the failing test first for a bug, root cause before a fix, and evidence before every claim.",
+      "layers": [
+        "testing"
+      ],
+      "stacks": [
+        "any"
+      ],
+      "trust": {
+        "runs_code": false,
+        "fetches": false,
+        "reviewed": "2026-10-25",
+        "notes": "Markdown with TypeScript and shell samples. The skills tell an agent to delete code written before its test, to ask a human, and to use git; DEVOS-NOTES.md replaces those parts. The script find-polluter.sh and the example code file are not copied."
+      },
+      "notes": "DEVOS-NOTES.md",
+      "reads": [
+        {
+          "file": "test-driven-development/writing-good-tests.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "testing"
+          ],
+          "when": "every test written or changed: name the break it catches, exercise the real code",
+          "priority": "required"
+        },
+        {
+          "file": "verification-before-completion/SKILL.md",
+          "roles": [
+            "builder"
+          ],
+          "layers": [
+            "testing"
+          ],
+          "when": "before the report: every claim has its command and real output",
+          "priority": "required"
+        },
+        {
+          "file": "test-driven-development/SKILL.md",
+          "roles": [
+            "builder"
+          ],
+          "layers": [
+            "testing"
+          ],
+          "when": "a bug fix: the failing test first",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "bugfix"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "systematic-debugging/SKILL.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "testing"
+          ],
+          "when": "a bug, a failing test or a flaky one: root cause before the fix",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "bugfix",
+                "flaky"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "systematic-debugging/root-cause-tracing.md",
+          "roles": [
+            "builder"
+          ],
+          "layers": [
+            "testing"
+          ],
+          "when": "tracing a bad value back to where it starts",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "bugfix"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "systematic-debugging/defense-in-depth.md",
+          "roles": [
+            "builder"
+          ],
+          "layers": [
+            "testing"
+          ],
+          "when": "after the fix: validation at each layer the data crosses",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "bugfix"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "systematic-debugging/condition-based-waiting.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "testing"
+          ],
+          "when": "tests that wait: wait for the condition, not a guessed delay",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "flaky",
+                "e2e"
+              ]
+            }
+          ]
+        }
+      ],
+      "excluded": [
+        {
+          "path": "systematic-debugging/find-polluter.sh",
+          "reason": "a script; the cycle runs no code from a skill"
+        },
+        {
+          "path": "systematic-debugging/condition-based-waiting-example.ts",
+          "reason": "example code; the pattern is in condition-based-waiting.md"
+        },
+        {
+          "path": "systematic-debugging/test-academic.md",
+          "reason": "the authors' evaluation scenario"
+        },
+        {
+          "path": "systematic-debugging/test-pressure-1.md",
+          "reason": "the authors' evaluation scenario"
+        },
+        {
+          "path": "systematic-debugging/test-pressure-2.md",
+          "reason": "the authors' evaluation scenario"
+        },
+        {
+          "path": "systematic-debugging/test-pressure-3.md",
+          "reason": "the authors' evaluation scenario"
+        },
+        {
+          "path": "systematic-debugging/CREATION-LOG.md",
+          "reason": "the authors' notes on writing the skill"
+        },
+        {
+          "path": "using-git-worktrees/",
+          "reason": "drives the agent's own git workflow; the builder never runs git"
+        },
+        {
+          "path": "finishing-a-development-branch/",
+          "reason": "drives the agent's own git workflow; the builder never runs git"
+        }
+      ],
+      "files": [
+        {
+          "path": "DEVOS-NOTES.md",
+          "origin": "devos",
+          "sha256": "eb12f9b8684c0eeaba834c81dcb94404632741c5821e972c18b8f7da5d365277"
+        },
+        {
+          "path": "LICENSE",
+          "origin": "source",
+          "from": "LICENSE",
+          "sha256": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400"
+        },
+        {
+          "path": "systematic-debugging/SKILL.md",
+          "origin": "source",
+          "from": "skills/systematic-debugging/SKILL.md",
+          "sha256": "51c6435d98c83c42c96ba7c35725a0b2c376cd487fb1a4e6bd0ddbe7e33ef202"
+        },
+        {
+          "path": "systematic-debugging/condition-based-waiting.md",
+          "origin": "source",
+          "from": "skills/systematic-debugging/condition-based-waiting.md",
+          "sha256": "e89fec8400d6cd50f43407cec9fab50976ba4d55d0ec2eb51c0bd68036b54c26"
+        },
+        {
+          "path": "systematic-debugging/defense-in-depth.md",
+          "origin": "source",
+          "from": "skills/systematic-debugging/defense-in-depth.md",
+          "sha256": "1e175fb86fc357e58c6aebf5441e481e1b7868b4380c0456b63a17eefbd18ba7"
+        },
+        {
+          "path": "systematic-debugging/root-cause-tracing.md",
+          "origin": "source",
+          "from": "skills/systematic-debugging/root-cause-tracing.md",
+          "sha256": "75b933b6a8c40bdb2031b10f21654395b56ec6ab6bc7b018c18d3fe57aeb7fb8"
+        },
+        {
+          "path": "test-driven-development/SKILL.md",
+          "origin": "source",
+          "from": "skills/test-driven-development/SKILL.md",
+          "sha256": "64b03fce4aee5a97a93160cea8111f3ba13a17b7c001db4bd5836d67fd10705d"
+        },
+        {
+          "path": "test-driven-development/writing-good-tests.md",
+          "origin": "source",
+          "from": "skills/test-driven-development/writing-good-tests.md",
+          "sha256": "51471c853306ff92ca8bb41dcaea05f31c0e46b03651f8f3c99754b7172f4ae1"
+        },
+        {
+          "path": "verification-before-completion/SKILL.md",
+          "origin": "source",
+          "from": "skills/verification-before-completion/SKILL.md",
+          "sha256": "2befe7fc55bcadaa3d97dd9e8efeb633d2561c0ebe74c5a8b17c4d9e7e4520b3"
+        }
+      ]
+    },
+    {
+      "id": "playwright-best-practices",
+      "kind": "reference",
+      "title": "Playwright best practices",
+      "source": {
+        "repo": "https://github.com/microsoft/playwright",
+        "commit": "cfe490d941f992655948eee8fd4fd94e1c4234bf",
+        "tag": "v1.64.1",
+        "path": "docs/src/best-practices-js.md",
+        "version": "release v1.64.1"
+      },
+      "licence": {
+        "spdx": "Apache-2.0",
+        "class": "free",
+        "file": "LICENSE",
+        "notices": [
+          "NOTICE"
+        ],
+        "copyright": "Copyright (c) Microsoft Corporation (NOTICE)"
+      },
+      "delivery": "vendored",
+      "obligations": [
+        "The Apache-2.0 licence ships as LICENSE and the repository's NOTICE ships as NOTICE beside the file",
+        "best-practices-js.md is copied unchanged; LICENSE is the upstream text with its CRLF line endings normalised to LF (the repository stores text with LF)",
+        "DEVOS-NOTES.md is DEV_OS's own"
+      ],
+      "changes": "none to best-practices-js.md and NOTICE; LICENSE line endings normalised to LF; DEVOS-NOTES.md is DEV_OS's own",
+      "roles": [
+        "builder",
+        "reviewer"
+      ],
+      "use": "End-to-end tests in Playwright: user-visible behaviour, isolated tests, role locators, web-first assertions.",
+      "layers": [
+        "testing",
+        "frontend"
+      ],
+      "stacks": [
+        "node"
+      ],
+      "trust": {
+        "runs_code": false,
+        "fetches": false,
+        "reviewed": "2026-10-25",
+        "notes": "Markdown with JavaScript and shell samples, and remote image links. It suggests staging environments, @latest upgrades and interactive tools; DEVOS-NOTES.md says what applies in a run."
+      },
+      "notes": "DEVOS-NOTES.md",
+      "reads": [
+        {
+          "file": "best-practices-js.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "testing"
+          ],
+          "when": "end-to-end tests in Playwright",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "e2e"
+              ]
+            }
+          ]
+        }
+      ],
+      "files": [
+        {
+          "path": "DEVOS-NOTES.md",
+          "origin": "devos",
+          "sha256": "5a84f4781fd1923a051e1d4147d849513cf9f5472bd14d04fd04e4ade2016b37"
+        },
+        {
+          "path": "LICENSE",
+          "origin": "source",
+          "from": "LICENSE",
+          "sha256": "7fab1461b41970ff376f1c9303a637076bfaaeb71cd12dd3a1c44aaf59a1a2b9"
+        },
+        {
+          "path": "NOTICE",
+          "origin": "source",
+          "from": "NOTICE",
+          "sha256": "6d602191187b35b9b01d2cffa01c8469c2c8d9de8a96f1bf868e0f264f51c81d"
+        },
+        {
+          "path": "best-practices-js.md",
+          "origin": "source",
+          "from": "docs/src/best-practices-js.md",
+          "sha256": "785e6244815ed457ceb0a9109e0ead34a114fd89b09c0689174a5b421eed8512"
+        }
+      ]
+    },
+    {
+      "id": "azure-cloud-patterns",
+      "kind": "reference",
+      "title": "Cloud design patterns (Azure Architecture Center), 10 patterns",
+      "source": {
+        "repo": "https://github.com/MicrosoftDocs/architecture-center",
+        "commit": "b60c2b4526bab9b5e77cba2d779e695ed9d6ab9a",
+        "tag": "",
+        "path": "docs/patterns",
+        "version": "repository head of 2026-10-24; the documentation publishes no release tags"
+      },
+      "licence": {
+        "spdx": "CC-BY-4.0 AND MIT",
+        "class": "conditions",
+        "file": "LICENSE",
+        "notices": [
+          "LICENSE-CODE",
+          "ThirdPartyNotices",
+          "ATTRIBUTION.md"
+        ],
+        "copyright": "Microsoft and the contributors (ThirdPartyNotices)"
+      },
+      "delivery": "vendored",
+      "obligations": [
+        "Attribution (CC BY 4.0, the documentation): ATTRIBUTION.md gives the titles, the authors, the source at the pinned commit, the licence with its link, and that nothing was changed",
+        "MIT (the code in the pages): the licence text ships as LICENSE-CODE",
+        "ThirdPartyNotices ships unchanged: the licences grant no right to Microsoft's names, logos or trademarks",
+        "The pages are copied unchanged; a change would be marked in the file, in ATTRIBUTION.md and in this entry",
+        "DEVOS-NOTES.md is DEV_OS's own commentary; DEV_OS's licence does not cover the pages and theirs does not cover DEV_OS"
+      ],
+      "changes": "none to the pages; ATTRIBUTION.md and DEVOS-NOTES.md are DEV_OS's own",
+      "roles": [
+        "blueprint",
+        "builder",
+        "reviewer"
+      ],
+      "use": "Reliability and architecture patterns: retry, circuit breaker, bulkhead, health endpoints, queues, idempotent consumers, throttling, compensation, strangler fig and anti-corruption layer.",
+      "layers": [
+        "reliability",
+        "architecture",
+        "ops"
+      ],
+      "stacks": [
+        "any"
+      ],
+      "trust": {
+        "runs_code": false,
+        "fetches": false,
+        "reviewed": "2026-10-25",
+        "notes": "Markdown with YAML samples, Azure-specific examples and image blocks. No instruction to the agent. One example contradicts its page's rule (Circuit Breaker), and links to the .yml pages and to images do not resolve (DEVOS-NOTES.md)."
+      },
+      "notes": "DEVOS-NOTES.md",
+      "reads": [
+        {
+          "file": "retry-content.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "reliability"
+          ],
+          "when": "every call to a remote service: which faults to retry, and how",
+          "priority": "recommended"
+        },
+        {
+          "file": "circuit-breaker.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "reliability"
+          ],
+          "when": "a dependency that can fail for a long time",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "resilience"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "bulkhead.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "reliability"
+          ],
+          "when": "isolating one dependency's failure from the rest",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "resilience"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "health-endpoint-monitoring.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "reliability",
+            "ops"
+          ],
+          "when": "health checks, liveness and readiness",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "health",
+                "deploy"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "queue-based-load-leveling.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "reliability"
+          ],
+          "when": "absorbing load spikes with a queue",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "concurrency",
+                "rate-limit"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "idempotent-consumer.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "reliability"
+          ],
+          "when": "messages, jobs and webhooks that can arrive twice",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "concurrency",
+                "webhook",
+                "idempotency"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "throttling.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "reliability"
+          ],
+          "when": "limiting what one caller or tenant can consume",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "rate-limit"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "compensating-transaction.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "reliability",
+            "architecture"
+          ],
+          "when": "undoing steps of an operation that spans services",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "distributed"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "strangler-fig.md",
+          "roles": [
+            "blueprint",
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "architecture"
+          ],
+          "when": "replacing an older system step by step",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "legacy"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "anti-corruption-layer.md",
+          "roles": [
+            "blueprint",
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "architecture"
+          ],
+          "when": "integrating a system whose model differs from yours",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "legacy",
+                "integration"
+              ]
+            }
+          ]
+        }
+      ],
+      "files": [
+        {
+          "path": "ATTRIBUTION.md",
+          "origin": "devos",
+          "sha256": "a00d2932ae7b3673084ce79e6e8ddebad7a388ea0f5932c1dff42978dc128116"
+        },
+        {
+          "path": "DEVOS-NOTES.md",
+          "origin": "devos",
+          "sha256": "aa887aa7b464d63f22f70cbca9c201ab7f60b89b5e374bf7efc3a9b256d7369a"
+        },
+        {
+          "path": "LICENSE",
+          "origin": "source",
+          "from": "LICENSE",
+          "sha256": "7183ef9749eb9b75e710a81a4c812a9405cc184f087500581a973e5929ac3f5e"
+        },
+        {
+          "path": "LICENSE-CODE",
+          "origin": "source",
+          "from": "LICENSE-CODE",
+          "sha256": "91f7258203fd43ba6d6f7f72b644eaedee9e3430f035c053beb6f34052f045e2"
+        },
+        {
+          "path": "ThirdPartyNotices",
+          "origin": "source",
+          "from": "ThirdPartyNotices",
+          "sha256": "f90a4ebe55a146d29bae7ce11cb57faf7346beab9dd9db5f15b533ac6c48a37f"
+        },
+        {
+          "path": "anti-corruption-layer.md",
+          "origin": "source",
+          "from": "docs/patterns/anti-corruption-layer.md",
+          "sha256": "2c2f1586eb46629a57470c70ef645bfaf60428125654171780dfcfdf2380e48a"
+        },
+        {
+          "path": "bulkhead.md",
+          "origin": "source",
+          "from": "docs/patterns/bulkhead.md",
+          "sha256": "2024b432e7477e0ebd068ca7ab4457a8e17c3f46aa82e256a7652422fb5d4ce1"
+        },
+        {
+          "path": "circuit-breaker.md",
+          "origin": "source",
+          "from": "docs/patterns/circuit-breaker.md",
+          "sha256": "29baeab9e19c54c9fdae01dfa4c431bae0c6811e0c5267a1d6c8c78267b8146e"
+        },
+        {
+          "path": "compensating-transaction.md",
+          "origin": "source",
+          "from": "docs/patterns/compensating-transaction.md",
+          "sha256": "18d9aca47cba63058af04b44ffe4d40485ff786c71c6ec6059870eefd0ed4c50"
+        },
+        {
+          "path": "health-endpoint-monitoring.md",
+          "origin": "source",
+          "from": "docs/patterns/health-endpoint-monitoring.md",
+          "sha256": "2ffed47249e9c6e6dd5a2d2b36c73fcb2adcbd217377e60f3466c98cf9f9d08f"
+        },
+        {
+          "path": "idempotent-consumer.md",
+          "origin": "source",
+          "from": "docs/patterns/idempotent-consumer.md",
+          "sha256": "c4650525eb0380f519ada5e18793ef474b466bac66f91672a5072ce4ed4e153d"
+        },
+        {
+          "path": "queue-based-load-leveling.md",
+          "origin": "source",
+          "from": "docs/patterns/queue-based-load-leveling.md",
+          "sha256": "9ce566aa87c58aa74c6af4e42ffd2d61e40e893164e72b33139923946211d9f0"
+        },
+        {
+          "path": "retry-content.md",
+          "origin": "source",
+          "from": "docs/patterns/retry-content.md",
+          "sha256": "619b34a5b1eaf6508715080192feb9fcd85447d402f29816e9f3ffaf294f91a8"
+        },
+        {
+          "path": "strangler-fig.md",
+          "origin": "source",
+          "from": "docs/patterns/strangler-fig.md",
+          "sha256": "433101cd85942a5c3e9fb410d8fdf53d5c10e50851d3821caebf56db0954bb51"
+        },
+        {
+          "path": "throttling.md",
+          "origin": "source",
+          "from": "docs/patterns/throttling.md",
+          "sha256": "8d63758dc5e81606a9d58a4c3b028a4298da807b073f40126d5db7862295cba7"
+        }
+      ]
+    },
+    {
+      "id": "twelve-factor",
+      "kind": "reference",
+      "title": "The Twelve-Factor App",
+      "source": {
+        "repo": "https://github.com/heroku/12factor",
+        "commit": "1385d2c80bac38c25647651f6f5ec769561828dc",
+        "tag": "",
+        "path": "content/en",
+        "version": "repository head of 2026-05-18; the project publishes no release tags"
+      },
+      "licence": {
+        "spdx": "MIT",
+        "class": "free",
+        "file": "LICENSE",
+        "notices": [],
+        "copyright": "Copyright (c) 2012 Adam Wiggins"
+      },
+      "delivery": "vendored",
+      "obligations": [
+        "The copyright and permission notice ships in LICENSE beside the pages (the README releases the project under the MIT licence)",
+        "The pages are copied unchanged; a change would be marked in the file and in this entry",
+        "DEVOS-NOTES.md is DEV_OS's own"
+      ],
+      "changes": "none to the pages; DEVOS-NOTES.md is DEV_OS's own",
+      "roles": [
+        "blueprint",
+        "builder",
+        "reviewer"
+      ],
+      "use": "How a service is structured and run: config in the environment, backing services, stateless processes, disposability, logs as streams, admin processes.",
+      "layers": [
+        "architecture",
+        "ops",
+        "reliability"
+      ],
+      "stacks": [
+        "any"
+      ],
+      "trust": {
+        "runs_code": false,
+        "fetches": false,
+        "reviewed": "2026-10-25",
+        "notes": "Markdown written in 2011-2012; dated tool examples and image links. It suggests consoles on the live database; DEVOS-NOTES.md says production is never touched from a task."
+      },
+      "notes": "DEVOS-NOTES.md",
+      "reads": [
+        {
+          "file": "intro.md",
+          "roles": [
+            "blueprint"
+          ],
+          "layers": [
+            "architecture"
+          ],
+          "when": "planning a service: what the twelve factors are for",
+          "priority": "recommended"
+        },
+        {
+          "file": "codebase.md",
+          "roles": [
+            "blueprint"
+          ],
+          "layers": [
+            "architecture"
+          ],
+          "when": "planning a service: one codebase, many deploys",
+          "priority": "recommended"
+        },
+        {
+          "file": "backing-services.md",
+          "roles": [
+            "blueprint",
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "architecture"
+          ],
+          "when": "databases, queues and third-party services as attached resources",
+          "priority": "recommended"
+        },
+        {
+          "file": "processes.md",
+          "roles": [
+            "blueprint",
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "architecture",
+            "reliability"
+          ],
+          "when": "stateless processes; state in a backing service",
+          "priority": "recommended"
+        },
+        {
+          "file": "port-binding.md",
+          "roles": [
+            "blueprint"
+          ],
+          "layers": [
+            "architecture"
+          ],
+          "when": "planning a service: self-contained, exported by port",
+          "priority": "recommended"
+        },
+        {
+          "file": "disposability.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "reliability"
+          ],
+          "when": "fast start, graceful shutdown, jobs safe to rerun",
+          "priority": "recommended"
+        },
+        {
+          "file": "config.md",
+          "roles": [
+            "blueprint",
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "architecture",
+            "ops"
+          ],
+          "when": "configuration and secrets in the environment",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "config",
+                "secrets",
+                "deploy"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "concurrency.md",
+          "roles": [
+            "blueprint",
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "architecture"
+          ],
+          "when": "scaling out with process types; web and worker",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "concurrency"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "dependencies.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "ops"
+          ],
+          "when": "declaring and isolating dependencies",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "dependencies"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "build-release-run.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "ops"
+          ],
+          "when": "separate build, release and run; releases are immutable",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "deploy",
+                "ci"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "dev-prod-parity.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "ops"
+          ],
+          "when": "the same backing services in development and production",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "deploy",
+                "config"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "logs.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "ops"
+          ],
+          "when": "logs as an event stream to standard output",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "logging",
+                "observability"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "admin-processes.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "ops"
+          ],
+          "when": "migrations and one-off tasks",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "migration",
+                "deploy"
+              ]
+            }
+          ]
+        }
+      ],
+      "excluded": [
+        {
+          "path": "background.md",
+          "reason": "the authors' background, not guidance"
+        },
+        {
+          "path": "who.md",
+          "reason": "who the document is for, not guidance"
+        },
+        {
+          "path": "toc.md",
+          "reason": "the site's table of contents"
+        }
+      ],
+      "files": [
+        {
+          "path": "DEVOS-NOTES.md",
+          "origin": "devos",
+          "sha256": "a921fe43a5c7a6c1d3316ee9b1ce7b0811067d8a6538ae2fc229d70662cadfb8"
+        },
+        {
+          "path": "LICENSE",
+          "origin": "source",
+          "from": "LICENSE",
+          "sha256": "bffa134a9c134b41d3f33e0c76dd9a91cee1a4e67912216d441c6e7584970b71"
+        },
+        {
+          "path": "admin-processes.md",
+          "origin": "source",
+          "from": "content/en/admin-processes.md",
+          "sha256": "fc496eaf191463a22fa4a04e4eca2bab35889f966688e024959ea320c310a7cd"
+        },
+        {
+          "path": "backing-services.md",
+          "origin": "source",
+          "from": "content/en/backing-services.md",
+          "sha256": "092e74d60e59001d0f70e39024c6bbac67188907f677431c1081b80f20b37695"
+        },
+        {
+          "path": "build-release-run.md",
+          "origin": "source",
+          "from": "content/en/build-release-run.md",
+          "sha256": "f5eababf567dfe7a3ea7740d32372aeffb22fb660c4e296c8c4701b179bb517b"
+        },
+        {
+          "path": "codebase.md",
+          "origin": "source",
+          "from": "content/en/codebase.md",
+          "sha256": "aafead6b0d15bd56a80521bd783094d5bf2d7381cf4dec2c15716ea8f2798e9a"
+        },
+        {
+          "path": "concurrency.md",
+          "origin": "source",
+          "from": "content/en/concurrency.md",
+          "sha256": "d4a22e2db87f45c04f78bcec5fe3dd69075359e9a76d724039ce110b0acfc996"
+        },
+        {
+          "path": "config.md",
+          "origin": "source",
+          "from": "content/en/config.md",
+          "sha256": "eb1dd6799ee8a82ca0074727432138234f40841952392406aa05c76fb35fcd27"
+        },
+        {
+          "path": "dependencies.md",
+          "origin": "source",
+          "from": "content/en/dependencies.md",
+          "sha256": "636df45c364d8abc3fa2418be2e913dda1c97eca62c199048827bac2d91a8c87"
+        },
+        {
+          "path": "dev-prod-parity.md",
+          "origin": "source",
+          "from": "content/en/dev-prod-parity.md",
+          "sha256": "0964d7249df65f78f7a50fa066f80f99ca1125c3e64a25d07582905292a20e6d"
+        },
+        {
+          "path": "disposability.md",
+          "origin": "source",
+          "from": "content/en/disposability.md",
+          "sha256": "8ee1f8a0acb60b75f1d2c761ba14234fd578d66c5c64a59347d48680bc09ee53"
+        },
+        {
+          "path": "intro.md",
+          "origin": "source",
+          "from": "content/en/intro.md",
+          "sha256": "21a1fc883d6fa0a6bfb577d63047294bb7cfe64921824d233c9dbdf2416713e3"
+        },
+        {
+          "path": "logs.md",
+          "origin": "source",
+          "from": "content/en/logs.md",
+          "sha256": "7dcb48b93385aca9fb8a8087ba592f3c588bb3937ffee7ac1514ecb377932146"
+        },
+        {
+          "path": "port-binding.md",
+          "origin": "source",
+          "from": "content/en/port-binding.md",
+          "sha256": "21aba4d1b47a5cf15dfdb90ec6ef8473193dbbd7d84a563d5998e70cf90ff7ed"
+        },
+        {
+          "path": "processes.md",
+          "origin": "source",
+          "from": "content/en/processes.md",
+          "sha256": "77f8721bde123f9f63e86f6ebb953ce77705582cce76b8d2e64272788ad429b7"
+        }
+      ]
+    },
+    {
+      "id": "github-actions-security",
+      "kind": "reference",
+      "title": "GitHub Actions: secure use reference",
+      "source": {
+        "repo": "https://github.com/github/docs",
+        "commit": "02c25d16369fe27f9bdb28d1201f6b452f0d21dd",
+        "tag": "",
+        "path": "content/actions/reference/security/secure-use.md",
+        "version": "repository head of 2026-10-23; the documentation publishes no release tags"
+      },
+      "licence": {
+        "spdx": "CC-BY-4.0 AND MIT",
+        "class": "conditions",
+        "file": "LICENSE",
+        "notices": [
+          "LICENSE-CODE",
+          "ATTRIBUTION.md"
+        ],
+        "copyright": "GitHub and the contributors (LICENSE-CODE: Copyright 2026 GitHub)"
+      },
+      "delivery": "vendored",
+      "obligations": [
+        "Attribution (CC BY 4.0, the documentation): ATTRIBUTION.md gives the title, the authors, the source at the pinned commit, the licence with its link, and that nothing was changed",
+        "MIT (the code): the licence text ships as LICENSE-CODE",
+        "The page is copied unchanged; a change would be marked in the file, in ATTRIBUTION.md and in this entry",
+        "DEVOS-NOTES.md is DEV_OS's own commentary; DEV_OS's licence does not cover the page and its licences do not cover DEV_OS"
+      ],
+      "changes": "none to the page; ATTRIBUTION.md and DEVOS-NOTES.md are DEV_OS's own",
+      "roles": [
+        "builder",
+        "reviewer"
+      ],
+      "use": "Writing the project's own GitHub Actions workflows safely: secrets, script injection, untrusted checkouts, pinned actions, runners.",
+      "layers": [
+        "ops",
+        "security"
+      ],
+      "stacks": [
+        "any"
+      ],
+      "trust": {
+        "runs_code": false,
+        "fetches": false,
+        "reviewed": "2026-10-25",
+        "notes": "The page's Liquid source: template variables, included text that is missing here, version blocks and AUTOTITLE links (DEVOS-NOTES.md explains them). No instruction to the agent."
+      },
+      "notes": "DEVOS-NOTES.md",
+      "reads": [
+        {
+          "file": "secure-use.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "ops"
+          ],
+          "when": "the project's own CI workflows",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "ci"
+              ]
+            }
+          ]
+        }
+      ],
+      "excluded": [
+        {
+          "path": "securely-using-pull_request_target.md",
+          "reason": "not copied in this task; secure-use.md gives the rule for pull_request_target and links to it"
+        }
+      ],
+      "files": [
+        {
+          "path": "ATTRIBUTION.md",
+          "origin": "devos",
+          "sha256": "ba765db361cdb1ccf0b752885aef234f1bee5821673cac16c9174b72ab692e0b"
+        },
+        {
+          "path": "DEVOS-NOTES.md",
+          "origin": "devos",
+          "sha256": "ed21473ce2b88d65845eaee78408bf6e287a4b8b34f5859020fe3a58fc94d036"
+        },
+        {
+          "path": "LICENSE",
+          "origin": "source",
+          "from": "LICENSE",
+          "sha256": "12d3a82a7d1378e6f597ec23d63a081aeb6ec4bc8de2a76ee9dc96c34c6d7a1b"
+        },
+        {
+          "path": "LICENSE-CODE",
+          "origin": "source",
+          "from": "LICENSE-CODE",
+          "sha256": "938cb3c100a34b9a1965b69cfe4b82287074e4fe1b9fbacaddaf23f57fd5698a"
+        },
+        {
+          "path": "secure-use.md",
+          "origin": "source",
+          "from": "content/actions/reference/security/secure-use.md",
+          "sha256": "0b2d692984fae55eff6334aabb52ca3c97bd38757cca1e2cc3437460cbc4b1d5"
+        }
+      ]
+    },
+    {
+      "id": "opentelemetry-concepts",
+      "kind": "reference",
+      "title": "OpenTelemetry concepts: primer, traces, logs, metrics",
+      "source": {
+        "repo": "https://github.com/open-telemetry/opentelemetry.io",
+        "commit": "bb4e55d88ba78a18aa732e40a76cc0066cbab286",
+        "tag": "",
+        "path": "content/en/docs/concepts",
+        "version": "repository head of 2026-10-25; the website publishes no release tags"
+      },
+      "licence": {
+        "spdx": "CC-BY-4.0 AND Apache-2.0",
+        "class": "conditions",
+        "file": "LICENSE",
+        "notices": [
+          "LICENSE-CODE",
+          "ATTRIBUTION.md"
+        ],
+        "copyright": "the OpenTelemetry authors (the licence files name no holder)"
+      },
+      "delivery": "vendored",
+      "obligations": [
+        "Attribution (CC BY 4.0, the documentation): ATTRIBUTION.md gives the titles, the authors, the source at the pinned commit, the licence with its link, and that nothing was changed",
+        "Apache-2.0 (the code): the licence text ships as LICENSE-CODE; the repository has no NOTICE file",
+        "The pages are copied unchanged; a change would be marked in the file, in ATTRIBUTION.md and in this entry",
+        "DEVOS-NOTES.md is DEV_OS's own commentary; DEV_OS's licence does not cover the pages and theirs does not cover DEV_OS"
+      ],
+      "changes": "none to the pages; ATTRIBUTION.md and DEVOS-NOTES.md are DEV_OS's own",
+      "roles": [
+        "builder",
+        "reviewer"
+      ],
+      "use": "What to emit so a running service can be understood: traces, spans, metrics, structured logs and their correlation.",
+      "layers": [
+        "ops",
+        "reliability"
+      ],
+      "stacks": [
+        "any"
+      ],
+      "trust": {
+        "runs_code": false,
+        "fetches": false,
+        "reviewed": "2026-10-25",
+        "notes": "Markdown with JSON samples and site templates. No instruction to the agent. A log sample records a token and personal data (corrected in DEVOS-NOTES.md)."
+      },
+      "notes": "DEVOS-NOTES.md",
+      "reads": [
+        {
+          "file": "observability-primer.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "ops"
+          ],
+          "when": "logging, metrics or tracing: the concepts first",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "observability",
+                "logging"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "signals/traces.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "ops"
+          ],
+          "when": "traces and spans",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "observability"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "signals/logs.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "ops"
+          ],
+          "when": "structured logs and their correlation with traces",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "logging",
+                "observability"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "signals/metrics.md",
+          "roles": [
+            "builder",
+            "reviewer"
+          ],
+          "layers": [
+            "ops"
+          ],
+          "when": "metrics, instruments and cardinality",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "observability"
+              ]
+            }
+          ]
+        }
+      ],
+      "files": [
+        {
+          "path": "ATTRIBUTION.md",
+          "origin": "devos",
+          "sha256": "5ff67ed66c7035018f59d8c2ee47ff9837879f98db557dda6109427b6cfc3023"
+        },
+        {
+          "path": "DEVOS-NOTES.md",
+          "origin": "devos",
+          "sha256": "93d285e7aba41dfa663c6dcd88a36628b7365fdc466e01fd8df73d8744ce55ab"
+        },
+        {
+          "path": "LICENSE",
+          "origin": "source",
+          "from": "LICENSE",
+          "sha256": "6f9997b6f85f473f853aeef19b5f16504dd228ba99cee70e5a19211df947a2b3"
+        },
+        {
+          "path": "LICENSE-CODE",
+          "origin": "source",
+          "from": "LICENSE-CODE",
+          "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+        },
+        {
+          "path": "observability-primer.md",
+          "origin": "source",
+          "from": "content/en/docs/concepts/observability-primer.md",
+          "sha256": "dc03eacab8e562649cfc648081d23fe08fff34c4abae8d8418db45c587877f5e"
+        },
+        {
+          "path": "signals/logs.md",
+          "origin": "source",
+          "from": "content/en/docs/concepts/signals/logs.md",
+          "sha256": "20950feea860a7ce64b1d51b7e96e95f1bafb354f6a8e35021eb0ca058c2427d"
+        },
+        {
+          "path": "signals/metrics.md",
+          "origin": "source",
+          "from": "content/en/docs/concepts/signals/metrics.md",
+          "sha256": "891112f4c81851850b2d732f68c3ba58adf7d5e0017df5233408324307e18951"
+        },
+        {
+          "path": "signals/traces.md",
+          "origin": "source",
+          "from": "content/en/docs/concepts/signals/traces.md",
+          "sha256": "e114163e1eecc33e146a502784c484ca482648a1f278c24ab4809262d2cc0061"
+        }
+      ]
+    },
+    {
       "id": "vercel-web-design-guidelines-skill",
       "kind": "skill",
       "title": "web-design-guidelines (vercel-labs/agent-skills)",
@@ -3166,7 +4671,7 @@
         "class": "conditions"
       },
       "delivery": "external",
-      "reason": "A review aid for dangerous APIs and defaults, about 19,000 words of Markdown across 22 files and mostly language-specific. It is not shipped unread: its full audit belongs to E23b2b with the testing and reliability layers.",
+      "reason": "A review aid for dangerous APIs and defaults, about 19,000 words of Markdown across 22 files and mostly language-specific. It is not shipped unread: as a security review aid, its full audit belongs to the production-readiness gates (E23b4).",
       "layers": [
         "security"
       ],
@@ -3189,6 +4694,46 @@
       "reason": "A verification standard, not build guidance: its requirement levels belong to the production-readiness gates (E23b4), which will map them per layer.",
       "layers": [
         "security"
+      ],
+      "files": []
+    },
+    {
+      "id": "wshobson-slo-implementation",
+      "kind": "skill",
+      "title": "SLO implementation (wshobson/agents)",
+      "source": {
+        "repo": "https://github.com/wshobson/agents",
+        "commit": "0874a27b17a22e2b7c2e2bcd725768e0803cad06",
+        "path": "plugins/observability-monitoring/skills/slo-implementation"
+      },
+      "licence": {
+        "spdx": "MIT",
+        "class": "free"
+      },
+      "delivery": "external",
+      "reason": "Evaluated on 2026-10-25 from its SKILL.md: Prometheus recording rules and alert templates that assume monitoring infrastructure a DEV_OS project does not run; the concepts are in the OpenTelemetry primer. Its references were not audited, so nothing of it is shipped.",
+      "layers": [
+        "ops"
+      ],
+      "files": []
+    },
+    {
+      "id": "wshobson-github-actions-templates",
+      "kind": "skill",
+      "title": "GitHub Actions templates (wshobson/agents)",
+      "source": {
+        "repo": "https://github.com/wshobson/agents",
+        "commit": "0874a27b17a22e2b7c2e2bcd725768e0803cad06",
+        "path": "plugins/cicd-automation/skills/github-actions-templates"
+      },
+      "licence": {
+        "spdx": "MIT",
+        "class": "free"
+      },
+      "delivery": "external",
+      "reason": "Evaluated on 2026-10-25 from its SKILL.md: its workflow templates pin actions to tags such as @v4, which GitHub's secure use reference advises against (pin to a full commit SHA), and target Docker registries and Kubernetes; github-actions-security ships the rules instead.",
+      "layers": [
+        "ops"
       ],
       "files": []
     }
