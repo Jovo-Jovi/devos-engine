@@ -2,7 +2,7 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
-## 1.0.0 — Unreleased
+## 1.0.0 — 2026-10-26
 
 The first public release.
 
