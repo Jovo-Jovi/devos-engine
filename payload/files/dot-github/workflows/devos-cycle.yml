@@ -319,6 +319,13 @@ jobs:
         timeout-minutes: 15
         run: node scripts/devos/modules.mjs start --task "$TASK"
 
+      # PR-61: events are only noted here, in .devos/journal.jsonl. The report job sends them: this job, where
+      # the agents run, never holds the OIDC permission.
+      - name: devos-report build started
+        if: env.REVIEW_ONLY != 'true'
+        continue-on-error: true
+        run: node scripts/devos/report.mjs note --step build --status started
+
       - name: Builder (the project's builder agent)
         id: builder
         if: env.REVIEW_ONLY != 'true'
@@ -600,7 +607,18 @@ jobs:
             echo "::error title=Dev OS::$TASK halted: the builder failed (not a usage limit). See the PR comment."
           fi
 
+      - name: devos-report build
+        if: always() && env.REVIEW_ONLY != 'true' && steps.bs.outcome == 'success'
+        continue-on-error: true
+        env:
+          STATE: ${{ steps.bs.outputs.state }}
+        run: |
+          # A time slice that continues in a new run ends nothing: that run reports the build.
+          case "$STATE" in ok) s=pass ;; quota) s=waiting ;; continue) exit 0 ;; *) s=fail ;; esac
+          node scripts/devos/report.mjs note --step build --status "$s"
+
       - name: Checks (evidence for the reviewer)
+        id: checks
         if: steps.bs.outputs.state == 'ok'
         run: |
           if [ -f package.json ]; then
@@ -612,6 +630,13 @@ jobs:
           bash scripts/devos/checks-status.sh "$(git rev-parse HEAD)"
         env:
           GH_TOKEN: ${{ secrets.DEVOS_PAT || github.token }}
+
+      - name: devos-report checks
+        if: always() && steps.checks.outcome != 'skipped'
+        continue-on-error: true
+        run: |
+          s=$(node -e 'try{process.stdout.write(require("./.devos/ci-results.json").all_required_passed?"pass":"fail")}catch{process.stdout.write("fail")}')
+          node scripts/devos/report.mjs note --step checks --status "$s"
 
       - name: Vercel preview of this attempt
         id: preview
@@ -682,6 +707,11 @@ jobs:
           for f in .devos/*.env; do [ -f "$f" ] && { set -a; . "$f"; set +a; }; done
           node scripts/devos/evidence.mjs --task "$TASK" --attempt "$ATTEMPT"
           sed -n '1,12p' .devos/evidence.md
+
+      - name: devos-report review started
+        if: steps.bs.outputs.state == 'ok' && !(inputs.reuse_review && hashFiles(format('docs/reviews/{0}-a{1}.md', env.TASK, env.ATTEMPT)) != '')
+        continue-on-error: true
+        run: node scripts/devos/report.mjs note --step review --status started
 
       - name: Reviewer (the project's reviewer agent)
         id: reviewer
@@ -867,7 +897,22 @@ jobs:
           gh pr comment "$PRN" --repo "$REPO" --body-file .devos/verdict-summary.md
           cat .devos/verdict-summary.md >> "$GITHUB_STEP_SUMMARY"
 
+      - name: devos-report review and verdict
+        if: always() && steps.v.outcome == 'success'
+        continue-on-error: true
+        env:
+          RULING: ${{ steps.v.outputs.verdict }}
+          ACTION: ${{ steps.v.outputs.action }}
+        run: |
+          case "$RULING" in PASS) r=pass; v=pass ;; WAIT) r=waiting; v=waiting ;; *) r=pass; v=fail ;; esac
+          [ "$ACTION" = "setup_wait" ] && v=waiting
+          ev="docs/reviews/$TASK-a$ATTEMPT.md@$(git rev-parse HEAD)"
+          [ -f "docs/reviews/$TASK-a$ATTEMPT.md" ] || ev="@$(git rev-parse HEAD)"
+          node scripts/devos/report.mjs note --step review --status "$r" --evidence "$ev"
+          node scripts/devos/report.mjs note --step verdict --status "$v" --evidence "$ev"
+
       - name: Act on the verdict
+        id: act
         if: steps.bs.outputs.state == 'ok'
         env:
           GH_TOKEN: ${{ secrets.DEVOS_PAT || github.token }}
@@ -880,6 +925,7 @@ jobs:
             ACTION=human_gate
             echo "Method files changed: the human gate is forced by the workflow from main."
           fi
+          echo "FINAL_ACTION=$ACTION" >> "$GITHUB_ENV"
           case "$ACTION" in
             merge)
               gh pr edit "$PRN" --repo "$REPO" --add-label "devos:auto-merged"
@@ -908,6 +954,22 @@ jobs:
               echo "::warning title=Dev OS::$TASK waits for a setting outside the repository (see the PR and the setup issue)." ;;
             *) echo "::error::unknown action '$ACTION'"; exit 1 ;;
           esac
+
+      - name: devos-report gate and merge
+        if: always() && steps.act.outcome == 'success'
+        continue-on-error: true
+        run: |
+          case "$FINAL_ACTION" in
+            merge)
+              node scripts/devos/report.mjs note --step gate --status skipped
+              node scripts/devos/report.mjs note --step merge --status pass --evidence "docs/PHASES.md@$(git rev-parse HEAD)" ;;
+            human_gate|halt) node scripts/devos/report.mjs note --step gate --status waiting ;;
+          esac
+
+      - name: devos-report a step a runner failure left open
+        if: failure()
+        continue-on-error: true
+        run: node scripts/devos/report.mjs note --failed
 
       - name: Parking info for the waiter (usage limits)
         id: park
@@ -944,6 +1006,38 @@ jobs:
           gh pr edit "${PRN:-$BR}" --repo "$REPO" --add-label "devos:halted" 2>/dev/null || true
           gh pr comment "${PRN:-$BR}" --repo "$REPO" --body "Dev OS runner stopped on a failure in run ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}. Nothing was merged. Fix the cause, then re-run devos-cycle with task=$TASK attempt=$ATTEMPT." 2>/dev/null || true
           [ -n "$PRN" ] && gh workflow run devos-doctor.yml --repo "$REPO" --ref main -f pr="$PRN" 2>/dev/null || true
+
+  # PR-61: the only job with the OIDC permission. It runs no agent: it asks the DEV_OS registry to link this
+  # repository (its owner approves it once) and sends the events the cycle job noted. It never fails the run.
+  report:
+    needs: [resolve, cycle]
+    if: always() && needs.cycle.result != 'skipped' && vars.DEVOS_REPORTING != 'off'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    continue-on-error: true
+    permissions:
+      id-token: write
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            scripts/devos
+            devos
+      - name: The journal of the cycle job
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: devos-${{ needs.resolve.outputs.task }}-a${{ needs.resolve.outputs.attempt }}
+          path: .devos
+      - name: devos-report link and send
+        continue-on-error: true
+        timeout-minutes: 2
+        run: |
+          node scripts/devos/report.mjs link
+          node scripts/devos/report.mjs flush
 
   # Wait out a usage limit inside Actions instead of relying on GitHub's best-effort cron.
   # Claude's session limits reset within about five hours, so a wait up to resume.inline_wait_max_minutes

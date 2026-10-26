@@ -315,6 +315,10 @@
       "allow_routes": []
     }
   },
+  "registry": {
+    "$comment": "PR-61: the DEV_OS registry's address, the audience of the OIDC token the report job sends. Empty: nothing is sent.",
+    "url": ""
+  },
   "structure": {
     "$comment": "PR-58: the product's feature modules. Each is a folder with a public entry; code outside a module imports it only through that entry (guard:imports). The blueprint writes modules in devos/project.json from stack.scaffold.modules; aliases name import prefixes the guard resolves besides tsconfig.json paths; exempt files (tests) may reach inside a module.",
     "modules": {},

@@ -1,4 +1,4 @@
-# DEV_OS contract — version 0-draft-2
+# DEV_OS contract — version 0-draft-3
 
 This is a draft, shown so that setup can be built and tested. A reviewed text replaces it before the first release.
 
@@ -9,10 +9,10 @@ each task, a reviewer agent reviews it, and you merge at the gates. Every file i
 
 ## What is reported
 
-After you register (a later step of setup), each workflow step sends one event to the DEV_OS registry, operated by
-Jovo-Jovi. An event holds: the project key, the run id, a sequence number, the phase, the task, the step, its status,
-the time, the path and commit of the evidence file, and the token counts of builds and reviews. Events are sent with
-GitHub's own identity for the workflow (OIDC); no token is stored. Reporting never blocks a run.
+Once your repository is linked (see Linking), each step of the cycle sends one event to the DEV_OS registry, operated
+by Jovo-Jovi. An event holds: the project key, the run id, a sequence number, the phase, the task, the step, its
+status, the time, and the path and commit of the evidence file. Events are sent with GitHub's own identity for the
+workflow (OIDC), from a job of the cycle that runs no agent; no token is stored. Reporting never blocks a run.
 
 ## What is never sent
 
@@ -20,15 +20,16 @@ Your code, diffs, prompts, file contents, secrets and email addresses. DEV_OS ne
 you type during setup stay in the engine's memory only until it hands each one to GitHub (`gh secret set`, over
 standard input). No model, file, log or answer ever receives one.
 
-## Registration
+## Linking
 
-Setup registers the repository by installing the DEV_OS registry GitHub App on that one repository. The registry
-records your GitHub login, the repository, the project key, the version of this contract and when you accepted it.
-Until then nothing is sent.
+The first cycle run asks the registry to link your repository. The request carries the repository and its owner, as
+GitHub's OIDC identity proves them, the project key it proposes, the engine version and the version of this contract.
+The registry's operator approves the link once and the registry names the project's key; until then no event is sent.
+Linking never limits what you can do: DEV_OS works the same whether the link is approved, waiting or declined.
 
 ## Disconnecting
 
-Uninstall the GitHub App from the repository. Reporting stops and the project shows as disconnected. To ask for your
+Set the repository variable `DEVOS_REPORTING` to `off`. Reporting stops and nothing more is sent. To ask for your
 records to be deleted, open an issue in the DEV_OS Engine repository.
 
 ## Accepting

@@ -1,0 +1,16 @@
+{
+  "README.md": "31d2fd45cd0c30c3df10e7471cc5f3516fd24013d23f45fbb7f8245d57763c14",
+  "lib/contract.mjs": "1f9b783ad091a5dc41be59a683d075427387d718a836b4462f039cbba65aebad",
+  "package.json": "10ae68169fe3193384f07e25f1abb6a56c8de6b8fadbd74baee13d3086a16ef3",
+  "payload/contract/CONTRACT.md": "500eb3797f2d883d8e65045c1e56ae6adfe7493d2328ea3dc0d022af2c7e05a7",
+  "payload/files/devos/engine.defaults.json": "e919153b7c861b44c7ebd4bea03365783fa1aa27da16f243b0f913c42d15ed1e",
+  "payload/files/docs/method/AUTOMATION.md": "70e7a7d3bc2401dd5af25a8c8fe833eeccb835c9dce39b8f15d427740df6ae45",
+  "payload/files/docs/method/PRECEDENTS.md": "1838f30c8aa3fae57ab605ebdb662622fa1c69bbd83b99505952604dc2aff96e",
+  "payload/files/dot-github/workflows/devos-cycle.yml": "afb61814ffbb6f7bef0cbd5b9bbba44169dd0db7fe914e3ad54ae4580603e978",
+  "test/config-equivalence.test.mjs": "834ee5c04e78e2e458b9d7e71b49555760be563ca64ac9f06e412af924499bb0",
+  "test/init.test.mjs": "6145f90561bea05f30b7b3531c86e1b8ecafd97c5dd4261c84935c75240c2c37",
+  "test/install.test.mjs": "bb1422e42efff456e520ffaf470ca602aededb8d9d1eb2594c59fa527a95cc37",
+  "test/upgrade.test.mjs": "9a8c3cbd17e5047ac472f682960ad5c23619c5be7c799d31c131f7482a0b6998",
+  "test/version.test.mjs": "4851b0c91acf3d4c8cfdbd5d5ec36aed1430d8ee1757604b96e547d3d1cd2692",
+  "tools/sources.mjs": "74ee9bfa837f8316f9655695eecd665634322e3aec9d973bf1bdc997369517c0"
+}
