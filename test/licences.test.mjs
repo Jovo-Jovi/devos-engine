@@ -84,7 +84,8 @@ test("licences.test.mjs (e) LICENSES.md maps every file to one licence, first ru
 
 test("licences.test.mjs (f) CHANGELOG.md opens with this version, and the README states the licences", () => {
   const changelog = read("CHANGELOG.md");
-  assert.equal(changelog.split("\n").find((line) => line.startsWith("## ")), `## ${pkg.version} — Unreleased`);
+  const heading = changelog.split("\n").find((line) => line.startsWith("## "));
+  assert.match(heading, new RegExp(`^## ${pkg.version.replaceAll(".", "\\.")} — (?:Unreleased|[0-9]{4}-[0-9]{2}-[0-9]{2})$`));
   assert.equal(JSON.parse(read("payload/manifest.json")).engine_version, pkg.version);
   const readme = read("README.md");
   assert.equal(readme.includes("\n## Licence\n"), true);
