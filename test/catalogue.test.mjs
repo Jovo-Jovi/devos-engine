@@ -133,7 +133,7 @@ test("catalogue.test.mjs (h) the prepare list comes before attachments", () => {
     const docs = prepareFor("saas");
     assert.deepEqual(docs.map((doc) => doc.id), ["brief", "design", "brand", "rules", "data"]);
     const block = result.stdout.indexOf("Have these ready (all optional; attach the ones you have):");
-    const attach = result.stdout.indexOf("Documents to attach");
+    const attach = result.stdout.indexOf("Documents and design screenshots (PNG, JPEG, WebP) to attach");
     assert.equal(block >= 0 && attach > block, true, result.stdout);
     let from = block;
     for (const doc of docs) {

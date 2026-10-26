@@ -13,8 +13,11 @@ test("engine-ci.test.mjs workflow shape", () => {
   const text = normalizeLf(readFileSync(file)).toString("utf8");
   const needles = [
     'branches: [main, "task/**"]',
-    "os: [ubuntu-latest, windows-latest]",
-    'node --test "test/*.test.mjs"',
+    "workflow_dispatch:",
+    // A task-branch push runs the Linux tests only; main, a pull request and a manual run add Windows.
+    `os: \${{ fromJSON(github.event_name == 'push' && github.ref != 'refs/heads/main' && '["ubuntu-latest"]' || '["ubuntu-latest", "windows-latest"]') }}`,
+    "timeout-minutes: 25",
+    'node --test --test-concurrency=4 "test/*.test.mjs"',
     "node tools/build-manifest.mjs --check",
     "node tools/find-specifics.mjs --check",
     "ACTIONLINT_VERSION: 1.7.7",
@@ -24,7 +27,9 @@ test("engine-ci.test.mjs workflow shape", () => {
     "contents: read",
   ];
   for (const needle of needles) assert.equal(text.includes(needle), true, needle);
-  for (const banned of ["secrets.", "write", "workflow_dispatch"]) {
+  // Commits that change only dev/ (fences, reviews, the ledger) start no run, on a push or a pull request.
+  assert.equal(text.split('paths-ignore: ["dev/**"]').length - 1, 2);
+  for (const banned of ["secrets.", "write", "schedule"]) {
     assert.equal(text.includes(banned), false, banned);
   }
   for (const line of text.split("\n")) {

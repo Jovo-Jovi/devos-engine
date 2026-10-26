@@ -3,8 +3,11 @@ name: engine-ci
 on:
   push:
     branches: [main, "task/**"]
+    paths-ignore: ["dev/**"]
   pull_request:
     branches: [main]
+    paths-ignore: ["dev/**"]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -17,18 +20,18 @@ jobs:
   test:
     name: test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 15
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: ${{ fromJSON(github.event_name == 'push' && github.ref != 'refs/heads/main' && '["ubuntu-latest"]' || '["ubuntu-latest", "windows-latest"]') }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v4
         with:
           node-version: 22
       - name: Tests
-        run: node --test "test/*.test.mjs"
+        run: node --test --test-concurrency=4 "test/*.test.mjs"
 
   checks:
     runs-on: ubuntu-latest

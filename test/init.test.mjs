@@ -323,6 +323,40 @@ test("init.test.mjs (p) an attached brief asks for open questions", () => {
   }
 });
 
+test("init.test.mjs keeps an attached screenshot as a design reference (PR-59)", () => {
+  const staged = stage();
+  try {
+    const shot = path.join(staged.parent, "hero.png");
+    writeFileSync(shot, Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+    const result = init(staged, flow({ attachment: shot }));
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    assert.deepEqual([...readFileSync(path.join(staged.project, "docs", "design", "references", "hero.png"))], [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    assert.equal(existsSync(path.join(staged.project, "devos", "intake-docs")), false);
+    const answers = JSON.parse(readFileSync(path.join(staged.project, "devos", "answers.json"), "utf8"));
+    assert.deepEqual(answers.attachments, ["hero.png"]);
+    assert.equal(readFileSync(path.join(staged.project, "docs", "design", "REFERENCES.md"), "utf8").includes("| R1 | hero.png |"), true);
+    assert.equal(runs(staged.parent).length, 1);
+  } finally {
+    cleanup(staged.parent);
+  }
+});
+
+test("init.test.mjs repairs a REFERENCES.md that leaves out a screenshot (PR-59)", () => {
+  const staged = stage({ mode: "refs-unnamed-then-good" });
+  try {
+    const shot = path.join(staged.parent, "pricing.webp");
+    writeFileSync(shot, Buffer.from("RIFF0000WEBP"));
+    const result = init(staged, flow({ attachment: shot }));
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    const called = runs(staged.parent);
+    assert.equal(called.length, 2);
+    assert.equal(called[1].stdin.includes("docs/design/REFERENCES.md does not name docs/design/references/pricing.webp"), true, called[1].stdin);
+    assert.equal(readFileSync(path.join(staged.project, "docs", "design", "REFERENCES.md"), "utf8").includes("pricing.webp"), true);
+  } finally {
+    cleanup(staged.parent);
+  }
+});
+
 test("init.test.mjs (q) missing workflow scope stops before the contract", () => {
   const staged = stage();
   staged.env.DEVOS_GH_NO_WORKFLOW = "1";

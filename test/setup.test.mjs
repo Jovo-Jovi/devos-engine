@@ -19,7 +19,7 @@ function cleanup(dir) {
   rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 }
 
-const claudeStub = `import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+const claudeStub = `import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 const early = process.argv.slice(2);
@@ -51,6 +51,10 @@ process.stdin.on("end", () => {
   mkdirSync(path.join(docs, "design"), { recursive: true });
   writeFileSync(path.join(docs, "DESIGN_SYSTEM.md"), "# Design system\\n");
   writeFileSync(path.join(docs, "design", "UI_ACCEPTANCE.md"), "| Id | Criterion | Checked by |\\n|---|---|---|\\n| UA-01 | Text contrast meets WCAG 2.2 AA | automated |\\n");
+  // PR-59: every screenshot the developer gave is a row of REFERENCES.md.
+  const refsDir = path.join(docs, "design", "references");
+  const refNames = existsSync(refsDir) ? readdirSync(refsDir).sort() : [];
+  if (!(false)) writeFileSync(path.join(docs, "design", "REFERENCES.md"), ["| Ref | Source | What we take | What we leave |", "|---|---|---|---|", ...refNames.map((name, i) => "| R" + (i + 1) + " | " + name + " | the spacing | the colours |")].join("\\n") + "\\n");
   process.stdout.write('{"result":"stub summary"}');
 });
 `;

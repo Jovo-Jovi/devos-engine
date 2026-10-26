@@ -35,5 +35,7 @@ test("config-equivalence.test.mjs regenerates the Tower config", () => {
   for (const role of ["builder", "builder_method"]) {
     merged.surfaces[role].deny = merged.surfaces[role].deny.filter((p) => p !== "docs/usage/**" && p !== "docs/USAGE.md");
   }
+  // PR-59 (E23b3): the intake may add design references.
+  merged.surfaces.intake.allow = merged.surfaces.intake.allow.filter((p) => p !== "docs/design/REFERENCES.md");
   assert.deepEqual(stripDollar(merged), stripDollar(tower));
 });

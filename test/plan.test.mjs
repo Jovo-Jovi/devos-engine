@@ -236,3 +236,28 @@ test("plan.test.mjs (g) a model listing row is not a model id", () => {
     'The builder model "grok-4.7-xhigh-fast - Grok 4.7 Extra High Fast" is not a model id. Pick one from the list the tool reports.',
   ]);
 });
+
+test("plan.test.mjs (h) screenshots up to 1 MB are design references; other images and bigger files are refused (PR-59)", () => {
+  const staged = stage();
+  try {
+    const shot = path.join(staged.parent, "hero shot.png");
+    const big = path.join(staged.parent, "big.webp");
+    const gif = path.join(staged.parent, "motion.gif");
+    const notes = path.join(staged.parent, "notes.md");
+    writeFileSync(shot, Buffer.alloc(1024 * 1024, 1));
+    writeFileSync(big, Buffer.alloc(1024 * 1024 + 1, 1));
+    writeFileSync(gif, Buffer.alloc(10, 1));
+    writeFileSync(notes, Buffer.alloc(200 * 1024 + 1, 65));
+    const ok = validatePlan({ ...validPlan(), attachments: [shot] }, signedIn);
+    assert.equal(ok.ok, true, JSON.stringify(ok.errors));
+    assert.deepEqual(ok.attachments.map((item) => item.name), ["hero-shot.png"]);
+    const refused = validatePlan({ ...validPlan(), attachments: [big, gif, notes] }, signedIn);
+    assert.deepEqual(refused.errors, [
+      `${big} is not an attachment this engine accepts.`,
+      `${gif} is not an attachment this engine accepts.`,
+      `${notes} is not an attachment this engine accepts.`,
+    ]);
+  } finally {
+    cleanup(staged.parent);
+  }
+});

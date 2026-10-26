@@ -89,6 +89,18 @@ Law 151 of 2020) and state in the OD that the repository must be private before 
 - In the OD, list the human's setup steps by name only (`SETUP.md` §13): accounts, bucket and public
   access, Firestore database, service accounts, GitHub secrets and variables, Vercel env.
 
+## Requests that change the look (PR-59, `docs/method/DESIGN_METHOD.md` §5.6)
+
+- A redesign, a new style or a new design reference is a change to the design OD. Write a DRAFT OD
+  that amends it by number, a new version of `docs/DESIGN_SYSTEM.md` (its Direction and signature,
+  §5.5, and the tokens that change) and the new rows of `docs/design/REFERENCES.md`: each link or
+  image the request gives, with what the product takes from it and what it leaves. A link to an
+  image in the issue is listed by its link; never fetch it.
+- Learn from a reference, never copy it (§5.5). A request to copy another product's look is answered
+  with a direction of the project's own that keeps what the human likes about it.
+- Plan the tokens and shared components first, then each area's screens, each a UI task with its
+  `- Screens:` line and design specification. The last task's gate lets the human sign off the new look.
+
 ## Settings outside the repository (PR-27)
 
 Whenever the request needs something only the human can create (an account, an outside API key, a

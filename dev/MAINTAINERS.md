@@ -35,7 +35,8 @@ Every task is built and reviewed on its own branch, and reaches `main` only afte
 3. **Local review (optional, Claude Code).** In `devos-engine`, run `claude`, then `/engine-review E16`. It writes
    `dev/reviews/E16-a1.md`.
 4. **Push (you).** Run `git add -A`, `git commit -m "E16 a1: build"`, then `git push -u origin task/E16`. The push
-   starts `engine-ci` on Linux and Windows.
+   starts `engine-ci` with two jobs, `checks` and `test (ubuntu-latest)`. The Windows tests are the builder's own
+   run (*Done when* D1 in the report); `engine-ci` runs them on `main` after the merge.
 5. **Remote review (the review of record).** Tell Claude in the DEVOS project "check task/E16". It runs every
    *Done when* check and writes `dev/reviews/E16-a1-remote.md` on the branch, with MERGE or FIX. It also updates the
    ledger and writes the next fence.
@@ -51,6 +52,22 @@ Every task is built and reviewed on its own branch, and reaches `main` only afte
    git push origin --delete task/E16
    git branch -D task/E16
    ```
-   `main` keeps one commit per accepted task.
+   `main` keeps one commit per accepted task. The push to `main` runs `engine-ci` with the Windows tests too. If a
+   job is red, tell the reviewer before the next task starts.
 
 If Cursor halts, that is the system working: send its report to the review as it is.
+
+## GitHub Actions minutes
+
+`engine-ci` spends the account's Actions minutes, and a Windows minute counts as two. It is shaped to spend few:
+
+- **Commits that change only `dev/`** (fences, reviews, the ledger) start no run. The reviewer's commits are all like
+  that.
+- **A task branch** runs `checks` and `test (ubuntu-latest)`. `main`, a pull request to `main` and a manual run add
+  `test (windows-latest)`.
+- **The tests run four files at a time** (`--test-concurrency=4`), which halves the suite on a 2-CPU runner.
+- **To run the Windows tests on a task branch** before the merge, open the repository's Actions tab, choose
+  `engine-ci`, then *Run workflow* on that branch.
+
+GitHub filters by the files a push changes. A push that changes more than 300 files may be judged on the first 300
+only; if a run is missing, start it by hand as above.

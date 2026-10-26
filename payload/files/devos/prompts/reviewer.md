@@ -53,7 +53,8 @@ part: a red required check fails the verdict whatever you write (PR-08), and the
    checks carry `ui-evidence` and `a11y` (PR-51); a red one is an automated failure and the verdict is
    FAIL, whatever the captures look like. Then, for each state and
    width, read the settled screenshot, the reduced-motion screenshot and the five filmstrip frames.
-   Judge them against `docs/DESIGN_SYSTEM.md`, the fence's Design specification, the criteria it names in
+   Judge them against `docs/DESIGN_SYSTEM.md` (its Direction and signature too, PR-59), the fence's
+   Design specification, the criteria it names in
    `docs/design/UI_ACCEPTANCE.md`, and the skills listed under "Evidence you have". Write
    the seven-row design ledger (hierarchy · consistency · accessibility · responsiveness · craft ·
    **motion**: purpose test, tokens, once-only, reduced motion · **truthfulness**). Read keyboard paths,

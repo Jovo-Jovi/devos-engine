@@ -7,9 +7,11 @@ stores data, sign-in, languages, deploy target and repository visibility. Nobody
 run: where the answers and your research leave something open, choose the safer option and record it as an
 **assumption** in `docs/DEVOS_FIT.md`.
 
-When `devos/intake-docs/` exists, read every file in it before step 1. Where a document and the answers disagree,
-the answers win. Anything the product needs that neither gives goes into `docs/OPEN_QUESTIONS.md`, one question per
-line; when nothing is open, that file holds the single line `No open questions.`
+When `devos/intake-docs/` exists, read every file in it before step 1, and every screenshot in
+`docs/design/references/` (the developer's design references; your Read tool shows an image, and a tool that cannot
+read images works from the developer's notes and records that as an assumption). Where a document and the answers
+disagree, the answers win. Anything the product needs that neither gives goes into `docs/OPEN_QUESTIONS.md`, one
+question per line; when nothing is open, that file holds the single line `No open questions.`
 
 **Keep it lean.** Build what the brief and the documents ask for — nothing cut, nothing added — with the simplest
 architecture that carries it. Every layer, module, service, dependency and abstraction you Include cites the brief
@@ -56,8 +58,13 @@ Work in this order.
    the profile needs, `DESIGN_SYSTEM.md`, `PHASES.md`, `SESSION_CONTEXT.md`, `DEVELOPMENT_JOURNAL.md` and
    `method/CARRY_FORWARDS.md` (empty). When `devos/project.json` `ui` is `true`, `DESIGN_SYSTEM.md` is the design
    contract of `docs/method/DESIGN_METHOD.md` §1: write every part that section lists, including a decision (adopt,
-   optional or reject, with the reason) for each resource of its §5, and also write `docs/design/UI_ACCEPTANCE.md`.
-   Choose the visual direction with the Blueprint rows of `devos/skills/INDEX.md`, for each layer the product needs.
+   optional or reject, with the reason) for each resource of its §5.1 that fits the stack, and also write
+   `docs/design/UI_ACCEPTANCE.md` and `docs/design/REFERENCES.md` (§5.4: every screenshot in
+   `docs/design/references/` by its file name, every link the developer gave, then your library picks). Choose a
+   direction of the project's own (§5.5): the developer's references first, then the library rows for the project's
+   type (§5.2) and the Blueprint rows of `devos/skills/INDEX.md`, for each layer the product needs.
+   `DESIGN_SYSTEM.md` opens with its Direction and signature. Never copy a reference, and never reuse one look for
+   every project of a type.
    Two formats are read by guards and must be exact:
    - `docs/PHASES.md`: the header `| Task | Phase | Station | Name | Risk | Gate | Done | Verdict |`, a separator
      row, then one row per task — `T01` first, ids ascending, Risk 1, 2 or 3, Done `[ ]`, Verdict `—`.

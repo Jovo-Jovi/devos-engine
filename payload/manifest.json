@@ -1,5 +1,5 @@
 {
-  "engine_version": "0.2.6",
+  "engine_version": "0.2.7",
   "source": {
     "repo": "Jovo-Jovi/devos-control-tower",
     "commit": "a49ca6db268b98d6558077bf3e95b8ae759d91b3"
@@ -254,13 +254,13 @@
     {
       "path": "devos/engine.defaults.json",
       "stored": "devos/engine.defaults.json",
-      "sha256": "601c5def8be757f65cea3b545a1441a85ba129de59ef77012a6b758fc4ac876d",
+      "sha256": "e919153b7c861b44c7ebd4bea03365783fa1aa27da16f243b0f913c42d15ed1e",
       "owner": "engine"
     },
     {
       "path": "devos/prompts/blueprint.md",
       "stored": "devos/prompts/blueprint.md",
-      "sha256": "6bf5b43a8f5205b288ad9d93bc9ca15de7fd3c4a5c02cea822b93f8cf2c9b774",
+      "sha256": "d222f16a59369baa86a38d4203c21a3b7280da19846519e667fa7f80646eb05b",
       "owner": "engine"
     },
     {
@@ -278,7 +278,7 @@
     {
       "path": "devos/prompts/intake.md",
       "stored": "devos/prompts/intake.md",
-      "sha256": "781ef4ceac8029f41bfb76d34975d1563e2521955f63b27388b85781d1c314de",
+      "sha256": "63b072867072595dd3a07b98c2526ac23f77c0c4026b73eb173d9c5f83d1ccee",
       "owner": "engine"
     },
     {
@@ -290,7 +290,7 @@
     {
       "path": "devos/prompts/reviewer.md",
       "stored": "devos/prompts/reviewer.md",
-      "sha256": "de0d312e0edba6c46b625f30f6b5fdb2be087506104e38d6ff09c09b86a6b11f",
+      "sha256": "a3ed5e4c8bb5a9d92237f12896de5d26670cd36f0f3ad92b08c8a36e95ede040",
       "owner": "engine"
     },
     {
@@ -1460,13 +1460,13 @@
     {
       "path": "docs/method/AUTOMATION.md",
       "stored": "docs/method/AUTOMATION.md",
-      "sha256": "006f616f4777c3917a604f32339ebc77547d89be3bbf97d343f2d7992afcfcbb",
+      "sha256": "ce899011d06da9426d1790b8b11b3b386c81753b0a0e4e5077c920353da0e54c",
       "owner": "engine"
     },
     {
       "path": "docs/method/DESIGN_METHOD.md",
       "stored": "docs/method/DESIGN_METHOD.md",
-      "sha256": "2fb987af8e841b52d2bca8f88ac776f0e49c8f53bb08d8b29d1fd392d4c47d50",
+      "sha256": "893aba8c4cafe8b263ac13e1da7d06ef25840738aa241ea81e27d8e542ec7eb0",
       "owner": "engine"
     },
     {
@@ -1484,7 +1484,7 @@
     {
       "path": "docs/method/PRECEDENTS.md",
       "stored": "docs/method/PRECEDENTS.md",
-      "sha256": "1a73fac75a3ed05417e49e88539c67cb606c1104cbbea5a31260f60bfcf8e7aa",
+      "sha256": "d95673c5c789071fe220c60f060e0b53f9516e9133a7518fec012f904d71bf1a",
       "owner": "engine"
     },
     {
