@@ -1,5 +1,5 @@
 {
-  "engine_version": "0.2.7",
+  "engine_version": "0.2.8",
   "source": {
     "repo": "Jovo-Jovi/devos-control-tower",
     "commit": "a49ca6db268b98d6558077bf3e95b8ae759d91b3"
@@ -260,7 +260,7 @@
     {
       "path": "devos/prompts/blueprint.md",
       "stored": "devos/prompts/blueprint.md",
-      "sha256": "d222f16a59369baa86a38d4203c21a3b7280da19846519e667fa7f80646eb05b",
+      "sha256": "f21476d9baa0b179e94676a0479707f18af8b4fdc072f04ea40b976b48918d3f",
       "owner": "engine"
     },
     {
@@ -1460,13 +1460,13 @@
     {
       "path": "docs/method/AUTOMATION.md",
       "stored": "docs/method/AUTOMATION.md",
-      "sha256": "ce899011d06da9426d1790b8b11b3b386c81753b0a0e4e5077c920353da0e54c",
+      "sha256": "70e7a7d3bc2401dd5af25a8c8fe833eeccb835c9dce39b8f15d427740df6ae45",
       "owner": "engine"
     },
     {
       "path": "docs/method/DESIGN_METHOD.md",
       "stored": "docs/method/DESIGN_METHOD.md",
-      "sha256": "893aba8c4cafe8b263ac13e1da7d06ef25840738aa241ea81e27d8e542ec7eb0",
+      "sha256": "18cc39f4a3164a026b48b9dda75dc562f6615d9a8fa8d80f8838995030e4d501",
       "owner": "engine"
     },
     {
@@ -1484,7 +1484,7 @@
     {
       "path": "docs/method/PRECEDENTS.md",
       "stored": "docs/method/PRECEDENTS.md",
-      "sha256": "d95673c5c789071fe220c60f060e0b53f9516e9133a7518fec012f904d71bf1a",
+      "sha256": "1838f30c8aa3fae57ab605ebdb662622fa1c69bbd83b99505952604dc2aff96e",
       "owner": "engine"
     },
     {

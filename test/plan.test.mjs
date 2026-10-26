@@ -237,26 +237,33 @@ test("plan.test.mjs (g) a model listing row is not a model id", () => {
   ]);
 });
 
-test("plan.test.mjs (h) screenshots up to 1 MB are design references; other images and bigger files are refused (PR-59)", () => {
+test("plan.test.mjs (h) images and PDFs up to 20 MB, documents up to 1 MB, at most 30 files (PR-59, PR-60)", () => {
   const staged = stage();
   try {
-    const shot = path.join(staged.parent, "hero shot.png");
-    const big = path.join(staged.parent, "big.webp");
-    const gif = path.join(staged.parent, "motion.gif");
-    const notes = path.join(staged.parent, "notes.md");
-    writeFileSync(shot, Buffer.alloc(1024 * 1024, 1));
-    writeFileSync(big, Buffer.alloc(1024 * 1024 + 1, 1));
-    writeFileSync(gif, Buffer.alloc(10, 1));
-    writeFileSync(notes, Buffer.alloc(200 * 1024 + 1, 65));
-    const ok = validatePlan({ ...validPlan(), attachments: [shot] }, signedIn);
+    const file = (name, size) => {
+      const at = path.join(staged.parent, name);
+      writeFileSync(at, Buffer.alloc(size, 1));
+      return at;
+    };
+    const MB = 1024 * 1024;
+    const hero = file("ref hero.png", 20 * MB);
+    const motion = file("ref-hover.gif", 10);
+    const guide = file("brand-guide.pdf", 20 * MB);
+    const notes = file("notes.md", MB);
+    const ok = validatePlan({ ...validPlan(), attachments: [hero, motion, guide, notes] }, signedIn);
     assert.equal(ok.ok, true, JSON.stringify(ok.errors));
-    assert.deepEqual(ok.attachments.map((item) => item.name), ["hero-shot.png"]);
-    const refused = validatePlan({ ...validPlan(), attachments: [big, gif, notes] }, signedIn);
+    assert.deepEqual(ok.attachments.map((item) => item.name), ["ref-hero.png", "ref-hover.gif", "brand-guide.pdf", "notes.md"]);
+    const big = file("big.webp", 20 * MB + 1);
+    const svg = file("logo.svg", 10);
+    const long = file("long.md", MB + 1);
+    const refused = validatePlan({ ...validPlan(), attachments: [big, svg, long] }, signedIn);
     assert.deepEqual(refused.errors, [
       `${big} is not an attachment this engine accepts.`,
-      `${gif} is not an attachment this engine accepts.`,
-      `${notes} is not an attachment this engine accepts.`,
+      `${svg} is not an attachment this engine accepts.`,
+      `${long} is not an attachment this engine accepts.`,
     ]);
+    const many = Array.from({ length: 31 }, (_, i) => file(`ref-${i + 1}.png`, 10));
+    assert.deepEqual(validatePlan({ ...validPlan(), attachments: many }, signedIn).errors, ["A plan holds at most 30 attachments."]);
   } finally {
     cleanup(staged.parent);
   }

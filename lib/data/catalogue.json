@@ -20,9 +20,12 @@
       "prepare": [
         "brief",
         "design",
+        "flows",
         "brand",
+        "content",
+        "data",
         "rules",
-        "data"
+        "similar"
       ]
     },
     {
@@ -41,8 +44,11 @@
       "prepare": [
         "brief",
         "design",
+        "flows",
         "brand",
-        "data"
+        "data",
+        "rules",
+        "similar"
       ]
     },
     {
@@ -60,7 +66,8 @@
         "brief",
         "design",
         "brand",
-        "content"
+        "content",
+        "similar"
       ]
     },
     {
@@ -78,8 +85,10 @@
       "prepare": [
         "brief",
         "design",
+        "flows",
         "data",
-        "rules"
+        "rules",
+        "similar"
       ]
     },
     {
@@ -101,9 +110,12 @@
       "prepare": [
         "brief",
         "design",
+        "flows",
         "brand",
         "content",
-        "rules"
+        "data",
+        "rules",
+        "similar"
       ]
     },
     {
@@ -125,9 +137,12 @@
       "prepare": [
         "brief",
         "design",
+        "flows",
         "brand",
         "content",
-        "rules"
+        "data",
+        "rules",
+        "similar"
       ]
     },
     {
@@ -146,7 +161,8 @@
       "prepare": [
         "brief",
         "data",
-        "rules"
+        "rules",
+        "similar"
       ]
     },
     {
@@ -164,8 +180,11 @@
       "prepare": [
         "brief",
         "design",
+        "flows",
         "brand",
-        "data"
+        "data",
+        "rules",
+        "similar"
       ]
     },
     {
@@ -185,8 +204,11 @@
       "prepare": [
         "brief",
         "design",
+        "flows",
+        "brand",
         "data",
-        "rules"
+        "rules",
+        "similar"
       ]
     },
     {
@@ -204,7 +226,10 @@
       "prepare": [
         "brief",
         "design",
-        "data"
+        "flows",
+        "data",
+        "rules",
+        "similar"
       ]
     },
     {
@@ -221,7 +246,9 @@
       "prepare": [
         "brief",
         "content",
-        "brand"
+        "design",
+        "brand",
+        "similar"
       ]
     },
     {
@@ -233,7 +260,8 @@
       "defaults": {},
       "prepare": [
         "brief",
-        "data"
+        "data",
+        "similar"
       ]
     },
     {
@@ -245,7 +273,8 @@
       "defaults": {},
       "prepare": [
         "brief",
-        "data"
+        "data",
+        "similar"
       ]
     },
     {
@@ -263,7 +292,8 @@
       },
       "prepare": [
         "brief",
-        "data"
+        "data",
+        "rules"
       ]
     },
     {
@@ -277,7 +307,11 @@
       },
       "prepare": [
         "brief",
-        "design"
+        "design",
+        "flows",
+        "brand",
+        "rules",
+        "similar"
       ]
     },
     {
@@ -301,9 +335,12 @@
       "prepare": [
         "brief",
         "design",
+        "flows",
         "brand",
+        "content",
         "data",
-        "rules"
+        "rules",
+        "similar"
       ]
     }
   ],
@@ -1376,17 +1413,22 @@
     {
       "id": "brief",
       "label": "Product brief or PRD",
-      "why": "the problem, the users and the must-have features, in your words"
+      "why": "the problem, the users and the must-have features, in your words (Markdown, text or PDF)"
     },
     {
       "id": "design",
       "label": "Design references",
-      "why": "screenshots (PNG, JPEG, WebP) and links of screens, sites or apps you like, and what you like about each; the project keeps them as its design references"
+      "why": "images (PNG, JPEG, WebP, GIF) and links of screens, sites or apps you like, and what you like about each; name each image for the reference it shows; the project keeps them as its design references"
+    },
+    {
+      "id": "flows",
+      "label": "Wireframes or user flows",
+      "why": "sketches, wireframes or diagrams of the main screens and the steps a user takes (images or PDF)"
     },
     {
       "id": "brand",
       "label": "Brand assets",
-      "why": "logo, colours and fonts, if you have them"
+      "why": "logo, colours and fonts, or a brand guide (PDF or images), if you have them"
     },
     {
       "id": "content",
@@ -1402,6 +1444,11 @@
       "id": "rules",
       "label": "Business rules",
       "why": "roles and permissions, pricing, and any legal requirement you know of"
+    },
+    {
+      "id": "similar",
+      "label": "Similar products",
+      "why": "products like yours: what they do well, and what yours must do better or differently"
     }
   ]
 }

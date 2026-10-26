@@ -745,7 +745,52 @@ async function workerW() {
   }
 }
 
-const workers = { l: workerL, n: workerN, m: workerM, o: workerO, p: workerP, q: workerQ, s: workerS, t: workerT, u: workerU, v: workerV, w: workerW };
+// PR-60: each attachment is sent on its own, so full-quality images fit; a plan names what was sent.
+async function workerZ() {
+  const terminal = stage();
+  const planned = stage();
+  Object.assign(process.env, planned.env);
+  let server;
+  try {
+    const plan = planFrom(terminal);
+    server = await startUiServer({ folder: planned.project, port: 0 });
+    const origin = `http://127.0.0.1:${server.port}`;
+    const sendFile = (name, body) => fetch(`${origin}/api/file`, {
+      method: "POST",
+      headers: { Origin: origin, "X-DEVOS-Token": server.token, "X-DEVOS-Name": name, "Content-Type": "application/octet-stream" },
+      body,
+    });
+    const big = await sendFile("ref-hero.png", Buffer.alloc(20 * 1024 * 1024, 7));
+    const bigBody = await big.json();
+    if (big.status !== 200 || bigBody.size !== 20 * 1024 * 1024) throw new Error(`a 20 MB image was refused: ${big.status}`);
+    const pdf = await sendFile("brand-guide.pdf", Buffer.from("%PDF-1.7\n"));
+    if (pdf.status !== 200) throw new Error("a PDF was refused");
+    await pdf.arrayBuffer();
+    const over = await sendFile("ref-wide.webp", Buffer.alloc(20 * 1024 * 1024 + 1, 7));
+    const overBody = await over.json();
+    if (over.status !== 400 || overBody.errors?.[0] !== "ref-wide.webp is not an attachment this engine accepts (type or size).") throw new Error("an image over 20 MB was taken");
+    const svg = await sendFile("logo.svg", Buffer.from("<svg/>"));
+    if (svg.status !== 400) throw new Error("an SVG was taken");
+    await svg.arrayBuffer();
+    const named = await sendFile("../x.png", Buffer.from("x"));
+    if (named.status !== 400) throw new Error("a path was taken as a name");
+    await named.arrayBuffer();
+    const headers = { "Content-Type": "application/json", Origin: origin, "X-DEVOS-Token": server.token };
+    const missing = await fetch(`${origin}/api/plan`, { method: "POST", headers, body: JSON.stringify({ ...plan, attachments: [{ name: "never-sent.png" }] }) });
+    const missingBody = await missing.json();
+    if (missing.status !== 400 || !missingBody.errors?.includes("never-sent.png was not uploaded; add it again.")) throw new Error("a file never sent was accepted");
+    const posted = await fetch(`${origin}/api/plan`, { method: "POST", headers, body: JSON.stringify({ ...plan, attachments: [{ name: "ref-hero.png" }, { name: "brand-guide.pdf" }] }) });
+    const postedBody = await posted.json();
+    if (posted.status !== 200) throw new Error(`the plan was refused: ${JSON.stringify(postedBody.errors)}`);
+    if (!postedBody.summary.includes("Attachments: ref-hero.png, brand-guide.pdf")) throw new Error(`summary: ${postedBody.summary.join(" | ")}`);
+  } finally {
+    if (server) await server.close();
+    cleanup(terminal.parent);
+    cleanup(planned.parent);
+  }
+}
+
+const workers = { l: workerL, n: workerN, m: workerM, o: workerO, p: workerP, q: workerQ, s: workerS, t: workerT, u: workerU, v: workerV, w: workerW, z: workerZ };
 const workerName = process.env.DEVOS_UI_WORKER;
 if (workers[workerName]) {
   workers[workerName]().then(() => process.exit(0)).catch((error) => {
@@ -964,6 +1009,11 @@ if (workers[workerName]) {
 
   test("ui-server.test.mjs (w) the agent's steps stream to the page and the last 40 replay", { timeout: 180000 }, () => {
     const result = runWorker("w");
+    assert.equal(result.status, 0, result.stderr);
+  });
+
+  test("ui-server.test.mjs (z) attachments are sent one by one at full quality, and a plan names what was sent (PR-60)", { timeout: 180000 }, () => {
+    const result = runWorker("z");
     assert.equal(result.status, 0, result.stderr);
   });
 

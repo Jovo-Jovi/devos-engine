@@ -20,7 +20,7 @@
   <img alt="Gemini" src="https://img.shields.io/badge/Gemini-reviewer%20%26%20builder-8E75B2?style=flat-square&logo=googlegemini&logoColor=white">
 </p>
 <p align="center">
-  <img alt="Pre-release 0.2.7" src="https://img.shields.io/badge/pre--release-0.2.7-C9A96E?style=flat-square">
+  <img alt="Pre-release 0.2.8" src="https://img.shields.io/badge/pre--release-0.2.8-C9A96E?style=flat-square">
   <img alt="20 stacks" src="https://img.shields.io/badge/stacks-20-0C1628?style=flat-square">
   <img alt="16 project types" src="https://img.shields.io/badge/project%20types-16-0C1628?style=flat-square">
   <img alt="Keys never stored" src="https://img.shields.io/badge/keys-never%20stored-7CC4A8?style=flat-square">
@@ -39,7 +39,7 @@ questions in your browser or your terminal, and an AI agent on your computer wri
 approve it, DEV_OS creates the GitHub repository and starts the automated cycle on GitHub Actions. From then on, a
 builder agent writes each task, a reviewer agent reviews it, and you merge at the gates.
 
-Status: pre-release `0.2.7`. The repository is private and not licensed for use yet (see `LICENSE`).
+Status: pre-release `0.2.8`. The repository is private and not licensed for use yet (see `LICENSE`).
 
 ## Why DEV_OS
 
@@ -212,9 +212,12 @@ takes the default shown.
 6. **Documents (optional).** DEV_OS first lists the documents worth preparing for your type: a product brief or PRD,
    design references, brand assets, content, data and API notes, business rules. Give the ones you have. They are
    copied to `devos/intake-docs/`. The blueprint reads them, writes every document that is still missing, and lists
-   what is left open in `docs/OPEN_QUESTIONS.md`. Screenshots of designs you like (PNG, JPEG or WebP, up to 1 MB
-   each) are kept in `docs/design/references/`: the blueprint draws a direction of the project's own from them,
-   never a copy, and lists each one in `docs/design/REFERENCES.md`.
+   what is left open in `docs/OPEN_QUESTIONS.md`. Documents can be Markdown, text, CSV, JSON or YAML (up to 1 MB) or
+   PDF (up to 20 MB). Images of designs you like, at full quality (PNG, JPEG, WebP or GIF, up to 20 MB each; up to 30
+   files, 200 MB in all), are kept in `docs/design/references/`, in the repository: the blueprint draws a direction
+   of the project's own from them, never a copy, and lists each one in `docs/design/REFERENCES.md`. Name each file
+   for what it holds (`brief.md`, `brand-guide.pdf`) and each image for the reference it shows
+   (`ref-checkout-stripe.png`, `logo.png`, `flow-sign-up.png`): the agents cite them by name.
 7. **Summary.** Check your answers. Confirm, or answer again.
 8. **Install.** The method files are written into the folder.
 9. **Blueprint.** Your blueprint agent writes the project documents and fence T01 in the folder.

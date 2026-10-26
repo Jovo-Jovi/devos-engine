@@ -160,11 +160,14 @@ Look, never copy: every site below holds other people's work.
 
 ### 5.4 The developer's references
 
-- **At `devos init`**, the documents step takes design references: documents with links and notes, and screenshots
-  (PNG, JPEG or WebP, up to 1 MB each). The screenshots are kept in `docs/design/references/`.
+- **At `devos init`**, the documents step takes design references: documents with links and notes (Markdown, text,
+  CSV, JSON or YAML up to 1 MB, PDF up to 20 MB), and images at full quality (PNG, JPEG, WebP or GIF up to 20 MB each;
+  up to 30 files, 200 MB in all). The images are kept in `docs/design/references/`, in the repository. Each file is
+  named for what it holds and each image for the reference it shows (`ref-checkout-stripe.png`, `logo.png`,
+  `flow-sign-up.png`), because the agents cite them by name (PR-60).
 - **The blueprint writes `docs/design/REFERENCES.md`:** one table, `| Ref | Source | What we take | What we leave |`.
-  The developer's references come first: each screenshot by its file name, each link from their documents. The
-  library picks follow. `devos init` refuses a blueprint whose `REFERENCES.md` leaves out a screenshot.
+  The developer's references come first: each image by its file name, each link from their documents. The
+  library picks follow. `devos init` refuses a blueprint whose `REFERENCES.md` leaves out an image.
 - **Later references** come with a change request (§5.6).
 
 ### 5.5 A direction of its own

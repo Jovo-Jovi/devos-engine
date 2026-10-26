@@ -26,7 +26,7 @@ test("catalogue.test.mjs (a) integrity", () => {
   assert.equal(catalogue.stacks.length, 20);
   assert.equal(catalogue.stacks.filter((stack) => stack.runs === true).length, 20);
   assert.equal(catalogue.modules.length, 10);
-  assert.equal(catalogue.documents.length, 6);
+  assert.equal(catalogue.documents.length, 8);
   for (const type of catalogue.types) {
     const stack = catalogue.stacks.find((item) => item.id === type.stack);
     assert.equal(stack?.runs, true, type.id);
@@ -77,7 +77,7 @@ test("catalogue.test.mjs (e) derived answers", () => {
 });
 
 test("catalogue.test.mjs (f) documents to prepare for marketing", () => {
-  assert.deepEqual(prepareFor("marketing").map((doc) => doc.id), ["brief", "design", "brand", "content"]);
+  assert.deepEqual(prepareFor("marketing").map((doc) => doc.id), ["brief", "design", "brand", "content", "similar"]);
 });
 
 function appearsInOrder(text, parts) {
@@ -131,9 +131,9 @@ test("catalogue.test.mjs (h) the prepare list comes before attachments", () => {
     const result = init(staged, flow());
     assert.equal(result.status, 0, result.stdout + result.stderr);
     const docs = prepareFor("saas");
-    assert.deepEqual(docs.map((doc) => doc.id), ["brief", "design", "brand", "rules", "data"]);
+    assert.deepEqual(docs.map((doc) => doc.id), ["brief", "design", "flows", "brand", "content", "data", "rules", "similar"]);
     const block = result.stdout.indexOf("Have these ready (all optional; attach the ones you have):");
-    const attach = result.stdout.indexOf("Documents and design screenshots (PNG, JPEG, WebP) to attach");
+    const attach = result.stdout.indexOf("Documents (Markdown, text, CSV, JSON, YAML up to 1 MB; PDF up to 20 MB) and design images (PNG, JPEG, WebP, GIF up to 20 MB) to attach");
     assert.equal(block >= 0 && attach > block, true, result.stdout);
     let from = block;
     for (const doc of docs) {

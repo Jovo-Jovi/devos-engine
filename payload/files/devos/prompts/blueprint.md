@@ -7,9 +7,10 @@ stores data, sign-in, languages, deploy target and repository visibility. Nobody
 run: where the answers and your research leave something open, choose the safer option and record it as an
 **assumption** in `docs/DEVOS_FIT.md`.
 
-When `devos/intake-docs/` exists, read every file in it before step 1, and every screenshot in
-`docs/design/references/` (the developer's design references; your Read tool shows an image, and a tool that cannot
-read images works from the developer's notes and records that as an assumption). Where a document and the answers
+When `devos/intake-docs/` exists, read every file in it before step 1 (PDFs too), and every image in
+`docs/design/references/` (the developer's design references and brand assets, named for what they show; your Read
+tool shows an image). A file your tool cannot open (a format it does not read, or an image too large for it) is
+worked from its name and the developer's notes, and recorded as an assumption. Where a document and the answers
 disagree, the answers win. Anything the product needs that neither gives goes into `docs/OPEN_QUESTIONS.md`, one
 question per line; when nothing is open, that file holds the single line `No open questions.`
 
@@ -59,10 +60,10 @@ Work in this order.
    `method/CARRY_FORWARDS.md` (empty). When `devos/project.json` `ui` is `true`, `DESIGN_SYSTEM.md` is the design
    contract of `docs/method/DESIGN_METHOD.md` §1: write every part that section lists, including a decision (adopt,
    optional or reject, with the reason) for each resource of its §5.1 that fits the stack, and also write
-   `docs/design/UI_ACCEPTANCE.md` and `docs/design/REFERENCES.md` (§5.4: every screenshot in
-   `docs/design/references/` by its file name, every link the developer gave, then your library picks). Choose a
-   direction of the project's own (§5.5): the developer's references first, then the library rows for the project's
-   type (§5.2) and the Blueprint rows of `devos/skills/INDEX.md`, for each layer the product needs.
+   `docs/design/UI_ACCEPTANCE.md` and `docs/design/REFERENCES.md` (§5.4: every image in `docs/design/references/`
+   by its file name, which you keep, every link the developer gave, then your library picks). Choose a direction of
+   the project's own (§5.5): the developer's references first, then the library rows for the project's type (§5.2)
+   and the Blueprint rows of `devos/skills/INDEX.md`, for each layer the product needs.
    `DESIGN_SYSTEM.md` opens with its Direction and signature. Never copy a reference, and never reuse one look for
    every project of a type.
    Two formats are read by guards and must be exact:
@@ -98,8 +99,8 @@ Work in this order.
    `docs/SESSION_CONTEXT.md`, `docs/DEVELOPMENT_JOURNAL.md` and a lockfile beside a listed manifest are always
    allowed. Before you finish, run `node scripts/devos/fence-check.mjs docs/fences/T01.md` and fix every finding
    (PR-58).
-   Every later fence that builds a screen carries a `- Screens:` line and a `### Design specification` (`docs/method/DESIGN_METHOD.md`
-   §3).
+   Every later fence that builds a screen carries a `- Screens:` line and a `### Design specification`
+   (`docs/method/DESIGN_METHOD.md` §3).
 7. **End with a summary** as your final message: the profile, the ODs the developer signs by approving, your
    assumptions, and the setup steps that change for this project.
 

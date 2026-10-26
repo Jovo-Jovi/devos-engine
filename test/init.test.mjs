@@ -341,6 +341,25 @@ test("init.test.mjs keeps an attached screenshot as a design reference (PR-59)",
   }
 });
 
+test("init.test.mjs keeps a GIF with the design references and a PDF with the documents (PR-60)", () => {
+  // A document asks the blueprint for docs/OPEN_QUESTIONS.md, which this stub writes in its second round.
+  const staged = stage({ mode: "omit-questions" });
+  try {
+    const gif = path.join(staged.parent, "ref-hover.gif");
+    const pdf = path.join(staged.parent, "brand-guide.pdf");
+    writeFileSync(gif, Buffer.from("GIF89a"));
+    writeFileSync(pdf, Buffer.from("%PDF-1.7\n"));
+    const result = init(staged, flow({ attachment: `${gif}, ${pdf}` }));
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    assert.equal(readFileSync(path.join(staged.project, "docs", "design", "references", "ref-hover.gif"), "latin1"), "GIF89a");
+    assert.equal(readFileSync(path.join(staged.project, "devos", "intake-docs", "brand-guide.pdf"), "latin1"), "%PDF-1.7\n");
+    assert.equal(readFileSync(path.join(staged.project, "docs", "design", "REFERENCES.md"), "utf8").includes("| R1 | ref-hover.gif |"), true);
+    assert.equal(result.stdout.includes("Name each file for what it holds (brief.md, brand-guide.pdf), and each image for the reference it shows"), true, result.stdout);
+  } finally {
+    cleanup(staged.parent);
+  }
+});
+
 test("init.test.mjs repairs a REFERENCES.md that leaves out a screenshot (PR-59)", () => {
   const staged = stage({ mode: "refs-unnamed-then-good" });
   try {

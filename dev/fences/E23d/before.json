@@ -1,0 +1,21 @@
+{
+  "README.md": "facbd62cc30320f34bd7351b6b8a38f3ecbe6f9657805a719a2d8e6cd759af6f",
+  "lib/data/catalogue.json": "11e6ea9cb46f49d50288a43a64b8f090213b3673b6b96fd9d3db061fd2596a01",
+  "lib/init.mjs": "99f0993cbf62c0a21f8d5fcd8cbaa71dffdf6696919e8da0a543ad73ee559173",
+  "lib/plan.mjs": "eb15ddf6b129f87a81aaae2d3b98c002a3fdb32131c08ae6a0fdb26b6d89c852",
+  "lib/ui-server.mjs": "dd119a9b592991c3449a18d851eb002a7e5c31df6999ee0440a6542831e9030d",
+  "lib/ui/app.js": "7bf3d81fcf84c29bd9925d57ba89754f5e6fad279b789af879ec781ce444298e",
+  "package.json": "daae6762f8f1154815a718ed7f3c2b29890e8348d235f8db056acee893f9773a",
+  "payload/files/devos/prompts/blueprint.md": "d222f16a59369baa86a38d4203c21a3b7280da19846519e667fa7f80646eb05b",
+  "payload/files/docs/method/AUTOMATION.md": "ce899011d06da9426d1790b8b11b3b386c81753b0a0e4e5077c920353da0e54c",
+  "payload/files/docs/method/DESIGN_METHOD.md": "893aba8c4cafe8b263ac13e1da7d06ef25840738aa241ea81e27d8e542ec7eb0",
+  "payload/files/docs/method/PRECEDENTS.md": "d95673c5c789071fe220c60f060e0b53f9516e9133a7518fec012f904d71bf1a",
+  "test/catalogue.test.mjs": "e288a4f0ea42e548e482b1f29f3903c27353f035302b7a00b12cb21be11ca186",
+  "test/init.test.mjs": "b1cc664637b9013d43f9b611cafa5f42ecca0d169336a1ec8312ca4c2f481e39",
+  "test/install.test.mjs": "368038bc4615462d60ecc29cd72130f557d46e75c2f6e20025c8cdc42e9ff2cf",
+  "test/plan.test.mjs": "80f135070c11d9627ae712d7475d54056043628b4efae6a3080547c32447b928",
+  "test/ui-server.test.mjs": "9900c475bf8d4d7ffcca5f99d721f902f5b1e4e28d8aed0e9de60c43154e9b9a",
+  "test/upgrade.test.mjs": "bbbc646fcd49c3f6dd7d9304746758f264c83cbe0f46ea1b930a4246b06efc52",
+  "test/version.test.mjs": "10ff964db101da38564aaf58d6174843ea5357d37585a6ef0199dc8ae5f5b818",
+  "tools/sources.mjs": "719d2b61e755530f82797ef3fe9167d0589a631f41f56f9d65cb4803850efca8"
+}
