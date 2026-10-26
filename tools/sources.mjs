@@ -129,6 +129,7 @@ export const LOCAL = {
   },
   added: {
     "devos/engine.defaults.json": "E02, E19, E20, E14, E24, E23c, E23b3, E09, E10a",
+    "devos/LICENSE.md": "E10b",
     "scripts/devos/config.mjs": "E02",
     "scripts/guards/config.mjs": "E02",
     "scripts/devos/agents.mjs": "E11, E17, E22h",

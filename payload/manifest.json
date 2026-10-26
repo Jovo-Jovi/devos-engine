@@ -1,5 +1,5 @@
 {
-  "engine_version": "0.3.0",
+  "engine_version": "1.0.0",
   "source": {
     "repo": "Jovo-Jovi/devos-control-tower",
     "commit": "a49ca6db268b98d6558077bf3e95b8ae759d91b3"
@@ -237,6 +237,12 @@
       "path": ".gitignore",
       "stored": "dot-gitignore",
       "sha256": "e45529a9d7e596fd47769f2bdb25175cc37d81d89aebdbf9df55f421f9a4e5d5",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/LICENSE.md",
+      "stored": "devos/LICENSE.md",
+      "sha256": "bf8f3b4e0e7108e6713cf0624006c3231b0bfc219e20200ecc793b390dff6f13",
       "owner": "engine"
     },
     {

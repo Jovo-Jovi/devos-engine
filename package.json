@@ -1,7 +1,8 @@
 {
   "name": "devos-engine",
-  "version": "0.3.0",
+  "version": "1.0.0",
   "private": true,
+  "license": "PolyForm-Shield-1.0.0",
   "type": "module",
   "description": "DEV_OS Engine — from an empty folder to a GitHub project that AI agents build, review and ship task by task",
   "bin": {
@@ -15,6 +16,9 @@
     "lib/",
     "payload/",
     "LICENSE",
+    "LICENSES.md",
+    "THIRD_PARTY_NOTICES.md",
+    "CHANGELOG.md",
     "README.md"
   ],
   "scripts": {

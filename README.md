@@ -20,7 +20,8 @@
   <img alt="Gemini" src="https://img.shields.io/badge/Gemini-reviewer%20%26%20builder-8E75B2?style=flat-square&logo=googlegemini&logoColor=white">
 </p>
 <p align="center">
-  <img alt="Pre-release 0.3.0" src="https://img.shields.io/badge/pre--release-0.3.0-C9A96E?style=flat-square">
+  <img alt="Version 1.0.0" src="https://img.shields.io/badge/version-1.0.0-C9A96E?style=flat-square">
+  <img alt="Licence PolyForm Shield 1.0.0" src="https://img.shields.io/badge/licence-PolyForm%20Shield%201.0.0-0C1628?style=flat-square">
   <img alt="20 stacks" src="https://img.shields.io/badge/stacks-20-0C1628?style=flat-square">
   <img alt="16 project types" src="https://img.shields.io/badge/project%20types-16-0C1628?style=flat-square">
   <img alt="Keys never stored" src="https://img.shields.io/badge/keys-never%20stored-7CC4A8?style=flat-square">
@@ -39,7 +40,8 @@ questions in your browser or your terminal, and an AI agent on your computer wri
 approve it, DEV_OS creates the GitHub repository and starts the automated cycle on GitHub Actions. From then on, a
 builder agent writes each task, a reviewer agent reviews it, and you merge at the gates.
 
-Status: pre-release `0.3.0`. The repository is private and not licensed for use yet (see `LICENSE`).
+Version `1.0.0`. The engine is under PolyForm Shield 1.0.0 and the files it installs into your project under MIT
+(see [Licence](#licence)).
 
 ## Why DEV_OS
 
@@ -375,4 +377,17 @@ it.
    reads.
 2. Database, storage and deploys for Python, Go and Dart stacks.
 3. The first real run and the end-to-end test, including copying app keys to the host.
-4. Version 1.0 and its licence.
+
+## Licence
+
+- **The engine**, meaning the `devos` command, its guided page and the contract, is under the
+  [PolyForm Shield License 1.0.0](LICENSE). You may use it for any purpose, commercial work included, except to
+  provide a product that competes with it, or with a product its licensor provides using it. The text in `LICENSE`
+  is what binds.
+- **The files DEV_OS installs into your project** are under the MIT License, in `devos/LICENSE.md` of every project.
+  Your project may keep, change and ship them under its own licence, with that notice.
+- **Third-party files keep their own licences:** the vendored skills under `devos/skills/` (MIT, Apache-2.0,
+  CC-BY-4.0 and CC-BY-SA-4.0) and the IBM Plex fonts of the guided page (OFL-1.1). See
+  [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+- [LICENSES.md](LICENSES.md) maps every file to its licence, and [CHANGELOG.md](CHANGELOG.md) lists what each
+  release changed.

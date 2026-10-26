@@ -1,0 +1,10 @@
+{
+  "LICENSE": "13efae3d7101e4a3ae98616c9203eff4b2ddcc0c11308c38ec875b4b6210c5ce",
+  "README.md": "dbed39b131ac99212e720825ec3a743c8d4e285515201ee868fe3aaf024fb92e",
+  "package.json": "18dd44243c229c46f802c811e17f9bc376c52e953f8fb92fe8095281a943a5d2",
+  "tools/sources.mjs": "cf22014982d1f7477e5b830cc6bf4f68f8ab5569425f937cdcdec475496b072e",
+  "tools/specifics-allow.json": "094951408a4ef9bbc8d1113685156de5ca9b479e1180880b5f0e368357ca6eba",
+  "test/version.test.mjs": "453e97f653a0f6bd8e38b7a0bcc3834814193ca295007e90aac4aa6ed8eac218",
+  "test/install.test.mjs": "894b2c1b7eb887de753a09a9d2e130d655a0992d4eac2f9d6e0fe2b690c2ed81",
+  "test/upgrade.test.mjs": "8ec19a43f2dd4d33059e0b74e2d5bc3070ea1091e83cb14f2599741da148955f"
+}

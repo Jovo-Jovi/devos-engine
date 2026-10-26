@@ -1,0 +1,14 @@
+[
+  {
+    "path": "devos/skills/owasp-cheat-sheets/Logging_Cheat_Sheet.md",
+    "text": "    - Source address e.g. user's device/machine identifier, user's IP address, cell/RF tower ID, mobile telephone number"
+  },
+  {
+    "path": "devos/engine.defaults.json",
+    "text": "    \"url\": \"https://devos-control-tower.vercel.app\""
+  },
+  {
+    "path": "devos/LICENSE.md",
+    "text": "Copyright (c) 2026 Jovo-Jovi"
+  }
+]
