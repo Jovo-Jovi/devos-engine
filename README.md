@@ -346,17 +346,29 @@ it.
   - **No:** nothing is ever sent, and every feature works the same.
   - **Yes:** the project's cycle asks the Control Tower to link the repository, and its operator approves or declines.
 - **What a link sends.**
-  - The request: the repository and its owner, as GitHub's identity for the workflow proves them, the proposed project
-    key, the engine version and the contract version.
-  - After approval, one event per cycle step: the project key, the run, a sequence number, the phase, the task, the
-    step, its status, the time and the evidence file's path and commit.
+  - The request: its format version, the proposed project key, the engine version and the contract version, with
+    GitHub's signed identity token for the workflow run. The Control Tower keeps only the repository and its owner's
+    numeric GitHub id from that token, and drops the token.
+  - After approval, one event per cycle step: its format version, the project key, the run, a sequence number, the
+    phase, the task, the step, its status, the time and the evidence file's path and commit.
   - Never your code, diffs, prompts, file contents, secrets, keys, emails or token counts.
 - **How.** HTTPS to `https://devos-control-tower.vercel.app`, from the cycle's `report` job only.
   - That job runs no AI agent, holds no key, and alone gets GitHub's `id-token: write` permission to prove which
     repository is asking.
   - No token is stored, and reporting never blocks a run.
+- **What it keeps, and for how long.** The operator, Jovo-Jovi, alone reads it.
+  - From each request: the repository's full name, the owner's numeric GitHub id, the proposed key, the versions and
+    the request and decision times. After approval, the project's step events.
+  - A pending or declined request: up to 180 days after its last request. A disconnected project with its events: up
+    to 365 days after the decision. A linked project: while it stays linked. Encrypted backups: up to 30 days after a
+    deletion.
+- **Where.** Supabase in Frankfurt, Germany (`eu-central-1`), and Vercel in Frankfurt (`fra1`); requests can pass
+  through Vercel's network in other countries, and the encrypted backups are kept on GitHub. All three companies are
+  based in the United States.
 - **Changing your mind.** The repository variable `DEVOS_REPORTING` is `on` when you answered yes. Set it to `off`, or
   delete it, and nothing more is sent from the next run on.
+- **Your rights.** To know what is kept about you, to get a copy, or to have it corrected or deleted, write to
+  jiovanny.adel@gmail.com.
 
 ## Current limits
 

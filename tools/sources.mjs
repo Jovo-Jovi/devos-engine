@@ -333,7 +333,7 @@ export const LOCAL = {
     "devos/skills/twelve-factor/port-binding.md": "E23b2b",
     "devos/skills/twelve-factor/processes.md": "E23b2b",
     "scripts/devos/fence-check.mjs": "E23c",
-    "scripts/devos/report.mjs": "E09",
+    "scripts/devos/report.mjs": "E09, E10b2",
     "scripts/guards/fences.mjs": "E23c",
     "scripts/guards/imports.mjs": "E23c",
     "scripts/guards/scope.mjs": "E23c",

@@ -1,0 +1,8 @@
+{
+  "CHANGELOG.md": "3c4c5211a4e40a414d63efcf962cfeb3342c189d10586de120c4f7a38f9c38e7",
+  "README.md": "0f8cd951fc5ad8c529a96fed4ec500de55e0cf18aba785d577bd4ab43c3d6c62",
+  "payload/contract/CONTRACT.md": "6415bc47411b8d714045f6d329c05957814068c19c7321afbc95ebe7b0a436d4",
+  "payload/files/scripts/devos/report.mjs": "07a4093562750cde88cbf1c3db8b777fef83f67eccb78f483fc729254d0ea251",
+  "test/report.test.mjs": "6dc0302a904237fe71ae94c8c55f8e0fef66f1c83d2b3e55218b827ae0a86849",
+  "tools/sources.mjs": "1a6f558798afbddfe76ef85964ac3f55b1469564701d0f25539c40384f0f73fd"
+}

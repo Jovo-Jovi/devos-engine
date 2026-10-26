@@ -27,6 +27,8 @@ The first public release.
 
 - Linking a project to the private DEV_OS Control Tower is optional and asked as a plain yes or no at setup. Nothing
   is sent without a yes, and the engine works the same either way.
+- Before you answer, the contract says what the Control Tower keeps, why, for how long and where, and how to reach its
+  operator to see, correct or delete it.
 
 ### Licences
 

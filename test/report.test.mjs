@@ -135,7 +135,8 @@ test("report.test.mjs (b) link asks the registry with GitHub's OIDC identity and
   for (const [status, line, kept] of [
     [200, "devos report: linked to the DEV_OS registry as DEMO-SHOP-2", { status: "linked", key: "DEMO-SHOP-2" }],
     [202, "devos report: link requested; it waits for the registry owner's approval, and the next run asks again", { status: "pending" }],
-    [403, "devos report: the registry declined this repository's link; nothing is sent", { status: "declined" }],
+    [403, "devos report: the registry declined this repository's link; nothing is sent. To stop asking, set the repository variable DEVOS_REPORTING to off", { status: "declined" }],
+    [429, "devos report: the registry takes no new link requests right now; the next run asks again", { status: "busy" }],
     [503, "devos report: the registry did not answer (503); the next run asks again", { status: "unreachable" }],
   ]) {
     const server = await registry({ link: status });

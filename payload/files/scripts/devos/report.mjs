@@ -7,7 +7,7 @@
 //   note --failed
 //        The step that started and never ended (.devos/report-state.json) ends as `fail`.
 //   link In the report job: ask the registry to link this repository. Its owner approves it once; the answer
-//        (linked with the project's key, pending, declined) is kept in .devos/link.json.
+//        (linked with the project's key, pending, declined, busy) is kept in .devos/link.json.
 //   flush
 //        In the report job, when the repository is linked: send every unsent event once, in order.
 //   --dry
@@ -253,7 +253,11 @@ async function link(args, out, env = process.env) {
   }
   if (reply.status === 403) {
     writeJson(LINK, { status: "declined" });
-    return out("devos report: the registry declined this repository's link; nothing is sent");
+    return out("devos report: the registry declined this repository's link; nothing is sent. To stop asking, set the repository variable DEVOS_REPORTING to off");
+  }
+  if (reply.status === 429) {
+    writeJson(LINK, { status: "busy" });
+    return out("devos report: the registry takes no new link requests right now; the next run asks again");
   }
   writeJson(LINK, { status: "unreachable" });
   return out(`devos report: the registry did not answer (${reply.error ?? reply.status}); the next run asks again`);
