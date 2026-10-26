@@ -11,6 +11,7 @@ import { profileCommand } from "../lib/profile.mjs";
 import { rosterCommand } from "../lib/roster.mjs";
 import { upgradeCommand } from "../lib/upgrade.mjs";
 import { uiCommand } from "../lib/ui-server.mjs";
+import { verifyCommand, watchCommand } from "../lib/verify.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const pkg = JSON.parse(readFileSync(path.join(here, "..", "package.json"), "utf8"));
@@ -31,6 +32,8 @@ devos init [--continue] [folder]
 devos init --plan <file> [folder]
 devos ui [folder] [--no-open]
 devos continue [folder]
+devos verify [folder]
+devos watch [folder] [--interval <seconds>] [--once]
 `);
   process.exit(2);
 }
@@ -51,6 +54,8 @@ else if (args[0] === "upgrade") code = upgradeCommand(args.slice(1));
 else if (args[0] === "init") code = await initCommand(args.slice(1));
 else if (args[0] === "ui") code = await uiCommand(args.slice(1));
 else if (args[0] === "continue") code = await continueCommand(path.resolve(args[1] ?? process.cwd()));
+else if (args[0] === "verify") code = verifyCommand(args.slice(1));
+else if (args[0] === "watch") code = await watchCommand(args.slice(1));
 else {
   console.log(`devos: unknown command ${args[0]}`);
   code = 2;

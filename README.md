@@ -263,7 +263,9 @@ it.
 - **The cycle builds T01 on GitHub.** T01 is always the project skeleton from your stack's recipe: the official
   generator, the check commands, one structured logger, error handling, a health route for web and API projects, and
   one architecture test. Every check passes before the first feature. Follow it in the repository's **Actions** and
-  **Pull requests** tabs.
+  **Pull requests** tabs, or from a terminal with `devos watch <folder>`.
+- **When a run fails,** `devos verify <folder>` quotes what the run said, names the likely cause and the fix, and says
+  who applies it: you, `devos continue`, or nobody, when the cycle resumes by itself after a usage limit.
 - **You merge at the gates.** Each pull request carries a comment from the gate doctor that says what still blocks
   the merge. Comment `/devos doctor` to check again.
 - **`SETUP.md`** in the repository lists every setting the project uses. If the setup check reports a missing one,
@@ -312,6 +314,8 @@ it.
 | `devos init [folder]` | Guided setup of a new project in a new or empty folder outside the engine folder. |
 | `devos ui [folder] [--no-open]` | The same setup as a guided page in your browser, on this computer only. Without a folder, the page asks where to create the project. `--no-open` prints the link without opening it. |
 | `devos continue [folder]` | Shows what is done and finishes what is missing. |
+| `devos verify [folder]` | Checks everything between this computer and a green cycle run: Node.js and git, the GitHub CLI, the project's setup steps, the keys GitHub is missing (names only), and the newest `devos-cycle` run. A failed run is quoted in its own words, with the likely cause, the fix and who applies it. It changes nothing. |
+| `devos watch [folder] [--interval <seconds>] [--once]` | Runs `devos verify` again every 30 seconds (or `--interval`, 5 or more), marks with `*` what changed since the last pass, and stops at ALL GREEN. `--once` runs one pass. |
 | `devos status` | In a project folder: shows the project and your saved roster. |
 | `devos agents detect` | Lists the AI CLIs on this computer, their versions, and whether each one is signed in. |
 | `devos agents show` · `devos agents import <file>` | Shows or saves your default roster of agents (`~/.devos/roster.json`). |
@@ -340,8 +344,9 @@ it.
   so a Python, Go or Dart project offers none of them.
 - **App keys.** The keys your app reads (payments, email, error tracking, …) are stored as GitHub secrets. Until the
   deploy copies them to your host, also set them in Vercel → Settings → Environment Variables (Production).
-- **Testing.** Continuous integration tests the engine on Linux and Windows. The full run on GitHub, from
-  `devos init` to a merged first task, gets its end-to-end test before the release.
+- **Testing.** Continuous integration tests the engine on Linux on every change, and on Windows before each
+  release. The full run on GitHub, from `devos init` to a merged first task, has no end-to-end test yet;
+  `devos verify` and `devos watch` say what stops a first run.
 
 ## Roadmap
 

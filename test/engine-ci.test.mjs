@@ -14,8 +14,8 @@ test("engine-ci.test.mjs workflow shape", () => {
   const needles = [
     'branches: [main, "task/**"]',
     "workflow_dispatch:",
-    // A task-branch push runs the Linux tests only; main, a pull request and a manual run add Windows.
-    `os: \${{ fromJSON(github.event_name == 'push' && github.ref != 'refs/heads/main' && '["ubuntu-latest"]' || '["ubuntu-latest", "windows-latest"]') }}`,
+    // Every push and pull request runs the Linux tests only; a manual run adds Windows (E21: Windows minutes count double).
+    `os: \${{ fromJSON(github.event_name == 'workflow_dispatch' && '["ubuntu-latest", "windows-latest"]' || '["ubuntu-latest"]') }}`,
     "timeout-minutes: 25",
     'node --test --test-concurrency=4 "test/*.test.mjs"',
     "node tools/build-manifest.mjs --check",
