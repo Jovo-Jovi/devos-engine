@@ -248,7 +248,7 @@ if (args[0] === "secret" && args[1] === "list") {
   process.exit(0);
 }
 if (args[0] === "variable" && args[1] === "list") {
-  process.stdout.write('[{"name":"DEVOS_VERCEL","value":"true"}]');
+  process.stdout.write(process.env.STUB_VARIABLES || '[{"name":"DEVOS_VERCEL","value":"true"}]');
   process.exit(0);
 }
 if (args[0] === "workflow" && args[1] === "run") {

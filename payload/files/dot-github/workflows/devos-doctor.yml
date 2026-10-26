@@ -69,6 +69,10 @@ jobs:
     timeout-minutes: 45
     env:
       REPO: ${{ github.repository }}
+      # PR-63: a role's model from a repository variable (same tool); unset = the configured model.
+      DEVOS_REVIEWER_MODEL: ${{ vars.DEVOS_REVIEWER_MODEL }}
+      DEVOS_REVIEWER_LIGHT_MODEL: ${{ vars.DEVOS_REVIEWER_LIGHT_MODEL }}
+      DEVOS_BUILDER_MODEL: ${{ vars.DEVOS_BUILDER_MODEL }}
       GH_TOKEN: ${{ github.token }}
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}

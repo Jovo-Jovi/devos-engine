@@ -7,6 +7,7 @@ import { doctorCommand, statusCommand } from "../lib/doctor.mjs";
 import { continueCommand } from "../lib/continue.mjs";
 import { initCommand } from "../lib/init.mjs";
 import { installCommand } from "../lib/install.mjs";
+import { modelsCommand } from "../lib/models.mjs";
 import { profileCommand } from "../lib/profile.mjs";
 import { rosterCommand } from "../lib/roster.mjs";
 import { upgradeCommand } from "../lib/upgrade.mjs";
@@ -34,6 +35,9 @@ devos ui [folder] [--no-open]
 devos continue [folder]
 devos verify [folder]
 devos watch [folder] [--interval <seconds>] [--once]
+devos models [folder]
+devos models set <reviewer|light|builder> <model> [folder]
+devos models reset <reviewer|light|builder> [folder]
 `);
   process.exit(2);
 }
@@ -56,6 +60,7 @@ else if (args[0] === "ui") code = await uiCommand(args.slice(1));
 else if (args[0] === "continue") code = await continueCommand(path.resolve(args[1] ?? process.cwd()));
 else if (args[0] === "verify") code = verifyCommand(args.slice(1));
 else if (args[0] === "watch") code = await watchCommand(args.slice(1));
+else if (args[0] === "models") code = modelsCommand(args.slice(1));
 else {
   console.log(`devos: unknown command ${args[0]}`);
   code = 2;

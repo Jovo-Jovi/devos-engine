@@ -78,6 +78,10 @@ jobs:
       REPO: ${{ github.repository }}
       BR: intake/issue-${{ inputs.issue || github.event.issue.number }}
       RESUME: ${{ (github.event_name == 'workflow_dispatch' && inputs.resume) || (github.event_name == 'issue_comment' && startsWith(github.event.comment.body, '/devos intake resume')) }}
+      # PR-63: a role's model from a repository variable (same tool); unset = the configured model.
+      DEVOS_REVIEWER_MODEL: ${{ vars.DEVOS_REVIEWER_MODEL }}
+      DEVOS_REVIEWER_LIGHT_MODEL: ${{ vars.DEVOS_REVIEWER_LIGHT_MODEL }}
+      DEVOS_BUILDER_MODEL: ${{ vars.DEVOS_BUILDER_MODEL }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -378,6 +382,10 @@ jobs:
     env:
       PR: ${{ github.event.issue.number }}
       REPO: ${{ github.repository }}
+      # PR-63: a role's model from a repository variable (same tool); unset = the configured model.
+      DEVOS_REVIEWER_MODEL: ${{ vars.DEVOS_REVIEWER_MODEL }}
+      DEVOS_REVIEWER_LIGHT_MODEL: ${{ vars.DEVOS_REVIEWER_LIGHT_MODEL }}
+      DEVOS_BUILDER_MODEL: ${{ vars.DEVOS_BUILDER_MODEL }}
     steps:
       - name: Find the task branch
         id: pr

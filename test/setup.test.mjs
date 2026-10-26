@@ -415,7 +415,8 @@ test("setup.test.mjs (s) a typed key reaches gh on stdin only", async () => {
     writeFileSync(path.join(docs, "PHASES.md"), readFileSync(path.join(fixtures, "PHASES.md")));
     writeFileSync(path.join(docs, "GLOSSARY.md"), readFileSync(path.join(fixtures, "GLOSSARY.md")));
     writeFileSync(path.join(docs, "fences", "T01.md"), "# T01\n");
-    const secrets = [`${value}\n`, `${other}\n`];
+    // E25a: each tool's optional second-account key comes right after its first; Enter skips it.
+    const secrets = [`${value}\n`, "\n", `${other}\n`, "\n"];
     const stream = new EventEmitter();
     stream.setRawMode = () => {};
     stream.pause = () => {};
@@ -494,7 +495,7 @@ test("setup.test.mjs (u) a skipped key is printed and not uploaded", () => {
     const result = init(staged, answers());
     assert.equal(result.status, 0, result.stdout + result.stderr);
     assert.equal(result.stdout.includes("gh secret set CURSOR_API_KEY --repo devtest/demo-shop"), true, result.stdout);
-    assert.equal(result.stdout.includes("to set later: CURSOR_API_KEY, CLAUDE_CODE_OAUTH_TOKEN"), true, result.stdout);
+    assert.equal(result.stdout.includes("to set later: CURSOR_API_KEY, CURSOR_API_KEY_2, CLAUDE_CODE_OAUTH_TOKEN, CLAUDE_CODE_OAUTH_TOKEN_2"), true, result.stdout);
     assert.equal(ghLines(staged.parent).some((line) => line.startsWith("secret set")), false);
   } finally {
     cleanup(staged.parent);

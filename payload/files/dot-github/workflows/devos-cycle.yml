@@ -91,6 +91,11 @@ jobs:
       held: ${{ steps.heavy.outputs.held }}
       blocked: ${{ steps.setup.outputs.blocked }}
       method: ${{ steps.t.outputs.method }}
+    env:
+      # PR-63: a role's model from a repository variable (same tool); unset = the configured model.
+      DEVOS_REVIEWER_MODEL: ${{ vars.DEVOS_REVIEWER_MODEL }}
+      DEVOS_REVIEWER_LIGHT_MODEL: ${{ vars.DEVOS_REVIEWER_LIGHT_MODEL }}
+      DEVOS_BUILDER_MODEL: ${{ vars.DEVOS_BUILDER_MODEL }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -181,6 +186,10 @@ jobs:
       DEVOS_CODEX_ACCOUNT: ${{ vars.DEVOS_CODEX_ACCOUNT || '1' }}
       DEVOS_GEMINI_ACCOUNT: ${{ vars.DEVOS_GEMINI_ACCOUNT || '1' }}
       DEVOS_ACCOUNT_SWITCH: ${{ vars.DEVOS_ACCOUNT_SWITCH || 'auto' }}
+      # PR-63: a role's model from a repository variable (same tool); unset = the configured model.
+      DEVOS_REVIEWER_MODEL: ${{ vars.DEVOS_REVIEWER_MODEL }}
+      DEVOS_REVIEWER_LIGHT_MODEL: ${{ vars.DEVOS_REVIEWER_LIGHT_MODEL }}
+      DEVOS_BUILDER_MODEL: ${{ vars.DEVOS_BUILDER_MODEL }}
     steps:
       # The agents never see a git credential: checkout keeps none, and only the push and gh
       # steps below receive a token (PR-04).

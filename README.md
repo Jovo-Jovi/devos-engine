@@ -40,7 +40,7 @@ questions in your browser or your terminal, and an AI agent on your computer wri
 approve it, DEV_OS creates the GitHub repository and starts the automated cycle on GitHub Actions. From then on, a
 builder agent writes each task, a reviewer agent reviews it, and you merge at the gates.
 
-Version `1.0.0`. The engine is under PolyForm Shield 1.0.0 and the files it installs into your project under MIT
+Version `1.1.0`. The engine is under PolyForm Shield 1.0.0 and the files it installs into your project under MIT
 (see [Licence](#licence)).
 
 ## Why DEV_OS
@@ -233,7 +233,9 @@ takes the default shown.
 10. **Keys.** DEV_OS lists every key this project needs, for the agents and for the modules you picked, and where to
     get each one. Type each one once. The input is hidden, and you can skip a key you will set later. For a key that
     is a JSON file, such as a service account, give the file's path instead. The values stay in memory until they are
-    handed to GitHub (`gh secret set`, over standard input).
+    handed to GitHub (`gh secret set`, over standard input). Each agent tool also offers an optional second account's
+    key (`CURSOR_API_KEY_2`, `CLAUDE_CODE_OAUTH_TOKEN_2`, `OPENAI_API_KEY_2`, `GEMINI_API_KEY_2`): when one account
+    reaches its usage limit, the run continues on the other, and when both have, it waits for the earliest reset.
 11. **GitHub.** DEV_OS shows the plan: the repository, its visibility, the variables, and the keys to upload or set
     later. When you confirm, DEV_OS:
     - commits the folder;
@@ -268,6 +270,11 @@ it.
   **Pull requests** tabs, or from a terminal with `devos watch <folder>`.
 - **When a run fails,** `devos verify <folder>` quotes what the run said, names the likely cause and the fix, and says
   who applies it: you, `devos continue`, or nobody, when the cycle resumes by itself after a usage limit.
+- **Change a model without a commit.** In the project folder, `devos models` shows the model of the reviewer, the
+  light reviewer and the default builder. `devos models set builder <model>` changes one from the next cycle run, with
+  the same tool, and `devos models reset builder` goes back to the configured model. They set the repository variables
+  `DEVOS_REVIEWER_MODEL`, `DEVOS_REVIEWER_LIGHT_MODEL` and `DEVOS_BUILDER_MODEL`, which you can also set in GitHub
+  (Settings → Secrets and variables → Actions → Variables).
 - **You merge at the gates.** Each pull request carries a comment from the gate doctor that says what still blocks
   the merge. Comment `/devos doctor` to check again.
 - **`SETUP.md`** in the repository lists every setting the project uses. If the setup check reports a missing one,
@@ -319,6 +326,8 @@ it.
 | `devos verify [folder]` | Checks everything between this computer and a green cycle run: Node.js and git, the GitHub CLI, the project's setup steps, the keys GitHub is missing (names only), and the newest `devos-cycle` run. A failed run is quoted in its own words, with the likely cause, the fix and who applies it. It changes nothing. |
 | `devos watch [folder] [--interval <seconds>] [--once]` | Runs `devos verify` again every 30 seconds (or `--interval`, 5 or more), marks with `*` what changed since the last pass, and stops at ALL GREEN. `--once` runs one pass. |
 | `devos status` | In a project folder: shows the project and your saved roster. |
+| `devos models [folder]` | In a project: shows the reviewer's, the light reviewer's and the default builder's model, and the repository variable that changes each one. |
+| `devos models set <reviewer\|light\|builder> <model> [folder]` · `devos models reset <role> [folder]` | Sets or removes that variable: the next cycle run uses the model, with the same tool. Nothing is committed. |
 | `devos agents detect` | Lists the AI CLIs on this computer, their versions, and whether each one is signed in. |
 | `devos agents show` · `devos agents import <file>` | Shows or saves your default roster of agents (`~/.devos/roster.json`). |
 | `devos profile show` · `devos profile set <key> <value>` | Shows or sets your defaults (`~/.devos/profile.json`): `github_owner`, `visibility`, `default_stack`, `cursor_accounts`, `claude_accounts`. It refuses anything that looks like a key. |

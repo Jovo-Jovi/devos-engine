@@ -163,7 +163,9 @@ test("catalogue.test.mjs (i) module keys follow the cycle keys", () => {
   }, DEFAULT_AGENTS);
   assert.deepEqual(keys.map((key) => key.name), [
     "CURSOR_API_KEY",
+    "CURSOR_API_KEY_2",
     "CLAUDE_CODE_OAUTH_TOKEN",
+    "CLAUDE_CODE_OAUTH_TOKEN_2",
     "VERCEL_TOKEN",
     "VERCEL_ORG_ID",
     "VERCEL_PROJECT_ID",
@@ -174,8 +176,8 @@ test("catalogue.test.mjs (i) module keys follow the cycle keys", () => {
     "STRIPE_SECRET_KEY",
     "STRIPE_WEBHOOK_SECRET",
   ]);
-  assert.deepEqual(keys.slice(0, 2).map((key) => key.optional), [false, false]);
-  assert.equal(keys.slice(2).every((key) => key.optional === true), true);
+  assert.deepEqual(keys.slice(0, 4).map((key) => key.optional), [false, true, false, true]);
+  assert.equal(keys.slice(4).every((key) => key.optional === true), true);
   for (const key of keys) assert.equal(Object.hasOwn(KEY_SOURCES, key.name), true, key.name);
 });
 

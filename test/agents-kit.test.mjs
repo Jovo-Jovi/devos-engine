@@ -326,13 +326,15 @@ test("agents-kit.test.mjs (v) neededKeys follows the tools and vercel", () => {
     reviewer_light: null,
     pool: [{ tool: "cursor" }, { tool: "claude" }],
   };
-  assert.deepEqual(neededKeys(setup, { deploy: "none" }, claude).map((key) => key.name), ["CLAUDE_CODE_OAUTH_TOKEN"]);
-  assert.deepEqual(neededKeys(setup, { deploy: "none" }, both).map((key) => key.name), ["CURSOR_API_KEY", "CLAUDE_CODE_OAUTH_TOKEN"]);
+  assert.deepEqual(neededKeys(setup, { deploy: "none" }, claude).map((key) => key.name), ["CLAUDE_CODE_OAUTH_TOKEN", "CLAUDE_CODE_OAUTH_TOKEN_2"]);
+  assert.deepEqual(neededKeys(setup, { deploy: "none" }, both).map((key) => key.name), ["CURSOR_API_KEY", "CURSOR_API_KEY_2", "CLAUDE_CODE_OAUTH_TOKEN", "CLAUDE_CODE_OAUTH_TOKEN_2"]);
   assert.deepEqual(
     neededKeys(setup, { deploy: "vercel" }, both).map((key) => [key.name, key.optional]),
     [
       ["CURSOR_API_KEY", false],
+      ["CURSOR_API_KEY_2", true],
       ["CLAUDE_CODE_OAUTH_TOKEN", false],
+      ["CLAUDE_CODE_OAUTH_TOKEN_2", true],
       ["VERCEL_TOKEN", true],
       ["VERCEL_ORG_ID", true],
       ["VERCEL_PROJECT_ID", true],

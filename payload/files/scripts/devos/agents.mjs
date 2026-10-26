@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 // The project's agents (PR-41). The runner reads devos.config.json; it does not read the developer's home.
+// A repository variable may replace a role's model (PR-63, lib.mjs withModelOverrides); config() applies it, and
+// pick and reviewer say so in their note.
 // Usage: node scripts/devos/agents.mjs pick --task Tnn
 //        node scripts/devos/agents.mjs reviewer --mode light|deep
 //        node scripts/devos/agents.mjs pool
 //        node scripts/devos/agents.mjs tools
 import { existsSync, readFileSync } from "node:fs";
-import { P, config, emit, fail } from "./lib.mjs";
+import { MODEL_VARIABLES, P, config, emit, fail, readJson, withModelOverrides } from "./lib.mjs";
 
 const TOOLS = new Set(["cursor", "claude", "codex", "gemini"]);
 const POLICIES = new Set(["reviewer-picks", "always-default"]);
@@ -130,15 +132,21 @@ function arg(name) {
   return index >= 0 ? (process.argv[index + 1] ?? "") : "";
 }
 
+function overrideNotes(role) {
+  return withModelOverrides(readJson("devos.config.json")).notes.filter((line) => line.includes(MODEL_VARIABLES[role]));
+}
+
 if (process.argv[1]?.endsWith("agents.mjs")) {
   try {
     const command = process.argv[2];
     if (command === "pick") {
       const { item, note } = pick(arg("task"));
-      emit({ builder_id: item.id, builder_tool: item.tool, builder_model: item.model, builder_note: note });
+      const notes = [note, ...(item.default ? overrideNotes("builder") : [])].filter(Boolean);
+      emit({ builder_id: item.id, builder_tool: item.tool, builder_model: item.model, builder_note: notes.join("; ") });
     } else if (command === "reviewer") {
       const item = reviewerFor(arg("mode"));
-      emit({ reviewer_id: item.id, reviewer_tool: item.tool, reviewer_model: item.model });
+      const notes = overrideNotes(item.id === config().agents.reviewer.id ? "reviewer" : "light");
+      emit({ reviewer_id: item.id, reviewer_tool: item.tool, reviewer_model: item.model, reviewer_note: notes.join("; ") });
     } else if (command === "pool") {
       console.log(poolText());
     } else if (command === "next") {

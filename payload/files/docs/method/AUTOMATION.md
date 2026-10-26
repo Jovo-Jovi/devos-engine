@@ -124,7 +124,7 @@ workflow may start late.
 
 | Script | Role |
 |---|---|
-| `lib.mjs` | shared: config, PHASES parsing (`nextOpenTask`, `taskAfter`, method rows), globs, outputs, `.devos/*.env` |
+| `lib.mjs` | shared: config (with the model variables applied, PR-63), PHASES parsing (`nextOpenTask`, `taskAfter`, method rows), globs, outputs, `.devos/*.env` |
 | `config.mjs` | builds `devos.config.json` from `devos/engine.defaults.json` and `devos/project.json`; `--write`, `--check`, `--print`; PR-39 |
 | `agents.mjs` | resolves the builder pool id, the reviewer model and `next --after` (not used by the cycle since PR-53) from `devos.config.json` `agents`; `tools` lists the tools the agents use, so the cycle installs only those CLIs (PR-41, PR-42, PR-45) |
 | `role-env.mjs` | installs a role kit for a tool in the other role and restores the tool's own config (PR-42); `devos/roles/cursor-blueprint/` is the kit `devos init` gives Cursor while it writes the blueprint (PR-44); `cursor-planner` is Cursor's kit for a planning run (PR-53); the kits `codex-builder`, `codex-reviewer`, `gemini-builder` and `gemini-reviewer` give Codex its `AGENTS.md` and Gemini its `GEMINI.md` for the run (PR-45) |
@@ -254,12 +254,21 @@ A UI fence carries a header line `- Screens: \`<name> <path>[ click|hover|focus 
   | `DEVOS_GEMINI_ACCOUNT` | **1** · 2 | the Gemini account a run starts with (secrets `GEMINI_API_KEY`, `GEMINI_API_KEY_2`) | PR-45 |
   | `DEVOS_SUPERVISOR` | **on** · off | off stops the supervisor only (the cycle keeps running) | §4 |
   | `DEVOS_ACCOUNT_SWITCH` | **auto** · off | auto: at a usage limit the run continues on the other account; off: only the chosen one (shared by every agent tool) | SETUP §15 |
+  | `DEVOS_REVIEWER_MODEL` | a model id · **unset** | the reviewer's model, same tool (deep reviews, planning, revisions); unset: `agents.reviewer` | PR-63 |
+  | `DEVOS_REVIEWER_LIGHT_MODEL` | a model id · **unset** | the light reviewer's model, same tool as the reviewer when the project has no light reviewer; unset: `agents.reviewer_light` | PR-63 |
+  | `DEVOS_BUILDER_MODEL` | a model id · **unset** | the default builder's model, same tool; a fence that names another pool builder keeps that builder's model | PR-63 |
   | `DEVOS_REPORTING` | on · **off (not set)** | on: the `report` job links the project to the DEV_OS registry and sends its events; `devos init` sets it only when the developer answers yes; off or not set, nothing is sent | PR-61, PR-62 |
 
   Accounts, in practice: nothing set = both accounts on, starting with 1 · only account 2 =
   `DEVOS_CURSOR_ACCOUNT`/`DEVOS_CLAUDE_ACCOUNT` = 2 and `DEVOS_ACCOUNT_SWITCH` = off · for a single
   run, the `cursor_account` / `claude_account` choices in devos-cycle's run form. A second account
-  exists only if its `_2` secret is set.
+  exists only if its `_2` secret is set; `devos init` and the guided page offer it as an optional key.
+
+  Models, in practice: `devos.config.json` `agents` is the configured record; a model variable changes the
+  next run without a commit, and removing it goes back to the configured model. `devos models` shows the
+  three roles and sets or removes the variables (`devos models set <reviewer|light|builder> <model>`,
+  `devos models reset <role>`). The id is checked as a model id only; the tool reports a model it cannot
+  run when the run starts.
 - **`devos.config.json`:** generated — edit `devos/project.json`; engine defaults in `devos/engine.defaults.json`. `max_attempts`; `builder` (model family, effort by risk); `reviewer`
   (models and efforts by risk and gate, `modes.light/deep`, `deep_paths`, intake and method efforts; its Claude model ids apply only to a project without `agents`, PR-53); `agents` (reviewer, reviewer_light, pool, policy; without reviewer_light the reviewer reviews every task, PR-53; any of Cursor, Claude Code, Codex and Gemini may take either role (PR-45); a usage limit switches only to the same tool's other account, and with none left the attempt waits for the reset: no other agent or model takes over, PR-53; `devos init` writes them from the developer's choices, and the setup items `cursor`, `claude`, `codex` and `gemini` apply only when an agent uses that tool, PR-44);
   `required_checks` / `optional_checks`; `stack` (the toolchain, its manifest and the commands of its checks, written by `devos init`, PR-48, and `scaffold`, the recipe fence T01 follows, PR-49, with `scaffold.modules`, the stack's module convention, PR-58); `structure` (the product's feature modules: `modules`, each with its `dir` and `public` entries, `aliases` and `exempt`, written by the blueprint, PR-58); `screens` (`pages`, `filmstrip_ms`, `settle_max_ms`; a fence `- Screens:` line overrides `pages`); `surfaces` (builder, builder_method, reviewer, intake,

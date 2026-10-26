@@ -112,7 +112,7 @@ test("continue.test.mjs (j) an existing repository asks only for the missing key
     });
     assert.equal(result.stdout.includes("gh secret set CLAUDE_CODE_OAUTH_TOKEN --repo devtest/demo-shop"), true, result.stdout);
     assert.equal(result.stdout.includes("gh secret set CURSOR_API_KEY --repo devtest/demo-shop"), false, result.stdout);
-    assert.equal(result.stdout.includes("to set later: CLAUDE_CODE_OAUTH_TOKEN"), true, result.stdout);
+    assert.equal(result.stdout.includes("to set later: CURSOR_API_KEY_2, CLAUDE_CODE_OAUTH_TOKEN, CLAUDE_CODE_OAUTH_TOKEN_2"), true, result.stdout);
   } finally {
     cleanup(staged.parent);
   }

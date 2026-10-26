@@ -12,8 +12,48 @@ export function readJson(rel) {
   return JSON.parse(readFileSync(P(rel), "utf8"));
 }
 
+// PR-63: a project's models change without a commit. Each repository variable replaces the model of one role and
+// keeps that role's tool: the reviewer, the light reviewer (created from the reviewer when the project has none) and
+// the pool's default builder. The workflows pass the variables in; devos.config.json stays the configured record.
+export const MODEL_VARIABLES = { reviewer: "DEVOS_REVIEWER_MODEL", light: "DEVOS_REVIEWER_LIGHT_MODEL", builder: "DEVOS_BUILDER_MODEL" };
+export const MODEL_ID = /^[A-Za-z0-9][A-Za-z0-9._:/+-]{0,99}$/;
+
+export function withModelOverrides(cfg, env = process.env) {
+  const notes = [];
+  if (!cfg?.agents || typeof cfg.agents !== "object") return { config: cfg, notes };
+  const agents = JSON.parse(JSON.stringify(cfg.agents));
+  const chosen = (role) => {
+    const name = MODEL_VARIABLES[role];
+    const value = String(env[name] ?? "").trim();
+    if (!value) return "";
+    if (!MODEL_ID.test(value)) {
+      notes.push(`${name} is not a model id; the configured model is used`);
+      return "";
+    }
+    return value;
+  };
+  const reviewer = chosen("reviewer");
+  if (reviewer && agents.reviewer) {
+    agents.reviewer.model = reviewer;
+    notes.push(`reviewer model ${reviewer} from DEVOS_REVIEWER_MODEL`);
+  }
+  const light = chosen("light");
+  if (light && agents.reviewer) {
+    if (agents.reviewer_light) agents.reviewer_light.model = light;
+    else agents.reviewer_light = { id: `${agents.reviewer.id}-light`, tool: agents.reviewer.tool, model: light };
+    notes.push(`light reviewer model ${light} from DEVOS_REVIEWER_LIGHT_MODEL`);
+  }
+  const builder = chosen("builder");
+  const item = Array.isArray(agents.pool) ? agents.pool.find((entry) => entry?.default === true) : null;
+  if (builder && item) {
+    item.model = builder;
+    notes.push(`builder ${item.id} model ${builder} from DEVOS_BUILDER_MODEL`);
+  }
+  return { config: { ...cfg, agents }, notes };
+}
+
 export function config() {
-  return readJson("devos.config.json");
+  return withModelOverrides(readJson("devos.config.json")).config;
 }
 
 // ---------- PHASES.md ----------------------------------------------------------------------

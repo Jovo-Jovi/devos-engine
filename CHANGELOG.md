@@ -2,6 +2,17 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
+## 1.1.0 — Unreleased
+
+### Agents
+
+- **Change a model without a commit.** The repository variables `DEVOS_REVIEWER_MODEL`, `DEVOS_REVIEWER_LIGHT_MODEL`
+  and `DEVOS_BUILDER_MODEL` each replace one role's model from the next cycle run, with the same tool; removing one
+  goes back to the model in `devos.config.json` (PR-63). `devos models` shows the three roles and sets or removes them.
+- **A second account at setup.** `devos init` and the guided page offer each agent tool's second account key as an
+  optional key. At a usage limit the run continues on the other account, and waits for the earliest reset when both
+  are limited (PR-29).
+
 ## 1.0.0 — 2026-10-26
 
 The first public release.
