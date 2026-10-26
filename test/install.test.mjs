@@ -57,7 +57,7 @@ test("install.test.mjs installs into an empty folder", () => {
     const result = devos(["install", folder, "--key", "DEMO"]);
     assert.equal(result.status, 0, result.stdout + result.stderr);
     const manifest = JSON.parse(readFileSync(path.join(root, "payload", "manifest.json"), "utf8"));
-    assert.equal(result.stdout.includes(`devos install 0.2.9: ${manifest.files.length} engine files, 4 templates, devos.config.json written`), true, result.stdout);
+    assert.equal(result.stdout.includes(`devos install 0.3.0: ${manifest.files.length} engine files, 4 templates, devos.config.json written`), true, result.stdout);
     const lock = JSON.parse(readFileSync(path.join(folder, "devos", "engine.lock.json"), "utf8"));
     assert.equal(lock.files.length, manifest.files.length);
     assert.deepEqual(
@@ -115,7 +115,7 @@ test("install.test.mjs a second install is refused", () => {
     assert.equal(first.status, 0, first.stdout + first.stderr);
     const second = devos(["install", folder, "--key", "DEMO"]);
     assert.equal(second.status, 1);
-    assert.equal(second.stdout.includes("devos: already installed (engine 0.2.9); run devos upgrade"), true, second.stdout);
+    assert.equal(second.stdout.includes("devos: already installed (engine 0.3.0); run devos upgrade"), true, second.stdout);
   } finally {
     cleanup(folder);
   }

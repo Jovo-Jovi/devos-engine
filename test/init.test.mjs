@@ -18,6 +18,7 @@ const bin = path.join(root, "bin", "devos.mjs");
 const menus = ["", "", "", "", "", "", ""];
 const accepted = [
   "accept",
+  "no",
   ...menus,
   "",
   "",
@@ -78,7 +79,8 @@ test("init.test.mjs approves a blueprint with the defaults", () => {
     assert.equal(answers.deploy, "vercel");
     assert.equal(answers.visibility, "private");
     assert.equal(answers.scope, "mvp");
-    assert.equal(answers.contract_version, "0-draft-3");
+    assert.equal(answers.contract_version, "1");
+    assert.equal(answers.registry_link, false);
     const called = runs(staged.parent);
     assert.equal(called.length, 1);
     assert.equal(called[0].stdin.startsWith("# Blueprint"), true);
@@ -186,10 +188,10 @@ test("init.test.mjs keyFromName matches the key rule", () => {
   for (const name of ["Demo Shop", "42 things!"]) assert.equal(KEY_RE.test(keyFromName(name)), true);
 });
 
-test("init.test.mjs contract version is 0-draft-3", () => {
+test("init.test.mjs contract version is 1", () => {
   const first = readFileSync(path.join(root, "payload", "contract", "CONTRACT.md"), "utf8").split("\n")[0];
-  assert.equal(first.endsWith("version 0-draft-3"), true, first);
-  assert.equal(CONTRACT_VERSION, "0-draft-3");
+  assert.equal(first.endsWith("version 1"), true, first);
+  assert.equal(CONTRACT_VERSION, "1");
 });
 
 test("init.test.mjs prints a JSON blueprint error and how to resume", () => {
@@ -405,7 +407,7 @@ test("init.test.mjs (r) a Claude-only pool lists the Claude key", () => {
 test("init.test.mjs (a) GitHub role menus omit tools the cycle cannot run", () => {
   const staged = stage();
   try {
-    const result = init(staged, "accept\n");
+    const result = init(staged, "accept\nno\n");
     assert.equal(result.status, 1, result.stdout + result.stderr);
     const note = "Muse and GLM join the GitHub roles in a later version.";
     assert.equal(result.stdout.includes(note), true, result.stdout);

@@ -1009,9 +1009,10 @@ jobs:
 
   # PR-61: the only job with the OIDC permission. It runs no agent: it asks the DEV_OS registry to link this
   # repository (its owner approves it once) and sends the events the cycle job noted. It never fails the run.
+  # PR-62: it runs only when the developer answered yes at devos init (DEVOS_REPORTING = on).
   report:
     needs: [resolve, cycle]
-    if: always() && needs.cycle.result != 'skipped' && vars.DEVOS_REPORTING != 'off'
+    if: always() && needs.cycle.result != 'skipped' && vars.DEVOS_REPORTING == 'on'
     runs-on: ubuntu-latest
     timeout-minutes: 3
     continue-on-error: true

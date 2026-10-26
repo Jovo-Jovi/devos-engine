@@ -1,5 +1,5 @@
 {
-  "engine_version": "0.2.9",
+  "engine_version": "0.3.0",
   "source": {
     "repo": "Jovo-Jovi/devos-control-tower",
     "commit": "a49ca6db268b98d6558077bf3e95b8ae759d91b3"
@@ -188,7 +188,7 @@
     {
       "path": ".github/workflows/devos-cycle.yml",
       "stored": "dot-github/workflows/devos-cycle.yml",
-      "sha256": "079f27af9089a338c1927ea2160cd6905207efa2abfaed46738c9b274cfea063",
+      "sha256": "834a214e955828e7cf798fe6f117277f9a6d703be910e42b69a16bb15ccdbff4",
       "owner": "engine"
     },
     {
@@ -254,7 +254,7 @@
     {
       "path": "devos/engine.defaults.json",
       "stored": "devos/engine.defaults.json",
-      "sha256": "650f4e45b8dac5841f7d96794da426c321f3b7b00e7cb9a10f3f1ebce04b0980",
+      "sha256": "a6be2284a811c7f1ce643bed9d951ec9f46d82ea1d0c5c5619b765b216001064",
       "owner": "engine"
     },
     {
@@ -1460,7 +1460,7 @@
     {
       "path": "docs/method/AUTOMATION.md",
       "stored": "docs/method/AUTOMATION.md",
-      "sha256": "fb5b1d3acf3eedea5e646c638203caef521fdf72b379e1ac23433a53ca98bb7b",
+      "sha256": "18d10b681bae570c22e783b044e806436ebfa79a182dc53394df20715c12dbb1",
       "owner": "engine"
     },
     {
@@ -1484,7 +1484,7 @@
     {
       "path": "docs/method/PRECEDENTS.md",
       "stored": "docs/method/PRECEDENTS.md",
-      "sha256": "60359234d54a4006de9be405142aa3959e49b193239ec82676dbce5b58021489",
+      "sha256": "1927a0a2e0482992b5f06ad83855f393a44ce2f9a0f982653aae498d243dece2",
       "owner": "engine"
     },
     {

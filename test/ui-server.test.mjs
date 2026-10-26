@@ -45,6 +45,7 @@ function planFrom(staged) {
   return {
     accepted: true,
     contract_version: CONTRACT_VERSION,
+    link: false,
     agents,
     blueprint: answers.blueprint_agent,
     project: { type: answers.type, stack: answers.stack, modules: answers.modules, scope: answers.scope },

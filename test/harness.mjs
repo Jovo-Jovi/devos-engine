@@ -342,13 +342,14 @@ export function toolRuns(parent) {
   return readFileSync(log, "utf8").trim().split("\n").filter(Boolean).map((line) => JSON.parse(line));
 }
 
-export function flow({ pool = "", blueprint = "", attachment = "", tail = "approve", confirmAnswer = "", type = "", stack = "", modules, scope = "" } = {}) {
+export function flow({ link = "no", pool = "", blueprint = "", attachment = "", tail = "approve", confirmAnswer = "", type = "", stack = "", modules, scope = "" } = {}) {
   const agent = ["", "", "", "", "", "", ""];
   agent[2] = pool;
   agent[5] = blueprint;
   const moduleLines = modules ?? ["database none", "", "auth none", "", "email none", "", ""];
   return [
     "accept",
+    link,
     ...agent,
     type,
     stack,

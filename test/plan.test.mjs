@@ -17,6 +17,7 @@ function validPlan() {
   return {
     accepted: true,
     contract_version: CONTRACT_VERSION,
+    link: false,
     agents: {
       reviewer: { id: "claude-deep", tool: "claude", model: "claude-opus-5-5" },
       reviewer_light: { id: "claude-light", tool: "claude", model: "claude-sonnet-5-5" },

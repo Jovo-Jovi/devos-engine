@@ -20,7 +20,7 @@
   <img alt="Gemini" src="https://img.shields.io/badge/Gemini-reviewer%20%26%20builder-8E75B2?style=flat-square&logo=googlegemini&logoColor=white">
 </p>
 <p align="center">
-  <img alt="Pre-release 0.2.9" src="https://img.shields.io/badge/pre--release-0.2.9-C9A96E?style=flat-square">
+  <img alt="Pre-release 0.3.0" src="https://img.shields.io/badge/pre--release-0.3.0-C9A96E?style=flat-square">
   <img alt="20 stacks" src="https://img.shields.io/badge/stacks-20-0C1628?style=flat-square">
   <img alt="16 project types" src="https://img.shields.io/badge/project%20types-16-0C1628?style=flat-square">
   <img alt="Keys never stored" src="https://img.shields.io/badge/keys-never%20stored-7CC4A8?style=flat-square">
@@ -39,7 +39,7 @@ questions in your browser or your terminal, and an AI agent on your computer wri
 approve it, DEV_OS creates the GitHub repository and starts the automated cycle on GitHub Actions. From then on, a
 builder agent writes each task, a reviewer agent reviews it, and you merge at the gates.
 
-Status: pre-release `0.2.9`. The repository is private and not licensed for use yet (see `LICENSE`).
+Status: pre-release `0.3.0`. The repository is private and not licensed for use yet (see `LICENSE`).
 
 ## Why DEV_OS
 
@@ -332,11 +332,29 @@ it.
   your last project (never a key, a name or a brief).
 - **The project.** Your answers are in `devos/answers.json` and your agents are in `devos/project.json`. The method's
   settings are generated into `devos.config.json`; do not edit that file by hand.
-- **Reporting.** Once the DEV_OS registry has approved your repository's link request, each step of the cycle sends
-  one small event to it: the project key, the run, the task, the step, its status, the time and the evidence file's
-  commit. Never your code, diffs, prompts, file contents, secrets or emails. A separate job of the cycle sends them with
-  GitHub's own identity for the workflow, so no token is stored, and reporting never blocks a run. To turn it off,
-  set the repository variable `DEVOS_REPORTING` to `off`.
+- **The Control Tower.** Nothing is sent anywhere unless you answer yes to the link question at setup. See
+  [The DEV_OS Control Tower (optional)](#the-dev_os-control-tower-optional).
+
+## The DEV_OS Control Tower (optional)
+
+- **What it is.** A private service operated by Jovo-Jovi, separate from the engine. It is not a public dashboard and
+  not a service engine users get: you have no access to it, and nothing in the engine needs it.
+- **Your choice.** Right after you accept the contract, setup asks whether to link the project, with no answer chosen
+  for you.
+  - **No:** nothing is ever sent, and every feature works the same.
+  - **Yes:** the project's cycle asks the Control Tower to link the repository, and its operator approves or declines.
+- **What a link sends.**
+  - The request: the repository and its owner, as GitHub's identity for the workflow proves them, the proposed project
+    key, the engine version and the contract version.
+  - After approval, one event per cycle step: the project key, the run, a sequence number, the phase, the task, the
+    step, its status, the time and the evidence file's path and commit.
+  - Never your code, diffs, prompts, file contents, secrets, keys, emails or token counts.
+- **How.** HTTPS to `https://devos-control-tower.vercel.app`, from the cycle's `report` job only.
+  - That job runs no AI agent, holds no key, and alone gets GitHub's `id-token: write` permission to prove which
+    repository is asking.
+  - No token is stored, and reporting never blocks a run.
+- **Changing your mind.** The repository variable `DEVOS_REPORTING` is `on` when you answered yes. Set it to `off`, or
+  delete it, and nothing more is sent from the next run on.
 
 ## Current limits
 
