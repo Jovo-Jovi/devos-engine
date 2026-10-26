@@ -19,6 +19,7 @@
     "LICENSES.md",
     "THIRD_PARTY_NOTICES.md",
     "CHANGELOG.md",
+    "SECURITY.md",
     "README.md"
   ],
   "scripts": {

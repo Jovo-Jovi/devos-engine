@@ -141,7 +141,7 @@ flowchart LR
    git clone https://github.com/Jovo-Jovi/devos-engine.git
    ```
 
-   The repository is private until the release, so you need access to it.
+   Each release is a tag with a GitHub Release and its ZIP; `CHANGELOG.md` says what changed.
 3. **Start it.** Nothing else to install: the engine has no dependencies.
    - **Windows:** double-click `Start DEV_OS.cmd` in the engine folder.
    - **macOS:** double-click `Start DEV_OS.command`. The first time, right-click it and choose **Open**.
@@ -403,3 +403,7 @@ it.
   [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 - [LICENSES.md](LICENSES.md) maps every file to its licence, and [CHANGELOG.md](CHANGELOG.md) lists what each
   release changed.
+
+## Security
+
+Report a vulnerability privately, never in a public issue: see [SECURITY.md](SECURITY.md).
