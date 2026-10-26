@@ -543,6 +543,12 @@ code, .mono { font-family: var(--mono); font-size: 0.875em; }
 .project-name { font-weight: 500; }
 .project-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .project-path { color: var(--dim); font-size: 13px; overflow-wrap: anywhere; }
+/* E25b: a started project's models, under its row. */
+.project-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.models-slot:not(:empty) { margin-top: 12px; }
+.models { display: flex; flex-direction: column; gap: 12px; }
+.model-change { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 6px; }
+.model-change .select { flex: 1; min-width: 12rem; }
 .finder { display: flex; gap: 10px; }
 .finder .input { flex: 1; min-width: 0; font-family: var(--mono); font-size: 14px; }
 .finder-result:not(:empty) { margin-top: 12px; }

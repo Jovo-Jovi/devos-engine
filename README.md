@@ -274,7 +274,8 @@ it.
   light reviewer and the default builder. `devos models set builder <model>` changes one from the next cycle run, with
   the same tool, and `devos models reset builder` goes back to the configured model. They set the repository variables
   `DEVOS_REVIEWER_MODEL`, `DEVOS_REVIEWER_LIGHT_MODEL` and `DEVOS_BUILDER_MODEL`, which you can also set in GitHub
-  (Settings → Secrets and variables → Actions → Variables).
+  (Settings → Secrets and variables → Actions → Variables). In the guided page (`devos ui`), the **Models** button of a
+  started project does the same, with each tool's model list.
 - **You merge at the gates.** Each pull request carries a comment from the gate doctor that says what still blocks
   the merge. Comment `/devos doctor` to check again.
 - **`SETUP.md`** in the repository lists every setting the project uses. If the setup check reports a missing one,
