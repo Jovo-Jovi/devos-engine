@@ -1,0 +1,9 @@
+# gitleaks (dev/RELEASE.md step 3): the default rules, plus one allowlist. A fence's before.json holds the SHA-256
+# content hashes of repository files that its preconditions check; a path such as "lib/keys.mjs" next to a 64-hex
+# hash reads like a key to the generic rule, but it is never a credential.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "SHA-256 content hashes in fence before-files (dev/fences/*/before.json)"
+paths = ['''^dev/fences/[^/]+/before\.json$''']
