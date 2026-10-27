@@ -52,7 +52,7 @@ test("reviewer-output.test.mjs (a) a Cursor review that finished keeps its PASS,
     assert.match(summary, /Review run: 24 min, \? turns, 385k tokens read \(383k from cache\), 1k written\./);
     assert.equal(/Claude/.test(summary), false, summary);
   } finally {
-    rmSync(dir, { recursive: true, force: true });
+    rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -71,7 +71,7 @@ test("reviewer-output.test.mjs (b) a Cursor review stopped by its limit parks, n
     assert.match(summary, /The reviewer agent \(cursor\) is out of usage on every account it has/);
     assert.equal(/Claude/.test(summary), false, summary);
   } finally {
-    rmSync(dir, { recursive: true, force: true });
+    rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
