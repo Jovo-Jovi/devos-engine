@@ -40,7 +40,7 @@ questions in your browser or your terminal, and an AI agent on your computer wri
 approve it, DEV_OS creates the GitHub repository and starts the automated cycle on GitHub Actions. From then on, a
 builder agent writes each task, a reviewer agent reviews it, and you merge at the gates.
 
-Version `1.2.1`. The engine is under PolyForm Shield 1.0.0 and the files it installs into your project under MIT
+Version `1.3.0`. The engine is under PolyForm Shield 1.0.0 and the files it installs into your project under MIT
 (see [Licence](#licence)).
 
 ## Why DEV_OS
@@ -295,14 +295,17 @@ it.
   project's setup, its version next to this engine's and the latest release, its models and its Control Tower link.
   Opening a project changes nothing in it.
 - **Upgrade and connect from a project's page.** When the project on GitHub is older than this engine, **Upgrade to
-  1.2.1 by pull request** (this engine's version) runs `devos upgrade` for you. Merge the pull request on GitHub, then
+  1.3.0 by pull request** (this engine's version) runs `devos upgrade` for you. Merge the pull request on GitHub, then
   press **Bring this folder up to date**. **Read the contract** shows the Control Tower contract. Once this engine,
   the project and the latest release are the same version, tick the box and press **Connect by pull request**: a pull
   request records your answer, and `DEVOS_REPORTING` turns on. To stop reporting, set `DEVOS_REPORTING` to `off`.
   - **When the link is asked.** A `devos-cycle` run asks the Control Tower to link the repository, and its operator
     approves it once. Merging the link's pull request starts a link run, which builds nothing and only asks; with the
     link on, **Ask the Control Tower now** on the project's page does the same. While a `devos-cycle` run is queued or
-    going, that run asks instead.
+    going, that run asks instead. Once the Control Tower has approved the link, ask once more: that link run sends the
+    project's tasks, done and still to do.
+  - **A new contract version.** A project linked under an older version of the contract shows it on its page: read it
+    and press **Accept by pull request**. The plan is sent only to a project that accepted version 2 or later.
 - **You merge at the gates.** Each pull request carries a comment from the gate doctor that says what still blocks
   the merge. Comment `/devos doctor` to check again.
 - **`SETUP.md`** in the repository lists every setting the project uses. If the setup check reports a missing one,
@@ -390,6 +393,8 @@ it.
     numeric GitHub id from that token, and drops the token.
   - After approval, one event per cycle step: its format version, the project key, the run, a sequence number, the
     phase, the task, the step, its status, the time and the evidence file's path and commit.
+  - After approval, a link run also sends the project's plan with the same fields: one event for each task of
+    `docs/PHASES.md`, finished or still to do, so the Control Tower shows every task and the current phase.
   - Never your code, diffs, prompts, file contents, secrets, keys, emails or token counts.
 - **How.** HTTPS to `https://devos-control-tower.vercel.app`, from the cycle's `report` job only.
   - That job runs no AI agent, holds no key, and alone gets GitHub's `id-token: write` permission to prove which

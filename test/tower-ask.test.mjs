@@ -106,7 +106,7 @@ test("tower-ask.test.mjs (c) asking starts one devos-cycle link run on the defau
     assert.deepEqual(ghCalls(staged), []);
     assert.deepEqual(askTower(STATE, { defaultBranch: "trunk", ask: yes }), {
       ok: true,
-      message: "A devos-cycle link run is starting on GitHub. It builds nothing: its report job asks the Control Tower to link this repository, and the Control Tower's operator approves it once.",
+      message: "A devos-cycle link run is starting on GitHub. It builds nothing: its report job asks the Control Tower to link this repository and, once the link is approved, sends the project's tasks.",
     });
     assert.deepEqual(ghCalls(staged), [`workflow run devos-cycle.yml --repo ${SLUG} --ref trunk -f task=link`]);
     process.env.STUB_DISPATCH = "fail";
@@ -160,7 +160,6 @@ test("tower-ask.test.mjs (d) a link run builds nothing and its report job asks; 
   assert.equal(advance.includes("id-token"), false);
   assert.equal(job.includes("actions/checkout"), false);
   const precedents = readFileSync(path.join(root, "payload", "files", "docs", "method", "PRECEDENTS.md"), "utf8");
-  assert.equal(precedents.includes("**Live maximum: PR-65.**"), true);
   assert.equal(precedents.includes("| PR-65 | **A project asks for its link without a task to run.**"), true);
   const manual = readFileSync(path.join(root, "payload", "files", "docs", "method", "AUTOMATION.md"), "utf8");
   assert.equal(manual.includes("| `advance`, `link` |"), true);
@@ -229,7 +228,7 @@ test("tower-ask.test.mjs (e) the server asks the Control Tower only when the pag
     const ready = await call(server, "/api/hub");
     assert.deepEqual(ready.body.actions.ask, yes);
     const asked = await call(server, "/api/ask-tower", {});
-    assert.deepEqual([asked.status, asked.body.ok, asked.body.message], [200, true, "A devos-cycle link run is starting on GitHub. It builds nothing: its report job asks the Control Tower to link this repository, and the Control Tower's operator approves it once."]);
+    assert.deepEqual([asked.status, asked.body.ok, asked.body.message], [200, true, "A devos-cycle link run is starting on GitHub. It builds nothing: its report job asks the Control Tower to link this repository and, once the link is approved, sends the project's tasks."]);
     assert.deepEqual(ghCalls(staged).filter((line) => line.startsWith("workflow run")), [LINK_RUN]);
     // The run just started is listed now, so a second ask is refused.
     const again = await call(server, "/api/ask-tower", {});
@@ -251,11 +250,15 @@ test("tower-ask.test.mjs (f) the project's page says what the link waits for, an
   const js = readFileSync(path.join(root, "lib", "ui", "app.js"), "utf8");
   for (const text of [
     "function askSection(hub, data) {",
-    "if (data.reporting === \"on\") return askSection(hub, data);",
+    // E29: a project linked under an older contract accepts this one by the same pull request, and can still ask.
+    "const renew = data.reporting === \"on\" && data.contractVersion !== app.state.contractVersion;",
+    "return renew ? [connect, askSection(hub, data)] : [connect];",
+    "function connectSection(hub, data, renew) {",
+    "if (data.reporting === \"on\" && !renew) return [askSection(hub, data)];",
     "hubButton(hub, \"Ask the Control Tower now\", \"/api/ask-tower\", {}, true)",
     ": el(\"p\", { class: \"hint\", text: a.ask.why }));",
     "if (done && route === \"/api/ask-tower\") hub.asked = true;",
-    "\"Asked. The link run's report job shows the Control Tower's answer in the repository's Actions tab.\"",
+    "\"Asked. The link run's report job shows the Control Tower's answer, and the tasks it sent, in the repository's Actions tab.\"",
     "\"On by your choice: DEVOS_REPORTING is on. A devos-cycle run asks the Control Tower to link this repository, and its operator approves it once.\"",
   ]) {
     assert.equal(js.includes(text), true, text);

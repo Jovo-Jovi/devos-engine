@@ -245,7 +245,7 @@ test("report.test.mjs (e) reporting never blocks: every command exits 0, even wi
     assert.equal(run.status, 0, run.stderr);
     assert.match(run.stdout, /devos report: no OIDC token|devos report: the registry did not answer \(network\)/);
     assert.deepEqual(await report(dir, ["bogus"]), [
-      "usage: node scripts/devos/report.mjs note --step <step> --status <status> [--evidence <path@sha>] | note --failed | link | flush [--dry]",
+      "usage: node scripts/devos/report.mjs note --step <step> --status <status> [--evidence <path@sha>] | note --failed | link | flush [--dry] | history [--dry]",
     ]);
     assert.equal(existsSync(path.join(dir, ".devos", "journal.jsonl")), false);
   } finally {

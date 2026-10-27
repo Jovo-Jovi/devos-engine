@@ -1064,11 +1064,14 @@ jobs:
   # repository (its owner approves it once) and sends the events the cycle job noted. It never fails the run.
   # PR-62: it runs only when the developer answered yes at devos init (DEVOS_REPORTING = on).
   # PR-65: a run with every task PASS, or a link run (task=link), asks for the link too; it has no event to send.
+  # PR-66: in a link run (task=link), once the registry has approved the link, it also sends one event for each task of
+  # docs/PHASES.md (history). It checks out only the files report.mjs reads, and in a link run the git history of the
+  # plan and the reviews, read for paths and dates only.
   report:
     needs: [resolve, cycle]
     if: always() && (needs.cycle.result != 'skipped' || needs.resolve.outputs.done == 'true') && vars.DEVOS_REPORTING == 'on'
     runs-on: ubuntu-latest
-    timeout-minutes: 3
+    timeout-minutes: 8
     continue-on-error: true
     permissions:
       id-token: write
@@ -1078,9 +1081,14 @@ jobs:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
+          fetch-depth: ${{ inputs.task == 'link' && '0' || '1' }}
+          filter: blob:none
+          sparse-checkout-cone-mode: false
           sparse-checkout: |
-            scripts/devos
-            devos
+            /scripts/devos/
+            /devos/
+            /devos.config.json
+            /docs/PHASES.md
       - name: The journal of the cycle job
         if: needs.resolve.outputs.done != 'true'
         continue-on-error: true
@@ -1090,10 +1098,13 @@ jobs:
           path: .devos
       - name: devos-report link and send
         continue-on-error: true
-        timeout-minutes: 2
+        timeout-minutes: 7
+        env:
+          LINK_RUN: ${{ inputs.task == 'link' }}
         run: |
           node scripts/devos/report.mjs link
           node scripts/devos/report.mjs flush
+          if [ "$LINK_RUN" = "true" ]; then node scripts/devos/report.mjs history; fi
 
   # Wait out a usage limit inside Actions instead of relying on GitHub's best-effort cron.
   # Claude's session limits reset within about five hours, so a wait up to resume.inline_wait_max_minutes

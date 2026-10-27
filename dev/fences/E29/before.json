@@ -1,0 +1,23 @@
+{
+  "CHANGELOG.md": "16551df2a18f29ecc560c4214bbb57762f009e50e0f0c50b36aa523c00688223",
+  "README.md": "8cf47bdfb266b9acb74fae3ce298ca9939077e71c1b4e450cdb5a06528cf5829",
+  "lib/contract.mjs": "528e11d0b396cf22044268ad3f42b3df9c82a15d9ae49846174efff4418d2b49",
+  "lib/hub.mjs": "2f1fb91e9adce638d1cb4d471835978aee80bba243d6ba97812e9cae27ab7b53",
+  "lib/ui/app.js": "3074aaf5f0444d89776c542f9b83a7ecd4249bc29ab88899eb95f9f4e0443390",
+  "package.json": "64218221b196b69ef7d7cf8400874d51f223d394a6835891290cf2c6684488f9",
+  "payload/contract/CONTRACT.md": "58cf2a0b7205452375c84aba9295ec3a680f4eda39d7dff28eb48136a28dfe81",
+  "payload/files/docs/method/AUTOMATION.md": "67846775d976cfb29f87befd0972dfb3e327c7bb899d421af1ef0797460b3355",
+  "payload/files/docs/method/PRECEDENTS.md": "7c758c85b74b0bf7f1182f66a7699b0845511873296fb432ff6459efca600dc5",
+  "payload/files/dot-github/workflows/devos-cycle.yml": "43405607c144b74ae3d5e28cb8bdad504d5cd5897d2886a2f410ecd90132a60b",
+  "payload/files/scripts/devos/report.mjs": "49a285dd092780d42bf98925ebd35d93ee3ddaa1f1169a522ffb0b4ee4518b46",
+  "test/consent.test.mjs": "c4da9559126e920b650e2b3b0a17e1980697e718d249e7280a8a7d79c70c20e9",
+  "test/hub-actions.test.mjs": "18bb4dabb1be714bd4c012c7749cfd5b0944acecca279236f69ef04962c25ee4",
+  "test/hub.test.mjs": "90245b3bf468b2bae16e25ebe135902e3fe8ee98a969316a3f7cf0a3f48e5c17",
+  "test/init.test.mjs": "f144ff8a0249c0b6cb8f2568b6b54c03a1179aaa17ab2495b4ec23d762f63d8d",
+  "test/install.test.mjs": "60ffe68ded4dd63f8a9cbed99008737ade653ea14b9801c6c7bc7d0a083ad92c",
+  "test/report.test.mjs": "b6e289f89cd73590e61af82bda5c1247efd8b6c20bb0837b25866ee8790a3d7e",
+  "test/tower-ask.test.mjs": "b09bcbc1038a3b66906c909ec3f6714672248a8e655f2375d0b13eaf29c0d164",
+  "test/upgrade.test.mjs": "b2debec2ce0f91dcf4b6b01bfb37de97a339219575f72b7cfd39b7a56b44d5e1",
+  "test/version.test.mjs": "fdcdf8efcb07af8e2619a09b0fa93b048f3cc1cb379f0b22afb9579faf73d37a",
+  "tools/sources.mjs": "96c2926a33fd7c9476888b00fcbd6279484a87038e05bda8c44dee9708fe9acf"
+}

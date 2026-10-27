@@ -91,7 +91,7 @@ test("consent.test.mjs (d) only a yes sets DEVOS_REPORTING to on; a no sets noth
 });
 
 test("consent.test.mjs (e) the page's plan must say yes or no, and no choice is ever remembered for the next project", () => {
-  const plan = { accepted: true, contract_version: "1" };
+  const plan = { accepted: true, contract_version: "2" };
   const errors = validatePlan(plan, []).errors;
   assert.equal(errors.includes("Choose whether to link this project to the DEV_OS Control Tower: yes or no."), true);
   assert.equal(validatePlan({ ...plan, link: false }, []).errors.includes("Choose whether to link this project to the DEV_OS Control Tower: yes or no."), false);

@@ -2,6 +2,20 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
+## 1.3.0 — Unreleased
+
+### The Control Tower
+
+- **A linked project's plan reaches the Control Tower (PR-66).** Once the Control Tower has approved the link, a link
+  run (**Ask the Control Tower now**, or `devos-cycle` with `task=link`) sends one event for each task of
+  `docs/PHASES.md`: `verdict pass` for a finished task, dated by its review's commit, and `intake pass` for a task
+  still to do. The Control Tower then shows every task, what is done and the current phase. The events carry the
+  contract's fields only, and git gives only paths and dates. A second link run on the same plan sends duplicates
+  only, and a long plan goes at 50 events a minute, the rest at the next link run.
+- **Contract version 2.** The contract now says that a link run sends the plan, including tasks finished before the
+  link. The plan goes only to a project that accepted version 2: a project linked under version 1 reads it on its
+  page and presses **Accept by pull request**; once that pull request is merged, a link run sends the plan.
+
 ## 1.2.1 — 2026-10-27
 
 ### Fixed

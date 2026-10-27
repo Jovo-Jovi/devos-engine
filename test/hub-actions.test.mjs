@@ -100,7 +100,9 @@ test("hub-actions.test.mjs (a) each action is allowed only by the page's facts, 
     connect: no(needs),
   });
   const ready = { versions: { project: "1.2.0" } };
-  assert.equal(decide({ ...ready, reporting: "on" }, { github: "1.2.0" }).connect.why, "The link is on: DEVOS_REPORTING is on.");
+  assert.equal(decide({ ...ready, reporting: "on", contractVersion: CONTRACT_VERSION }, { github: "1.2.0" }).connect.why, "The link is on: DEVOS_REPORTING is on.");
+  // E29: a linked project that accepted an older contract may connect again, to accept this one.
+  assert.deepEqual(decide({ ...ready, reporting: "on", contractVersion: "1" }, { github: "1.2.0" }).connect, yes);
   assert.equal(decide({ ...ready, reportingError: "gh could not list the repository's variables" }, { github: "1.2.0" }).connect.why, "gh could not list the repository's variables");
   assert.equal(decide(ready, { github: "1.2.0", pulls: { connect: "https://github.com/devtest/demo-shop/pull/8" } }).connect.why,
     "A link pull request is open: merge it on GitHub. If DEVOS_REPORTING is still off, set it: gh variable set DEVOS_REPORTING --body on --repo devtest/demo-shop");
@@ -320,7 +322,7 @@ test("hub-actions.test.mjs (f) the project's page offers the upgrade, the pull a
     "function towerSection(hub, data) {",
     "`Upgrade to ${v.engine} by pull request`, \"/api/upgrade\"",
     "\"Bring this folder up to date\", \"/api/pull\"",
-    "\"Connect by pull request\", \"/api/connect\", { accept: true, contract: app.state.contractVersion }",
+    "renew ? \"Accept by pull request\" : \"Connect by pull request\", \"/api/connect\", { accept: true, contract: app.state.contractVersion }",
     "markdownDoc(app.state.contract),\n    el(\"label\", { class: \"check\" }, box",
     "connect.disabled = hub.busy || !box.checked;",
     "rel: \"noopener noreferrer\"",

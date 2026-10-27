@@ -1,4 +1,4 @@
-# DEV_OS contract — version 1
+# DEV_OS contract — version 2
 
 ## The DEV_OS Engine and the DEV_OS Control Tower
 
@@ -23,7 +23,9 @@ proposes, the engine version and the version of this contract, together with Git
 workflow run. The Control Tower checks that token, keeps only the repository and its owner's numeric GitHub id from it,
 and drops the token. After approval, each step of the cycle sends one event: its format version, the project key, the
 run id, a sequence number, the phase, the task, the step, its status, the time, and the path and commit of the evidence
-file.
+file. After approval, a link run, which builds nothing, also sends the project's plan as events with the same fields:
+one for each task in `docs/PHASES.md`, marked passed for a task already finished, dated when its review was committed,
+or planned for a task still to do. This includes tasks finished before you linked the project.
 
 Connection and permission: the events go to https://devos-control-tower.vercel.app over HTTPS. They are sent by the
 cycle's `report` job, which runs no AI agent and holds no key. That job alone receives GitHub's `id-token: write`

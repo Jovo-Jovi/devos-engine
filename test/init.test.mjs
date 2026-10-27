@@ -79,7 +79,7 @@ test("init.test.mjs approves a blueprint with the defaults", () => {
     assert.equal(answers.deploy, "vercel");
     assert.equal(answers.visibility, "private");
     assert.equal(answers.scope, "mvp");
-    assert.equal(answers.contract_version, "1");
+    assert.equal(answers.contract_version, "2");
     assert.equal(answers.registry_link, false);
     const called = runs(staged.parent);
     assert.equal(called.length, 1);
@@ -188,10 +188,10 @@ test("init.test.mjs keyFromName matches the key rule", () => {
   for (const name of ["Demo Shop", "42 things!"]) assert.equal(KEY_RE.test(keyFromName(name)), true);
 });
 
-test("init.test.mjs contract version is 1", () => {
+test("init.test.mjs contract version is 2", () => {
   const first = readFileSync(path.join(root, "payload", "contract", "CONTRACT.md"), "utf8").split("\n")[0];
-  assert.equal(first.endsWith("version 1"), true, first);
-  assert.equal(CONTRACT_VERSION, "1");
+  assert.equal(first.endsWith("version 2"), true, first);
+  assert.equal(CONTRACT_VERSION, "2");
 });
 
 test("init.test.mjs prints a JSON blueprint error and how to resume", () => {

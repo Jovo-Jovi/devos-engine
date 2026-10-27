@@ -84,6 +84,7 @@ test("hub.test.mjs (b) the page reads a project's setup, versions and Control To
       reporting: "on",
       reportingError: "",
       registryLink: true,
+      contractVersion: "",
       paused: false,
     });
     // E28: the workflows skip every run while DEVOS_PAUSED is exactly "true".
