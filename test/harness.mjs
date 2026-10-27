@@ -204,8 +204,43 @@ if (args[0] === "api" && /^repos\\/[^/]+\\/[^/]+\\/releases\\/latest$/.test(args
   process.stdout.write(process.env.STUB_LATEST + "\\n");
   process.exit(0);
 }
+// E26b: a project's default branch, its files on GitHub (STUB_REMOTE_LOCK, STUB_REMOTE_ANSWERS), its open pull
+// requests (STUB_PULLS, head to url), and the connect branch, commit and pull request. A write logs its input.
+if (args[0] === "api" && args.includes("--input") && log) {
+  appendFileSync(log, "input " + readFileSync(args[args.indexOf("--input") + 1], "utf8") + "\\n");
+}
+if (args[0] === "api" && /^repos\\/[^/]+\\/[^/]+$/.test(args[1] ?? "") && args.includes(".default_branch")) {
+  if (process.env.STUB_DEFAULT_BRANCH === "missing") process.exit(1);
+  process.stdout.write((process.env.STUB_DEFAULT_BRANCH || "main") + "\\n");
+  process.exit(0);
+}
+if (args[0] === "api" && /^repos\\/[^/]+\\/[^/]+\\/git\\/ref\\/heads\\//.test(args[1] ?? "")) {
+  process.stdout.write("a".repeat(40) + "\\n");
+  process.exit(0);
+}
+if (args[0] === "api" && /^repos\\/[^/]+\\/[^/]+\\/git\\/refs$/.test(args[1] ?? "")) {
+  process.exit(process.env.STUB_REF === "fail" ? 1 : 0);
+}
 if (args[0] === "api" && /^repos\\/[^/]+\\/[^/]+\\/contents\\//.test(args[1] ?? "")) {
-  process.exit(process.env.STUB_CONTENTS === "missing" ? 1 : 0);
+  if (process.env.STUB_CONTENTS === "missing") process.exit(1);
+  if (args.includes("-X")) process.exit(0);
+  const file = args[1].split("/contents/")[1].split("?")[0];
+  const text = file === "devos/engine.lock.json" ? process.env.STUB_REMOTE_LOCK : (file === "devos/answers.json" ? process.env.STUB_REMOTE_ANSWERS : undefined);
+  if (text !== undefined && !args.includes("--jq")) {
+    process.stdout.write(JSON.stringify({ sha: "b".repeat(40), encoding: "base64", content: Buffer.from(text).toString("base64").replace(/(.{60})/g, "$1\\n") }) + "\\n");
+  }
+  process.exit(0);
+}
+if (args[0] === "pr" && args[1] === "list") {
+  const pulls = JSON.parse(process.env.STUB_PULLS || "{}");
+  const head = args[args.indexOf("--head") + 1];
+  if (pulls[head]) process.stdout.write(pulls[head] + "\\n");
+  process.exit(0);
+}
+if (args[0] === "pr" && args[1] === "create") {
+  if (process.env.STUB_PR === "fail") process.exit(1);
+  process.stdout.write("https://github.com/" + args[args.indexOf("--repo") + 1] + "/pull/7\\n");
+  process.exit(0);
 }
 if (args[0] === "repo" && args[1] === "clone") {
   const from = process.env.STUB_CLONE_FROM;

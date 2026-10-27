@@ -277,10 +277,16 @@ it.
   (Settings → Secrets and variables → Actions → Variables). In the guided page (`devos ui`), the **Models** button on
   a project's page does the same, with each tool's model list.
 - **A project's page.** Start DEV_OS, then choose **Current project** after the computer check. Pick a project from
-  your projects folder, give its folder, or paste its GitHub address: your GitHub account (the gh sign-in) must own or
-  administer that repository, and DEV_OS checks that it is a DEV_OS project before it clones it into your projects
-  folder. The page shows the project's setup, its version next to this engine's and the latest release, its models
-  and its Control Tower link. Opening a project changes nothing in it.
+  your projects folder, press **Choose a folder…** to pick its folder in this computer's folder dialog (or paste its
+  path), or paste its GitHub address: your GitHub account (the gh sign-in) must own or administer that repository, and
+  DEV_OS checks that it is a DEV_OS project before it clones it into your projects folder. The page shows the
+  project's setup, its version next to this engine's and the latest release, its models and its Control Tower link.
+  Opening a project changes nothing in it.
+- **Upgrade and connect from a project's page.** When the project on GitHub is older than this engine, **Upgrade to
+  1.2.0 by pull request** (this engine's version) runs `devos upgrade` for you. Merge the pull request on GitHub, then
+  press **Bring this folder up to date**. **Read the contract** shows the Control Tower contract. Once this engine,
+  the project and the latest release are the same version, tick the box and press **Connect by pull request**: a pull
+  request records your answer, and `DEVOS_REPORTING` turns on. To stop reporting, set `DEVOS_REPORTING` to `off`.
 - **You merge at the gates.** Each pull request carries a comment from the gate doctor that says what still blocks
   the merge. Comment `/devos doctor` to check again.
 - **`SETUP.md`** in the repository lists every setting the project uses. If the setup check reports a missing one,

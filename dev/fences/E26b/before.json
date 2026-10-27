@@ -1,0 +1,8 @@
+{
+  "CHANGELOG.md": "c61243927300ddad2f75f075a20ce6f0601a4872a72b674470660ad26659be03",
+  "README.md": "8eff9ecfd0bbcdc1cf1b09086513297c880f02c3a9bd4bc96319a4f2caf3cb02",
+  "lib/hub.mjs": "42beeb073a4fc8fedb9577e0af0f2486bbca7bad3819fefc79a70c556ee23f41",
+  "lib/ui-server.mjs": "3815b1d45e0e5da73cbf754c4b7a398c8ca53d872d836e7a5fa54ff7489f5a94",
+  "lib/ui/app.js": "22380f7cb23e4778e8915a0f4847a89641317230480b291ee0e0e677f5a4ab72",
+  "test/harness.mjs": "04aaef33d63299cf6c39cec6e2a864039a2204161a75afb0e8650b1f9598dbf1"
+}

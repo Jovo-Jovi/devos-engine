@@ -12,6 +12,16 @@ The notable changes of each DEV_OS Engine release. Versions follow [Semantic Ver
   into your projects folder.
 - **A project's page.** It shows the project's setup, its version next to this engine's and the latest release, its
   models (the Models panel) and its Control Tower link. Opening a project changes nothing in it.
+- **Upgrade from the project's page.** When the project on GitHub is older than this engine, **Upgrade to 1.2.0 by
+  pull request** (this engine's version) runs `devos upgrade` in its folder. An engine older than the latest release
+  is told to update first. After you merge the pull request on GitHub, **Bring this folder up to date** pulls it into
+  the folder, fast-forward only.
+- **Choose a folder.** On *Open a current project*, **Choose a folder…** opens this computer's own folder dialog
+  (Windows, macOS, or zenity or kdialog on Linux) and opens the project you pick. Pasting the path still works.
+- **Connect to the Control Tower from the project's page.** It is offered only when this engine, the project on GitHub
+  and the latest release are the same version. The page shows the contract and asks for an explicit yes. Then a pull
+  request records your answer in `devos/answers.json`, and the repository variable `DEVOS_REPORTING` turns on. The
+  folder on your computer is not touched.
 
 ## 1.1.0 — 2026-10-27
 
