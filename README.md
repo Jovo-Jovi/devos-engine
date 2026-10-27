@@ -131,6 +131,8 @@ flowchart LR
 | Optional: a Vercel account | deploys | `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`, which you can set later |
 
 `devos doctor` checks the GitHub CLI for you. `devos agents detect` shows which AI CLIs are installed and signed in.
+[Before you start a project](docs/PROJECT-CHECKLIST.md) lists the rest to prepare: the agents, the project's choices,
+its documents, and the services and keys it needs.
 
 ## Install
 
@@ -165,6 +167,9 @@ flowchart LR
   Linux it is that folder's `bin`. Add it to your PATH, or keep using the commands above.
 
 ## Create a project
+
+**Before you start,** read [Before you start a project](docs/PROJECT-CHECKLIST.md). It lists every decision, piece of
+information, file and key the setup asks for, in the order it asks, with a worksheet to fill in.
 
 **In the browser.** Start DEV_OS as in *Install*. The first screen checks this computer: the engine, the GitHub CLI
 and the AI tools signed in. The page then asks where to create the project and walks you through the steps below.
