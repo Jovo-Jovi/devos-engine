@@ -225,7 +225,8 @@ if (args[0] === "api" && /^repos\\/[^/]+\\/[^/]+\\/contents\\//.test(args[1] ?? 
   if (process.env.STUB_CONTENTS === "missing") process.exit(1);
   if (args.includes("-X")) process.exit(0);
   const file = args[1].split("/contents/")[1].split("?")[0];
-  const text = file === "devos/engine.lock.json" ? process.env.STUB_REMOTE_LOCK : (file === "devos/answers.json" ? process.env.STUB_REMOTE_ANSWERS : undefined);
+  // E26c2: STUB_REMOTE_FILES maps any other path to its text.
+  const text = file === "devos/engine.lock.json" ? process.env.STUB_REMOTE_LOCK : (file === "devos/answers.json" ? process.env.STUB_REMOTE_ANSWERS : JSON.parse(process.env.STUB_REMOTE_FILES || "{}")[file]);
   if (text !== undefined && !args.includes("--jq")) {
     process.stdout.write(JSON.stringify({ sha: "b".repeat(40), encoding: "base64", content: Buffer.from(text).toString("base64").replace(/(.{60})/g, "$1\\n") }) + "\\n");
   }

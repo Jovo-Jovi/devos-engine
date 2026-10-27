@@ -300,8 +300,8 @@ These need no answer now, but they shape the work.
 - **Settings you can change later:**
   - the account each tool starts with, and the switch at a usage limit (`DEVOS_ACCOUNT_SWITCH`);
   - each role's model (`DEVOS_REVIEWER_MODEL`, `DEVOS_REVIEWER_LIGHT_MODEL`, `DEVOS_BUILDER_MODEL`, or `devos models`);
-  - each role's next models at a usage limit: up to 4 more models of its tool, as `fallback_models` in
-    `devos/project.json`;
+  - each role's next models at a usage limit: up to 4 more models of its tool (`devos models fallback`, or **Next
+    models** in the project's Models panel, by pull request);
   - the Control Tower link (`DEVOS_REPORTING`).
 
   The project's `docs/method/AUTOMATION.md` lists every setting.

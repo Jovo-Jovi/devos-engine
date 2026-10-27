@@ -281,11 +281,13 @@ it.
   `DEVOS_REVIEWER_MODEL`, `DEVOS_REVIEWER_LIGHT_MODEL` and `DEVOS_BUILDER_MODEL`, which you can also set in GitHub
   (Settings → Secrets and variables → Actions → Variables). In the guided page (`devos ui`), the **Models** button on
   a project's page does the same, with each tool's model list.
-- **Several models per role.** In `devos/project.json`, an agent of `agents` (the reviewer, the light reviewer or a
-  builder of the pool) may list `"fallback_models": ["<model>", …]`, up to 4 model ids of its own tool. When its model
-  reaches a usage limit on every account, the run moves on to the next one; a model the account cannot use is skipped.
-  The run waits only when no model can run. Then run `node scripts/devos/config.mjs --write` and merge both files by
-  pull request.
+- **Several models per role.** The reviewer, the light reviewer and the default builder can each list up to 4 next
+  models of their own tool (`fallback_models`). When a role's model reaches a usage limit on every account, the run
+  moves on to the next one; a model the account cannot use is skipped. The run waits only when no model can run.
+  Change them with `devos models fallback <reviewer|light|builder> <model>,<model>` (or `none`), or with **Next
+  models** in a project's Models panel: either opens a pull request with `devos/project.json` and the
+  `devos.config.json` made from it, and they apply once you merge it. Another builder of the pool lists them in
+  `devos/project.json` by hand; then run `node scripts/devos/config.mjs --write`.
 - **A project's page.** Start DEV_OS, then choose **Current project** after the computer check. Pick a project from
   your projects folder, press **Choose a folder…** to pick its folder in this computer's folder dialog (or paste its
   path), or paste its GitHub address: your GitHub account (the gh sign-in) must own or administer that repository, and
@@ -351,6 +353,7 @@ it.
 | `devos status` | In a project folder: shows the project and your saved roster. |
 | `devos models [folder]` | In a project: shows the reviewer's, the light reviewer's and the default builder's model, and the repository variable that changes each one. |
 | `devos models set <reviewer\|light\|builder> <model> [folder]` · `devos models reset <role> [folder]` | Sets or removes that variable: the next cycle run uses the model, with the same tool. Nothing is committed. |
+| `devos models fallback <reviewer\|light\|builder> <model,model…\|none> [folder]` | Opens a pull request that sets the role's next models at a usage limit (up to 4, its own tool). They apply once you merge it. |
 | `devos agents detect` | Lists the AI CLIs on this computer, their versions, and whether each one is signed in. |
 | `devos agents show` · `devos agents import <file>` | Shows or saves your default roster of agents (`~/.devos/roster.json`). |
 | `devos profile show` · `devos profile set <key> <value>` | Shows or sets your defaults (`~/.devos/profile.json`): `github_owner`, `visibility`, `default_stack`, `cursor_accounts`, `claude_accounts`. It refuses anything that looks like a key. |

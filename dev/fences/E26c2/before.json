@@ -1,0 +1,11 @@
+{
+  "CHANGELOG.md": "e80655692498af982c06f94c53a87bf1f0251085f285b47437130bd33aadac13",
+  "README.md": "c86352b78480129482cffce5af50c536a29a9350a022f020cdcf0b400d57eaf3",
+  "docs/PROJECT-CHECKLIST.md": "1d58c76eb11dc98508bb35693b53b80d2243edf8bcec9948b825e3c57d2a0aac",
+  "lib/hub.mjs": "633bf14592b6a32f0aab6de9716a4c4f094711275dd6a782f59f56fa8985e298",
+  "lib/models.mjs": "78770f51bac40cda9093b485f9278706cc4cee72eac1016f2a741d99590ef7a4",
+  "lib/ui-server.mjs": "18bdcd0de510038d08576bf4181e9c82dcb57ea17060593097e3f7719bd96fea",
+  "lib/ui/app.js": "2022c4a2eddff2688ebd288572adb95330e93c544dec1378210a24a01e8c8096",
+  "test/harness.mjs": "2e0fef4bda4cec3e1efebb148f01615ef25e9c85bbb8889532ab9bef4d3d41c8",
+  "test/models.test.mjs": "7d6083e354f9169a047da22afd1cabdf0fe6fed5a55815baa81785d46f129c2a"
+}

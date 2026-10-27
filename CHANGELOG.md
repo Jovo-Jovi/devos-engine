@@ -30,6 +30,9 @@ The notable changes of each DEV_OS Engine release. Versions follow [Semantic Ver
   then the next model: a usage limit moves on, a model the account cannot use is skipped at once, and the run waits
   for the earliest reset only when no model can run. No other tool ever takes over. A model variable still replaces
   the first model only.
+- **Edit the next models (PR-64).** `devos models` shows each role's next models, and `devos models fallback <role>
+  <model>,<model>` (or `none`) changes them by pull request. On a project's page, the Models panel's **Next models**
+  orders, removes and adds them, then saves by pull request. Your project folder is not touched.
 
 ## 1.1.0 — 2026-10-27
 
