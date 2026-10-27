@@ -158,6 +158,6 @@ test("ui-models.test.mjs (c) the page offers Models on every started project, an
     assert.equal(js.includes(text), true, text);
   }
   assert.equal((js.match(/projectRow\((project|got)\.folder\)/g) ?? []).length, 2);
-  assert.equal(js.includes("modelsSection(\"\")"), true);
+  assert.equal(js.includes("modelsSection(hub.folder)"), true, "E26a: the Models button sits on the project's page");
   for (const rule of [".project-actions {", ".models-slot:not(:empty) {", ".model-change {"]) assert.equal(css.includes(rule), true, rule);
 });

@@ -40,7 +40,7 @@ questions in your browser or your terminal, and an AI agent on your computer wri
 approve it, DEV_OS creates the GitHub repository and starts the automated cycle on GitHub Actions. From then on, a
 builder agent writes each task, a reviewer agent reviews it, and you merge at the gates.
 
-Version `1.1.0`. The engine is under PolyForm Shield 1.0.0 and the files it installs into your project under MIT
+Version `1.2.0`. The engine is under PolyForm Shield 1.0.0 and the files it installs into your project under MIT
 (see [Licence](#licence)).
 
 ## Why DEV_OS
@@ -274,8 +274,13 @@ it.
   light reviewer and the default builder. `devos models set builder <model>` changes one from the next cycle run, with
   the same tool, and `devos models reset builder` goes back to the configured model. They set the repository variables
   `DEVOS_REVIEWER_MODEL`, `DEVOS_REVIEWER_LIGHT_MODEL` and `DEVOS_BUILDER_MODEL`, which you can also set in GitHub
-  (Settings → Secrets and variables → Actions → Variables). In the guided page (`devos ui`), the **Models** button of a
-  started project does the same, with each tool's model list.
+  (Settings → Secrets and variables → Actions → Variables). In the guided page (`devos ui`), the **Models** button on
+  a project's page does the same, with each tool's model list.
+- **A project's page.** Start DEV_OS, then choose **Current project** after the computer check. Pick a project from
+  your projects folder, give its folder, or paste its GitHub address: your GitHub account (the gh sign-in) must own or
+  administer that repository, and DEV_OS checks that it is a DEV_OS project before it clones it into your projects
+  folder. The page shows the project's setup, its version next to this engine's and the latest release, its models
+  and its Control Tower link. Opening a project changes nothing in it.
 - **You merge at the gates.** Each pull request carries a comment from the gate doctor that says what still blocks
   the merge. Comment `/devos doctor` to check again.
 - **`SETUP.md`** in the repository lists every setting the project uses. If the setup check reports a missing one,
@@ -297,8 +302,9 @@ it.
   - **Or change the blueprint agent**, when the run ended while the blueprint was being written. Pick another tool or
     model, then **Try again with this model**. The documents written so far stay;
   - **Start a new project** and **Close DEV_OS**.
-- **Later.** Start DEV_OS again. The first screen lists your projects in `devos-projects`, each with the step it picks
-  up at. For a project in another folder, paste its full path under **A project in another folder**, then **Find it**.
+- **Later.** Start DEV_OS again and choose **Current project**. The list shows your projects in `devos-projects`, each
+  with the step it picks up at. For a project in another folder, paste its full path under **A project in another
+  folder**, then **Find it**. **Open** shows the project's page, and **Continue this project** finishes its setup.
   While a project continues, the page shows that project's own choices.
 - **A blueprint already written** is not drafted again. When its documents pass the checks, Continue goes straight to
   your review; otherwise the agent fixes only what fails, in its earlier session.

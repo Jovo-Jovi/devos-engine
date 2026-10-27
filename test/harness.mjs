@@ -198,6 +198,23 @@ if (args[0] === "auth" && args[1] === "status") {
   process.stdout.write(\`Token scopes: \${scopes}\\n\`);
   process.exit(0);
 }
+// E26a: the latest DEV_OS release, a repository's DEV_OS lock file, and a clone, each chosen by the test.
+if (args[0] === "api" && /^repos\\/[^/]+\\/[^/]+\\/releases\\/latest$/.test(args[1] ?? "")) {
+  if (!process.env.STUB_LATEST) process.exit(1);
+  process.stdout.write(process.env.STUB_LATEST + "\\n");
+  process.exit(0);
+}
+if (args[0] === "api" && /^repos\\/[^/]+\\/[^/]+\\/contents\\//.test(args[1] ?? "")) {
+  process.exit(process.env.STUB_CONTENTS === "missing" ? 1 : 0);
+}
+if (args[0] === "repo" && args[1] === "clone") {
+  const from = process.env.STUB_CLONE_FROM;
+  if (!from) process.exit(1);
+  const copied = spawnSync("git", ["clone", "-q", from, args[3]], { windowsHide: true });
+  if (copied.status !== 0) process.exit(copied.status ?? 1);
+  spawnSync("git", ["remote", "set-url", "origin", "https://github.com/" + args[2] + ".git"], { cwd: args[3], windowsHide: true });
+  process.exit(0);
+}
 if (args[0] === "api" && args[1] === "user") {
   if (!args.includes("--jq")) {
     process.stdout.write('{"login":"devtest"}\\n');
@@ -226,7 +243,7 @@ if (args[0] === "repo" && args[1] === "view") {
   const mode = process.env.STUB_REPO || "missing";
   if (mode === "missing") process.exit(1);
   const remote = path.resolve(process.cwd(), "..", "remote");
-  process.stdout.write(JSON.stringify({ name: "demo-shop", isEmpty: mode === "empty", url: remote }) + "\\n");
+  process.stdout.write(JSON.stringify({ name: "demo-shop", isEmpty: mode === "empty", url: remote, nameWithOwner: args[2], viewerPermission: process.env.STUB_PERMISSION || "ADMIN" }) + "\\n");
   process.exit(0);
 }
 if (args[0] === "run" && args[1] === "list") {

@@ -1,0 +1,13 @@
+{
+  "CHANGELOG.md": "5ad2e06f694c712b0a278204eb6100488b825c906f0396322fd203329c202a3f",
+  "README.md": "d0b8057676e7bf99c8b8b23550f311d3336fe50615bd0f2c22cf2bd3ed8fb96e",
+  "lib/models.mjs": "1138441ebd60e7140d80481462db9802245be7dc115d50c794d6737b91ff2cc4",
+  "lib/ui-server.mjs": "a18ebc80b5fc16bb1ec138fe5b0fc1bbdd12f01dae1ceeaa303c76bca0bb54f2",
+  "lib/ui/app.js": "7aec34c4383c02aeed28bcb0ff4b399632c3ae9a36f46458b4d8ffeb5c48291f",
+  "package.json": "766d0f9550463c6c8529ca4791840ccd64f90398832be4bc6b0449ec78024d21",
+  "test/harness.mjs": "79b183964199b3e3cb1728ae109367de3d35686ad417c2a83b258597be701ec4",
+  "test/install.test.mjs": "d52a548ffb541e568d857d14cbf6e26fc9891bd795fa9f4b4af2e3e3970b2627",
+  "test/ui-models.test.mjs": "72bba244ab468a5d435da413bd4a5f6020ac2a90fe6e33f12fb15398f0daf6d3",
+  "test/upgrade.test.mjs": "6e5b1093ef5ee83bc4e7ca21247f8cfeaa7b758991dd5c08231dae86344d1bd9",
+  "test/version.test.mjs": "45a2b342b4818d6a6f5c6b3ece23106ac324e94c6690d2dec079345b3b60a811"
+}

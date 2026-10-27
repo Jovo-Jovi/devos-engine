@@ -2,6 +2,17 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
+## 1.2.0 — Unreleased
+
+### The guided page
+
+- **New or current project.** After the computer check, the page asks whether to start a new project or open a
+  current one. A current project comes from your projects folder, from its folder, or from its GitHub address: the gh
+  account must own or administer the repository, and DEV_OS checks that it is a DEV_OS project before it clones it
+  into your projects folder.
+- **A project's page.** It shows the project's setup, its version next to this engine's and the latest release, its
+  models (the Models panel) and its Control Tower link. Opening a project changes nothing in it.
+
 ## 1.1.0 — 2026-10-27
 
 ### Agents
