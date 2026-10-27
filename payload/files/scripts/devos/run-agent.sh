@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
 # One Codex or Gemini run for the cycle (PR-45). The workflow reads .devos/<role>-run.env afterwards.
 # Every run is in the usage record (PR-52): a builder run through the watchdog (DEVOS_USAGE_STAGE), a reviewer run here.
-#   bash scripts/devos/run-agent.sh <builder|reviewer> <codex|gemini> <model> <effort> <prompt-file>
+# PR-64: the models after the prompt file are tried after <model>, each on every account (accounts.sh devos_slots).
+#   bash scripts/devos/run-agent.sh <builder|reviewer> <codex|gemini> <model> <effort> <prompt-file> [<model>…]
 role="${1:-}"
 tool="${2:-}"
 model="${3:-}"
 effort="${4:-}"
 prompt="${5:-}"
+shift 5 2>/dev/null || shift $#
+models="$model $*"
 
 case "$role" in
   builder|reviewer) ;;
@@ -47,19 +50,30 @@ if [ "$tool" = "gemini" ]; then
   cp devos/roles/gemini/settings.json "$HOME/.gemini/settings.json" || exit 1
 fi
 
-node scripts/devos/agent-cli.mjs args --tool "$tool" --role "$role" --model "$model" --effort "$effort" --last "$last" > .devos/agent-args.bin || exit 1
-ARGS=()
-while IFS= read -r -d '' a; do
-  ARGS+=("$a")
-done < .devos/agent-args.bin
+# The CLI's arguments for one model (they name it).
+args_for() {
+  node scripts/devos/agent-cli.mjs args --tool "$tool" --role "$role" --model "$1" --effort "$effort" --last "$last" > .devos/agent-args.bin || return 1
+  ARGS=()
+  while IFS= read -r -d '' a; do
+    ARGS+=("$a")
+  done < .devos/agent-args.bin
+}
 
+slots=$(devos_slots "$tool" $models)
 code=1
 used=""
+used_model="$model"
 restarted=""
+lim=""
+outcome=""
 if [ "$role" = "builder" ]; then
-  for acc in $accounts; do
+  for slot in $slots; do
+    run_model="${slot%@*}"
+    acc="${slot##*@}"
+    args_for "$run_model" || exit 1
     if [ "$tool" = "codex" ]; then devos_use_codex "$acc"; else devos_use_gemini "$acc"; fi
     used="$acc"
+    used_model="$run_model"
     while :; do
       left=$(( budget - ($(date +%s) - T0) / 60 ))
       rm -f "$out" "$out.stream.jsonl" "$last"
@@ -75,33 +89,54 @@ if [ "$role" = "builder" ]; then
     done
     if [ "$code" != "0" ] && devos_limited "$out" "$err" "$code"; then
       mkdir -p .devos/limits
-      cat "$out" "$err" > ".devos/limits/${tool}-${acc}.txt"
-      devos_note "Builder: ${name} account ${acc} reached its usage limit."
-      printf '\n\n**This attempt was started on another %s account, which reached its usage limit.** Its partial changes are already in the working tree (`git status`). Verify them against the fence and continue from them; do not redo or duplicate them.\n' "$name" >> "$prompt"
+      lim=$(devos_limit_file "$tool" "$acc" "$(devos_model_index "$run_model" $models)")
+      cat "$out" "$err" > "$lim"
+      outcome=limited
+      devos_note "Builder: ${name} account ${acc} reached its usage limit on ${run_model}."
+      printf '\n\n**This attempt was started on another %s account or model, which reached its usage limit.** Its partial changes are already in the working tree (`git status`). Verify them against the fence and continue from them; do not redo or duplicate them.\n' "$name" >> "$prompt"
       continue
     fi
+    if [ "$code" != "0" ] && devos_unavailable "$out" "$err" "$code"; then
+      outcome=unavailable
+      devos_note "Builder: ${name} account ${acc} cannot use ${run_model}; trying the next model."
+      continue
+    fi
+    outcome=ran
     break
   done
 else
-  for acc in $accounts; do
+  for slot in $slots; do
+    run_model="${slot%@*}"
+    acc="${slot##*@}"
+    args_for "$run_model" || exit 1
     if [ "$tool" = "codex" ]; then devos_use_codex "$acc"; else devos_use_gemini "$acc"; fi
     used="$acc"
+    used_model="$run_model"
     rm -f "$out" "$out.stream.jsonl" "$last"
     "${ARGS[@]}" "$(cat "$prompt")" > "$out" 2> "$err"
     code=$?
-    node scripts/devos/usage.mjs record --stage reviewer --command "$tool" --model "$model" --out "$out" --code "$code" || true
+    node scripts/devos/usage.mjs record --stage reviewer --command "$tool" --model "$run_model" --out "$out" --code "$code" || true
     if [ "$code" != "0" ] && devos_limited "$out" "$err" "$code"; then
       mkdir -p .devos/limits
-      cat "$out" "$err" > ".devos/limits/${tool}-${acc}.txt"
-      devos_note "Reviewer: ${name} account ${acc} reached its usage limit."
+      lim=$(devos_limit_file "$tool" "$acc" "$(devos_model_index "$run_model" $models)")
+      cat "$out" "$err" > "$lim"
+      outcome=limited
+      devos_note "Reviewer: ${name} account ${acc} reached its usage limit on ${run_model}."
       continue
     fi
+    if [ "$code" != "0" ] && devos_unavailable "$out" "$err" "$code"; then
+      outcome=unavailable
+      devos_note "Reviewer: ${name} account ${acc} cannot use ${run_model}; trying the next model."
+      continue
+    fi
+    outcome=ran
     break
   done
 fi
+devos_settle "$outcome" "$lim" "$err"
 
 node scripts/devos/agent-cli.mjs normalize --tool "$tool" --raw "$out" --last "$last" --out "$out" || exit 1
 node scripts/devos/role-env.mjs restore || exit 1
 trap - EXIT
-printf 'code=%s\nused=%s\naccounts="%s"\n' "$code" "$used" "$accounts" > "$envfile"
+printf 'code=%s\nused=%s\naccounts="%s"\nmodel=%s\n' "$code" "$used" "$accounts" "$used_model" > "$envfile"
 exit 0

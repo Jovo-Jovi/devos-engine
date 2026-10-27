@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # One planning run on the project's reviewer agent (PR-53): an intake plan, a method-fix diagnosis or a revision.
 # The agent and model are the ones the developer chose (agents.reviewer in devos.config.json); no other is used.
-# A usage limit moves the run to the same tool's other account (PR-29); with none left it stops and the caller parks it.
+# A usage limit moves the run to the same tool's other account (PR-29), then to the reviewer's next model (its
+# fallback_models, PR-64); a model the account cannot use moves on at once. With no slot left it stops and the caller
+# parks it.
 #   bash scripts/devos/plan-agent.sh <stage> <prompt> <schema> <out.json> <effort> <max-turns> [prompt after a switch]
 # <out.json> holds {"structured_output": {…} or null, "tool", "model", "limited"} whatever the tool (Claude Code's own
 # fields such as duration_ms and usage are kept). The raw output is <out>.raw and the errors <out>.err.
@@ -23,6 +25,8 @@ answer="$base-answer.json"
 line=$(node scripts/devos/agents.mjs reviewer --mode deep) || exit 1
 tool=$(printf '%s\n' "$line" | sed -n 's/^reviewer_tool=//p')
 model=$(printf '%s\n' "$line" | sed -n 's/^reviewer_model=//p')
+fallback=$(printf '%s\n' "$line" | sed -n 's/^reviewer_fallbacks=//p')
+models="$model $fallback"
 mkdir -p .devos
 rm -f "$out" "$raw" "$err" "$answer"
 : > "$err"
@@ -51,14 +55,24 @@ case "$tool" in
       cp devos/roles/gemini/policy.toml "$HOME/.gemini/policies/devos.toml" || exit 1
       cp devos/roles/gemini/settings.json "$HOME/.gemini/settings.json" || exit 1
     fi
-    node scripts/devos/agent-cli.mjs args --tool "$tool" --role reviewer --model "$model" --effort "$effort" --last "$base.last" > .devos/plan-args.bin || exit 1
-    while IFS= read -r -d '' a; do ARGS+=("$a"); done < .devos/plan-args.bin
     ;;
   *) echo "::error::plan-agent: unknown reviewer tool '$tool'"; exit 1 ;;
 esac
 
+# The CLI's arguments for one model (Codex and Gemini name it in them).
+args_for() {
+  node scripts/devos/agent-cli.mjs args --tool "$tool" --role reviewer --model "$1" --effort "$effort" --last "$base.last" > .devos/plan-args.bin || return 1
+  ARGS=()
+  while IFS= read -r -d '' a; do ARGS+=("$a"); done < .devos/plan-args.bin
+}
+
 first=1
-for acc in $accounts; do
+ran_model="$model"
+for slot in $(devos_slots "$tool" $models); do
+  run_model="${slot%@*}"
+  acc="${slot##*@}"
+  ran_model="$run_model"
+  case "$tool" in codex|gemini) args_for "$run_model" || exit 1 ;; esac
   p="$prompt"
   [ -z "$first" ] && p="$again"
   first=""
@@ -70,7 +84,7 @@ for acc in $accounts; do
   case "$tool" in
     claude)
       devos_use_claude "$acc"
-      claude -p "$(cat "$p")" --model "$model" --effort "$effort" --output-format json \
+      claude -p "$(cat "$p")" --model "$run_model" --effort "$effort" --output-format json \
         --json-schema "$(cat "$schema")" --permission-mode dontAsk --max-turns "$turns" \
         --allowedTools "Read,Glob,Grep,Write,Edit,Bash,Task,Agent,Skill" \
         --disallowedTools "Bash(git push *),Bash(git commit *),Bash(git checkout *),Bash(git reset *),Bash(gh *),Bash(curl *),Bash(wget *)" \
@@ -78,7 +92,7 @@ for acc in $accounts; do
       code=$?; cmd=claude ;;
     cursor)
       devos_use_cursor "$acc"
-      agent -p --force --trust --model "$model" --output-format stream-json "$(cat "$p")" > "$raw" 2> "$err"
+      agent -p --force --trust --model "$run_model" --output-format stream-json "$(cat "$p")" > "$raw" 2> "$err"
       code=$?; cmd=agent ;;
     codex)
       devos_use_codex "$acc"
@@ -89,20 +103,24 @@ for acc in $accounts; do
       "${ARGS[@]}" "$(cat "$p")" > "$raw" 2> "$err"
       code=$?; cmd=gemini ;;
   esac
-  node scripts/devos/usage.mjs record --stage "$stage" --command "$cmd" --model "$model" --out "$raw" --code "$code" || true
-  echo "$stage exit code: $code ($tool account $acc)"
+  node scripts/devos/usage.mjs record --stage "$stage" --command "$cmd" --model "$run_model" --out "$raw" --code "$code" || true
+  echo "$stage exit code: $code ($tool $run_model, account $acc)"
   if devos_limited "$raw" "$err" "$code"; then
     mkdir -p .devos/limits
-    cat "$raw" "$err" > ".devos/limits/$tool-$acc.txt"
-    devos_note "$stage: $tool account $acc reached its usage limit."
+    cat "$raw" "$err" > "$(devos_limit_file "$tool" "$acc" "$(devos_model_index "$run_model" $models)")"
+    devos_note "$stage: $tool account $acc reached its usage limit on $run_model."
     limited=1
+    continue
+  fi
+  if [ "$code" != "0" ] && devos_unavailable "$raw" "$err" "$code"; then
+    devos_note "$stage: $tool account $acc cannot use $run_model; trying the next model."
     continue
   fi
   limited=""
   break
 done
 
-TOOL="$tool" MODEL="$model" LIMITED="$limited" RAW="$raw" ANSWER="$answer" OUT="$out" node -e '
+TOOL="$tool" MODEL="$ran_model" LIMITED="$limited" RAW="$raw" ANSWER="$answer" OUT="$out" node -e '
   const fs = require("fs");
   const read = (f) => { try { return fs.readFileSync(f, "utf8"); } catch { return ""; } };
   let r = {};

@@ -26,6 +26,44 @@ export function looksLikeLimit(...texts) {
   return LIMIT_RE.test(texts.filter(Boolean).map((text) => String(text).slice(-LIMIT_TAIL)).join("\n"));
 }
 
+// PR-64: a run that stopped because the account cannot use the model it was given: an unknown, retired or
+// unlicensed model. The run moves on to the next model (accounts.sh devos_slots) at once; it is not a wait.
+const UNAVAILABLE_RE = new RegExp(
+  [
+    "\\bmodels?\\b[^\\n]{0,80}\\b(not found|not available|unavailable|does not exist|is not supported|not supported|no longer available)",
+    "(unknown|invalid|unsupported) model",
+    "model_not_found",
+    "not_found_error[^\\n]{0,80}\\bmodel",
+    "(do not|don't|does not) have access to (the |this )?model",
+    "no access to (the |this )?model",
+    "cannot use (the |this )?model",
+    "issue with the selected model",
+    "may not exist or you may not have access",
+  ].join("|"),
+  "i",
+);
+
+/** PR-64: only the end of each text is read, as for a limit (PR-54). */
+export function looksUnavailable(...texts) {
+  return UNAVAILABLE_RE.test(texts.filter(Boolean).map((text) => String(text).slice(-LIMIT_TAIL)).join("\n"));
+}
+
+/**
+ * PR-64: did a failed run stop because the account cannot use its model? Only the CLI's own error is read: its error
+ * output and a final result or error object. The transcript is not read, so a tool's output (a compiler's "model does not
+ * exist") never counts, and a watchdog stop (124 out of time, 125 lost connection, 126 stuck) never does either.
+ */
+export function modelUnavailable(out, err, exit = "") {
+  if (["124", "125", "126"].includes(String(exit))) return false;
+  const json = parseJsonLoose(String(out ?? ""));
+  if (json?.structured_output) return false;
+  if (String(exit) === "0" && json && json.is_error !== true) return false;
+  const final = json && (json.type === "result" || json.type === "error" || json.is_error === true || json.error !== undefined)
+    ? [json.result, json.message, json.error === undefined ? "" : JSON.stringify(json.error)].filter(Boolean).join("\n")
+    : "";
+  return looksUnavailable(String(err ?? ""), final);
+}
+
 /** True when a run's final result says it finished: a result object with no error flag and no error subtype. */
 export function finishedRun(json) {
   if (!json || typeof json !== "object") return false;
@@ -82,7 +120,8 @@ export function notBefore(text, defaultMinutes = 60, now = new Date()) {
 }
 
 /** PR-29: with two accounts both out of usage, the run resumes when the FIRST of them resets.
- *  `tool` is cursor or claude; each account that hit a limit left .devos/limits/<tool>-<n>.txt. */
+ *  `tool` is the agent's tool; each account that hit a limit left .devos/limits/<tool>-<n>.txt, and each later model of
+ *  the agent (PR-64) .devos/limits/<tool>-<n>-m<k>.txt, so the earliest reset of every slot is found here. */
 export function earliestNotBefore(tool, currentText, defaultMinutes = 60, now = new Date()) {
   const dir = P(".devos/limits");
   const texts = [currentText];

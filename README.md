@@ -276,6 +276,11 @@ it.
   `DEVOS_REVIEWER_MODEL`, `DEVOS_REVIEWER_LIGHT_MODEL` and `DEVOS_BUILDER_MODEL`, which you can also set in GitHub
   (Settings → Secrets and variables → Actions → Variables). In the guided page (`devos ui`), the **Models** button on
   a project's page does the same, with each tool's model list.
+- **Several models per role.** In `devos/project.json`, an agent of `agents` (the reviewer, the light reviewer or a
+  builder of the pool) may list `"fallback_models": ["<model>", …]`, up to 4 model ids of its own tool. When its model
+  reaches a usage limit on every account, the run moves on to the next one; a model the account cannot use is skipped.
+  The run waits only when no model can run. Then run `node scripts/devos/config.mjs --write` and merge both files by
+  pull request.
 - **A project's page.** Start DEV_OS, then choose **Current project** after the computer check. Pick a project from
   your projects folder, press **Choose a folder…** to pick its folder in this computer's folder dialog (or paste its
   path), or paste its GitHub address: your GitHub account (the gh sign-in) must own or administer that repository, and

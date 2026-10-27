@@ -5,7 +5,7 @@
 //   quota  → Cursor is out of plan usage / rate limited: park the task (devos:quota-wait), same
 //            attempt, no review spent; devos-resume retries it hourly
 //   error  → the builder crashed or produced no output: halt without spending a review
-// Usage: node scripts/devos/builder-status.mjs --task T01 --attempt 1 --exit <code> [--review-only true]
+// Usage: node scripts/devos/builder-status.mjs --task T01 --attempt 1 --exit <code> [--tool cursor] [--review-only true]
 import { writeFileSync, mkdirSync } from "node:fs";
 import { P, emit, config } from "./lib.mjs";
 import { looksLikeLimit, readText, resumeMarker, parseJsonLoose, earliestNotBefore } from "./limits.mjs";
@@ -29,8 +29,9 @@ const failed = exit !== 0 || !out.trim() || json?.is_error === true || json?.sub
 const detail = String(json?.result ?? json?.error ?? "").slice(0, 400) || err.trim().split(/\r?\n/).slice(-5).join(" ").slice(0, 400);
 
 let state = "ok";
-// PR-29: with a second Cursor account, both were tried; resume when the first one resets.
-const waitUntil = earliestNotBefore("cursor", `${out}\n${err}`, config().resume?.default_wait_minutes ?? 60);
+// PR-29, PR-64: every account and model of the builder's tool was tried; resume when the first of them resets.
+const tool = arg("tool", process.env.DEVOS_BUILDER_TOOL || "cursor") || "cursor";
+const waitUntil = earliestNotBefore(tool, `${out}\n${err}`, config().resume?.default_wait_minutes ?? 60);
 let reason = "builder finished";
 // agent-watchdog.sh outcomes:
 // - devos-stall (lost connection, no progress, after one restart): transient → park for a short wait;

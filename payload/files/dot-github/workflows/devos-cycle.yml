@@ -351,6 +351,8 @@ jobs:
           GEMINI_KEY_1: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_KEY_2: ${{ secrets.GEMINI_API_KEY_2 }}
           MODEL: ${{ steps.bm.outputs.model }}
+          # PR-64: the builder's next models (its fallback_models), tried after MODEL on every account.
+          FALLBACKS: ${{ steps.ag.outputs.builder_fallbacks }}
           DEVOS_BUILDER_MODEL: ${{ steps.bm.outputs.model }}
           DEVOS_BUILDER_TOOL: ${{ steps.ag.outputs.builder_tool }}
           DEVOS_BUILDER_EFFORT: ${{ steps.bm.outputs.effort }}
@@ -404,7 +406,7 @@ jobs:
           fi
           # Every active module's local names and throwaway keys (PR-17, PR-26).
           for f in .devos/*.env; do [ -f "$f" ] && { set -a; . "$f"; set +a; }; done
-          echo "builder: $MODEL (effort ${DEVOS_BUILDER_EFFORT}, fast ${DEVOS_BUILDER_FAST}, from ${{ steps.bm.outputs.source }}) ${{ steps.bm.outputs.note }} · $builder_tool accounts in order: $accounts"
+          echo "builder: $MODEL (effort ${DEVOS_BUILDER_EFFORT}, fast ${DEVOS_BUILDER_FAST}, from ${{ steps.bm.outputs.source }}) ${{ steps.bm.outputs.note }} · $builder_tool accounts in order: $accounts${FALLBACKS:+ · then the models $FALLBACKS}"
           node scripts/devos/render-prompt.mjs builder "$TASK" "$ATTEMPT" --out .devos/builder-prompt.md
           if [ "$DEVOS_STAGES" -gt 1 ]; then
             if [ "$DEVOS_STAGE" -lt "$DEVOS_STAGES" ]; then
@@ -423,15 +425,21 @@ jobs:
             done ) &
           hb=$!
           ran_tool="$builder_tool"
+          # PR-64: each model on every account, then the next model (accounts.sh devos_slots). A limit moves to the next
+          # slot; a model the account cannot use moves on at once; with no slot left the attempt is parked until the
+          # earliest reset (builder-status.mjs → quota).
+          first_model="$MODEL"; models="$MODEL $FALLBACKS"; lim=""; outcome=""
           if [ "$builder_tool" = "codex" ] || [ "$builder_tool" = "gemini" ]; then
-            bash scripts/devos/run-agent.sh builder "$builder_tool" "$MODEL" "${{ steps.bm.outputs.effort }}" .devos/builder-prompt.md || exit 1
+            bash scripts/devos/run-agent.sh builder "$builder_tool" "$MODEL" "${{ steps.bm.outputs.effort }}" .devos/builder-prompt.md $FALLBACKS || exit 1
             . .devos/builder-run.env
+            MODEL="${model:-$MODEL}"
           elif [ "$builder_tool" = "claude" ]; then
             node scripts/devos/role-env.mjs swap claude-builder || exit 1
             trap 'node scripts/devos/role-env.mjs restore || exit 1' EXIT
             EFFORT="${{ steps.bm.outputs.effort }}"
             used=""; restarted=""; T0=$(date +%s)
-            for acc in $accounts; do
+            for slot in $(devos_slots claude $models); do
+              MODEL="${slot%@*}"; acc="${slot##*@}"
               devos_use_claude "$acc"; used="$acc"
               while :; do
                 left=$(( 72 - ($(date +%s) - T0) / 60 ))
@@ -447,11 +455,17 @@ jobs:
                 break
               done
               if [ "$code" != "0" ] && devos_limited .devos/builder.json .devos/builder.err "$code"; then
-                mkdir -p .devos/limits; cat .devos/builder.json .devos/builder.err > ".devos/limits/claude-$acc.txt"
-                devos_note "Builder: Claude account $acc reached its usage limit."
-                printf '\n\n**This attempt was started on another Claude account, which reached its usage limit.** Its partial changes are already in the working tree (`git status`). Verify them against the fence and continue from them; do not redo or duplicate them.\n' >> .devos/builder-prompt.md
+                lim=$(devos_limit_file claude "$acc" "$(devos_model_index "$MODEL" $models)"); outcome=limited
+                mkdir -p .devos/limits; cat .devos/builder.json .devos/builder.err > "$lim"
+                devos_note "Builder: Claude account $acc reached its usage limit on $MODEL."
+                printf '\n\n**This attempt was started on another Claude account or model, which reached its usage limit.** Its partial changes are already in the working tree (`git status`). Verify them against the fence and continue from them; do not redo or duplicate them.\n' >> .devos/builder-prompt.md
                 continue
               fi
+              if [ "$code" != "0" ] && devos_unavailable .devos/builder.json .devos/builder.err "$code"; then
+                outcome=unavailable; devos_note "Builder: Claude account $acc cannot use $MODEL; trying the next model."
+                continue
+              fi
+              outcome=ran
               break
             done
           else
@@ -461,7 +475,8 @@ jobs:
           # committed and the park/halt comment always posted. A lost connection that makes no progress
           # for 10 minutes is restarted once in place; a second stall parks the task (builder-status).
           used=""; restarted=""; T0=$(date +%s)
-          for acc in $accounts; do
+          for slot in $(devos_slots cursor $models); do
+            MODEL="${slot%@*}"; acc="${slot##*@}"
             devos_use_cursor "$acc"; used="$acc"
             while :; do
               left=$(( 72 - ($(date +%s) - T0) / 60 ))
@@ -477,19 +492,28 @@ jobs:
               break
             done
             if [ "$code" != "0" ] && devos_limited .devos/builder.json .devos/builder.err "$code"; then
-              mkdir -p .devos/limits; cat .devos/builder.json .devos/builder.err > ".devos/limits/cursor-$acc.txt"
-              devos_note "Builder: Cursor account $acc reached its usage limit."
-              printf '\n\n**This attempt was started on another Cursor account, which reached its usage limit.** Its partial changes are already in the working tree (`git status`). Verify them against the fence and continue from them; do not redo or duplicate them.\n' >> .devos/builder-prompt.md
+              lim=$(devos_limit_file cursor "$acc" "$(devos_model_index "$MODEL" $models)"); outcome=limited
+              mkdir -p .devos/limits; cat .devos/builder.json .devos/builder.err > "$lim"
+              devos_note "Builder: Cursor account $acc reached its usage limit on $MODEL."
+              printf '\n\n**This attempt was started on another Cursor account or model, which reached its usage limit.** Its partial changes are already in the working tree (`git status`). Verify them against the fence and continue from them; do not redo or duplicate them.\n' >> .devos/builder-prompt.md
               continue
             fi
+            if [ "$code" != "0" ] && devos_unavailable .devos/builder.json .devos/builder.err "$code"; then
+              outcome=unavailable; devos_note "Builder: Cursor account $acc cannot use $MODEL; trying the next model."
+              continue
+            fi
+            outcome=ran
             break
           done
           fi
-          # PR-53: a usage limit switches only to the same tool's other account (above); with none left the
-          # attempt is parked until the limit resets (builder-status.mjs → quota). No other agent is used.
+          devos_settle "$outcome" "$lim" .devos/builder.err
+          # PR-53, PR-64: a usage limit moves only to the same tool's other account or next model (above); with none
+          # left the attempt is parked until the earliest reset (builder-status.mjs → quota). No other agent is used.
           node scripts/devos/role-env.mjs restore || exit 1; trap - EXIT
           kill "$hb" 2>/dev/null
-          [ "$used" != "${accounts%% *}" ] && devos_note "Builder: switched to $ran_tool account $used."
+          if [ "$MODEL" != "$first_model" ]; then devos_note "Builder: switched to $ran_tool $MODEL (account $used)."
+          elif [ "$used" != "${accounts%% *}" ]; then devos_note "Builder: switched to $ran_tool account $used."; fi
+          echo "model=$MODEL" >> "$GITHUB_OUTPUT"
           echo "exit=$code" >> "$GITHUB_OUTPUT"
           echo "changed=$(git status --porcelain | wc -l | tr -d ' ')" >> "$GITHUB_OUTPUT"
           echo "account=$used" >> "$GITHUB_OUTPUT"
@@ -530,7 +554,7 @@ jobs:
             if [ "$STS" -gt 1 ]; then
               if [ "${{ steps.builder.outputs.exit }}" = "0" ]; then slice_tag=" (stage $ST of $STS done)"; else slice_tag=" (stage $ST of $STS)$slice_tag"; fi
             fi
-            git commit --allow-empty -m "$TASK a$ATTEMPT: builder (${{ steps.bm.outputs.model }}, effort ${{ steps.bm.outputs.effort }}, fast ${{ steps.bm.outputs.fast }})$slice_tag"
+            git commit --allow-empty -m "$TASK a$ATTEMPT: builder (${{ steps.builder.outputs.model || steps.bm.outputs.model }}, effort ${{ steps.bm.outputs.effort }}, fast ${{ steps.bm.outputs.fast }})$slice_tag"
             bash scripts/devos/sync-main.sh "$REMOTE"
             if ! git push "$REMOTE" "HEAD:refs/heads/$BR" 2> .devos/push.err; then
               cat .devos/push.err
@@ -551,7 +575,7 @@ jobs:
             echo "- Branch: \`$BR\`"
             echo "- HEAD: \`$LOCAL\`"
             echo "- Remote comparison: \`git ls-remote origin refs/heads/$BR\` = \`$REMOTE_SHA\` → $([ "$LOCAL" = "$REMOTE_SHA" ] && echo MATCH || echo MISMATCH)"
-            echo "- Builder: \`${{ steps.bm.outputs.model }}\` (effort ${{ steps.bm.outputs.effort }}, fast ${{ steps.bm.outputs.fast }}, chosen by ${{ steps.bm.outputs.source }}) ${{ steps.bm.outputs.note }}"
+            echo "- Builder: \`${{ steps.builder.outputs.model || steps.bm.outputs.model }}\` (effort ${{ steps.bm.outputs.effort }}, fast ${{ steps.bm.outputs.fast }}, chosen by ${{ steps.bm.outputs.source }}) ${{ steps.bm.outputs.note }}"
             echo "- Builder exit code: ${{ steps.builder.outputs.exit || 'not run (review-only re-run)' }} · ${{ steps.ag.outputs.builder_tool }} account: ${{ steps.builder.outputs.account || 'none' }}"
             [ -f .devos/accounts.md ] && cat .devos/accounts.md
             [ -s .devos/models.txt ] && echo "- Grok ids offered by \`agent models\`: $( (grep -oE 'grok-[A-Za-z0-9.-]+' .devos/models.txt 2>/dev/null || true) | sort -u | tr '\n' ' ')"
@@ -590,7 +614,7 @@ jobs:
 
       - name: Builder outcome (PR-12)
         id: bs
-        run: node scripts/devos/builder-status.mjs --task "$TASK" --attempt "$ATTEMPT" --exit "${{ steps.builder.outputs.exit }}" --review-only "$REVIEW_ONLY" --slice "${{ steps.builder.outputs.slice || 1 }}" --max-slices "${{ steps.builder.outputs.max_slices || 4 }}" --changed "${{ steps.builder.outputs.changed || 0 }}" --stage "${{ steps.builder.outputs.stage || 1 }}" --stages "${{ steps.builder.outputs.stages || 1 }}"
+        run: node scripts/devos/builder-status.mjs --task "$TASK" --attempt "$ATTEMPT" --tool "${{ steps.ag.outputs.builder_tool || 'cursor' }}" --exit "${{ steps.builder.outputs.exit }}" --review-only "$REVIEW_ONLY" --slice "${{ steps.builder.outputs.slice || 1 }}" --max-slices "${{ steps.builder.outputs.max_slices || 4 }}" --changed "${{ steps.builder.outputs.changed || 0 }}" --stage "${{ steps.builder.outputs.stage || 1 }}" --stages "${{ steps.builder.outputs.stages || 1 }}"
 
       - name: Continue (next time slice), park (usage limit) or halt (builder error) without spending a review
         if: steps.bs.outputs.state != 'ok'
@@ -746,7 +770,7 @@ jobs:
           DEVOS_REVIEW_REASONS: ${{ steps.rp.outputs.reasons }}
           DEVOS_REVIEW_CRITICAL: ${{ steps.rp.outputs.critical }}
           VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
-          DEVOS_BUILDER_MODEL: ${{ steps.bm.outputs.model }}
+          DEVOS_BUILDER_MODEL: ${{ steps.builder.outputs.model || steps.bm.outputs.model }}
           DEVOS_BUILDER_TOOL: ${{ steps.ag.outputs.builder_tool }}
           DEVOS_BUILDER_EFFORT: ${{ steps.bm.outputs.effort }}
           DEVOS_BUILDER_FAST: ${{ steps.bm.outputs.fast }}
@@ -761,19 +785,21 @@ jobs:
           rev_line=$(node scripts/devos/agents.mjs reviewer --mode "$DEVOS_REVIEW_MODE")
           rev_tool=$(printf '%s\n' "$rev_line" | sed -n 's/^reviewer_tool=//p')
           rev_model=$(printf '%s\n' "$rev_line" | sed -n 's/^reviewer_model=//p')
-          MODEL="$rev_model"
+          # PR-64: the reviewer's next models (its fallback_models), tried after its model on every account.
+          rev_fallbacks=$(printf '%s\n' "$rev_line" | sed -n 's/^reviewer_fallbacks=//p')
+          MODEL="$rev_model"; first_model="$MODEL"; models="$MODEL $rev_fallbacks"; lim=""; outcome=""
           if [ -n "$METHOD_CHANGE" ]; then
             EFFORT=high; TURNS=120
             echo "method fix: deep review ($rev_tool $MODEL, effort $EFFORT, $TURNS turns)"
           fi
-          echo "reviewer: $rev_tool $MODEL ($DEVOS_REVIEW_MODE review)"
+          echo "reviewer: $rev_tool $MODEL ($DEVOS_REVIEW_MODE review)${rev_fallbacks:+ · then the models $rev_fallbacks}"
           node scripts/devos/render-prompt.mjs reviewer "$TASK" "$ATTEMPT" --out .devos/reviewer-prompt.md
           set +e
           ran_tool="$rev_tool"
           if [ "$rev_tool" = "codex" ] || [ "$rev_tool" = "gemini" ]; then
-            bash scripts/devos/run-agent.sh reviewer "$rev_tool" "$MODEL" "${EFFORT:-high}" .devos/reviewer-prompt.md || exit 1
+            bash scripts/devos/run-agent.sh reviewer "$rev_tool" "$MODEL" "${EFFORT:-high}" .devos/reviewer-prompt.md $rev_fallbacks || exit 1
             . .devos/reviewer-run.env
-            rc=$code
+            rc=$code; MODEL="${model:-$MODEL}"
           elif [ "$rev_tool" = "cursor" ]; then
             node scripts/devos/role-env.mjs swap cursor-reviewer || exit 1
             cp devos/ci/mcp.ci.json .cursor/mcp.json
@@ -786,16 +812,23 @@ jobs:
               done ) &
             hb=$!
             used=""
-            for acc in $accounts; do
+            for slot in $(devos_slots cursor $models); do
+              MODEL="${slot%@*}"; acc="${slot##*@}"
               devos_use_cursor "$acc"; used="$acc"
               agent -p --force --trust --approve-mcps --model "$MODEL" --output-format stream-json "$(cat .devos/reviewer-prompt.md)" > .devos/reviewer.json 2> .devos/reviewer.err
               rc=$?
               node scripts/devos/usage.mjs record --stage reviewer --command agent --model "$MODEL" --out .devos/reviewer.json --code "$rc" || true
               if devos_limited .devos/reviewer.json .devos/reviewer.err "$rc"; then
-                mkdir -p .devos/limits; cat .devos/reviewer.json .devos/reviewer.err > ".devos/limits/cursor-$acc.txt"
-                devos_note "Reviewer: Cursor account $acc reached its usage limit."
+                lim=$(devos_limit_file cursor "$acc" "$(devos_model_index "$MODEL" $models)"); outcome=limited
+                mkdir -p .devos/limits; cat .devos/reviewer.json .devos/reviewer.err > "$lim"
+                devos_note "Reviewer: Cursor account $acc reached its usage limit on $MODEL."
                 continue
               fi
+              if [ "$rc" != "0" ] && devos_unavailable .devos/reviewer.json .devos/reviewer.err "$rc"; then
+                outcome=unavailable; devos_note "Reviewer: Cursor account $acc cannot use $MODEL; trying the next model."
+                continue
+              fi
+              outcome=ran
               break
             done
           else
@@ -808,7 +841,8 @@ jobs:
           hb=$!
           # PR-29: on a usage limit the review starts again at once on the other Claude account.
           used=""
-          for acc in $accounts; do
+          for slot in $(devos_slots claude $models); do
+            MODEL="${slot%@*}"; acc="${slot##*@}"
             devos_use_claude "$acc"; used="$acc"
             claude -p "$(cat .devos/reviewer-prompt.md)" \
               --model "$MODEL" \
@@ -823,20 +857,28 @@ jobs:
             rc=$?
             node scripts/devos/usage.mjs record --stage reviewer --command claude --model "$MODEL" --out .devos/reviewer.json --code "$rc" || true
             if devos_limited .devos/reviewer.json .devos/reviewer.err "$rc"; then
-              mkdir -p .devos/limits; cat .devos/reviewer.json .devos/reviewer.err > ".devos/limits/claude-$acc.txt"
-              devos_note "Reviewer: Claude account $acc reached its usage limit."
+              lim=$(devos_limit_file claude "$acc" "$(devos_model_index "$MODEL" $models)"); outcome=limited
+              mkdir -p .devos/limits; cat .devos/reviewer.json .devos/reviewer.err > "$lim"
+              devos_note "Reviewer: Claude account $acc reached its usage limit on $MODEL."
               continue
             fi
+            if [ "$rc" != "0" ] && devos_unavailable .devos/reviewer.json .devos/reviewer.err "$rc"; then
+              outcome=unavailable; devos_note "Reviewer: Claude account $acc cannot use $MODEL; trying the next model."
+              continue
+            fi
+            outcome=ran
             break
           done
           fi
+          devos_settle "$outcome" "$lim" .devos/reviewer.err
           node scripts/devos/role-env.mjs restore || exit 1; trap - EXIT
           rm -f .cursor/mcp.json
           kill "$hb" 2>/dev/null
-          [ "$used" != "${accounts%% *}" ] && devos_note "Reviewer: switched to $ran_tool account $used."
-          echo "reviewer exit code: $rc ($ran_tool account $used)"
+          if [ "$MODEL" != "$first_model" ]; then devos_note "Reviewer: switched to $ran_tool $MODEL (account $used)."
+          elif [ "$used" != "${accounts%% *}" ]; then devos_note "Reviewer: switched to $ran_tool account $used."; fi
+          echo "reviewer exit code: $rc ($ran_tool $MODEL, account $used)"
           # PR-54: verdict.mjs reads which tool reviewed and how its run exited.
-          printf 'code=%s\nused=%s\naccounts="%s"\ntool=%s\n' "$rc" "$used" "$accounts" "$ran_tool" > .devos/reviewer-run.env
+          printf 'code=%s\nused=%s\naccounts="%s"\ntool=%s\nmodel=%s\n' "$rc" "$used" "$accounts" "$ran_tool" "$MODEL" > .devos/reviewer-run.env
           tail -c 2000 .devos/reviewer.err || true
           # Surface any tool calls the permission layer refused, so a denial is never silent.
           node --input-type=module -e 'import { parseJsonLoose, readText } from "./scripts/devos/limits.mjs"; const r = parseJsonLoose(readText(".devos/reviewer.json")); if (!r) { console.log("reviewer.json: no JSON result"); process.exit(0); } const d = r.permission_denials || []; console.log(`reviewer permission denials: ${d.length}`); for (const x of d.slice(0, 20)) console.log(" -", JSON.stringify(x).slice(0, 300));' 

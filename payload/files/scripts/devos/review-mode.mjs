@@ -5,7 +5,8 @@
 //   deep   risk 3, a gate, or the diff touches a critical path (devos.config.json
 //          reviewer.deep_paths: migrations, auth, headers, workflows…): the reviewer, every changed line
 //          of the critical files, targeted probes only.
-// The agents and models are the ones the developer chose (agents in devos.config.json, PR-53); no fallback model.
+// The agents and models are the ones the developer chose (agents in devos.config.json, PR-53). The model here is the
+// reviewer's first; the cycle tries its fallback_models after it (agents.mjs, accounts.sh devos_slots, PR-64).
 //
 // A retry (attempt 2+) raises the effort one step: the cheap review missed something or the task is hard.
 // Usage: node scripts/devos/review-mode.mjs --task T12 --attempt 1

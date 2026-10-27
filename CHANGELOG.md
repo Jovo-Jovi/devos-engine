@@ -23,6 +23,14 @@ The notable changes of each DEV_OS Engine release. Versions follow [Semantic Ver
   request records your answer in `devos/answers.json`, and the repository variable `DEVOS_REPORTING` turns on. The
   folder on your computer is not touched.
 
+### Agents
+
+- **Several models per role (PR-64).** The reviewer, the light reviewer and each builder in `devos/project.json`
+  `agents` may list `fallback_models`, up to 4 model ids of their own tool. A run tries its model on each account,
+  then the next model: a usage limit moves on, a model the account cannot use is skipped at once, and the run waits
+  for the earliest reset only when no model can run. No other tool ever takes over. A model variable still replaces
+  the first model only.
+
 ## 1.1.0 — 2026-10-27
 
 ### Agents
