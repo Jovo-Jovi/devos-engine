@@ -2,7 +2,7 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
-## 1.2.1 — Unreleased
+## 1.2.1 — 2026-10-27
 
 ### Fixed
 
