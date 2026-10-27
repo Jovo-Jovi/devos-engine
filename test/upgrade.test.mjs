@@ -134,7 +134,7 @@ function fillRelease(dir, mutate) {
   cpSync(path.join(root, "lib"), path.join(dir, "lib"), { recursive: true });
   cpSync(path.join(root, "payload"), path.join(dir, "payload"), { recursive: true });
   const pkgPath = path.join(dir, "package.json");
-  const pkg = readFileSync(pkgPath, "utf8").replace("\"version\": \"1.2.0\"", "\"version\": \"1.2.1\"");
+  const pkg = readFileSync(pkgPath, "utf8").replace("\"version\": \"1.2.1\"", "\"version\": \"1.2.2\"");
   writeFileSync(pkgPath, pkg);
   if (mutate) mutate(dir);
   else {
@@ -220,18 +220,18 @@ test("upgrade.test.mjs publishes one updated file", () => {
       env: staged.env,
     });
     assert.equal(result.status, 0, result.stdout + result.stderr);
-    assert.equal(result.stdout.includes("devos upgrade 1.2.0 to 1.2.1: 1 updated, 0 added, 0 removed, 0 conflicts"), true, result.stdout);
-    assert.deepEqual(names(staged.project, "main..devos/upgrade-1.2.1"), ["devos/engine.lock.json", "devos/prompts/doctor.md"]);
-    assert.equal(git(["log", "-1", "--format=%s", "devos/upgrade-1.2.1"], staged.project).stdout.trim(), "DEV_OS upgrade 1.2.0 to 1.2.1");
-    const branchLock = JSON.parse(git(["show", "devos/upgrade-1.2.1:devos/engine.lock.json"], staged.project).stdout);
-    assert.equal(branchLock.engine_version, "1.2.1");
+    assert.equal(result.stdout.includes("devos upgrade 1.2.1 to 1.2.2: 1 updated, 0 added, 0 removed, 0 conflicts"), true, result.stdout);
+    assert.deepEqual(names(staged.project, "main..devos/upgrade-1.2.2"), ["devos/engine.lock.json", "devos/prompts/doctor.md"]);
+    assert.equal(git(["log", "-1", "--format=%s", "devos/upgrade-1.2.2"], staged.project).stdout.trim(), "DEV_OS upgrade 1.2.1 to 1.2.2");
+    const branchLock = JSON.parse(git(["show", "devos/upgrade-1.2.2:devos/engine.lock.json"], staged.project).stdout);
+    assert.equal(branchLock.engine_version, "1.2.2");
     assert.equal(branchLock.files.length, JSON.parse(readFileSync(path.join(root, "payload", "manifest.json"), "utf8")).files.length);
-    assert.equal(git(["show", "devos/upgrade-1.2.1:devos/prompts/doctor.md"], staged.project).stdout.includes("Upgrade test line."), true);
-    const remote = git(["ls-remote", "origin", "refs/heads/devos/upgrade-1.2.1"], staged.project);
+    assert.equal(git(["show", "devos/upgrade-1.2.2:devos/prompts/doctor.md"], staged.project).stdout.includes("Upgrade test line."), true);
+    const remote = git(["ls-remote", "origin", "refs/heads/devos/upgrade-1.2.2"], staged.project);
     assert.equal(remote.status, 0, remote.stderr);
-    assert.equal(remote.stdout.includes("refs/heads/devos/upgrade-1.2.1"), true, remote.stdout);
+    assert.equal(remote.stdout.includes("refs/heads/devos/upgrade-1.2.2"), true, remote.stdout);
     const seen = readFileSync(staged.log, "utf8");
-    for (const needle of ["pr create", "--base", "main", "DEV_OS upgrade 1.2.0 to 1.2.1"]) {
+    for (const needle of ["pr create", "--base", "main", "DEV_OS upgrade 1.2.1 to 1.2.2"]) {
       assert.equal(seen.includes(needle), true, seen);
     }
     assert.equal(git(["branch", "--show-current"], staged.project).stdout.trim(), "main");
@@ -251,18 +251,18 @@ test("upgrade.test.mjs leaves a local edit as a conflict", () => {
       env: staged.env,
     });
     assert.equal(result.status, 0, result.stdout + result.stderr);
-    assert.equal(result.stdout.includes("devos upgrade 1.2.0 to 1.2.1: 0 updated, 0 added, 0 removed, 1 conflicts"), true, result.stdout);
+    assert.equal(result.stdout.includes("devos upgrade 1.2.1 to 1.2.2: 0 updated, 0 added, 0 removed, 1 conflicts"), true, result.stdout);
     const body = readFileSync(path.join(staged.project, ".git", "devos-upgrade-body.md"), "utf8");
     assert.equal(body.includes("- devos/prompts/doctor.md — edited locally and changed upstream"), true, body);
     const doctor = readFileSync(path.join(staged.project, "devos", "prompts", "doctor.md"), "utf8");
     assert.equal(doctor.includes("Project edit line."), true);
     assert.equal(doctor.includes("Upgrade test line."), false);
-    assert.deepEqual(names(staged.project, "main..devos/upgrade-1.2.1"), ["devos/engine.lock.json"]);
+    assert.deepEqual(names(staged.project, "main..devos/upgrade-1.2.2"), ["devos/engine.lock.json"]);
     const mainLock = JSON.parse(git(["show", "main:devos/engine.lock.json"], staged.project).stdout);
-    const branchLock = JSON.parse(git(["show", "devos/upgrade-1.2.1:devos/engine.lock.json"], staged.project).stdout);
+    const branchLock = JSON.parse(git(["show", "devos/upgrade-1.2.2:devos/engine.lock.json"], staged.project).stdout);
     const doctorSha = (lock) => lock.files.find((file) => file.path === "devos/prompts/doctor.md").sha256;
     assert.equal(doctorSha(branchLock), doctorSha(mainLock));
-    assert.equal(branchLock.engine_version, "1.2.1");
+    assert.equal(branchLock.engine_version, "1.2.2");
     assert.equal(branchLock.files.length, JSON.parse(readFileSync(path.join(root, "payload", "manifest.json"), "utf8")).files.length);
   } finally {
     cleanup(staged.parent);
@@ -299,7 +299,7 @@ test("upgrade.test.mjs reports the same engine as up to date", () => {
     commitAll(project, "install");
     const result = devos(["upgrade"], project);
     assert.equal(result.status, 0, result.stdout + result.stderr);
-    assert.equal(result.stdout.includes("devos: up to date (1.2.0)"), true, result.stdout);
+    assert.equal(result.stdout.includes("devos: up to date (1.2.1)"), true, result.stdout);
     assert.equal(git(["branch", "--list", "devos/*"], project).stdout.trim(), "");
   } finally {
     cleanup(parent);
@@ -317,7 +317,7 @@ test("upgrade.test.mjs --local commits without gh", () => {
       env: staged.env,
     });
     assert.equal(result.status, 0, result.stdout + result.stderr);
-    assert.equal(result.stdout.includes("devos: branch devos/upgrade-1.2.1 committed locally (--local)"), true, result.stdout);
+    assert.equal(result.stdout.includes("devos: branch devos/upgrade-1.2.2 committed locally (--local)"), true, result.stdout);
     assert.equal(existsSync(staged.log), false);
     assert.equal(git(["branch", "--show-current"], staged.project).stdout.trim(), "main");
   } finally {
@@ -348,7 +348,7 @@ test("upgrade.test.mjs rolls back when config generation fails", () => {
     assert.equal(git(["branch", "--show-current"], staged.project).stdout.trim(), "main");
     assert.equal(git(["branch", "--list", "devos/*"], staged.project).stdout.trim(), "");
     const lock = JSON.parse(readFileSync(path.join(staged.project, "devos", "engine.lock.json"), "utf8"));
-    assert.equal(lock.engine_version, "1.2.0");
+    assert.equal(lock.engine_version, "1.2.1");
   } finally {
     cleanup(staged.parent);
   }
@@ -399,9 +399,9 @@ test("upgrade.test.mjs keeps the branch when the push fails", () => {
       env: staged.env,
     });
     assert.equal(result.status, 1, result.stdout + result.stderr);
-    assert.equal(result.stdout.includes("devos: branch devos/upgrade-1.2.1 is committed; push it and open the pull request by hand, or delete it to retry"), true, result.stdout);
+    assert.equal(result.stdout.includes("devos: branch devos/upgrade-1.2.2 is committed; push it and open the pull request by hand, or delete it to retry"), true, result.stdout);
     assert.equal(git(["branch", "--show-current"], staged.project).stdout.trim(), "main");
-    assert.equal(git(["rev-list", "--count", "main..devos/upgrade-1.2.1"], staged.project).stdout.trim(), "1");
+    assert.equal(git(["rev-list", "--count", "main..devos/upgrade-1.2.2"], staged.project).stdout.trim(), "1");
   } finally {
     cleanup(staged.parent);
   }

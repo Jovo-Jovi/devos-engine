@@ -151,7 +151,7 @@ test("hub-actions.test.mjs (c) connecting opens a pull request that records the 
     assert.deepEqual(done, {
       ok: true,
       pull: "https://github.com/devtest/demo-shop/pull/7",
-      message: "DEVOS_REPORTING is on, and the pull request that records your answer is open: merge it on GitHub. The next cycle run asks the Control Tower to link this repository; its operator approves it once.",
+      message: "DEVOS_REPORTING is on, and the pull request that records your answer is open: merge it on GitHub. The merge starts a devos-cycle link run that asks the Control Tower to link this repository, and its operator approves it once.",
     });
     const calls = ghCalls(staged);
     assert.deepEqual(calls.map((line) => line.replace(/ --(input|body-file) .*$/, " --$1 <file>")).filter((line) => !line.startsWith("input ")), [
@@ -171,7 +171,7 @@ test("hub-actions.test.mjs (c) connecting opens a pull request that records the 
     assert.deepEqual(connectProject(state, actions), {
       ok: true,
       pull: "",
-      message: "DEVOS_REPORTING is on. The project already records your answer, so no pull request was needed. The next cycle run asks the Control Tower to link this repository.",
+      message: "DEVOS_REPORTING is on. The project already records your answer, so no pull request was needed. Ask the Control Tower now on this page, or the next cycle run asks.",
     });
     assert.deepEqual(ghCalls(staged), [`api repos/${SLUG}/contents/devos/answers.json?ref=main`, `variable set DEVOS_REPORTING --body on --repo ${SLUG}`]);
 

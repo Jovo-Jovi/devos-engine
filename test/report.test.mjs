@@ -263,8 +263,8 @@ test("report.test.mjs (f) only the report job holds the OIDC permission, and it 
   assert.equal(job.includes("      id-token: write"), true);
   assert.equal(rest.includes("id-token"), false);
   for (const agent of ["run-agent.sh", "agent -p", "claude -p", "codex", "gemini", "secrets."]) assert.equal(job.includes(agent), false, agent);
-  // PR-62: only the developer's yes at devos init turns reporting on.
-  assert.equal(job.includes("    if: always() && needs.cycle.result != 'skipped' && vars.DEVOS_REPORTING == 'on'"), true);
+  // PR-62: only the developer's yes at devos init turns reporting on. PR-65: a run with every task PASS asks too.
+  assert.equal(job.includes("    if: always() && (needs.cycle.result != 'skipped' || needs.resolve.outputs.done == 'true') && vars.DEVOS_REPORTING == 'on'"), true);
   assert.equal(job.includes("    continue-on-error: true"), true);
   assert.equal(job.includes("node scripts/devos/report.mjs link\n          node scripts/devos/report.mjs flush"), true);
   assert.equal(rest.includes("report.mjs link") || rest.includes("report.mjs flush"), false);

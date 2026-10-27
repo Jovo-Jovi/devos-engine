@@ -13,7 +13,7 @@ on:
   workflow_dispatch:
     inputs:
       task:
-        description: "Task id, e.g. T03 (blank = next open task in docs/PHASES.md)"
+        description: "Task id, e.g. T03 (blank = next open task in docs/PHASES.md; link = no task, only ask the DEV_OS registry for the link, PR-65)"
         required: false
         default: ""
       attempt:
@@ -105,8 +105,10 @@ jobs:
           node-version: 22
       - id: t
         run: node scripts/devos/next-task.mjs --task "${{ inputs.task }}" --attempt "${{ inputs.attempt }}" --revision "${{ inputs.revision }}"
-      - if: steps.t.outputs.done == 'true'
+      - if: steps.t.outputs.done == 'true' && inputs.task != 'link'
         run: echo "::notice title=Dev OS::Every task in docs/PHASES.md is PASS. Nothing to run."
+      - if: steps.t.outputs.done == 'true' && inputs.task == 'link'
+        run: echo "::notice title=Dev OS::A link run, with no task. With DEVOS_REPORTING on, the report job asks the DEV_OS registry to link this repository."
       # PR-27: a run that cannot work (no builder or reviewer credential, no runner token for a method
       # fix) does not start. The setup issue gets the steps, and this run resumes when they are done.
       - name: Settings the cycle needs (PR-27)
@@ -1061,9 +1063,10 @@ jobs:
   # PR-61: the only job with the OIDC permission. It runs no agent: it asks the DEV_OS registry to link this
   # repository (its owner approves it once) and sends the events the cycle job noted. It never fails the run.
   # PR-62: it runs only when the developer answered yes at devos init (DEVOS_REPORTING = on).
+  # PR-65: a run with every task PASS, or a link run (task=link), asks for the link too; it has no event to send.
   report:
     needs: [resolve, cycle]
-    if: always() && needs.cycle.result != 'skipped' && vars.DEVOS_REPORTING == 'on'
+    if: always() && (needs.cycle.result != 'skipped' || needs.resolve.outputs.done == 'true') && vars.DEVOS_REPORTING == 'on'
     runs-on: ubuntu-latest
     timeout-minutes: 3
     continue-on-error: true
@@ -1079,6 +1082,7 @@ jobs:
             scripts/devos
             devos
       - name: The journal of the cycle job
+        if: needs.resolve.outputs.done != 'true'
         continue-on-error: true
         uses: actions/download-artifact@v4
         with:

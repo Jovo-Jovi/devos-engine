@@ -283,6 +283,12 @@ if (args[0] === "repo" && args[1] === "view") {
   process.exit(0);
 }
 if (args[0] === "run" && args[1] === "list") {
+  // E28: STUB_RUNS is the run list a test chooses; "fail" makes the call fail.
+  if (process.env.STUB_RUNS === "fail") process.exit(1);
+  if (process.env.STUB_RUNS) {
+    process.stdout.write(process.env.STUB_RUNS + "\\n");
+    process.exit(0);
+  }
   const seen = log ? readFileSync(log, "utf8").split("\\n").some((line) => line.startsWith("workflow run")) : false;
   process.stdout.write(seen ? '[{"databaseId":1}]\\n' : '[]\\n');
   process.exit(0);
@@ -305,6 +311,7 @@ if (args[0] === "variable" && args[1] === "list") {
   process.exit(0);
 }
 if (args[0] === "workflow" && args[1] === "run") {
+  if (process.env.STUB_DISPATCH === "fail") process.exit(1);
   if (process.env.STUB_DISPATCH === "fail-once" && log) {
     const seen = readFileSync(log, "utf8").split("\\n").filter((line) => line.startsWith("workflow run")).length;
     if (seen === 1) process.exit(1);

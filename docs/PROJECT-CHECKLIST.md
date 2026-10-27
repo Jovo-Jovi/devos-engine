@@ -302,7 +302,8 @@ These need no answer now, but they shape the work.
   - each role's model (`DEVOS_REVIEWER_MODEL`, `DEVOS_REVIEWER_LIGHT_MODEL`, `DEVOS_BUILDER_MODEL`, or `devos models`);
   - each role's next models at a usage limit: up to 4 more models of its tool (`devos models fallback`, or **Next
     models** in the project's Models panel, by pull request);
-  - the Control Tower link (`DEVOS_REPORTING`).
+  - the Control Tower link (`DEVOS_REPORTING`, or **Connect** on the project's page; the project asks the Control
+    Tower when the link's pull request is merged, or with **Ask the Control Tower now**).
 
   The project's `docs/method/AUTOMATION.md` lists every setting.
 

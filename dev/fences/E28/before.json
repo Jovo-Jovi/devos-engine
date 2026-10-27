@@ -1,0 +1,22 @@
+{
+  "CHANGELOG.md": "5920be536b4ae7d40d5ddc1e8e5ea876e2be22bd50861ab8474985034efb706a",
+  "README.md": "0b0ea49c92b026850fb460acc0d8e8378fb652893e0aba5ab4c4a0cf4608a487",
+  "docs/PROJECT-CHECKLIST.md": "b9bd2b4cbd1ef9338816c6b6d8dadc5c461e5e2592ea05ff681695e5ba948549",
+  "lib/hub.mjs": "7dc361b5f6429ac4a04a641544925a7c33e24a8b0aee48e73c59836921a0dbb1",
+  "lib/ui-server.mjs": "73324f9376aa7a73a5b3f62d90d773c81e2af5c8119149e0479b861f0d63de21",
+  "lib/ui/app.js": "e16ba33e8ea0e15474827c7ce1b14735692759a9daf5e0642d1a691d3bcb91bb",
+  "package.json": "adc8a694dbe7f3ac23c26a83cc5a31f41cfbea581df7ca1165683286cab50e57",
+  "payload/files/docs/method/AUTOMATION.md": "32bea7a4b82074bf819880d089850b4db8c0b74e56cd9aead1ea4fa966221350",
+  "payload/files/docs/method/PRECEDENTS.md": "29e016ccaa4a5c6d07a837e13a0a248317f2c49cdd4691b4d97a049aadb30659",
+  "payload/files/dot-github/workflows/devos-advance.yml": "bcb5bca5a27474b9ebc59c2c3e5b2583ea3059ebece8dcaedce9533d7c1b00de",
+  "payload/files/dot-github/workflows/devos-cycle.yml": "bf28857387a6cb3d49096a7594610818263b63f1029afadb8a479ac15742ba7e",
+  "payload/files/scripts/devos/next-task.mjs": "a27871c99cfb3282652174bf547c1494d1f1c64c6f2d6509d3b092ee620a9d77",
+  "test/harness.mjs": "4ca3ca26a9d934a85af555a33c2fd466033df0745b376149c0fb7c5b7bf4d6ee",
+  "test/hub-actions.test.mjs": "6865f54d9addae7b2e4137496286ff2285c345d17573483c8df1776ab6cce03c",
+  "test/hub.test.mjs": "a0e0530dde871cd1ba5cfad5c03b7e16dfb81bbf33bbdafd0b4e149096543bd2",
+  "test/install.test.mjs": "c2a0b88b7b6683cef4eeb9332cca5df3fa47d61fbf2d455efc21ae4a7904a0a4",
+  "test/report.test.mjs": "9db010c7fb8c3b0381965696030209a0e8e2731a4b2739a3f7abe23ddd7a8ccb",
+  "test/upgrade.test.mjs": "896313696a888f5fed6792a23efc7af3c2d57c09e450d897fe0e7f47757317ee",
+  "test/version.test.mjs": "d63ec2ae3f5e082f3d6ef429a46b68ae115bb723d482e8dd98379669ce3ed9c3",
+  "tools/sources.mjs": "f8072d26361800d2fb2f58e498f604620d75e2bf640a5e953441555384a3f514"
+}

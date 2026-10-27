@@ -84,7 +84,13 @@ test("hub.test.mjs (b) the page reads a project's setup, versions and Control To
       reporting: "on",
       reportingError: "",
       registryLink: true,
+      paused: false,
     });
+    // E28: the workflows skip every run while DEVOS_PAUSED is exactly "true".
+    process.env.STUB_VARIABLES = JSON.stringify([{ name: "DEVOS_REPORTING", value: "on" }, { name: "DEVOS_PAUSED", value: "true" }]);
+    assert.equal(hubState(staged.project).paused, true);
+    process.env.STUB_VARIABLES = JSON.stringify([{ name: "DEVOS_PAUSED", value: "True" }]);
+    assert.equal(hubState(staged.project).paused, false);
     process.env.STUB_VARIABLES = "[]";
     delete process.env.STUB_LATEST;
     const off = hubState(staged.project);

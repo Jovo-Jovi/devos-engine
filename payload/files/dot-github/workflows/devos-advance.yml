@@ -3,6 +3,8 @@
 # already dispatched the next task itself (this also prevents a double dispatch when DEVOS_PAT is used).
 # PR-28: after a method fix merges, the product task the problem stopped is restarted the way its
 # fence says ("Resume after merge"), then the cycle carries on from there.
+# PR-65: after the merge of the DEV_OS registry link answer (the project page's devos/connect pull request), a link run
+# of devos-cycle (task=link: no task) asks the registry to link the repository from its report job.
 name: devos-advance
 
 on:
@@ -75,3 +77,37 @@ jobs:
             gh workflow run devos-cycle.yml --repo "$REPO" --ref main
           fi
           echo "::notice title=Dev OS::Gate signed by merge of #${{ github.event.pull_request.number }}; next task dispatched."
+
+  # PR-65: no checkout, no agent and no OIDC token here; the cycle's report job alone has that permission. A link run
+  # starts no task. It is dispatched only when no devos-cycle run is queued or going: that run asks, and a dispatch
+  # then could cancel a pending run of the same concurrency group.
+  link:
+    if: >-
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.head.ref == 'devos/connect' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      vars.DEVOS_REPORTING == 'on' &&
+      vars.DEVOS_PAUSED != 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Ask the registry with a devos-cycle link run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          active=$(gh run list --repo "$REPO" --workflow devos-cycle.yml --limit 30 --json status \
+            --jq '[.[] | select(.status != "completed")] | length' 2>/dev/null || echo unknown)
+          case "$active" in
+            0)
+              gh workflow run devos-cycle.yml --repo "$REPO" --ref main -f task=link
+              echo "::notice title=Dev OS::A devos-cycle link run (no task) asks the DEV_OS registry to link this repository."
+              ;;
+            ''|*[!0-9]*)
+              echo "::notice title=Dev OS::gh could not list the devos-cycle runs; the next devos-cycle run asks the DEV_OS registry to link this repository."
+              ;;
+            *)
+              echo "::notice title=Dev OS::A devos-cycle run is queued or going; it asks the DEV_OS registry to link this repository."
+              ;;
+          esac

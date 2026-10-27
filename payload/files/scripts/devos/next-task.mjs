@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Resolve which task the runner works on, and everything the workflow needs to know about it.
-// Usage: node scripts/devos/next-task.mjs [--task T01] [--attempt 1] [--revision true]
+// Usage: node scripts/devos/next-task.mjs [--task T01|link] [--attempt 1] [--revision true]
+// PR-65: --task link is a run with no task: it says done, so only the report job runs and asks for the link.
 import { execFileSync } from "node:child_process";
 import { parsePhases, nextOpenTask, isHumanGate, isMethodRow, reviewerModel, reviewerEffort, taskAfter, config, emit, fail } from "./lib.mjs";
 
@@ -8,6 +9,11 @@ const arg = (name) => {
   const i = process.argv.indexOf(`--${name}`);
   return i >= 0 ? (process.argv[i + 1] ?? "").trim() : "";
 };
+
+if (arg("task").toLowerCase() === "link") {
+  emit({ done: "true", task: "", reason: "a link run: no task; the report job asks the DEV_OS registry for the link" });
+  process.exit(0);
+}
 
 const cfg = config();
 const { rows } = parsePhases();

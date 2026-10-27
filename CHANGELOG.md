@@ -2,6 +2,20 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
+## 1.2.1 — Unreleased
+
+### Fixed
+
+- **The Control Tower link is asked without a task to run (PR-65).** A project whose every task is PASS never asked
+  for its link: only a `devos-cycle` run with a task did. Now a link run (`devos-cycle` with `task=link`) builds
+  nothing and runs only its `report` job, which asks. Merging the project page's link pull request starts one, and
+  with the link on, the page's **Ask the Control Tower now** does the same; neither starts one while a `devos-cycle`
+  run is queued or going. A run with every task PASS asks too, so with `DEVOS_REPORTING` on, every run asks until the
+  link is approved, as task runs did; a declined repository stops asking when `DEVOS_REPORTING` is `off`. The
+  `report` job is still the only one that gets `id-token: write`, and no agent runs.
+- **The project page says what the link waits for.** With `DEVOS_REPORTING` on, the page says "On" and that a cycle
+  run asks the Control Tower, not "Linked": the link exists only once the Control Tower's operator approves it.
+
 ## 1.2.0 — 2026-10-27
 
 ### The guided page
