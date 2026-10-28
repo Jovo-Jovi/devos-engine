@@ -12,9 +12,11 @@ on:
 permissions:
   contents: read
 
+# On main, each commit and each event has a run of its own: the release's Run workflow never cancels the push's run
+# (E32). On a task branch, a newer push still cancels the older run.
 concurrency:
-  group: engine-ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: engine-ci-${{ github.event_name }}-${{ github.ref == 'refs/heads/main' && github.sha || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   test:

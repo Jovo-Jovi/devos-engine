@@ -25,6 +25,8 @@ never into this one.
    - Only secret *names* may appear, never values (on 2026-10-26: 11 hits, every one a name in a workflow or setup file).
    - A real secret is revoked at its provider first, then removed from history.
 4. **Windows.** Actions → `engine-ci` → *Run workflow* on `main`; both test jobs are green.
+   - The push of step 1 has its own `engine-ci` run, and it must be green too.
+   - The two runs no longer cancel each other (E32).
 5. **The first release only:**
    - make the repository public (Settings → General → Change repository visibility);
    - turn on private vulnerability reporting (Settings → Code security), which `SECURITY.md` points to.

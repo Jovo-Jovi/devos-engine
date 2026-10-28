@@ -4,6 +4,11 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+// Git 2.47 and later run their automatic maintenance in the background after a commit or a fetch, and it can still be
+// writing into .git while a test removes its folder (ENOTEMPTY on the CI runner, E32). Every git a test starts, itself
+// or through devos and its stubs, runs without it.
+Object.assign(process.env, { GIT_CONFIG_COUNT: "2", GIT_CONFIG_KEY_0: "maintenance.auto", GIT_CONFIG_VALUE_0: "false", GIT_CONFIG_KEY_1: "gc.auto", GIT_CONFIG_VALUE_1: "0" });
+
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const bin = path.join(root, "bin", "devos.mjs");
 const windows = process.platform === "win32";

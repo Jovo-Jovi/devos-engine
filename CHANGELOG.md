@@ -2,6 +2,14 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
+## 1.3.2 — Unreleased
+
+### Fixes
+
+- **`devos` keeps its last lines.** When its output went to a busy pipe, such as the guided page reading `devos init`,
+  the command could end before that output was written, and the last line, often the one that explains the stop, was
+  lost. It now ends only after its output is written.
+
 ## 1.3.1 — 2026-10-28
 
 ### Storage

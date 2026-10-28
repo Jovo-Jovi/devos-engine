@@ -18,6 +18,21 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const pkg = JSON.parse(readFileSync(path.join(here, "..", "package.json"), "utf8"));
 const args = process.argv.slice(2);
 
+// The command ends only after stdout and stderr have flushed. On a busy pipe, such as the guided page reading devos
+// init, process.exit() dropped the writes still queued, and the last line, often the one that explains the stop, was
+// lost (E32). The timer ends a process whose reader never reads.
+function exitFlushed(code) {
+  let open = 2;
+  const flushed = () => {
+    open -= 1;
+    if (open === 0) process.exit(code);
+  };
+  setTimeout(() => process.exit(code), 10000);
+  process.stdout.write("", flushed);
+  process.stderr.write("", flushed);
+  return new Promise(() => {});
+}
+
 if (args.length === 0) {
   process.stdout.write(`devos ${pkg.version}
 devos doctor
@@ -39,12 +54,12 @@ devos models [folder]
 devos models set <reviewer|light|builder> <model> [folder]
 devos models reset <reviewer|light|builder> [folder]
 `);
-  process.exit(2);
+  await exitFlushed(2);
 }
 
 if (args[0] === "--version" || args[0] === "-v") {
   console.log(`devos ${pkg.version}`);
-  process.exit(0);
+  await exitFlushed(0);
 }
 
 let code = 2;
@@ -66,4 +81,4 @@ else {
   code = 2;
 }
 
-process.exit(code);
+await exitFlushed(code);
