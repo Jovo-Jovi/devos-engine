@@ -2,6 +2,15 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
+## 1.3.1 — Unreleased
+
+### Storage
+
+- **Screenshots are kept 3 days (PR-67).** A cycle run's PNG screenshots, most of its Actions storage, now go to an
+  artifact of their own, `devos-<task>-a<attempt>-screens`, kept 3 days. The repository variable
+  `DEVOS_SCREENS_RETENTION_DAYS` changes that. The rest of the run's evidence and `ci-evidence` are kept as before,
+  without the screenshots. No `.devos/*.env` file is uploaded any more.
+
 ## 1.3.0 — 2026-10-27
 
 ### The Control Tower

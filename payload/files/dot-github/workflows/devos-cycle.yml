@@ -1036,13 +1036,29 @@ jobs:
             { echo "task=$TASK"; echo "attempt=$ATTEMPT"; echo "review_only=true"; echo "not_before=${{ steps.v.outputs.not_before }}"; } >> "$GITHUB_OUTPUT"
           fi
 
+      # PR-67: the screenshots are most of a run's storage and matter only while the attempt is reviewed, so they are an
+      # artifact of their own, kept DEVOS_SCREENS_RETENTION_DAYS days (3 when unset). The rest of the evidence keeps the
+      # repository's retention. No *.env file (a module's local service names and keys) is ever uploaded.
       - name: Keep the evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: devos-${{ needs.resolve.outputs.task }}-a${{ needs.resolve.outputs.attempt }}
-          path: .devos/
+          path: |
+            .devos/
+            !.devos/screens/**/*.png
+            !.devos/**/*.env
           include-hidden-files: true
+          if-no-files-found: ignore
+      - name: Keep the screenshots (PR-67)
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: devos-${{ needs.resolve.outputs.task }}-a${{ needs.resolve.outputs.attempt }}-screens
+          path: .devos/screens/**/*.png
+          include-hidden-files: true
+          retention-days: ${{ vars.DEVOS_SCREENS_RETENTION_DAYS || 3 }}
           if-no-files-found: ignore
 
       - name: Halt on a runner failure

@@ -40,7 +40,7 @@ questions in your browser or your terminal, and an AI agent on your computer wri
 approve it, DEV_OS creates the GitHub repository and starts the automated cycle on GitHub Actions. From then on, a
 builder agent writes each task, a reviewer agent reviews it, and you merge at the gates.
 
-Version `1.3.0`. The engine is under PolyForm Shield 1.0.0 and the files it installs into your project under MIT
+Version `1.3.1`. The engine is under PolyForm Shield 1.0.0 and the files it installs into your project under MIT
 (see [Licence](#licence)).
 
 ## Why DEV_OS
@@ -295,7 +295,7 @@ it.
   project's setup, its version next to this engine's and the latest release, its models and its Control Tower link.
   Opening a project changes nothing in it.
 - **Upgrade and connect from a project's page.** When the project on GitHub is older than this engine, **Upgrade to
-  1.3.0 by pull request** (this engine's version) runs `devos upgrade` for you. Merge the pull request on GitHub, then
+  1.3.1 by pull request** (this engine's version) runs `devos upgrade` for you. Merge the pull request on GitHub, then
   press **Bring this folder up to date**. **Read the contract** shows the Control Tower contract. Once this engine,
   the project and the latest release are the same version, tick the box and press **Connect by pull request**: a pull
   request records your answer, and `DEVOS_REPORTING` turns on. To stop reporting, set `DEVOS_REPORTING` to `off`.

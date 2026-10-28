@@ -281,7 +281,6 @@ test("report-history.test.mjs (e) only a link run's report job sends the history
   assert.equal(report.includes('"--no-renames"'), true);
   assert.equal(/\bgit\b[^\n]*\b(show|cat-file|blame)\b/.test(report), false);
   const precedents = readFileSync(path.join(root, "payload", "files", "docs", "method", "PRECEDENTS.md"), "utf8");
-  assert.equal(precedents.includes("**Live maximum: PR-66.**"), true);
   assert.equal(precedents.includes("| PR-66 | **A linked project's plan and progress reach the registry from a link run.**"), true);
   const manual = readFileSync(path.join(root, "payload", "files", "docs", "method", "AUTOMATION.md"), "utf8");
   assert.equal(manual.includes("`history` (in a link run, PR-66)"), true);

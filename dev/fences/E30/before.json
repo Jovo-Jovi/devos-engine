@@ -1,0 +1,14 @@
+{
+  "CHANGELOG.md": "bd37f358133979ad43ee1271d6417c6e79a3c58abb57b230bf8512c1da2a7c5d",
+  "README.md": "f114f98b746e66ead05f2a4126a43f36a78b2e19b8a64399a6f7f9678ca05861",
+  "package.json": "8b37ff983a19624dd1cb77eeee1cb34d7d31b3b5390b19ba416fd7c051a1dfe0",
+  "payload/files/docs/method/AUTOMATION.md": "a2bf46cb3f0a24fc91775bba126642cf856b273b6fbf67516e16599b00eb161e",
+  "payload/files/docs/method/PRECEDENTS.md": "e688b87870a2ccfcf8caedc2ced8e871de50f258ed34c13839374c8329756ba0",
+  "payload/files/dot-github/workflows/ci.yml": "3ff52c161fcc4ad18433f5ee75a5b3e6c5e7f3e602f5f5bc167f0731083ef5f2",
+  "payload/files/dot-github/workflows/devos-cycle.yml": "1f0d95ff877cddc847705878df6d3a6b707b23ab6a883497216c792d7bd158a1",
+  "test/install.test.mjs": "c0f4ba73815a569352cd642089a5287851d91358bd00c5b89a34e3df238e64ba",
+  "test/report-history.test.mjs": "6793877aa7c9d56ea2dbb57d9841a831c522d775bbbbc3028f54b2fcbd2cdb50",
+  "test/upgrade.test.mjs": "cf4eade2baa859359aadd026320dee68ef361078b7c77e002cb65941cb97f098",
+  "test/version.test.mjs": "ebd50a08be44652e5e107d54a8d3c97d29d4d09266019f525dbed7d460be34f4",
+  "tools/sources.mjs": "843b953a08c5eae1b083a36d6d035ded3c5e127e8529b747328d7ce107361c38"
+}

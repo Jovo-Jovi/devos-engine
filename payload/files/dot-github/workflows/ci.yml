@@ -64,10 +64,14 @@ jobs:
         run: if [ -f package.json ]; then pnpm install --frozen-lockfile; fi
       - name: Guards, typecheck, lint, test, build (+ e2e when present)
         run: node scripts/devos/run-checks.mjs --strict
+      # PR-67: the gate doctor reads ci-results.json and logs/ from this artifact; screenshots and *.env files stay out.
       - if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ci-evidence
-          path: .devos/
+          path: |
+            .devos/
+            !.devos/screens/**/*.png
+            !.devos/**/*.env
           include-hidden-files: true
           if-no-files-found: ignore

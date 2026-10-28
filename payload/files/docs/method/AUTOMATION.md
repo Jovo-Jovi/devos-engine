@@ -218,7 +218,7 @@ A UI fence carries a header line `- Screens: \`<name> <path>[ click|hover|focus 
   `devos-setup-wait`, `devos-setup-missing`, `devos-setup-resumed`, `devos-supervisor` (one per
   incident: key, action, done, AI used, pending proposal), and the builder commit tag
   "(time slice k)" that tells the next run which slice it is.
-- **Run scratch** (`.devos/`, never committed, kept as the run's artifact): prompts, agent output,
+- **Run scratch** (`.devos/`, never committed, kept as the run's artifact, PR-67: its PNG screenshots in an artifact of their own, `<artifact>-screens`, for `DEVOS_SCREENS_RETENTION_DAYS` days; its `*.env` files never uploaded): prompts, agent output,
   `ci-results.json`, `logs/`, `evidence.md`, `screens/` (`motion.json` plus settled, filmstrip and reduced-motion PNGs), `*.env` (module services), `limits/`,
   `accounts.md`, `usage/` (usage lines not yet committed), `setup.md`, `setup-result.json`, `progress-issue` / `progress-comment` (the live
   progress comment), `supervisor/` (facts, incidents, the AI diagnosis), `journal.jsonl`, `report-state.json` and
@@ -257,6 +257,7 @@ A UI fence carries a header line `- Screens: \`<name> <path>[ click|hover|focus 
   | `DEVOS_REVIEWER_MODEL` | a model id · **unset** | the reviewer's model, same tool (deep reviews, planning, revisions); unset: `agents.reviewer` | PR-63 |
   | `DEVOS_REVIEWER_LIGHT_MODEL` | a model id · **unset** | the light reviewer's model, same tool as the reviewer when the project has no light reviewer; unset: `agents.reviewer_light` | PR-63 |
   | `DEVOS_BUILDER_MODEL` | a model id · **unset** | the default builder's model, same tool; a fence that names another pool builder keeps that builder's model | PR-63 |
+  | `DEVOS_SCREENS_RETENTION_DAYS` | days · **3 (not set)** | how long GitHub keeps a cycle run's screenshots (the artifact `devos-<task>-a<attempt>-screens`); the rest of the run's evidence and `ci-evidence` keep the repository's own retention | PR-67 |
   | `DEVOS_REPORTING` | on · **off (not set)** | on: the `report` job links the project to the DEV_OS registry and sends its events; `devos init` sets it only when the developer answers yes; off or not set, nothing is sent | PR-61, PR-62 |
 
   Accounts, in practice: nothing set = both accounts on, starting with 1 · only account 2 =
