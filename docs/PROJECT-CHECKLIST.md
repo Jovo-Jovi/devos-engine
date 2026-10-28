@@ -269,8 +269,9 @@ issue "Dev OS: setup needed" and names it.
   signed in to, or under the owner set with `devos profile set github_owner <owner>`. The repository is named after
   the project's key in lower case (`MY-SHOP` becomes `my-shop`). If a repository of that name already exists, it must
   have no commits.
-- [ ] **Visibility,** as in section 5. In a private repository, the cycle's GitHub Actions minutes count against your
-  GitHub plan.
+- [ ] **Visibility,** as in section 5. In a private repository, the cycle's GitHub Actions minutes and artifact
+  storage count against your GitHub plan; the README's
+  [GitHub minutes and storage](../README.md#github-minutes-and-storage) says how to keep them low.
 - [ ] **Optional: `DEVOS_PAT`**, for method fixes that change a workflow. GitHub's own runner token cannot push a
   change to `.github/workflows/`.
   - Create a fine-grained personal access token with access to this repository only.
@@ -303,9 +304,12 @@ These need no answer now, but they shape the work.
   - each role's next models at a usage limit: up to 4 more models of its tool (`devos models fallback`, or **Next
     models** in the project's Models panel, by pull request);
   - the Control Tower link (`DEVOS_REPORTING`, or **Connect** on the project's page; the project asks the Control
-    Tower when the link's pull request is merged, or with **Ask the Control Tower now**).
+    Tower when the link's pull request is merged, or with **Ask the Control Tower now**);
+  - pausing the project while you are not working on it (`DEVOS_PAUSED`);
+  - how many days a cycle run's screenshots are kept (`DEVOS_SCREENS_RETENTION_DAYS`, 3).
 
-  The project's `docs/method/AUTOMATION.md` lists every setting.
+  The README's [Settings you can change on GitHub](../README.md#settings-you-can-change-on-github) has the everyday
+  ones, and the project's `docs/method/AUTOMATION.md` lists every setting.
 
 ## 10. The worksheet
 
