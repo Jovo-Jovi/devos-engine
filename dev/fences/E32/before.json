@@ -1,0 +1,13 @@
+{
+  ".github/workflows/engine-ci.yml": "1192a380c875e1e0b6d09366da47f5b6ae0a26b61344071bb828d8ce2b3e674d",
+  "bin/devos.mjs": "aa1f5f49d4fd938254add697f061577a8adbfc6d0be0bf38cfc527e1413d0efb",
+  "test/harness.mjs": "4107f33e7e906805dea9d6822ed3d1e419da9e49d9f2cd2e35362be981863706",
+  "test/setup.test.mjs": "2933bac80064cd7e53a4c9fb04673f9d2202e8697c28ac1ca05dad7b4b5f6c07",
+  "package.json": "38ce3f25d736d940892a9f26d0f56cfa9c65bf10d9d7c4d113e11b2a38ad8d7b",
+  "test/version.test.mjs": "f91a8d81982978661a2b1cf913dd7adc3991940154c18eabffad2723d361e5d1",
+  "test/install.test.mjs": "587f96c08d2173470222327f0d68f780cf3ad4a9774c4b5c72b505a95e12db3f",
+  "test/upgrade.test.mjs": "95228270da6f73e1de5493503c7f80e860539405a5a0347ee9741b711504d68f",
+  "README.md": "cf59417a77539baf7223cd737ffaa4d41c4d845cb7e7df0675d16e5ff5618520",
+  "CHANGELOG.md": "4085f7fefc38984b960ef0a586e67c17650f48fef213bcb99846192cc127fcc7",
+  "dev/RELEASE.md": "23029e89ebc889029bb169e7a5833e98e6cd7e95b606cebf518e7e415cb47651"
+}

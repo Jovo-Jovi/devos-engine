@@ -1,0 +1,66 @@
+name: engine-ci
+
+on:
+  push:
+    branches: [main, "task/**"]
+    paths-ignore: ["dev/**"]
+  pull_request:
+    branches: [main]
+    paths-ignore: ["dev/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# On main, each commit and each event has a run of its own: the release's Run workflow never cancels the push's run
+# (E32). On a task branch, a newer push still cancels the older run.
+concurrency:
+  group: engine-ci-${{ github.event_name }}-${{ github.ref == 'refs/heads/main' && github.sha || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  test:
+    name: test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ${{ fromJSON(github.event_name == 'workflow_dispatch' && '["ubuntu-latest", "windows-latest"]' || '["ubuntu-latest"]') }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Tests
+        run: node --test --test-concurrency=4 "test/*.test.mjs"
+
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Manifest
+        run: node tools/build-manifest.mjs --check
+      - name: Specifics
+        shell: bash
+        run: |
+          out=$(node tools/find-specifics.mjs --check)
+          printf '%s\n' "$out"
+          [ "$out" = "0 0" ] || exit 1
+      - name: Install actionlint
+        shell: bash
+        env:
+          ACTIONLINT_VERSION: 1.7.7
+          ACTIONLINT_SHA256: 023070a287cd8cccd71515fedc843f1985bf96c436b7effaecce67290e7e0757
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/actionlint.tar.gz" "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          echo "${ACTIONLINT_SHA256}  $RUNNER_TEMP/actionlint.tar.gz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/actionlint.tar.gz" -C "$RUNNER_TEMP" actionlint
+      - name: Lint workflows
+        shell: bash
+        run: |
+          "$RUNNER_TEMP/actionlint" -color -shellcheck= -pyflakes= payload/files/dot-github/workflows/*.yml .github/workflows/*.yml
