@@ -347,6 +347,47 @@ it.
 - **When the blueprint or a setup step fails,** the message names the cause: for example a usage limit, a trust
   prompt, a model the tool or your plan does not offer, or a GitHub step. Fix it, then continue.
 
+## Settings you can change on GitHub
+
+Each project reads these repository variables at the start of every run. Set them on GitHub (the repository →
+Settings → Secrets and variables → Actions → **Variables**), or with
+`gh variable set <NAME> --body <value> --repo <owner>/<repo>`. A variable that is not set takes its default, and a
+change applies from the next run. The project's `docs/method/AUTOMATION.md` lists every one (section 8).
+
+| Variable | Default | What it does |
+|---|---|---|
+| `DEVOS_PAUSED` | `false` | `true` stops every `devos-*` workflow, schedules included; `ci` still checks each push to `main`. Use it for a project you are not working on. |
+| `DEVOS_SUPERVISOR` | `on` | `off` stops the supervisor only; the cycle keeps running. |
+| `DEVOS_HEAVY` | `notify` | `hold`: a heavy run waits until you comment `/devos go`. |
+| `DEVOS_CURSOR_ACCOUNT`, `DEVOS_CLAUDE_ACCOUNT`, `DEVOS_CODEX_ACCOUNT`, `DEVOS_GEMINI_ACCOUNT` | `1` | The account, 1 or 2, each tool starts with. Account 2 needs its `_2` key. |
+| `DEVOS_ACCOUNT_SWITCH` | `auto` | At a usage limit, `auto` goes on with the other account; `off` keeps to the one chosen. |
+| `DEVOS_REVIEWER_MODEL`, `DEVOS_REVIEWER_LIGHT_MODEL`, `DEVOS_BUILDER_MODEL` | not set | A role's model, with the same tool (`devos models`). Not set: the configured model. |
+| `DEVOS_SCREENS_RETENTION_DAYS` | `3` | How many days GitHub keeps a cycle run's screenshots. |
+| `DEVOS_REPORTING` | not set (off) | `on` links the project to the Control Tower: your answer at setup. |
+| `DEVOS_VERCEL`, `DEVOS_SUPABASE`, `DEVOS_R2`, `DEVOS_FIREBASE` | not set | `true` turns on the deploy and that module's steps. Setup sets the ones you chose. |
+| `DEVOS_PREVIEW_DB` | not set | `true`: with the database module, each preview gets its own database. |
+
+## GitHub minutes and storage
+
+- **Public or private.** GitHub Actions runs public repositories at no cost. A private repository uses your GitHub
+  plan's monthly minutes and its artifact storage: on GitHub Free, 2,000 minutes and 0.5 GB a month. When they run
+  out, GitHub stops the private repository's workflows until the month resets, or bills the extra if your account has
+  a payment method. See [How use of GitHub Actions is
+  measured](https://docs.github.com/en/billing/concepts/product-billing/github-actions) for your plan.
+- **What uses them.**
+  - Minutes: each task's builder and reviewer runs, often 30 minutes or more each; `ci` on every push; and the
+    supervisor and resume schedules.
+  - Storage: the evidence each run uploads. A cycle run's screenshots are most of it.
+- **Keep them low.**
+  - Pause a project you are not working on: `gh variable set DEVOS_PAUSED --body true --repo <owner>/<repo>`, and
+    `false` to go on.
+  - Screenshots are kept 3 days (`DEVOS_SCREENS_RETENTION_DAYS`). The rest of a run's evidence follows the
+    repository's **Artifact and log retention** (Settings → Actions → General), 90 days unless you change it.
+  - Old artifacts can be deleted from a run's page in the **Actions** tab, or with
+    `gh api -X DELETE repos/<owner>/<repo>/actions/artifacts/<id>`.
+  - Your usage is on GitHub's Settings → Billing → Usage. Storage is counted by the hour over the month, so deleting
+    artifacts stops more usage but does not lower what the month has already used.
+
 ## Commands
 
 | Command | What it does |
