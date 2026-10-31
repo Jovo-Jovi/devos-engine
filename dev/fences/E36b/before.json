@@ -1,0 +1,8 @@
+{
+  "lib/adopt.mjs": "c47606408daf3f0eb1494fa8080ea7949df39aed1a340e0e1b88f44aade9aa9b",
+  "bin/devos.mjs": "97263bc060d0d2ade6b911b7ca894abadb46c7dd56d5682a889eaeec6d8c37e1",
+  "test/harness.mjs": "a20cb9388806780a8f9af70a37b284845537acb0cf1601f3bd08c597fd201884",
+  "test/adopt.test.mjs": "add6c9efe7ba13af92798ac3a278169b58e520b3983604f8510e3d01e6273b9b",
+  "README.md": "c76484b9d61d5241496baf12477d4fbadbf32f889146faa1e8c47be1cff95913",
+  "CHANGELOG.md": "b3de5e7c4cfb47b3fdf74b7348ca82a82ae27006940374c5fc6d298ade428a69"
+}

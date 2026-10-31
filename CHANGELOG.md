@@ -25,7 +25,21 @@ The notable changes of each DEV_OS Engine release. Versions follow [Semantic Ver
     out environment files other than an example one, and private keys: the tool sends what it reads to its
     provider. The project's HEAD and status are checked unchanged after every round.
   - **Your answer.** Type `yes` to keep the brief, or write what to change and the tool revises it. `--agent`
-    chooses the tool. Nothing is added to the project yet; that is the next step.
+    chooses the tool. It then asks whether to add DEV_OS now; `no` keeps the brief for `devos adopt --install`.
+- **`devos adopt --install [folder]` adds DEV_OS on a branch.** From the brief you confirmed for this commit:
+  - **Where.** A new branch `devos/adopt`, made in a worktree in `~/.devos/adopt/`, in one commit. Your checkout
+    stays on `main`, unchanged.
+  - **The documents.** Your AI tool writes DEV_OS's documents from the brief: what exists as the baseline of the
+    scope, the open work as the phases, and `T01` to make DEV_OS's checks run on your code. If it changes your
+    code, your own documents or an engine file, or commits, DEV_OS stops and removes the branch. So does Ctrl-C.
+  - **Beside your files.** Your CI, `.gitignore` and `CLAUDE.md` are kept, with DEV_OS's beside them or after them.
+    A file of yours with one of DEV_OS's names stops it before the brief, and so does an older copy of DEV_OS,
+    which a later version adopts.
+  - **The baseline.** The guards' findings on your code as it is go to `devos/baseline.json`, and every guard must
+    pass before the commit.
+  - **The commit.** It holds only what was checked: your git hooks do not run on it. DEV_OS's files are committed
+    even where your `.gitignore` leaves them out, and devos names them.
+  - It needs a default branch named `main`. Pushing the branch and opening its pull request come next.
 - **The code a project already has gets a baseline (PR-68).** The guards pass what `devos/baseline.json` records:
   the findings of `naming`, `design`, `i18n`, `literals` and `imports` on the code that existed when DEV_OS was
   added, matched by file, rule and line text. New or changed code must pass. `secrets`, `boundary`, `data` and

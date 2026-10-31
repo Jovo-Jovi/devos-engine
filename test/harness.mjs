@@ -41,7 +41,8 @@ export async function processGone(pid, ms) {
   }
 }
 
-const claudeStub = `import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+const claudeStub = `import { spawnSync } from "node:child_process";
+import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 const early = process.argv.slice(2);
@@ -96,6 +97,30 @@ process.stdin.on("end", () => {
   writeFileSync(path.join(docs, "fences", "T01.md"), readFileSync(path.join(fixtureDir, "..", "fences", "T01.md")));
   mkdirSync(path.join(docs, "design"), { recursive: true });
   writeFileSync(path.join(docs, "DESIGN_SYSTEM.md"), "# Design system\\n");
+  if (existsSync(path.join(process.cwd(), ".devos", "adopt", "brief.json"))) {
+    // E36b: the documents of an adopted project. DEV_OS's CLAUDE.md goes to .devos/adopt/. As a tool that ignored
+    // the adoption rules would: touch-code edits a product file and stages it, touch-docs edits a document of the
+    // project's and an engine file, settings-dir puts a folder where DEV_OS's settings go, commit commits, and
+    // hide-engine edits an engine file that git is told not to look at.
+    writeFileSync(path.join(process.cwd(), ".devos", "adopt", "CLAUDE.md"), "# CLAUDE.md\\n\\nStub reviewer rules.\\n");
+    if (process.env.STUB_ADOPT === "touch-code") {
+      writeFileSync(path.join(process.cwd(), "app", "page.tsx"), "export default function Page() { return null; }\\n// changed\\n");
+      spawnSync("git", ["add", "app/page.tsx"], { cwd: process.cwd(), windowsHide: true });
+    }
+    if (process.env.STUB_ADOPT === "settings-dir") mkdirSync(path.join(process.cwd(), ".claude", "settings.json"), { recursive: true });
+    if (process.env.STUB_ADOPT === "hide-engine") {
+      spawnSync("git", ["update-index", "--assume-unchanged", "scripts/guards/lib.mjs"], { cwd: process.cwd(), windowsHide: true });
+      writeFileSync(path.join(process.cwd(), "scripts", "guards", "lib.mjs"), "export {};\\n");
+    }
+    if (process.env.STUB_ADOPT === "commit") {
+      spawnSync("git", ["add", "-A"], { cwd: process.cwd(), windowsHide: true });
+      spawnSync("git", ["commit", "-q", "--no-verify", "-m", "stub"], { cwd: process.cwd(), windowsHide: true });
+    }
+    if (process.env.STUB_ADOPT === "touch-docs") {
+      writeFileSync(path.join(docs, "notes.md"), "# Notes\\n\\nRewritten.\\n");
+      writeFileSync(path.join(docs, "method", "AUTOMATION.md"), "# Automation\\n");
+    }
+  }
   writeFileSync(path.join(docs, "design", "UI_ACCEPTANCE.md"), "| Id | Criterion | Checked by |\\n|---|---|---|\\n| UA-01 | Text contrast meets WCAG 2.2 AA | automated |\\n");
   // PR-59: every screenshot the developer gave is a row of REFERENCES.md.
   const refsDir = path.join(docs, "design", "references");
@@ -168,6 +193,8 @@ process.stdin.on("end", () => {
   writeFileSync(path.join(docs, "fences", "T01.md"), readFileSync(path.join(fixtureDir, "..", "fences", "T01.md")));
   mkdirSync(path.join(docs, "design"), { recursive: true });
   writeFileSync(path.join(docs, "DESIGN_SYSTEM.md"), "# Design system\\n");
+  // E36b: an adopted project's DEV_OS CLAUDE.md goes to .devos/adopt/.
+  if (existsSync(path.join(process.cwd(), ".devos", "adopt", "brief.json"))) writeFileSync(path.join(process.cwd(), ".devos", "adopt", "CLAUDE.md"), "# CLAUDE.md\\n\\nStub reviewer rules.\\n");
   writeFileSync(path.join(docs, "design", "UI_ACCEPTANCE.md"), "| Id | Criterion | Checked by |\\n|---|---|---|\\n| UA-01 | Text contrast meets WCAG 2.2 AA | automated |\\n");
   // PR-59: every screenshot the developer gave is a row of REFERENCES.md.
   const refsDir = path.join(docs, "design", "references");
@@ -300,7 +327,9 @@ if (args[0] === "repo" && args[1] === "view") {
   const mode = process.env.STUB_REPO || "missing";
   if (mode === "missing") process.exit(1);
   const remote = path.resolve(process.cwd(), "..", "remote");
-  process.stdout.write(JSON.stringify({ name: "demo-shop", isEmpty: mode === "empty", url: remote, nameWithOwner: args[2], viewerPermission: process.env.STUB_PERMISSION || "ADMIN" }) + "\\n");
+  // E36b: the default branch, as GitHub reports it (STUB_DEFAULT_BRANCH, main when unset).
+  const defaultBranchRef = process.env.STUB_DEFAULT_BRANCH === "missing" ? null : { name: process.env.STUB_DEFAULT_BRANCH || "main" };
+  process.stdout.write(JSON.stringify({ name: "demo-shop", isEmpty: mode === "empty", url: remote, nameWithOwner: args[2], viewerPermission: process.env.STUB_PERMISSION || "ADMIN", defaultBranchRef }) + "\\n");
   process.exit(0);
 }
 if (args[0] === "run" && args[1] === "list") {
