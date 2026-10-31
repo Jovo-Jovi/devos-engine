@@ -67,6 +67,22 @@ process.stdin.on("end", () => {
     process.stdout.write('{"type":"result","is_error":true,"result":"Claude AI usage limit reached|1760900000"}');
     process.exit(1);
   }
+  if (existsSync(path.join(process.cwd(), "survey.json"))) {
+    // E34: an adoption brief, in the staging folder. STUB_ADOPT: good (default), bad-then-good (round 1 writes an
+    // empty brief.json), touch (also writes touched.txt into STUB_TOUCH, as a tool that reached the project would).
+    const adopt = process.env.STUB_ADOPT || "good";
+    const brief = path.join(process.cwd(), "brief");
+    mkdirSync(brief, { recursive: true });
+    if (adopt === "touch" && process.env.STUB_TOUCH) writeFileSync(path.join(process.env.STUB_TOUCH, "touched.txt"), "x\\n");
+    const heads = ["What it is", "Stage", "How it is built", "What is done", "What is open", "Risks", "Personal data", "What DEV_OS will add", "Questions for you"];
+    writeFileSync(path.join(brief, "brief.md"), "# Adoption brief\\n\\n" + heads.map((head) => "## " + head + "\\n\\nStub line for " + head + ".\\n").join("\\n"));
+    const empty = adopt === "bad-then-good" && !args.includes("--continue");
+    writeFileSync(path.join(brief, "brief.json"), empty ? "{}\\n" : JSON.stringify({ schema: "devos-brief/1", name: "Demo App", key: "DEMO-APP", stage: "in-development", type: "saas", stack: "next", personal_data: true, questions: ["Is the Stripe account live?"] }) + "\\n");
+    const say = (event) => process.stdout.write(JSON.stringify(event) + "\\n");
+    say({ type: "system", subtype: "init", session_id: "claude-adopt-1", model: "stub" });
+    say({ type: "result", subtype: "success", is_error: false, result: "brief written", session_id: "claude-adopt-1", duration_ms: 1000 });
+    return;
+  }
   const docs = path.join(process.cwd(), "docs");
   mkdirSync(path.join(docs, "fences"), { recursive: true });
   if (mode === "bad-then-good" && !args.includes("--continue")) {

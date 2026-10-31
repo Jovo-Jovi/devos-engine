@@ -16,6 +16,16 @@ The notable changes of each DEV_OS Engine release. Versions follow [Semantic Ver
     repository, or a project that already has the engine.
 - **It changes nothing.** It reads tracked files only, and of environment files only an example file's variable
   names. `--json` prints the survey.
+- **`devos adopt [folder]` writes the brief you confirm.** After the survey, your own AI tool writes a brief:
+  - what the project is and its stage, with the reasons;
+  - how it is built, what is done and what is open;
+  - its risks and the personal data it handles;
+  - what DEV_OS will add, and its questions for you.
+  - **Where it works.** In `~/.devos/adopt/`, on a copy of the tracked files, never in the project. The copy leaves
+    out environment files other than an example one, and private keys: the tool sends what it reads to its
+    provider. The project's HEAD and status are checked unchanged after every round.
+  - **Your answer.** Type `yes` to keep the brief, or write what to change and the tool revises it. `--agent`
+    chooses the tool. Nothing is added to the project yet; that is the next step.
 
 ## 1.3.2 — 2026-10-28
 
