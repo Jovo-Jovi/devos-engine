@@ -26,6 +26,12 @@ The notable changes of each DEV_OS Engine release. Versions follow [Semantic Ver
     provider. The project's HEAD and status are checked unchanged after every round.
   - **Your answer.** Type `yes` to keep the brief, or write what to change and the tool revises it. `--agent`
     chooses the tool. Nothing is added to the project yet; that is the next step.
+- **The code a project already has gets a baseline (PR-68).** The guards pass what `devos/baseline.json` records:
+  the findings of `naming`, `design`, `i18n`, `literals` and `imports` on the code that existed when DEV_OS was
+  added, matched by file, rule and line text. New or changed code must pass. `secrets`, `boundary`, `data` and
+  `services` are never baselined. `node scripts/guards/run-all.mjs --write-baseline` writes it once,
+  `--shrink-baseline` removes what is fixed, and `--no-baseline` shows every finding. A project started with
+  `devos init` has no baseline and works as before.
 
 ## 1.3.2 — 2026-10-28
 

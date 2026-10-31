@@ -296,7 +296,7 @@
     {
       "path": "devos/prompts/reviewer.md",
       "stored": "devos/prompts/reviewer.md",
-      "sha256": "a3ed5e4c8bb5a9d92237f12896de5d26670cd36f0f3ad92b08c8a36e95ede040",
+      "sha256": "e2f144a37d40dbfa21e67caf172e5cca9c73545eda8b3eb42c1f96fbd722f4ea",
       "owner": "engine"
     },
     {
@@ -1466,7 +1466,7 @@
     {
       "path": "docs/method/AUTOMATION.md",
       "stored": "docs/method/AUTOMATION.md",
-      "sha256": "b5394103670359adee4eaf0aa8b31bb12f1b1456c7eeb48563f4b10277bb7cde",
+      "sha256": "e2dfa1375dab0b58caf049c8c0e0f9a89eeda8d7811dbd11552310ac68e4421f",
       "owner": "engine"
     },
     {
@@ -1490,7 +1490,7 @@
     {
       "path": "docs/method/PRECEDENTS.md",
       "stored": "docs/method/PRECEDENTS.md",
-      "sha256": "85c1f5e5dfb7158ea6356765eaebc96d614c9910ab145089bdbd55a84f40ed6a",
+      "sha256": "787bd66a33ef73ea9acf44e4a28197ad96260fe9c9dbebe4e127f9a6bfd5c361",
       "owner": "engine"
     },
     {
@@ -1808,7 +1808,7 @@
     {
       "path": "scripts/guards/lib.mjs",
       "stored": "scripts/guards/lib.mjs",
-      "sha256": "ade5bc49d7a6cc6990dcb68d73ac3b55f20fd1a9ee2f621b915b1ef4d805bcf1",
+      "sha256": "97f717bdd31594e966c11c4077ff3feac61514e55a86cc25692e12e6bfac7f6f",
       "owner": "engine"
     },
     {
@@ -1838,7 +1838,7 @@
     {
       "path": "scripts/guards/run-all.mjs",
       "stored": "scripts/guards/run-all.mjs",
-      "sha256": "5772d5095e682be03480684bef9ccde372b82066b02a23a4f80dc574b3375815",
+      "sha256": "21530390f9a133bc055b00675df469daa2bcd5550c9310705df24e97e7891f13",
       "owner": "engine"
     },
     {
