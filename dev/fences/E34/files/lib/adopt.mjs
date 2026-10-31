@@ -166,6 +166,16 @@ const CODE_EXTENSIONS = new Set([
 ]);
 
 const ENV_EXAMPLE = /^\.env\.(example|sample|template|dist)$/;
+// Never read and never copied: environment files other than an example one, and private keys. An AI tool sends what
+// it reads to its provider, so a secret a project tracks by mistake must not reach it (E34).
+const SECRET_FILES = [/^\.env(\..+)?$/, /\.(pem|key|p12|pfx|jks|keystore)$/i, /^id_(rsa|dsa|ecdsa|ed25519)$/];
+
+/** True for a tracked file DEV_OS never reads or copies: an environment file other than an example, or a key. */
+export function secretFile(file) {
+  const base = path.posix.basename(file);
+  if (ENV_EXAMPLE.test(base)) return false;
+  return SECRET_FILES.some((pattern) => pattern.test(base));
+}
 
 function startsWith(deps, prefix) {
   for (const name of deps) if (name.startsWith(prefix)) return true;
@@ -540,6 +550,11 @@ export function surveyProject(folder, { exec = hubExec, root = engineRoot() } = 
   if (devos.kind === "copy") {
     notes.push(`it runs an older copy of DEV_OS (${devos.precedents_max ? `precedents up to ${devos.precedents_max}` : "no precedents file"}, no engine lock): adopting it keeps its documents and settings`);
   }
+  const secretFiles = files.filter((file) => secretFile(file));
+  if (secretFiles.length > 0) {
+    const named = secretFiles.length <= 3 ? secretFiles.join(", ") : `${secretFiles.slice(0, 3).join(", ")} and ${secretFiles.length - 3} more`;
+    notes.push(`it tracks ${named}, which may hold a secret: DEV_OS never reads or copies ${secretFiles.length === 1 ? "it" : "them"}`);
+  }
   if (!stack.catalogue_stack) notes.push("its stack is not in DEV_OS's catalogue: the cycle works, and the backend modules stay off");
   if (repository.default_branch && repository.branch && repository.branch !== repository.default_branch) {
     notes.push(`you are on ${repository.branch}; adopting starts from the default branch ${repository.default_branch}`);
@@ -555,6 +570,7 @@ export function surveyProject(folder, { exec = hubExec, root = engineRoot() } = 
     automation,
     env_names: env.names,
     env_sources: env.sources,
+    secret_files: secretFiles,
     docs: { readme: files.some((file) => /^readme(\.[a-z]+)?$/i.test(file)), docs_files: docsFiles, agent_files: agentFiles },
     languages,
     size,
@@ -598,14 +614,22 @@ export function stagingFolder(slug) {
   return path.join(devosHome(), ".devos", "adopt", slug.toLowerCase().replace("/", "__"));
 }
 
-/** Copies the project's tracked files (a clean tree, so its HEAD) into `target`; { files, skipped } or { error }. */
+/**
+ * Copies the project's tracked files (a clean tree, so its HEAD) into `target`, except the secret files it holds
+ * back; { files, skipped, held } or { error }.
+ */
 export function copyTracked(folder, target, exec = hubExec) {
   const listed = exec("git", ["ls-files", "-z"], folder);
   if (!ok(listed)) return { error: "devos: git could not list the project's files" };
   let total = 0;
   let files = 0;
   let skipped = 0;
+  let held = 0;
   for (const file of listed.stdout.split("\0").filter((entry) => entry !== "")) {
+    if (secretFile(file)) {
+      held += 1;
+      continue;
+    }
     const from = path.join(folder, ...file.split("/"));
     let info;
     try {
@@ -625,7 +649,7 @@ export function copyTracked(folder, target, exec = hubExec) {
     copyFileSync(from, to);
     files += 1;
   }
-  return { files, skipped };
+  return { files, skipped, held };
 }
 
 /** The agent that writes the brief: `--agent tool[:model]`, else the default reviewer, else the first signed-in tool. */
@@ -770,7 +794,8 @@ export async function adoptBrief(folder, { agent: option = "", read = lineReader
       deny: ["Shell(git)", "Shell(gh)", "Shell(curl)", "Shell(wget)", "Shell(rm)", "Shell(sudo)", "Write(workspace/**)", "Write(survey.json)", "Write(adopt-input.md)", "Write(adopt-next.md)", "Write(.cursor/**)"],
     } }, null, 2)}\n`);
   }
-  console.log(`devos: ${toolCommand(agent.tool)} · ${agent.model} writes the brief in ${staging}, from a copy of ${copied.files} tracked file${copied.files === 1 ? "" : "s"}; your project is not touched`);
+  const heldBack = copied.held > 0 ? ` (${copied.held} held back: environment files and private keys)` : "";
+  console.log(`devos: ${toolCommand(agent.tool)} · ${agent.model} writes the brief in ${staging}, from a copy of ${copied.files} tracked file${copied.files === 1 ? "" : "s"}${heldBack}; your project is not touched`);
   const before = snapshot(folder, exec);
   const command = toolCommand(agent.tool);
   let session = "";
