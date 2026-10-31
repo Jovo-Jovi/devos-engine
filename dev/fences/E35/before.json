@@ -1,0 +1,9 @@
+{
+  "payload/files/scripts/guards/lib.mjs": "ade5bc49d7a6cc6990dcb68d73ac3b55f20fd1a9ee2f621b915b1ef4d805bcf1",
+  "payload/files/scripts/guards/run-all.mjs": "5772d5095e682be03480684bef9ccde372b82066b02a23a4f80dc574b3375815",
+  "payload/files/docs/method/AUTOMATION.md": "b5394103670359adee4eaf0aa8b31bb12f1b1456c7eeb48563f4b10277bb7cde",
+  "payload/files/docs/method/PRECEDENTS.md": "85c1f5e5dfb7158ea6356765eaebc96d614c9910ab145089bdbd55a84f40ed6a",
+  "payload/files/devos/prompts/reviewer.md": "a3ed5e4c8bb5a9d92237f12896de5d26670cd36f0f3ad92b08c8a36e95ede040",
+  "tools/sources.mjs": "d12d57bb07d718ecf30d8bd2f84be19a3fc7387053b27530351adb98d79d2b27",
+  "CHANGELOG.md": "3200e77a30b03cca40415117eb576c5a2bb5dbb737b6045950d4e51ff9f39d90"
+}
