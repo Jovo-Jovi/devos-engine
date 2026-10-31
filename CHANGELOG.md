@@ -2,6 +2,21 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
+## 1.4.0 — Unreleased
+
+### Adopting an existing project (D-E13)
+
+- **`devos adopt --check [folder]` surveys a project you already have.** It is the first step of adding DEV_OS to a
+  project in development or in production. In the project's own clone, it reports:
+  - its stage (prototype, in development or production, with the reasons);
+  - its stack and the catalogue stack it matches, its services (database, auth, payments, email and others);
+  - its workflows and where it deploys, and an older copy of DEV_OS, with its precedents;
+  - the engine files and project documents DEV_OS would overlap;
+  - what stops the adoption: no GitHub origin, uncommitted changes, an account that does not administer the
+    repository, or a project that already has the engine.
+- **It changes nothing.** It reads tracked files only, and of environment files only an example file's variable
+  names. `--json` prints the survey.
+
 ## 1.3.2 — 2026-10-28
 
 ### Fixes

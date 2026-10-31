@@ -2,6 +2,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { adoptCommand } from "../lib/adopt.mjs";
 import { detectCommand } from "../lib/detect.mjs";
 import { doctorCommand, statusCommand } from "../lib/doctor.mjs";
 import { continueCommand } from "../lib/continue.mjs";
@@ -48,6 +49,7 @@ devos init [--continue] [folder]
 devos init --plan <file> [folder]
 devos ui [folder] [--no-open]
 devos continue [folder]
+devos adopt --check [folder] [--json]
 devos verify [folder]
 devos watch [folder] [--interval <seconds>] [--once]
 devos models [folder]
@@ -73,6 +75,7 @@ else if (args[0] === "upgrade") code = upgradeCommand(args.slice(1));
 else if (args[0] === "init") code = await initCommand(args.slice(1));
 else if (args[0] === "ui") code = await uiCommand(args.slice(1));
 else if (args[0] === "continue") code = await continueCommand(path.resolve(args[1] ?? process.cwd()));
+else if (args[0] === "adopt") code = adoptCommand(args.slice(1));
 else if (args[0] === "verify") code = verifyCommand(args.slice(1));
 else if (args[0] === "watch") code = await watchCommand(args.slice(1));
 else if (args[0] === "models") code = modelsCommand(args.slice(1));
