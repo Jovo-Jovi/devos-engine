@@ -121,6 +121,8 @@ test("adopt.test.mjs (b) only an example environment file is read, and only its 
     const survey = surveyProject(folder, { exec: fakeGh() });
     assert.deepEqual(survey.env_names, ["API_KEY", "DB_URL"]);
     assert.deepEqual(survey.env_sources, [".env.example"]);
+    assert.deepEqual(survey.secret_files, [".env.local"]);
+    assert.equal(survey.notes.includes("it tracks .env.local, which may hold a secret: DEV_OS never reads or copies it"), true, survey.notes.join("\n"));
     const text = `${JSON.stringify(survey)}\n${surveyLines(survey).join("\n")}`;
     for (const value of ["example-value-xyz", "postgres://", "secret-local-123", "LOCAL_ONLY", "untracked-secret-456"]) {
       assert.equal(text.includes(value), false, value);
@@ -267,10 +269,15 @@ function rounds(staged) {
   return readFileSync(log, "utf8").split(/\r?\n/).filter(Boolean).map((line) => JSON.parse(line));
 }
 
-test("adopt.test.mjs (g) the AI tool writes the brief on a copy outside the project, and yes keeps it", () => {
+test("adopt.test.mjs (g) the AI tool writes the brief on a copy outside the project, without secret files, and yes keeps it", () => {
   const staged = stage();
   try {
-    const folder = project(NEXT_APP, { dir: staged.project });
+    const folder = project({
+      ...NEXT_APP,
+      ".env.example": "TOKEN=\n",
+      ".env.local": "TOKEN=tracked-secret-789\n",
+      "certs/server.pem": "-----BEGIN PRIVATE KEY-----\n",
+    }, { dir: staged.project });
     writeFileSync(path.join(folder, ".env"), "SECRET=untracked-secret-456\n");
     const head = git(["rev-parse", "HEAD"], folder);
     const result = adopt(staged, folder, "yes\n");
@@ -282,12 +289,17 @@ test("adopt.test.mjs (g) the AI tool writes the brief on a copy outside the proj
     assert.equal(confirmed.schema, "devos-brief-confirmed/1");
     assert.equal(confirmed.repository, "devtest/demo-app");
     assert.equal(confirmed.head, head.trim());
+    assert.equal(result.stdout.includes("(2 held back: environment files and private keys); your project is not touched\n"), true, result.stdout);
     assert.equal(existsSync(path.join(staging, "workspace", "app", "page.tsx")), true);
+    assert.equal(existsSync(path.join(staging, "workspace", ".env.example")), true);
+    assert.equal(existsSync(path.join(staging, "workspace", ".env.local")), false);
+    assert.equal(existsSync(path.join(staging, "workspace", "certs", "server.pem")), false);
     assert.equal(existsSync(path.join(staging, "workspace", ".env")), false);
     assert.equal(existsSync(path.join(staging, "workspace", ".git")), false);
     const survey = JSON.parse(readFileSync(path.join(staging, "survey.json"), "utf8"));
     assert.equal(survey.schema, "devos-survey/1");
     assert.equal("folder" in survey, false);
+    assert.equal(JSON.stringify(survey).includes("tracked-secret-789"), false);
     const done = rounds(staged);
     assert.equal(done.length, 1);
     assert.equal(done[0].stdin.startsWith("# DEV_OS adoption brief\n"), true);
