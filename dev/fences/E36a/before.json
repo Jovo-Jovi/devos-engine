@@ -1,0 +1,13 @@
+{
+  "lib/adopt.mjs": "c47606408daf3f0eb1494fa8080ea7949df39aed1a340e0e1b88f44aade9aa9b",
+  "lib/engine.mjs": "f2c4f3c2639f4d374ff6fba8c779d7f509493b0402b751ac2546caa17d9ace10",
+  "lib/install.mjs": "9b047cecff1a72613bfda737916b143df7bc3a5467de1634be95b583262ef6b4",
+  "lib/upgrade.mjs": "d5df16c223d56f40f2f27cfb72edf1a9691af411b7fef3312c093f343c7523dd",
+  "payload/files/scripts/guards/manual.mjs": "0ba34ead09d2ca2230360014415923b74464f23b35c50baaf1b5cc0b03b3ef94",
+  "payload/files/docs/method/AUTOMATION.md": "c180b764a102b8c44262036172f9a38f0f93806573906652a2df2a1f30dbf1ef",
+  "payload/files/docs/method/PRECEDENTS.md": "e3619ce10a78032f30502edddfa90fc43fbb28c354a9d35280daa60c25d87944",
+  "tools/sources.mjs": "b6e35e9cc42a5096288192f3af1e580af318092e7d9bec6879c4a39740e2ba8c",
+  "CHANGELOG.md": "b3de5e7c4cfb47b3fdf74b7348ca82a82ae27006940374c5fc6d298ade428a69",
+  "test/baseline.test.mjs": "964050d9c8518aa354f5d53c657952f4d2ded1e3dce1f5f0692bfc350d835af1",
+  "test/adopt-files.test.mjs": "2733ce29d4bab78f704027b58d03521c27ce3e8d1c4781777fda1617da1a7498"
+}

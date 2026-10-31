@@ -32,6 +32,12 @@ The notable changes of each DEV_OS Engine release. Versions follow [Semantic Ver
   `services` are never baselined. `node scripts/guards/run-all.mjs --write-baseline` writes it once,
   `--shrink-baseline` removes what is fixed, and `--no-baseline` shows every finding. A project started with
   `devos init` has no baseline and works as before.
+- **DEV_OS's files sit beside a project's own (PR-69).** For the coming install by pull request:
+  - **Merged:** `.gitignore` and `.gitattributes`.
+  - **Kept beside:** a project's own CI workflow stays where it is, and DEV_OS's goes to `devos-ci.yml`, which
+    `devos upgrade` now updates there.
+  - **Your instructions first:** your `CLAUDE.md` and `AGENTS.md` keep your text, with DEV_OS's rules after it.
+  - **The manual guard** no longer asks the manual to name a project's own workflows.
 
 ## 1.3.2 — 2026-10-28
 

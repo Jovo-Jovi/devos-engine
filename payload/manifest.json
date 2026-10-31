@@ -1466,7 +1466,7 @@
     {
       "path": "docs/method/AUTOMATION.md",
       "stored": "docs/method/AUTOMATION.md",
-      "sha256": "e2dfa1375dab0b58caf049c8c0e0f9a89eeda8d7811dbd11552310ac68e4421f",
+      "sha256": "c180b764a102b8c44262036172f9a38f0f93806573906652a2df2a1f30dbf1ef",
       "owner": "engine"
     },
     {
@@ -1490,7 +1490,7 @@
     {
       "path": "docs/method/PRECEDENTS.md",
       "stored": "docs/method/PRECEDENTS.md",
-      "sha256": "787bd66a33ef73ea9acf44e4a28197ad96260fe9c9dbebe4e127f9a6bfd5c361",
+      "sha256": "e3619ce10a78032f30502edddfa90fc43fbb28c354a9d35280daa60c25d87944",
       "owner": "engine"
     },
     {
@@ -1820,7 +1820,7 @@
     {
       "path": "scripts/guards/manual.mjs",
       "stored": "scripts/guards/manual.mjs",
-      "sha256": "a631183acbb4c45f230bd1ee39c493bc6fc03d16a4e5b8eb580f169a8853387e",
+      "sha256": "0ba34ead09d2ca2230360014415923b74464f23b35c50baaf1b5cc0b03b3ef94",
       "owner": "engine"
     },
     {

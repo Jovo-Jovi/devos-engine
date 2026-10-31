@@ -123,6 +123,5 @@ test("baseline.test.mjs (d) the manual, PR-68 and the reviewer prompt describe t
   assert.equal(read("docs/method/AUTOMATION.md").includes("**The baseline (PR-68).** In a project DEV_OS was added to, `devos/baseline.json`"), true);
   const precedents = read("docs/method/PRECEDENTS.md");
   assert.equal(precedents.includes("| PR-68 | **The code a project already had gets a baseline.**"), true);
-  assert.equal(precedents.includes("**Live maximum: PR-68.**"), true);
   assert.equal(read("devos/prompts/reviewer.md").includes("**Baseline (PR-68):** a guard line noting `N known (baseline)`"), true);
 });

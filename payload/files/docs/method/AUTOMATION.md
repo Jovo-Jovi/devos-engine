@@ -170,7 +170,7 @@ workflow may start late.
 with a gate) · `naming` · `design` (tokens, no raw colours, logical properties) · `i18n` (identical
 catalogues) · `boundary` (no visitor data outside declared zones) · `literals` (no hard-coded contact
 or locale) · `data` (migrations, RLS, grants, server-only secret key, synthetic seed, pgTAP) ·
-`services` (R2 and Firebase rules) · `manual` (this file names every part of the automation) · `config` (the generated configuration is current) · `design-spec` (every open UI fence has a design specification whose states match its `- Screens:` line and whose criteria are rows of `docs/design/UI_ACCEPTANCE.md`, PR-50) · `skills` (every skill in `devos/skills/` is listed in its manifest, pinned to a full commit, licensed for its use with its licence and notices beside it, and unchanged, PR-51; mapped to its layers, stacks and roles, with a trust review that says it runs no code and fetches nothing, and `INDEX.md` current, PR-55; every read's priority and condition valid, its topics in the manifest's vocabulary, and an entry's notes written by DEV_OS, PR-56, PR-57) · `fences` (the fence of the task this run builds passes `fence-check.mjs`; N/A without `TASK`, PR-58) · `imports` (code outside a feature module of `structure.modules` imports it only through its public entry: JavaScript and TypeScript with `structure.aliases` and tsconfig.json or jsconfig.json `paths`, Python, Go and Dart; files in `structure.exempt`, the tests, may reach inside; a module folder that exists has its public entry; N/A while no module is declared, PR-58) · `scope` (the task branch against `origin/<base>`, plus the working tree, changes only the fence's `- Paths:`, its report, `docs/SESSION_CONTEXT.md`, `docs/DEVELOPMENT_JOURNAL.md` and a lockfile beside a listed manifest; paths no builder may change and `docs/PHASES.md` are left to the surface guard and the runner; N/A without `TASK` or a Paths line, PR-58).
+`services` (R2 and Firebase rules) · `manual` (this file names every part of DEV_OS's automation; a project's own workflows are its own, PR-69) · `config` (the generated configuration is current) · `design-spec` (every open UI fence has a design specification whose states match its `- Screens:` line and whose criteria are rows of `docs/design/UI_ACCEPTANCE.md`, PR-50) · `skills` (every skill in `devos/skills/` is listed in its manifest, pinned to a full commit, licensed for its use with its licence and notices beside it, and unchanged, PR-51; mapped to its layers, stacks and roles, with a trust review that says it runs no code and fetches nothing, and `INDEX.md` current, PR-55; every read's priority and condition valid, its topics in the manifest's vocabulary, and an entry's notes written by DEV_OS, PR-56, PR-57) · `fences` (the fence of the task this run builds passes `fence-check.mjs`; N/A without `TASK`, PR-58) · `imports` (code outside a feature module of `structure.modules` imports it only through its public entry: JavaScript and TypeScript with `structure.aliases` and tsconfig.json or jsconfig.json `paths`, Python, Go and Dart; files in `structure.exempt`, the tests, may reach inside; a module folder that exists has its public entry; N/A while no module is declared, PR-58) · `scope` (the task branch against `origin/<base>`, plus the working tree, changes only the fence's `- Paths:`, its report, `docs/SESSION_CONTEXT.md`, `docs/DEVELOPMENT_JOURNAL.md` and a lockfile beside a listed manifest; paths no builder may change and `docs/PHASES.md` are left to the surface guard and the runner; N/A without `TASK` or a Paths line, PR-58).
 
 **The baseline (PR-68).** In a project DEV_OS was added to, `devos/baseline.json` holds the findings of `naming`,
 `design`, `i18n`, `literals` and `imports` on the code that existed then. `run-all.mjs` passes a finding it holds (the
@@ -179,6 +179,18 @@ finding, so new or changed code must pass. `--no-baseline` shows every finding. 
 once (it refuses when the file exists), and `--shrink-baseline` removes what is fixed and adds nothing. `secrets`,
 `boundary`, `data`, `services` and the method's own guards are never baselined. A product builder never changes
 `devos/`. A project started with `devos init` has no baseline.
+
+**DEV_OS beside a project's own files (PR-69).** When DEV_OS is added to an existing project:
+- **Merged:** `.gitignore` and `.gitattributes` keep the project's lines, and DEV_OS's missing ones go at the end.
+- **The project's CI workflow** stays at `.github/workflows/ci.yml`, and DEV_OS's `ci.yml` goes to
+  `.github/workflows/devos-ci.yml`. A project workflow also named `ci` becomes `ci (project)`.
+- **The lock** (`devos/engine.lock.json`) records the file under its engine path with `at`, the place it lives.
+  `devos upgrade` reads and writes it there.
+- **`CLAUDE.md` and `AGENTS.md`** keep the project's text first. DEV_OS's rules follow between
+  `<!-- devos:start` and `<!-- devos:end -->`.
+- **Other engine files** that exist and differ stop the adoption until the developer moves them.
+- **`guard:manual`** checks DEV_OS's workflows only: those the lock lists, by their engine name, and every
+  `devos-*.yml`.
 
 ## 6. Prompts, schemas, rules
 
