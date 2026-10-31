@@ -40,7 +40,7 @@ questions in your browser or your terminal, and an AI agent on your computer wri
 approve it, DEV_OS creates the GitHub repository and starts the automated cycle on GitHub Actions. From then on, a
 builder agent writes each task, a reviewer agent reviews it, and you merge at the gates.
 
-Version `1.3.2`. The engine is under PolyForm Shield 1.0.0 and the files it installs into your project under MIT
+Version `1.4.0`. The engine is under PolyForm Shield 1.0.0 and the files it installs into your project under MIT
 (see [Licence](#licence)).
 
 ## Why DEV_OS
@@ -295,7 +295,7 @@ it.
   project's setup, its version next to this engine's and the latest release, its models and its Control Tower link.
   Opening a project changes nothing in it.
 - **Upgrade and connect from a project's page.** When the project on GitHub is older than this engine, **Upgrade to
-  1.3.2 by pull request** (this engine's version) runs `devos upgrade` for you. Merge the pull request on GitHub, then
+  1.4.0 by pull request** (this engine's version) runs `devos upgrade` for you. Merge the pull request on GitHub, then
   press **Bring this folder up to date**. **Read the contract** shows the Control Tower contract. Once this engine,
   the project and the latest release are the same version, tick the box and press **Connect by pull request**: a pull
   request records your answer, and `DEVOS_REPORTING` turns on. To stop reporting, set `DEVOS_REPORTING` to `off`.
@@ -396,6 +396,7 @@ change applies from the next run. The project's `docs/method/AUTOMATION.md` list
 | `devos init [folder]` | Guided setup of a new project in a new or empty folder outside the engine folder. |
 | `devos ui [folder] [--no-open]` | The same setup as a guided page in your browser, on this computer only. Without a folder, the page asks where to create the project. `--no-open` prints the link without opening it. |
 | `devos continue [folder]` | Shows what is done and finishes what is missing. |
+| `devos adopt --check [folder] [--json]` | Surveys a project you already have, in its own clone on GitHub: its stage, stack, services, workflows and deploys, an older copy of DEV_OS, the files DEV_OS would overlap, and what stops adding DEV_OS to it. It reads tracked files only, and of environment files only an example file's names. It changes nothing. `--json` prints the survey as JSON. |
 | `devos verify [folder]` | Checks everything between this computer and a green cycle run: Node.js and git, the GitHub CLI, the project's setup steps, the keys GitHub is missing (names only), and the newest `devos-cycle` run. A failed run is quoted in its own words, with the likely cause, the fix and who applies it. It changes nothing. |
 | `devos watch [folder] [--interval <seconds>] [--once]` | Runs `devos verify` again every 30 seconds (or `--interval`, 5 or more), marks with `*` what changed since the last pass, and stops at ALL GREEN. `--once` runs one pass. |
 | `devos status` | In a project folder: shows the project and your saved roster. |

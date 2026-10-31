@@ -1,0 +1,9 @@
+{
+  "bin/devos.mjs": "21ae5e0cba2a1f72e4928b7dbba7228ffcfa8c08c012cfc5e6567c2cd3fcec95",
+  "package.json": "ee11dee77d3e62ddac689db43752b2f8ef6d5f59e5204cd57c7e362ef1ab296e",
+  "test/version.test.mjs": "b5f9c36f3347c3c510a64c1be416d3c2102b8e3710d0e62a1f4de2c18acaccee",
+  "test/install.test.mjs": "30efdce969430e7cbea4d3d394e597474accfc5263b3adeaeb587d0675efa8ae",
+  "test/upgrade.test.mjs": "8bb9d9d4830f929f8d722ebd7d45e2133e61be469ed5fa70ad96b07885905121",
+  "README.md": "6d58d4282ae8ccffb8035829db89cb48bd6dfa8e3e9549a7cca576ae70d22fdc",
+  "CHANGELOG.md": "2024a185da1f6d74248a6b7eddb8189f70e3e8a10ad9716fc0288c2f2a9649f7"
+}
