@@ -172,6 +172,14 @@ catalogues) · `boundary` (no visitor data outside declared zones) · `literals`
 or locale) · `data` (migrations, RLS, grants, server-only secret key, synthetic seed, pgTAP) ·
 `services` (R2 and Firebase rules) · `manual` (this file names every part of the automation) · `config` (the generated configuration is current) · `design-spec` (every open UI fence has a design specification whose states match its `- Screens:` line and whose criteria are rows of `docs/design/UI_ACCEPTANCE.md`, PR-50) · `skills` (every skill in `devos/skills/` is listed in its manifest, pinned to a full commit, licensed for its use with its licence and notices beside it, and unchanged, PR-51; mapped to its layers, stacks and roles, with a trust review that says it runs no code and fetches nothing, and `INDEX.md` current, PR-55; every read's priority and condition valid, its topics in the manifest's vocabulary, and an entry's notes written by DEV_OS, PR-56, PR-57) · `fences` (the fence of the task this run builds passes `fence-check.mjs`; N/A without `TASK`, PR-58) · `imports` (code outside a feature module of `structure.modules` imports it only through its public entry: JavaScript and TypeScript with `structure.aliases` and tsconfig.json or jsconfig.json `paths`, Python, Go and Dart; files in `structure.exempt`, the tests, may reach inside; a module folder that exists has its public entry; N/A while no module is declared, PR-58) · `scope` (the task branch against `origin/<base>`, plus the working tree, changes only the fence's `- Paths:`, its report, `docs/SESSION_CONTEXT.md`, `docs/DEVELOPMENT_JOURNAL.md` and a lockfile beside a listed manifest; paths no builder may change and `docs/PHASES.md` are left to the surface guard and the runner; N/A without `TASK` or a Paths line, PR-58).
 
+**The baseline (PR-68).** In a project DEV_OS was added to, `devos/baseline.json` holds the findings of `naming`,
+`design`, `i18n`, `literals` and `imports` on the code that existed then. `run-all.mjs` passes a finding it holds (the
+same guard, file, rule and line text, up to its count) with the note `N known (baseline)`, and fails every other
+finding, so new or changed code must pass. `--no-baseline` shows every finding. `--write-baseline` writes the file
+once (it refuses when the file exists), and `--shrink-baseline` removes what is fixed and adds nothing. `secrets`,
+`boundary`, `data`, `services` and the method's own guards are never baselined. A product builder never changes
+`devos/`. A project started with `devos init` has no baseline.
+
 ## 6. Prompts, schemas, rules
 
 `devos/prompts/`: `builder.md`, `reviewer.md`, `intake.md`, `method.md`, `revise.md`, `doctor.md`, `supervisor.md`,

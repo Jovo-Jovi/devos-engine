@@ -98,6 +98,9 @@ part: a red required check fails the verdict whatever you write (PR-08), and the
    when the task does not need it (the attempt focus undoes it), the fence's when it does (reissue with
    the path added, and say why). A `guard:imports` finding is the builder's: reach the other module
    through its public entry.
+   **Baseline (PR-68):** a guard line noting `N known (baseline)` passed on findings of the code that existed
+   when DEV_OS was added (`devos/baseline.json`); judge only the findings it lists. A change that adds to
+   `devos/baseline.json`, or a builder that fixed baseline findings outside the fence's paths, is a FAIL.
 4. Write `docs/reviews/{{TASK}}-a{{ATTEMPT}}.md`. **First line exactly** `VERDICT: PASS` or
    `VERDICT: FAIL`, then the Dev OS verdict format from `CLAUDE.md`. Keep it short: ledger lines cite
    evidence ("pack §Checks: test pass, 57 tests"), they do not repeat it. `Next prompt:` gives the
