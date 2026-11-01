@@ -52,6 +52,15 @@ The notable changes of each DEV_OS Engine release. Versions follow [Semantic Ver
     kept, and the keys are named. Your workflows' default permissions, your Wiki and your Projects stay as they are.
   - **The cycle** starts once you merge: the supervisor starts `T01` within half an hour. Run again, `--publish`
     does only what is missing.
+- **A project in production stays in your hands (PR-72).**
+  - **Your deploy stays yours.** A project that deploys itself keeps its deploy: DEV_OS never deploys and never
+    sets its deploy variable. For Vercel, `devos adopt` asks first, and you may choose DEV_OS's deploy of `main` at
+    the gates you sign instead. A repository that already has `DEVOS_VERCEL` keeps DEV_OS's deploy.
+  - **Your gate on the risky paths.** The survey names the critical paths: the deploy files and workflows, the
+    schema directories, and the sign-in and payment files, by directory name and by what the code imports. They
+    are always reviewed deep. When the brief you confirm says production, a task that changes one stops for your
+    review and merge (`reviewer.human_gate_paths_extra` in `devos/project.json`), even at risk 1 or 2. A move or a
+    deletion counts. The list is what exists when DEV_OS is added; name a later file there yourself.
 - **The code a project already has gets a baseline (PR-68).** The guards pass what `devos/baseline.json` records:
   the findings of `naming`, `design`, `i18n`, `literals` and `imports` on the code that existed when DEV_OS was
   added, matched by file, rule and line text. New or changed code must pass. `secrets`, `boundary`, `data` and
@@ -67,6 +76,18 @@ The notable changes of each DEV_OS Engine release. Versions follow [Semantic Ver
 
 ### Fixes
 
+- **An agent can no longer stop itself (PR-71).** The agents got their whole prompt on the command line, so a
+  command the builder ran to stop its servers (`pkill -f "next dev"`) also matched the builder, whose prompt named
+  that command, and stopped it.
+  - **The prompt is never an argument.** Claude Code, Codex and Gemini read it on standard input, and Cursor gets
+    one line that names the file. This holds for the builder, the reviewer and the planning runs.
+  - **The builder stops only what it started,** by its PID; `pkill` and `killall` are denied to it.
+  - **A builder stopped by a signal from inside its run restarts once in place,** from what it finished, as a lost
+    connection does. The watchdog, if signalled itself, ends the agent's whole session first, and what an agent
+    left running ends with it.
+- **The gates read a branch's paths as they are (PR-72).** A rename counts by both of its paths, and a name git
+  would quote is read plainly, for the schema gate (PR-17), the review depth, the method gate (PR-28) and
+  `guard:scope`. Before, moving a file out of a gated folder listed only its new path.
 - **A check that hangs fails; it never holds the cycle (PR-70).**
   - **A time limit for every check.** Each check has 30 minutes (`check_timeout_minutes`), and all of them 60
     (`checks_budget_minutes`), the Supabase CLI's checks included. At its limit, a check is stopped with everything

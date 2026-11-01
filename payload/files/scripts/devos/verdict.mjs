@@ -7,7 +7,8 @@
 //
 // Actions:
 //   merge       PASS, checks green, not a human gate, next fence present
-//   human_gate  PASS on a risk-3 task, a gate task, a schema change (PR-17), or with no next fence
+//   human_gate  PASS on a risk-3 task, a gate task, a schema change (PR-17), a change to a path of
+//               reviewer.human_gate_paths (a project in production, PR-72), or with no next fence
 //   retry       FAIL and attempt < max_attempts
 //   halt        FAIL at max attempts, or the reviewer produced no usable verdict
 //   quota_wait  the reviewer hit a usage/rate limit: nothing recorded, same attempt, review-only
@@ -16,8 +17,7 @@
 //               variable, an account or dashboard setting). Grok cannot fix it, so no retry is spent:
 //               the human gets the steps, and the same attempt is re-reviewed once it is in place (PR-27)
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
-import { execFileSync } from "node:child_process";
-import { P, config, parsePhases, isHumanGate, taskAfter, updatePhasesRow, changedPaths, emit, fail } from "./lib.mjs";
+import { P, config, parsePhases, isHumanGate, taskAfter, updatePhasesRow, changedPaths, diffPaths, matchesAny, emit, fail } from "./lib.mjs";
 import { looksLikeLimit, readText, resumeMarker, earliestNotBefore, agentStats, parseJsonLoose, finishedRun } from "./limits.mjs";
 import { rulesFiles } from "./firebase.mjs";
 
@@ -61,14 +61,30 @@ function finish(verdict, action, extra = {}) {
   process.exit(0);
 }
 
+/** What a gate lists when git cannot diff the branch against its base: the gate then holds. */
+const UNREAD = "(could not diff against the base branch)";
+
 /** Migration files, and (PR-26) Firestore rules files, this branch adds or changes against the base. */
 function schemaChanges() {
   try {
     const rules = cfg.modules?.firebase ? rulesFiles() : [];
-    const out = execFileSync("git", ["diff", "--name-only", `origin/${cfg.base_branch ?? "main"}...HEAD`, "--", "supabase/migrations", ...rules], { cwd: P(), encoding: "utf8" });
-    return out.split(/\r?\n/).filter(Boolean);
+    return diffPaths(`origin/${cfg.base_branch ?? "main"}`, ["supabase/migrations", ...rules]);
   } catch {
-    return existsSync(P("supabase/migrations")) ? ["(could not diff against the base branch)"] : [];
+    return existsSync(P("supabase/migrations")) ? [UNREAD] : [];
+  }
+}
+
+/**
+ * PR-72: the paths of reviewer.human_gate_paths this branch adds, changes, deletes or moves against the base: for a
+ * project in production, its deploy, schema, sign-in and payment files. When the diff cannot be read, the gate holds.
+ */
+function gatePaths() {
+  const globs = cfg.reviewer?.human_gate_paths ?? [];
+  if (globs.length === 0) return [];
+  try {
+    return diffPaths(`origin/${cfg.base_branch ?? "main"}`).filter((p) => matchesAny(p, globs));
+  } catch {
+    return [UNREAD];
   }
 }
 
@@ -179,13 +195,18 @@ if (verdict === "PASS") {
   // PR-17: a schema change always stops for the human, whatever the task's risk or gate. Merging it
   // is what lets the next production deploy apply the migration.
   const schema = schemaChanges();
-  if (schema.length) notes.push(`schema change: ${schema.join(", ")}`);
-  const gate = isHumanGate(row) || schema.length > 0;
-  const why = isHumanGate(row) ? (row.risk >= 3 ? "Risk-3 task" : `Gate ${row.gate}`) : "Schema change (PR-17)";
+  // File names the builder chose go into the comment in code spans: they never render or notify anyone.
+  const code = (list) => list.map((p) => (p === UNREAD ? p : `\`${p.replaceAll("`", "'")}\``)).join(", ");
+  if (schema.length) notes.push(`schema change: ${code(schema)}`);
+  const guarded = gatePaths();
+  if (guarded.length) notes.push(`production paths changed (PR-72): ${code(guarded)}`);
+  const gate = isHumanGate(row) || schema.length > 0 || guarded.length > 0;
+  const why = isHumanGate(row) ? (row.risk >= 3 ? "Risk-3 task" : `Gate ${row.gate}`) : schema.length ? "Schema change (PR-17)" : "Production paths (PR-72)";
+  const named = guarded.length ? ` and every change to ${code(guarded.slice(0, 6))}${guarded.length > 6 ? ", …" : ""}` : "";
   finish("PASS", gate ? "human_gate" : "merge", {
     summary: structured.summary,
     fence: structured.fence_written,
-    human: gate ? `${why}: review the PR${schema.length ? " and every migration or rules change in it" : ""} and merge it to sign off. Merging restarts the cycle.` : structured.human_attention,
+    human: gate ? `${why}: review the PR${schema.length ? " and every migration or rules change in it" : named} and merge it to sign off. Merging restarts the cycle.` : structured.human_attention,
   });
 }
 

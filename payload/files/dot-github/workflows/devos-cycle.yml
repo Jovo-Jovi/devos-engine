@@ -445,13 +445,14 @@ jobs:
               devos_use_claude "$acc"; used="$acc"
               while :; do
                 left=$(( 72 - ($(date +%s) - T0) / 60 ))
-                bash scripts/devos/agent-watchdog.sh "$left" 10 .devos/builder.json .devos/builder.err -- \
-                  claude -p "$(cat .devos/builder-prompt.md)" --model "$MODEL" --effort "$EFFORT" --output-format json --permission-mode dontAsk --allowedTools "Read,Glob,Grep,Write,Edit,MultiEdit,Bash,Task,Agent,Skill,mcp__context7" --disallowedTools "Bash(git push *),Bash(git commit *),Bash(git checkout *),Bash(git reset *),Bash(gh *),Bash(curl *),Bash(wget *)" --mcp-config devos/ci/mcp.claude.json --max-turns 400
+                DEVOS_STDIN=.devos/builder-prompt.md bash scripts/devos/agent-watchdog.sh "$left" 10 .devos/builder.json .devos/builder.err -- \
+                  claude -p --model "$MODEL" --effort "$EFFORT" --output-format json --permission-mode dontAsk --allowedTools "Read,Glob,Grep,Write,Edit,MultiEdit,Bash,Task,Agent,Skill,mcp__context7" --disallowedTools "Bash(git push *),Bash(git commit *),Bash(git checkout *),Bash(git reset *),Bash(gh *),Bash(curl *),Bash(wget *),Bash(pkill *),Bash(killall *)" --mcp-config devos/ci/mcp.claude.json --max-turns 400
                 code=$?
-                if { [ "$code" = "125" ] || [ "$code" = "126" ]; } && [ -z "$restarted" ] && [ $(( 72 - ($(date +%s) - T0) / 60 )) -ge 25 ]; then
+                why=$(devos_restart "$code")
+                if [ -n "$why" ] && [ -z "$restarted" ] && [ $(( 72 - ($(date +%s) - T0) / 60 )) -ge 25 ]; then
                   restarted=1; mkdir -p .devos/logs; cp .devos/builder.err .devos/logs/builder-stalled.err
-                  devos_note "Builder: the Claude CLI stopped making progress (exit $code: 125 lost connection, 126 stuck); restarted once."
-                  printf '\n\n**An earlier run of this attempt stopped making progress (lost connection or stuck).** Its partial changes are already in the working tree (`git status`). Verify them against the fence and continue from them; do not redo or duplicate them.\n' >> .devos/builder-prompt.md
+                  devos_note "Builder: the Claude CLI $why; restarted once."
+                  printf '\n\n**An earlier run of this attempt %s.** Its partial changes are already in the working tree (`git status`). Verify them against the fence and continue from them; do not redo or duplicate them.\n' "$why" >> .devos/builder-prompt.md
                   continue
                 fi
                 break
@@ -483,12 +484,13 @@ jobs:
             while :; do
               left=$(( 72 - ($(date +%s) - T0) / 60 ))
               bash scripts/devos/agent-watchdog.sh "$left" 10 .devos/builder.json .devos/builder.err -- \
-                agent -p --force --trust --approve-mcps --model "$MODEL" --output-format stream-json "$(cat .devos/builder-prompt.md)"
+                agent -p --force --trust --approve-mcps --model "$MODEL" --output-format stream-json "$(devos_prompt cursor .devos/builder-prompt.md)"
               code=$?
-              if { [ "$code" = "125" ] || [ "$code" = "126" ]; } && [ -z "$restarted" ] && [ $(( 72 - ($(date +%s) - T0) / 60 )) -ge 25 ]; then
+              why=$(devos_restart "$code")
+              if [ -n "$why" ] && [ -z "$restarted" ] && [ $(( 72 - ($(date +%s) - T0) / 60 )) -ge 25 ]; then
                 restarted=1; mkdir -p .devos/logs; cp .devos/builder.err .devos/logs/builder-stalled.err
-                devos_note "Builder: the Cursor CLI stopped making progress (exit $code: 125 lost connection, 126 stuck); restarted once."
-                printf '\n\n**An earlier run of this attempt stopped making progress (lost connection or stuck).** Its partial changes are already in the working tree (`git status`). Verify them against the fence and continue from them; do not redo or duplicate them.\n' >> .devos/builder-prompt.md
+                devos_note "Builder: the Cursor CLI $why; restarted once."
+                printf '\n\n**An earlier run of this attempt %s.** Its partial changes are already in the working tree (`git status`). Verify them against the fence and continue from them; do not redo or duplicate them.\n' "$why" >> .devos/builder-prompt.md
                 continue
               fi
               break
@@ -531,8 +533,9 @@ jobs:
       - name: Guard — method files (from main's workflow)
         if: env.REVIEW_ONLY != 'true'
         run: |
-          changed=$( { git diff --name-only HEAD; git ls-files --others --exclude-standard; } | sort -u \
-            | grep -E '^(\.github/|scripts/devos/|scripts/guards/|devos/|devos\.config\.json$|CLAUDE\.md$|\.claude/|\.cursor/(rules|hooks|cli))' || true)
+          # The paths as they are (-z: no quoting), as PR-72 reads them.
+          changed=$( { git diff --name-only --no-renames -z HEAD; git ls-files --others --exclude-standard -z; } \
+            | grep -zE '^(\.github/|scripts/devos/|scripts/guards/|devos/|devos\.config\.json$|CLAUDE\.md$|\.claude/|\.cursor/(rules|hooks|cli))' | tr '\0' '\n' | sort -u || true)
           [ -z "$changed" ] && exit 0
           echo "Method files changed:"; echo "$changed"
           if [ "$METHOD" != "true" ]; then
@@ -566,7 +569,8 @@ jobs:
             fi
           fi
           # PR-28: a method fix always gets the deep review and stops at the human gate.
-          if git diff --name-only origin/main...HEAD | grep -qE '^(\.github/|scripts/devos/|scripts/guards/|devos/|devos\.config\.json$|CLAUDE\.md$|\.claude/|\.cursor/(rules|hooks|cli))'; then
+          # The paths as they are (-z: no quoting) and both paths of a rename (--no-renames), as PR-72 reads them.
+          if git diff --name-only --no-renames -z origin/main...HEAD | grep -qzE '^(\.github/|scripts/devos/|scripts/guards/|devos/|devos\.config\.json$|CLAUDE\.md$|\.claude/|\.cursor/(rules|hooks|cli))'; then
             echo "METHOD_CHANGE=1" >> "$GITHUB_ENV"
           fi
           LOCAL=$(git rev-parse HEAD)
@@ -817,7 +821,7 @@ jobs:
             for slot in $(devos_slots cursor $models); do
               MODEL="${slot%@*}"; acc="${slot##*@}"
               devos_use_cursor "$acc"; used="$acc"
-              agent -p --force --trust --approve-mcps --model "$MODEL" --output-format stream-json "$(cat .devos/reviewer-prompt.md)" > .devos/reviewer.json 2> .devos/reviewer.err
+              agent -p --force --trust --approve-mcps --model "$MODEL" --output-format stream-json "$(devos_prompt cursor .devos/reviewer-prompt.md)" > .devos/reviewer.json 2> .devos/reviewer.err
               rc=$?
               node scripts/devos/usage.mjs record --stage reviewer --command agent --model "$MODEL" --out .devos/reviewer.json --code "$rc" || true
               if devos_limited .devos/reviewer.json .devos/reviewer.err "$rc"; then
@@ -846,16 +850,16 @@ jobs:
           for slot in $(devos_slots claude $models); do
             MODEL="${slot%@*}"; acc="${slot##*@}"
             devos_use_claude "$acc"; used="$acc"
-            claude -p "$(cat .devos/reviewer-prompt.md)" \
+            claude -p \
               --model "$MODEL" \
               --effort "${EFFORT:-high}" \
               --output-format json \
               --json-schema "$(cat devos/schemas/verdict.schema.json)" \
               --permission-mode dontAsk \
               --allowedTools "Read,Glob,Grep,Write,Edit,Bash,Task,Agent,Skill,mcp__context7" \
-              --disallowedTools "Bash(git push *),Bash(git commit *),Bash(git checkout *),Bash(git reset *),Bash(gh *),Bash(curl *),Bash(wget *)" \
+              --disallowedTools "Bash(git push *),Bash(git commit *),Bash(git checkout *),Bash(git reset *),Bash(gh *),Bash(curl *),Bash(wget *),Bash(pkill *),Bash(killall *)" \
               --mcp-config devos/ci/mcp.claude.json \
-              --max-turns "$TURNS" > .devos/reviewer.json 2> .devos/reviewer.err
+              --max-turns "$TURNS" < .devos/reviewer-prompt.md > .devos/reviewer.json 2> .devos/reviewer.err
             rc=$?
             node scripts/devos/usage.mjs record --stage reviewer --command claude --model "$MODEL" --out .devos/reviewer.json --code "$rc" || true
             if devos_limited .devos/reviewer.json .devos/reviewer.err "$rc"; then

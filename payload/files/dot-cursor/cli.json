@@ -31,6 +31,8 @@
       "Shell(curl)",
       "Shell(wget)",
       "Shell(sudo)",
+      "Shell(pkill)",
+      "Shell(killall)",
       "Read(.env*)",
       "Write(.env*)",
       "Write(.github/workflows/devos-*)",

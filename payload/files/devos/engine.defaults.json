@@ -72,6 +72,8 @@
       "vercel.json",
       ".github/**"
     ],
+    "human_gate_paths": [],
+    "human_gate_note": "PR-72: a PASS that changes one of these paths stops at the human gate, as a schema change does (PR-17), and its review is deep. devos adopt fills it, as reviewer.human_gate_paths_extra in devos/project.json, for a project in production: its deploy, schema, sign-in and payment files.",
     "escalate_on_retry": true
   },
   "required_checks": [

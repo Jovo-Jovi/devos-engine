@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -371,10 +371,18 @@ function countOf(text, needle) {
 test("cycle-tools.test.mjs (m) the cycle workflow keeps the proven commands and adds Codex and Gemini", () => {
   const text = readFileSync(path.join(root, "payload", "files", "dot-github", "workflows", "devos-cycle.yml"), "utf8");
   // PR-53: one run per builder tool; no other agent takes over on a usage limit.
-  assert.equal(countOf(text, "agent -p --force --trust --approve-mcps --model \"$MODEL\" --output-format stream-json \"$(cat .devos/builder-prompt.md)\""), 1);
-  assert.equal(countOf(text, "agent -p --force --trust --approve-mcps --model \"$MODEL\" --output-format stream-json \"$(cat .devos/reviewer-prompt.md)\""), 1);
-  assert.equal(countOf(text, "claude -p \"$(cat .devos/builder-prompt.md)\" --model \"$MODEL\" --effort \"$EFFORT\" --output-format json --permission-mode dontAsk"), 1);
-  assert.equal(countOf(text, "claude -p \"$(cat .devos/reviewer-prompt.md)\""), 1);
+  // PR-71: an agent gets only where its prompt is, never the prompt itself, on its command line.
+  assert.equal(countOf(text, "agent -p --force --trust --approve-mcps --model \"$MODEL\" --output-format stream-json \"$(devos_prompt cursor .devos/builder-prompt.md)\""), 1);
+  assert.equal(countOf(text, "agent -p --force --trust --approve-mcps --model \"$MODEL\" --output-format stream-json \"$(devos_prompt cursor .devos/reviewer-prompt.md)\""), 1);
+  assert.equal(countOf(text, "DEVOS_STDIN=.devos/builder-prompt.md bash scripts/devos/agent-watchdog.sh \"$left\" 10 .devos/builder.json .devos/builder.err -- \\\n                  claude -p --model \"$MODEL\" --effort \"$EFFORT\" --output-format json --permission-mode dontAsk"), 1);
+  assert.equal(countOf(text, "--max-turns \"$TURNS\" < .devos/reviewer-prompt.md > .devos/reviewer.json"), 1);
+  // No agent that can run a command gets its prompt as an argument anywhere in the payload. The doctor and the
+  // supervisor read only (Read, Glob, Grep) and their prompts are fixed files, so they keep theirs.
+  const scripts = (dir) => readdirSync(dir, { withFileTypes: true }).flatMap((entry) => entry.isDirectory() ? scripts(path.join(dir, entry.name)) : /\.(ya?ml|sh)$/.test(entry.name) ? [path.join(dir, entry.name)] : []);
+  const carried = scripts(path.join(root, "payload", "files")).filter((file) => /\$\(cat [^)]*(prompt|"\$p")[^)]*\)/.test(readFileSync(file, "utf8")));
+  assert.deepEqual(carried.map((file) => path.basename(file)).sort(), ["devos-doctor.yml", "devos-supervisor.yml"]);
+  for (const file of carried) assert.match(readFileSync(file, "utf8"), /--allowedTools "Read,Glob,Grep" --disallowedTools "Bash,/, file);
+  assert.equal(countOf(text, "why=$(devos_restart \"$code\")"), 2);
   assert.equal(countOf(text, "bash scripts/devos/run-agent.sh builder"), 1);
   assert.equal(countOf(text, "bash scripts/devos/run-agent.sh reviewer"), 1);
   assert.equal(countOf(text, "npm install -g @openai/codex"), 1);
@@ -535,6 +543,7 @@ test("cycle-tools.test.mjs (s) the prompts keep the work lean", () => {
     const builder = render("builder");
     assert.equal(builder.status, 0, builder.stderr);
     assert.equal(builder.stdout.includes("Keep it lean: make the simplest change that meets the fence."), true, builder.stdout);
+    assert.equal(builder.stdout.includes("- **Stop only what you started (PR-71).** Keep the PID of anything you start in the background"), true, builder.stdout);
     const reviewer = render("reviewer");
     assert.equal(reviewer.status, 0, reviewer.stderr);
     assert.equal(reviewer.stdout.includes("proportion (a dependency, abstraction, layer or configuration the fence does not need is scope"), true, reviewer.stdout);
@@ -552,5 +561,105 @@ test("cycle-tools.test.mjs (r) every tool's Context7 config names the same serve
   for (const [rel, key] of files) {
     const json = JSON.parse(readFileSync(path.join(root, rel), "utf8"));
     assert.equal(json.mcpServers.context7[key], "https://mcp.context7.com/mcp", rel);
+  }
+});
+
+test("cycle-tools.test.mjs (t) an agent reads its prompt on standard input, and a builder stopped by a signal restarts once (PR-71)", { skip: skipWindows }, () => {
+  const dir = mkdtempSync(path.join(tmpdir(), "devos-signal-"));
+  try {
+    stage(dir);
+    repo(dir);
+    const bin = path.join(dir, "bin");
+    mkdirSync(bin);
+    const seen = path.join(dir, ".devos-prompts");
+    mkdirSync(seen);
+    // Each run keeps its last argument and its standard input. The first then stops as a run does when a command it
+    // ran (pkill, killall) signals it: SIGTERM, so exit 143.
+    writeFileSync(path.join(bin, "codex"), [
+      "#!/bin/sh",
+      "prev=''",
+      "last=''",
+      "arg=''",
+      "for a in \"$@\"; do",
+      "  if [ \"$prev\" = '-o' ]; then last=$a; fi",
+      "  prev=$a",
+      "  arg=$a",
+      "done",
+      "n=$(ls \"$DEVOS_SEEN\" | wc -l)",
+      "printf '%s' \"$arg\" > \"$DEVOS_SEEN/arg-$n\"",
+      "cat > \"$DEVOS_SEEN/stdin-$n\"",
+      "if [ \"$n\" -eq 0 ]; then kill -TERM $$; sleep 5; fi",
+      "printf '%s\\n' DONE > \"$last\"",
+      "exit 0",
+      "",
+    ].join("\n"), { mode: 0o755 });
+    mkdirSync(path.join(dir, ".devos"));
+    writeFileSync(path.join(dir, ".devos", "builder-prompt.md"), "Build it; the e2e starts next dev.\n");
+    const result = spawnSync("bash", ["scripts/devos/run-agent.sh", "builder", "codex", "M", "high", ".devos/builder-prompt.md"], {
+      cwd: dir,
+      encoding: "utf8",
+      windowsHide: true,
+      env: { ...process.env, PATH: `${bin}${path.delimiter}${process.env.PATH ?? ""}`, CODEX_KEY_1: "ok-key", DEVOS_WATCHDOG_TICK: "1", DEVOS_SEEN: seen },
+    });
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    const got = (name) => readFileSync(path.join(seen, name), "utf8");
+    // Codex takes "-": the prompt arrives on standard input, never on the command line.
+    assert.deepEqual([got("arg-0"), got("arg-2")], ["-", "-"]);
+    assert.equal(got("stdin-0"), "Build it; the e2e starts next dev.\n");
+    assert.equal(got("stdin-2").startsWith("Build it; the e2e starts next dev.\n\n\n**An earlier run of this attempt was stopped by a signal (exit 143), most likely by a command it ran that stops processes by name.** Its partial changes are already in the working tree"), true, got("stdin-2"));
+    assert.match(readFileSync(path.join(dir, ".devos", "builder-run.env"), "utf8"), /^code=0$/m);
+    assert.equal(readFileSync(path.join(dir, ".devos", "accounts.md"), "utf8").includes("- Builder: the Codex CLI was stopped by a signal (exit 143), most likely by a command it ran that stops processes by name; restarted once.\n"), true);
+    const shell = (script) => spawnSync("bash", ["-c", `. scripts/devos/accounts.sh; ${script}`], { cwd: dir, encoding: "utf8", windowsHide: true }).stdout;
+    assert.deepEqual(shell("for c in 0 1 124 125 126 137 143; do printf '%s=%s\\n' \"$c\" \"$(devos_restart \"$c\")\"; done").split("\n").filter(Boolean).map((line) => line.split("=")[1] !== ""), [false, false, false, true, true, true, true]);
+    assert.deepEqual(shell("for t in cursor codex gemini claude; do printf '%s|' \"$(devos_prompt \"$t\" .devos/x.md)\"; done").split("|"), [
+      "Your instructions for this run are in the file .devos/x.md. Read all of it first, then follow it exactly: it is your whole task.",
+      "-",
+      "Follow the instructions given on standard input exactly.",
+      "",
+      "",
+    ]);
+  } finally {
+    rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+  }
+});
+
+test("cycle-tools.test.mjs (u) the watchdog feeds the prompt file, ends the agent's session when it is signalled, what the agent left running, and what a killed watchdog left (PR-71)", { skip: skipWindows }, () => {
+  const dir = mkdtempSync(path.join(tmpdir(), "devos-watch-"));
+  try {
+    stage(dir);
+    repo(dir);
+    writeFileSync(path.join(dir, "in.txt"), "the prompt\n");
+    // Signalled on its own, the watchdog stops the agent first (143); a run that ends leaves nothing behind (0).
+    // A process counts as gone once it has ended: where nothing reaps orphans, an ended one stays a zombie (Z).
+    const state = (name, file) => `s=$(ps -o stat= -p "$(cat ${file})" 2>/dev/null | tr -d ' '); case "$s" in ''|Z*) echo ${name}=gone ;; *) echo ${name}=alive ;; esac`;
+    const script = [
+      "DEVOS_STDIN=in.txt DEVOS_WATCHDOG_TICK=1 bash scripts/devos/agent-watchdog.sh 5 1 out.txt err.txt -- sh -c 'cat > got.txt; echo $$ > agent.pid; exec sleep 30' &",
+      "w=$!",
+      "for i in $(seq 1 100); do [ -s agent.pid ] && break; sleep 0.1; done",
+      "kill -TERM $w; wait $w; echo \"watchdog=$?\"",
+      state("agent", "agent.pid"),
+      "DEVOS_WATCHDOG_TICK=1 bash scripts/devos/agent-watchdog.sh 5 1 out2.txt err2.txt -- sh -c 'sleep 30 & echo $! > left.pid; exit 0'",
+      "echo \"finished=$?\"",
+      "sleep 0.5",
+      state("left", "left.pid"),
+      // SIGKILL reaches no trap: the watchdog's next run ends what that one left in its session.
+      "DEVOS_WATCHDOG_TICK=1 bash scripts/devos/agent-watchdog.sh 5 1 out3.txt err3.txt -- sh -c 'echo $$ > kept.pid; exec sleep 30' &",
+      "w=$!",
+      "for i in $(seq 1 100); do [ -s kept.pid ] && break; sleep 0.1; done",
+      "kill -KILL $w; wait $w 2>/dev/null",
+      state("kept", "kept.pid"),
+      "DEVOS_WATCHDOG_TICK=1 bash scripts/devos/agent-watchdog.sh 5 1 out3.txt err3.txt -- sh -c 'exit 0'",
+      "sleep 0.5",
+      state("kept", "kept.pid"),
+      // A 0 or the watchdog's own session in that file is never acted on.
+      "echo 0 > out3.txt.agent-pid",
+      "DEVOS_WATCHDOG_TICK=1 bash scripts/devos/agent-watchdog.sh 5 1 out3.txt err3.txt -- sh -c 'exit 0'",
+      "echo \"self=$?\"",
+    ].join("\n");
+    const run = spawnSync("bash", ["-c", script], { cwd: dir, encoding: "utf8", windowsHide: true, timeout: 60000 });
+    assert.deepEqual(run.stdout.split("\n").filter(Boolean), ["watchdog=143", "agent=gone", "finished=0", "left=gone", "kept=alive", "kept=gone", "self=0"], run.stdout + run.stderr);
+    assert.equal(readFileSync(path.join(dir, "got.txt"), "utf8"), "the prompt\n");
+  } finally {
+    rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });

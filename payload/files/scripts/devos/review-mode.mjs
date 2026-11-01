@@ -3,16 +3,16 @@
 //
 //   light  risk 1–2, no gate, no critical path touched: the light reviewer (or the reviewer), evidence-first, spot checks.
 //   deep   risk 3, a gate, or the diff touches a critical path (devos.config.json
-//          reviewer.deep_paths: migrations, auth, headers, workflows…): the reviewer, every changed line
-//          of the critical files, targeted probes only.
+//          reviewer.deep_paths: migrations, auth, headers, workflows…, and every path of
+//          reviewer.human_gate_paths, PR-72): the reviewer, every changed line of the critical files,
+//          targeted probes only.
 // The agents and models are the ones the developer chose (agents in devos.config.json, PR-53). The model here is the
 // reviewer's first; the cycle tries its fallback_models after it (agents.mjs, accounts.sh devos_slots, PR-64).
 //
 // A retry (attempt 2+) raises the effort one step: the cheap review missed something or the task is hard.
 // Usage: node scripts/devos/review-mode.mjs --task T12 --attempt 1
 // Emits: mode, model, effort, max_turns, fallback, reasons, critical (comma-separated paths)
-import { execFileSync } from "node:child_process";
-import { P, config, parsePhases, globToRegExp, emit, fail, isMethodRow } from "./lib.mjs";
+import { P, config, parsePhases, globToRegExp, diffPaths, emit, fail, isMethodRow } from "./lib.mjs";
 import { reviewerFor } from "./agents.mjs";
 
 const arg = (n) => { const i = process.argv.indexOf(`--${n}`); return i >= 0 ? (process.argv[i + 1] ?? "") : ""; };
@@ -22,7 +22,7 @@ const hasGate = (row) => Boolean(row.gate && row.gate !== "—" && row.gate !== 
 /** The review plan for a task. `changed` is the branch's diff against the base (empty before the build). */
 export function reviewPlan(row, changed = [], attempt = 1, cfg = config()) {
   const r = cfg.reviewer;
-  const deepRes = (r.deep_paths ?? []).map(globToRegExp);
+  const deepRes = [...(r.deep_paths ?? []), ...(r.human_gate_paths ?? [])].map(globToRegExp);
   const critical = changed.filter((p) => deepRes.some((re) => re.test(p)));
   const reasons = [];
   if (hasGate(row)) reasons.push(`closes gate ${row.gate}`);
@@ -49,7 +49,7 @@ export function reviewPlan(row, changed = [], attempt = 1, cfg = config()) {
 
 export function branchChanges(base = config().base_branch ?? "main") {
   try {
-    return execFileSync("git", ["diff", "--name-only", `origin/${base}...HEAD`], { cwd: P(), encoding: "utf8" }).split(/\r?\n/).filter(Boolean);
+    return diffPaths(`origin/${base}`);
   } catch { return []; }
 }
 

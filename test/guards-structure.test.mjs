@@ -251,3 +251,23 @@ test("guards-structure.test.mjs (g) every stack has a module convention inside i
     assert.equal(modules.public.length > 0 && modules.public.every((entry) => entry === modules.dir || entry.startsWith(`${modules.dir}/`)), true, stack.id);
   }
 });
+
+test("guards-structure.test.mjs (h) guard:scope reads the branch's paths as they are: a move out of the Paths is outside them (PR-72)", () => {
+  const dir = project();
+  try {
+    branch(dir, FENCE("`src/modules/billing/**`"));
+    mkdirSync(path.join(dir, "src", "modules", "billing"), { recursive: true });
+    git(dir, ["mv", "src/modules/orders/old.ts", "src/modules/billing/old.ts"]);
+    // git quotes a name with an accent unless it is read with -z; read as it is, it is inside the Paths.
+    put(dir, { "src/modules/billing/résumé.ts": "export const r = 1;\n" });
+    git(dir, ["add", "-A"]);
+    git(dir, ["commit", "-q", "-m", "T07 a1: builder"]);
+    assert.deepEqual(guard(dir, "scope", { TASK: "T07" }), {
+      status: "FAIL",
+      findings: ["src/modules/orders/old.ts — outside the Paths of docs/fences/T07.md"],
+      note: "3 changed path(s), 1 Paths entry in docs/fences/T07.md",
+    });
+  } finally {
+    rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+  }
+});

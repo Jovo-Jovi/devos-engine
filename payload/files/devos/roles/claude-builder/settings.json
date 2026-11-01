@@ -69,7 +69,9 @@
       "Bash(git reset *)",
       "Bash(gh *)",
       "Bash(curl *)",
-      "Bash(wget *)"
+      "Bash(wget *)",
+      "Bash(pkill *)",
+      "Bash(killall *)"
     ]
   }
 }

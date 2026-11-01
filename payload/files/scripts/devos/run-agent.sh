@@ -77,12 +77,13 @@ if [ "$role" = "builder" ]; then
     while :; do
       left=$(( budget - ($(date +%s) - T0) / 60 ))
       rm -f "$out" "$out.stream.jsonl" "$last"
-      bash scripts/devos/agent-watchdog.sh "$left" 10 "$out" "$err" -- "${ARGS[@]}" "$(cat "$prompt")"
+      DEVOS_STDIN="$prompt" bash scripts/devos/agent-watchdog.sh "$left" 10 "$out" "$err" -- "${ARGS[@]}" "$(devos_prompt "$tool" "$prompt")"
       code=$?
-      if { [ "$code" = "125" ] || [ "$code" = "126" ]; } && [ -z "$restarted" ] && [ $(( budget - ($(date +%s) - T0) / 60 )) -ge 25 ]; then
+      why=$(devos_restart "$code")
+      if [ -n "$why" ] && [ -z "$restarted" ] && [ $(( budget - ($(date +%s) - T0) / 60 )) -ge 25 ]; then
         restarted=1
-        devos_note "Builder: the ${name} CLI stopped making progress (exit $code: 125 lost connection, 126 stuck); restarted once."
-        printf '\n\n**An earlier run of this attempt stopped making progress (lost connection or stuck).** Its partial changes are already in the working tree (`git status`). Verify them against the fence and continue from them; do not redo or duplicate them.\n' >> "$prompt"
+        devos_note "Builder: the ${name} CLI $why; restarted once."
+        printf '\n\n**An earlier run of this attempt %s.** Its partial changes are already in the working tree (`git status`). Verify them against the fence and continue from them; do not redo or duplicate them.\n' "$why" >> "$prompt"
         continue
       fi
       break
@@ -113,7 +114,7 @@ else
     used="$acc"
     used_model="$run_model"
     rm -f "$out" "$out.stream.jsonl" "$last"
-    "${ARGS[@]}" "$(cat "$prompt")" > "$out" 2> "$err"
+    "${ARGS[@]}" "$(devos_prompt "$tool" "$prompt")" < "$prompt" > "$out" 2> "$err"
     code=$?
     node scripts/devos/usage.mjs record --stage reviewer --command "$tool" --model "$run_model" --out "$out" --code "$code" || true
     if [ "$code" != "0" ] && devos_limited "$out" "$err" "$code"; then

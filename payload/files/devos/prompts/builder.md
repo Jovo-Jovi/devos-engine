@@ -44,6 +44,10 @@ Rules for this run:
   server start and stop it themselves (`scripts/devos/probe.mjs`, Playwright's `webServer`). Put
   `timeout 1200` in front of any long command (`timeout 1200 pnpm e2e`, `timeout 900 pnpm build`). A run
   in which nothing changes and nothing computes for 30 minutes is stopped as stuck.
+- **Stop only what you started (PR-71).** Keep the PID of anything you start in the background
+  (`pnpm exec next start & pid=$!`) and stop it with `kill "$pid"`. Never stop processes by name or by
+  their command line (`pkill`, `killall`, `kill 0`): that matches the runner's own processes and stops
+  your run with it.
 - Before finishing, run every Done-when command yourself and copy its real output into the report.
 - Finish by writing `docs/reports/{{TASK}}.md`: append a section `## Attempt {{ATTEMPT}}` in the
   `devos-task-report` skill's format. Its first line is `STATUS: DONE` or `STATUS: HALT`.

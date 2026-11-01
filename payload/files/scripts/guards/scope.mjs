@@ -24,7 +24,8 @@ export default function scope() {
   const base = process.env.DEVOS_SCOPE_BASE || `origin/${cfg.base_branch ?? "main"}`;
   let committed;
   try {
-    committed = execFileSync("git", ["diff", "--name-only", `${base}...HEAD`], { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).split(/\r?\n/).filter(Boolean);
+    // The paths as they are (-z) and both paths of a rename (--no-renames): a move out of the Paths is outside them.
+    committed = execFileSync("git", ["diff", "--name-only", "--no-renames", "-z", `${base}...HEAD`], { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).split("\0").filter(Boolean);
   } catch {
     return result("FAIL", [`cannot compare the branch with ${base}: fetch it (git fetch origin ${cfg.base_branch ?? "main"})`]);
   }

@@ -159,6 +159,16 @@ export function changedPaths() {
   return [...new Set(paths)];
 }
 
+/**
+ * The paths a branch adds, changes or deletes against `base`, as they are (PR-72): `-z`, so git quotes none of
+ * them, and `--no-renames`, so a rename lists the path it left as well as the one it made. Throws when git cannot
+ * diff.
+ */
+export function diffPaths(base, pathspec = []) {
+  const out = execFileSync("git", ["diff", "--name-only", "--no-renames", "-z", `${base}...HEAD`, ...(pathspec.length > 0 ? ["--", ...pathspec] : [])], { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+  return out.split("\0").filter(Boolean);
+}
+
 // ---------- globs --------------------------------------------------------------------------
 
 export function globToRegExp(glob) {

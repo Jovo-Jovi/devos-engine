@@ -84,23 +84,24 @@ for slot in $(devos_slots "$tool" $models); do
   case "$tool" in
     claude)
       devos_use_claude "$acc"
-      claude -p "$(cat "$p")" --model "$run_model" --effort "$effort" --output-format json \
+      # PR-71: the prompt on standard input, never on the command line.
+      claude -p --model "$run_model" --effort "$effort" --output-format json \
         --json-schema "$(cat "$schema")" --permission-mode dontAsk --max-turns "$turns" \
         --allowedTools "Read,Glob,Grep,Write,Edit,Bash,Task,Agent,Skill" \
-        --disallowedTools "Bash(git push *),Bash(git commit *),Bash(git checkout *),Bash(git reset *),Bash(gh *),Bash(curl *),Bash(wget *)" \
-        > "$raw" 2> "$err"
+        --disallowedTools "Bash(git push *),Bash(git commit *),Bash(git checkout *),Bash(git reset *),Bash(gh *),Bash(curl *),Bash(wget *),Bash(pkill *),Bash(killall *)" \
+        < "$p" > "$raw" 2> "$err"
       code=$?; cmd=claude ;;
     cursor)
       devos_use_cursor "$acc"
-      agent -p --force --trust --model "$run_model" --output-format stream-json "$(cat "$p")" > "$raw" 2> "$err"
+      agent -p --force --trust --model "$run_model" --output-format stream-json "$(devos_prompt cursor "$p")" > "$raw" 2> "$err"
       code=$?; cmd=agent ;;
     codex)
       devos_use_codex "$acc"
-      "${ARGS[@]}" "$(cat "$p")" > "$raw" 2> "$err"
+      "${ARGS[@]}" "$(devos_prompt codex "$p")" < "$p" > "$raw" 2> "$err"
       code=$?; cmd=codex ;;
     gemini)
       devos_use_gemini "$acc"
-      "${ARGS[@]}" "$(cat "$p")" > "$raw" 2> "$err"
+      "${ARGS[@]}" "$(devos_prompt gemini "$p")" < "$p" > "$raw" 2> "$err"
       code=$?; cmd=gemini ;;
   esac
   node scripts/devos/usage.mjs record --stage "$stage" --command "$cmd" --model "$run_model" --out "$raw" --code "$code" || true

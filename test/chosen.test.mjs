@@ -115,7 +115,9 @@ test("chosen.test.mjs (d) a planning run uses the chosen reviewer agent, switchi
     assert.equal(out.model, "grok-4.7-xhigh-fast");
     assert.equal(out.limited, false);
     assert.equal(existsSync(path.join(run.dir, ".devos", "limits", "cursor-1.txt")), true);
-    assert.match(readFileSync(`${run.seen}.ok-key`, "utf8"), /^continue the partial plan\n[\s\S]*\.devos\/intake-answer\.json/);
+    // PR-71: Cursor gets one line that names the prompt file, never the prompt.
+    assert.equal(readFileSync(`${run.seen}.ok-key`, "utf8"), "Your instructions for this run are in the file .devos/intake-prompt.md. Read all of it first, then follow it exactly: it is your whole task.");
+    assert.match(readFileSync(path.join(run.dir, ".devos", "intake-prompt.md"), "utf8"), /^continue the partial plan\n[\s\S]*\.devos\/intake-answer\.json/);
     assert.deepEqual(readFileSync(`${run.seen}.kit`), readFileSync(path.join(run.dir, "devos", "roles", "cursor-planner", "cli.json")));
     assert.equal(existsSync(`${run.seen}.claude`), false);
     assert.match(readFileSync(path.join(run.dir, ".devos", "accounts.md"), "utf8"), /intake: cursor account 1 reached its usage limit/);

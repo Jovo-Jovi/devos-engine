@@ -56,7 +56,7 @@
     {
       "path": ".cursor/cli.json",
       "stored": "dot-cursor/cli.json",
-      "sha256": "e0c7d4f833baef8a6c0a6f568d79e5dc31c20aa3f3d2233767201d4ec8461641",
+      "sha256": "7736d0a3ca20bc2567e7301e64115e0cfb57cd9f7c5f37b1ea8836a774b7ceb7",
       "owner": "engine"
     },
     {
@@ -98,7 +98,7 @@
     {
       "path": ".cursor/rules/40-environment.mdc",
       "stored": "dot-cursor/rules/40-environment.mdc",
-      "sha256": "ba3dd0c9c79356f82cdaa42fcb95c4bee133a526ed7e3c19ef2f48426a910677",
+      "sha256": "7a6a74da7abde199403160e77e0955e684b631c1412dfbf60472a2f92829dce2",
       "owner": "engine"
     },
     {
@@ -188,7 +188,7 @@
     {
       "path": ".github/workflows/devos-cycle.yml",
       "stored": "dot-github/workflows/devos-cycle.yml",
-      "sha256": "02805ede8a835fc3c2b0e8d0775798be57bdc881bf27163a6a3ef0216c5228f0",
+      "sha256": "3971487b9f8a7c4ce5c6cece61c7685de9a0a85c565bf79789567a0db78aa33b",
       "owner": "engine"
     },
     {
@@ -260,7 +260,7 @@
     {
       "path": "devos/engine.defaults.json",
       "stored": "devos/engine.defaults.json",
-      "sha256": "6e39aafdc4d6f557c2e63b59a1ea847626639f7c4b77010af8aa48b9be92baca",
+      "sha256": "cb4794f6eacc7d2d5fa806a811b98bfb639cead0fc3111d6dceaf308f56061eb",
       "owner": "engine"
     },
     {
@@ -272,7 +272,7 @@
     {
       "path": "devos/prompts/builder.md",
       "stored": "devos/prompts/builder.md",
-      "sha256": "1c86e50cb4bb25987d7b50853ab67c779e95822d7ababbf698533d6339abc610",
+      "sha256": "8643ca6a735e1d9b9ed8e66c62420681a0de166e9d842acd91a7ce076eb95422",
       "owner": "engine"
     },
     {
@@ -320,7 +320,7 @@
     {
       "path": "devos/roles/claude-builder/settings.json",
       "stored": "devos/roles/claude-builder/settings.json",
-      "sha256": "bb98adb9f421567383d7b828ad9aea32a23800106b6a88caae56822678d3ae0d",
+      "sha256": "ef630e998fee65ac5c22f02d2c78611f15143661b8b168917a957a4fc39abd40",
       "owner": "engine"
     },
     {
@@ -356,7 +356,7 @@
     {
       "path": "devos/roles/gemini/policy.toml",
       "stored": "devos/roles/gemini/policy.toml",
-      "sha256": "2adbaaa5ad8b18ee9c7c5e684b502de0088a44c567b7a2f575bb0b66b31cdbe2",
+      "sha256": "a0ecab77f3cb059913fec2e3c29d5ef4c90731a8b3c2c2df4fcdbca05ca925c4",
       "owner": "engine"
     },
     {
@@ -1466,7 +1466,7 @@
     {
       "path": "docs/method/AUTOMATION.md",
       "stored": "docs/method/AUTOMATION.md",
-      "sha256": "78ecee2bc9251e9789cff873641a671bee2c54f4f7870cda7b701dc86fb16b07",
+      "sha256": "d159a1d75f5524f8e29e2763deea8fdcedbeef0061ca7e616155a9c989cf59ff",
       "owner": "engine"
     },
     {
@@ -1490,13 +1490,13 @@
     {
       "path": "docs/method/PRECEDENTS.md",
       "stored": "docs/method/PRECEDENTS.md",
-      "sha256": "5acce9e9e6c723240901ab849c26af6ec3b4ab0c240abaebf071cacd079b5466",
+      "sha256": "9df629af7ecb6022eb6aa750c572af4045b5bd39ea76dd49751d722a3fd68bd3",
       "owner": "engine"
     },
     {
       "path": "scripts/devos/accounts.sh",
       "stored": "scripts/devos/accounts.sh",
-      "sha256": "7a0519c5d989c40f5f4d5875a981e01b1db19ee120d63f05d537dc2e584a9d79",
+      "sha256": "30dd0e3c53bbd99fbffafbee60fdc16b77657c4ce4252e2936d4b36bd39d72f8",
       "owner": "engine"
     },
     {
@@ -1508,7 +1508,7 @@
     {
       "path": "scripts/devos/agent-watchdog.sh",
       "stored": "scripts/devos/agent-watchdog.sh",
-      "sha256": "4b6fe526d0f9448cf0c995750c5a36f8f933a27bdb8a752f26fbfce048565b8f",
+      "sha256": "cc6fc553f6841220c81200fcacd6de18fb17a75e1fe442145cdb6de3ae3e4e28",
       "owner": "engine"
     },
     {
@@ -1586,7 +1586,7 @@
     {
       "path": "scripts/devos/lib.mjs",
       "stored": "scripts/devos/lib.mjs",
-      "sha256": "cfc065f5e59d9d8973547a628c92355e235791c361338af6be6a09ec90c2230e",
+      "sha256": "66370b891c26ad114fdab118de9346b4d0720330592fb9ef0dd3ba9e88c98afe",
       "owner": "engine"
     },
     {
@@ -1622,7 +1622,7 @@
     {
       "path": "scripts/devos/plan-agent.sh",
       "stored": "scripts/devos/plan-agent.sh",
-      "sha256": "13e6124e8006bb247f27d98a6ba34f0b09f64596144b8d0abe9889a2fa7fb17c",
+      "sha256": "3bac6e8be43931735f0f5f3dd421aba7b828251ac3d65cad3f262294090c34a2",
       "owner": "engine"
     },
     {
@@ -1664,7 +1664,7 @@
     {
       "path": "scripts/devos/review-mode.mjs",
       "stored": "scripts/devos/review-mode.mjs",
-      "sha256": "8961fc8fca152bec5e69a3daea7eb9df4b841987313e49e2d8c3cb41ec5966d7",
+      "sha256": "5be6031a4ed9c25f5d416e531b8b1ee6ae4c69b097bd22e8b4618b9350141fcd",
       "owner": "engine"
     },
     {
@@ -1676,7 +1676,7 @@
     {
       "path": "scripts/devos/run-agent.sh",
       "stored": "scripts/devos/run-agent.sh",
-      "sha256": "3ea91202d8476fc7d6dc00a55a0f62a1dd7c460cece88dad2413ac028f9e5d33",
+      "sha256": "a34d4c85d484db1457d41b144b2675e7d4df6e1f3affa1f40fae9191bee0fd5d",
       "owner": "engine"
     },
     {
@@ -1754,7 +1754,7 @@
     {
       "path": "scripts/devos/verdict.mjs",
       "stored": "scripts/devos/verdict.mjs",
-      "sha256": "c8c41a8356284ef22e9d9677537c4c0309a7859821d60d758b36edff0ba303f9",
+      "sha256": "fb93851907e137cb03376360ce87474fd96b251edefadbf606d1367ad7a10372",
       "owner": "engine"
     },
     {
@@ -1844,7 +1844,7 @@
     {
       "path": "scripts/guards/scope.mjs",
       "stored": "scripts/guards/scope.mjs",
-      "sha256": "d20c2c28a0212277670947180636d19e71210e1a0705f2b8752d0f94bb18f123",
+      "sha256": "b15092214918c6dcf575242a92a3858a36048d5a6e1d2b2f67d51f162ed8f7ea",
       "owner": "engine"
     },
     {

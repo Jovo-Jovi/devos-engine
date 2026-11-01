@@ -101,3 +101,26 @@ devos_unavailable() { node scripts/devos/limit-check.mjs --unavailable --json "$
 
 # devos_note "text" → one line for the PR comment (appended to the verdict or builder summary).
 devos_note() { echo "- $1" >> .devos/accounts.md; echo "::notice title=Dev OS::$1"; }
+
+# devos_prompt <tool> <file> → an agent's last argument, which never holds its prompt (PR-71). With the whole prompt
+# as an argument, a command the agent ran that finds processes by their command line (`pkill -f "next dev"`) matched
+# the agent itself, because its prompt named that command. Claude Code, Codex and Gemini read the prompt on standard
+# input (`< file`; Claude Code takes no argument for it, Codex takes `-`); Cursor, which reads no standard input, gets
+# one line that names the file, as `devos init`'s blueprint run does.
+devos_prompt() {
+  case "$1" in
+    cursor) printf 'Your instructions for this run are in the file %s. Read all of it first, then follow it exactly: it is your whole task.' "$2" ;;
+    codex) printf '%s' '-' ;;
+    gemini) printf 'Follow the instructions given on standard input exactly.' ;;
+  esac
+}
+
+# devos_restart <exit> → why a builder run is restarted once in place, or nothing (PR-71). 125 and 126 are the
+# watchdog's (a lost connection, stuck); 137 and 143 are a signal from inside the run, such as a command the agent ran
+# that stops processes by name, or the runner running out of memory.
+devos_restart() {
+  case "$1" in
+    125|126) printf 'stopped making progress (exit %s: 125 lost connection, 126 stuck)' "$1" ;;
+    137|143) printf 'was stopped by a signal (exit %s), most likely by a command it ran that stops processes by name' "$1" ;;
+  esac
+}

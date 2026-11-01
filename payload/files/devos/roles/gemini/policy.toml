@@ -6,3 +6,12 @@ commandRegex = '(git +(push|commit|reset|checkout|rebase|merge|tag)|gh|curl|wget
 decision = "deny"
 priority = 900
 denyMessage = "The DEV_OS runner owns git and the network; this command is not allowed in the cycle."
+
+# PR-71: an agent stops only the processes it started, by their PID; stopping them by name or command line can stop
+# the agent and the runner with them.
+[[rule]]
+toolName = "run_shell_command"
+commandRegex = '\b(pkill|killall)\b'
+decision = "deny"
+priority = 900
+denyMessage = "Stop only the processes you started, by the PID you kept (kill \"$pid\"); pkill and killall can stop the agent and the runner."

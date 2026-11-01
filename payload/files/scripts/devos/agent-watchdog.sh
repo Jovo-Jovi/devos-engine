@@ -21,6 +21,9 @@
 # The agent never sees DEVOS_PROGRESS_TOKEN: it is removed from the child's environment.
 # Usage (PR-52): with DEVOS_USAGE_STAGE set, every run ends with one line in the usage record
 # (scripts/devos/usage.mjs record), its tool and model read from the command line.
+# PR-71: DEVOS_STDIN names a file the command reads on standard input (its prompt; /dev/null by default). A signal to
+# the watchdog itself ends the command's whole session first, so a restart never runs beside a run still going; and
+# when the command ends, what it left running in its session ends with it.
 set -u
 budget=$1; stall=$2; out=$3; err=$4; shift 4
 tick=${DEVOS_WATCHDOG_TICK:-20}; unit=${DEVOS_WATCHDOG_UNIT:-60}   # tests shrink these
@@ -33,8 +36,19 @@ for a in "$@"; do [ "$prev" = "--model" ] && usage_model=$a; prev=$a; done
 
 # A stream kept from an earlier run (another tool) never stands for this one.
 rm -f "$out.stream.jsonl"
-env -u DEVOS_PROGRESS_TOKEN -u GH_TOKEN -u GITHUB_TOKEN setsid "$@" > "$out" 2> "$err" &
+# PR-71: the run before this one may have left its agent running, if its watchdog was ended by SIGKILL, which no trap
+# catches. Whatever is left in that run's session ends before this one starts; a session no process holds is nothing.
+pidfile="$out.agent-pid"
+old=$(cat "$pidfile" 2>/dev/null || true)
+own=$(ps -o sid= -p $$ 2>/dev/null | tr -d ' ')
+# Never 0 (pkill's "this session") and never the watchdog's own session.
+case "$old" in ''|0|*[!0-9]*) ;; *) [ "$old" = "$own" ] || pkill -KILL -s "$old" 2>/dev/null ;; esac
+env -u DEVOS_PROGRESS_TOKEN -u GH_TOKEN -u GITHUB_TOKEN setsid "$@" < "${DEVOS_STDIN:-/dev/null}" > "$out" 2> "$err" &
 pid=$!
+printf '%s\n' "$pid" > "$pidfile"
+trap 'stop; exit 143' TERM
+trap 'stop; exit 130' INT
+trap 'stop; exit 129' HUP
 start=$(date +%s); last_change=$start; last_sig=""; last_report=$start; last_cpu=0
 
 stop() { kill -TERM -- "-$pid" 2>/dev/null; sleep 5; kill -KILL -- "-$pid" 2>/dev/null; wait "$pid" 2>/dev/null; }
@@ -111,4 +125,5 @@ while kill -0 "$pid" 2>/dev/null; do
   fi
 done
 wait "$pid"; code=$?
+kill -TERM -- "-$pid" 2>/dev/null
 finish "$code" "✅ **builder finished** (exit $code) — next: checks and review"

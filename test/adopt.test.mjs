@@ -6,8 +6,9 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
 import { cleanup, stage } from "./harness.mjs";
-import { chooseAgent, surveyLines, surveyProject } from "../lib/adopt.mjs";
+import { chooseAgent, criticalList, surveyLines, surveyProject } from "../lib/adopt.mjs";
 import { hubExec } from "../lib/hub.mjs";
+import { matchesAny } from "../payload/files/scripts/devos/lib.mjs";
 
 // E33 (D-E13): devos adopt --check surveys an existing project and changes nothing. E34: devos adopt has the
 // developer's AI tool write a brief of it, outside the project, for the developer to confirm or correct.
@@ -89,6 +90,8 @@ test("adopt.test.mjs (a) a Next.js project that deploys and has a release is sur
     assert.deepEqual(survey.stack.test_runners, ["playwright", "vitest"]);
     assert.deepEqual(survey.modules, { database: ["supabase"], payments: ["stripe"], observability: ["sentry"] });
     assert.deepEqual(survey.automation, { workflows: ["ci.yml", "deploy.yml"], deploy: ["vercel"], deploy_workflows: ["deploy.yml"] });
+    // E37: a test that names Stripe in its text imports nothing from it, so only the deploy workflow is critical.
+    assert.deepEqual(survey.critical_paths, { deploy: [".github/workflows/deploy.yml"], schema: [], auth: [], payments: [] });
     assert.deepEqual(survey.collisions.engine.filter((entry) => [".github/workflows/ci.yml", ".gitignore"].includes(entry.path)), [
       { path: ".github/workflows/ci.yml", same: false },
       { path: ".gitignore", same: false },
@@ -224,6 +227,7 @@ test("adopt.test.mjs (f) devos adopt --check prints the survey, --json gives the
     assert.match(out[6], /^Overlaps: \d+ engine files exist \(\d+ differs?\) · 1 project document exists \(CLAUDE\.md\)$/);
     assert.equal(out[7], "Environment names: 0");
     assert.match(out[8], /^Size: 9 files, \d+ lines of code · 1 commit from \d{4}-\d\d-\d\d to \d{4}-\d\d-\d\d · 1 contributor · open pull requests unknown$/);
+    assert.equal(out[9], "Critical paths: 1 (deploy 1 · schema 0 · sign-in 0 · payments 0)");
     assert.equal(out.at(-1), "Ready: yes. Nothing was changed.");
     const json = runDevos(["adopt", "--check", folder, "--json"]);
     assert.equal(json.status, 0, json.stderr);
@@ -390,5 +394,50 @@ test("adopt.test.mjs (l) a tool that changes the project is caught, and the brie
     assert.equal(existsSync(path.join(stagingOf(staged), "brief", "confirmed.json")), false);
   } finally {
     cleanup(staged.parent);
+  }
+});
+
+test("adopt.test.mjs (m) the survey names a project's critical paths: its deploy, schema, sign-in and payment files, never its documents", () => {
+  const folder = project({
+    "package.json": JSON.stringify({ name: "shop", dependencies: { next: "15.0.0", "next-auth": "5.0.0", stripe: "17.0.0", "@stripe/stripe-js": "4.0.0" } }, null, 2),
+    "vercel.json": "{}\n",
+    "Dockerfile": "FROM node:22\n",
+    ".github/workflows/deploy.yml": "name: deploy\non: push\njobs:\n  ship:\n    runs-on: ubuntu-latest\n    steps:\n      - run: npx vercel deploy --prod\n",
+    "prisma/schema.prisma": "model Order {\n  id Int @id\n}\n",
+    "supabase/migrations/0001_init.sql": "create table orders (id int);\n",
+    "src/db/schema.ts": "export const orders = {};\n",
+    // A file that may hold a secret is never read, whatever it imports.
+    ".env.mjs": "import Stripe from \"stripe\";\nexport default Stripe;\n",
+    "src/server/passport.ts": "import { Strategy } from \"passport-local\";\nexport const strategy = Strategy;\n",
+    "src/middleware.ts": "export function middleware() {}\n",
+    "src/app/(auth)/login/page.tsx": "export default function Login() {\n  return null;\n}\n",
+    "src/app/api/auth/[...nextauth]/route.ts": "import NextAuth from \"next-auth\";\nexport const GET = NextAuth({});\n",
+    "src/server/session.ts": "import { getServerSession } from \"next-auth/next\";\nexport const session = getServerSession;\n",
+    "src/billing/plans.ts": "export const plans = [];\n",
+    "src/billing/invoice.ts": "import Stripe from \"stripe\";\nexport const make = Stripe;\n",
+    "src/lib/pay.ts": "import Stripe from \"stripe\";\nexport const client = Stripe;\n",
+    "src/lib/checkout-button.tsx": "export async function load() {\n  return import(\"@stripe/stripe-js\");\n}\n",
+    "lib/legacy.js": "const stripe = require('stripe');\nmodule.exports = stripe;\n",
+    "app/page.tsx": "// The Stripe docs say: use stripe.\nexport default function Page() {\n  return null;\n}\n",
+    "docs/auth/notes.md": "# How sign-in works\n",
+  });
+  try {
+    const survey = surveyProject(folder, { exec: fakeGh() });
+    assert.deepEqual(survey.critical_paths, {
+      deploy: [".github/workflows/deploy.yml", "Dockerfile", "vercel.json"],
+      schema: ["prisma/**", "src/db/schema.ts", "supabase/migrations/**"],
+      auth: ["src/app/(auth)/**", "src/app/api/auth/**", "src/middleware.ts", "src/server/passport.ts", "src/server/session.ts"],
+      payments: ["lib/legacy.js", "src/billing/**", "src/lib/checkout-button.tsx", "src/lib/pay.ts"],
+    });
+    const list = criticalList(survey.critical_paths);
+    assert.equal(list.length, 15);
+    // The runner's own glob matcher (scripts/devos/lib.mjs) reads them as the files they name.
+    for (const file of ["src/app/(auth)/login/page.tsx", "src/app/api/auth/[...nextauth]/route.ts", "src/billing/invoice.ts", "prisma/schema.prisma", "supabase/migrations/0001_init.sql", ".github/workflows/deploy.yml"]) {
+      assert.equal(matchesAny(file, list), true, file);
+    }
+    for (const file of ["app/page.tsx", "docs/auth/notes.md", "src/lib/other.ts", ".env.mjs"]) assert.equal(matchesAny(file, list), false, file);
+    assert.equal(surveyLines(survey).includes("Critical paths: 15 (deploy 3 · schema 3 · sign-in 5 · payments 4)"), true, surveyLines(survey).join("\n"));
+  } finally {
+    cleanup(folder);
   }
 });

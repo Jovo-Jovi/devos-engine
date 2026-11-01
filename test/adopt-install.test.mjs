@@ -6,7 +6,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
 import { cleanup, stage } from "./harness.mjs";
-import { AGENT_START, adoptModules, adoptPullBody, plainFile, publicText, strayPaths } from "../lib/adopt.mjs";
+import { AGENT_START, adoptModules, adoptPullBody, askDeploy, plainFile, publicText, strayPaths } from "../lib/adopt.mjs";
 
 // E36b (D-E13): from a confirmed brief, DEV_OS goes onto a new branch devos/adopt, made in a worktree outside the
 // project, with the documents the AI tool writes and the baseline; the developer's checkout is never touched.
@@ -368,4 +368,97 @@ test("adopt-install.test.mjs (v) the description keeps no path of this computer 
   } finally {
     cleanup(t.staged.parent);
   }
+});
+
+// E37: a project that deploys itself, and a project in production.
+const DEPLOYS = {
+  "vercel.json": "{}\n",
+  ".github/workflows/deploy.yml": "name: deploy\non: push\njobs:\n  ship:\n    runs-on: ubuntu-latest\n    steps:\n      - run: npx vercel deploy --prod\n",
+  "prisma/schema.prisma": "model Order {\n  id Int @id\n}\n",
+  "src/lib/pay.ts": "import Stripe from \"stripe\";\nexport const client = Stripe;\n",
+};
+const GATED = [".github/workflows/deploy.yml", "vercel.json", "prisma/**", "src/lib/pay.ts"];
+
+test("adopt-install.test.mjs (w) a project in production keeps its own deploy, and a change to its deploy, schema, sign-in or payment files stops at the gate", () => {
+  const t = setUp(DEPLOYS);
+  try {
+    const remote = bareOrigin(t);
+    const head = t.git(["rev-parse", "HEAD"]).out;
+    const result = t.run([t.folder, ...AGENT], `yes\nyes\n${asked()}\nyes\n`, { STUB_STAGE: "production", STUB_VARIABLES: "[]" });
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    assert.equal(result.stdout.includes("Your project deploys itself (vercel; deploy.yml). Who deploys main once DEV_OS is added?\n"), true, result.stdout);
+    assert.equal(result.stdout.includes("devos: your own deploy stays as it is; DEV_OS never deploys\n"), true, result.stdout);
+    assert.equal(result.stdout.includes(`devos: in production, a task that changes one of these 4 paths stops at your gate (PR-72): ${GATED.join(", ")}\n`), true, result.stdout);
+    unchanged(t, head);
+    const answers = JSON.parse(t.git(["show", "devos/adopt:devos/answers.json"]).out);
+    assert.deepEqual([answers.deploy, answers.adopted.stage], ["own", "production"]);
+    const project = JSON.parse(t.git(["show", "devos/adopt:devos/project.json"]).out);
+    assert.deepEqual(project.reviewer.human_gate_paths_extra, GATED);
+    assert.deepEqual(project.reviewer.deep_paths_extra, GATED);
+    const config = JSON.parse(t.git(["show", "devos/adopt:devos.config.json"]).out);
+    assert.deepEqual(config.reviewer.human_gate_paths, GATED);
+    assert.equal(GATED.every((entry) => config.reviewer.deep_paths.includes(entry)), true, config.reviewer.deep_paths.join(", "));
+    // DEV_OS's deploy stays off: its variable is never set, and the pull request says so.
+    assert.equal(remote("refs/heads/devos/adopt"), t.git(["rev-parse", "devos/adopt"]).out.trim());
+    assert.equal(ghLines(t).some((line) => line.startsWith("variable set DEVOS_VERCEL")), false, ghLines(t).join("\n"));
+    const body = JSON.parse(readFileSync(path.join(t.staged.parent, "gh.log.bodies"), "utf8").split(/\r?\n/).filter(Boolean)[0]);
+    assert.equal(body.includes("- Your deploy stays as it is: DEV_OS never deploys.\n"), true, body);
+    assert.equal(body.includes("- In production, a task that changes your deploy, schema, sign-in or payment files stops for your review and merge (4 paths, `reviewer.human_gate_paths_extra` in `devos/project.json`).\n"), true, body);
+  } finally {
+    cleanup(t.staged.parent);
+  }
+});
+
+test("adopt-install.test.mjs (x) a project in development may choose DEV_OS's deploy; its critical paths are reviewed deep, with no gate", () => {
+  const t = setUp(DEPLOYS);
+  try {
+    const remote = bareOrigin(t);
+    const result = t.run([t.folder, ...AGENT], `yes\nyes\n${asked()}2\nyes\n`, { STUB_VARIABLES: "[]" });
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    assert.equal(result.stdout.includes("devos: DEV_OS will deploy main to Vercel. Turn off Vercel's own Git deploys of main, or both will deploy it\n"), true, result.stdout);
+    assert.equal(result.stdout.includes("devos: in production"), false, result.stdout);
+    assert.equal(JSON.parse(t.git(["show", "devos/adopt:devos/answers.json"]).out).deploy, "vercel");
+    const project = JSON.parse(t.git(["show", "devos/adopt:devos/project.json"]).out);
+    assert.equal(Object.hasOwn(project.reviewer, "human_gate_paths_extra"), false);
+    assert.deepEqual(project.reviewer.deep_paths_extra, GATED);
+    assert.deepEqual(JSON.parse(t.git(["show", "devos/adopt:devos.config.json"]).out).reviewer.human_gate_paths, []);
+    assert.equal(remote("refs/heads/devos/adopt"), t.git(["rev-parse", "devos/adopt"]).out.trim());
+    assert.equal(ghLines(t).includes("variable set DEVOS_VERCEL --body true --repo devtest/demo-app"), true, ghLines(t).join("\n"));
+    const body = JSON.parse(readFileSync(path.join(t.staged.parent, "gh.log.bodies"), "utf8").split(/\r?\n/).filter(Boolean)[0]);
+    assert.equal(body.includes("- DEV_OS deploys `main` to Vercel at the gates you sign (`devos-deploy.yml`). Turn off Vercel's own Git deploys of `main` before you merge, or both deploy it.\n"), true, body);
+    assert.equal(body.includes("In production"), false, body);
+  } finally {
+    cleanup(t.staged.parent);
+  }
+});
+
+test("adopt-install.test.mjs (y) who deploys: none without a deploy, the project's own for any host but Vercel, and only 1 or 2 for Vercel", async () => {
+  const survey = (deploy, deployWorkflows = []) => ({ automation: { deploy, deploy_workflows: deployWorkflows } });
+  const reader = (lines) => async () => (lines.length > 0 ? lines.shift() : null);
+  const quiet = console.log;
+  const said = [];
+  console.log = (line) => said.push(String(line));
+  const write = process.stdout.write;
+  process.stdout.write = () => true;
+  try {
+    assert.equal(await askDeploy(reader([]), survey([])), "none");
+    assert.equal(await askDeploy(reader([]), survey(["netlify"], ["ship.yml"])), "own");
+    assert.equal(said.includes("Your project deploys itself (netlify; ship.yml). DEV_OS keeps that as it is and never deploys."), true, said.join("\n"));
+    assert.equal(await askDeploy(reader(["1"]), survey(["vercel"])), "own");
+    assert.equal(await askDeploy(reader(["", "2"]), survey(["vercel"])), "own");
+    assert.equal(await askDeploy(reader(["3", " 2 "]), survey(["vercel"])), "vercel");
+    assert.equal(await askDeploy(reader(["3", "x", "yes"]), survey(["vercel"])), null);
+    assert.equal(said.at(-1), "devos: no valid answer for the deploy; nothing was written or sent");
+    assert.equal(await askDeploy(reader([]), survey(["vercel", "docker"])), null);
+    assert.equal(said.at(-1), "devos: input ended before DEV_OS was added; nothing was written or sent");
+    assert.equal(await askDeploy(reader([]), { ...survey(["vercel"]), repository: { devos_variables: ["DEVOS_VERCEL"] } }), "vercel");
+    assert.equal(said.at(-1).startsWith("devos: DEVOS_VERCEL is set on the repository, so DEV_OS deploys main to Vercel."), true);
+  } finally {
+    console.log = quiet;
+    process.stdout.write = write;
+  }
+  const md = "## What it is\n\nA shop.\n";
+  const plain = adoptPullBody({ name: "Shop" }, md, {});
+  for (const line of ["DEV_OS never deploys", "DEV_OS deploys `main`", "In production"]) assert.equal(plain.includes(line), false, line);
+  assert.equal(adoptPullBody({ name: "Shop" }, md, { deploy: "own", gated: 1 }).includes("stops for your review and merge (1 path, `reviewer.human_gate_paths_extra`"), true);
 });
