@@ -2,7 +2,7 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
-## 1.4.1 — Unreleased
+## 1.4.1 — 2026-11-02
 
 - **The code guards read every source folder.** `guards.source_roots` (default `src`) names the folders `naming`, `design`, `i18n`, `literals` and `boundary` read, and the route checks read each one's `app/`.
 - **A new sign-in or payment import stops at the human gate.** `reviewer.human_gate_imports` names the packages. A PASS that adds or changes a source file importing one stops for a person and is reviewed deep.
