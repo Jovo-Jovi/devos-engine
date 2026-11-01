@@ -281,6 +281,11 @@ if (args[0] === "api" && /^repos\\/[^/]+\\/[^/]+\\/contents\\//.test(args[1] ?? 
   process.exit(0);
 }
 if (args[0] === "pr" && args[1] === "list") {
+  // E38: an older copy's check for a task under way (STUB_TASK_PULLS, none when unset).
+  if (args.includes("number,headRefName")) {
+    process.stdout.write((process.env.STUB_TASK_PULLS || "[]") + "\\n");
+    process.exit(0);
+  }
   const pulls = JSON.parse(process.env.STUB_PULLS || "{}");
   const head = args[args.indexOf("--head") + 1];
   if (pulls[head]) process.stdout.write(pulls[head] + "\\n");

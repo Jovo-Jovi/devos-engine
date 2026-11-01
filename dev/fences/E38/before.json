@@ -1,0 +1,8 @@
+{
+  "CHANGELOG.md": "6961e6278aecb45b623cfaa2ac82f9f983d6e8dfb92e3015913d558b234879ff",
+  "README.md": "6f6b338139f8c39a625c58ae1377a9f4de96301e3e5c668c52de1738ef88d14d",
+  "lib/adopt.mjs": "ea295e39265afe5f55ecb31c8ff5276d95d66f572bafb14949bab76bc3d1d864",
+  "test/adopt-install.test.mjs": "09c0c7cf3ea2c87b4c7bc3d35fe346104feaca69be9a842f47f3624d7de84977",
+  "test/adopt.test.mjs": "69065dbfa4df9a2a36009e873847eefd951a0f39aca40a1fc41c2f72bc8c28db",
+  "test/harness.mjs": "3e80d107f6e9c33bb9947060d6496010c34dc0ceb4539adee0585d7bae1ace7d"
+}

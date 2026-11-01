@@ -135,7 +135,7 @@ test("adopt-install.test.mjs (n) a tool that changes the project's own files or 
   }
 });
 
-test("adopt-install.test.mjs (o) files of the project's with DEV_OS's names, a tracked link where DEV_OS writes, or an older copy of DEV_OS, stop it before the brief", () => {
+test("adopt-install.test.mjs (o) files of the project's with DEV_OS's names, a tracked link where DEV_OS writes, or an older copy with a task under way, stop it before the brief", () => {
   const t = setUp({ ".claude/settings.json": "{\"permissions\":{\"allow\":[\"Bash(npm test)\"]}}\n", "docs/SCOPE.md": "# Our scope\n" });
   try {
     const head = t.git(["rev-parse", "HEAD"]).out;
@@ -162,9 +162,10 @@ test("adopt-install.test.mjs (o) files of the project's with DEV_OS's names, a t
   }
   const copy = setUp({ "scripts/devos/runner.mjs": "export {};\n", ".github/workflows/devos-cycle.yml": "name: devos-cycle\non: push\njobs: {}\n", "docs/method/PRECEDENTS.md": "# Precedents\n\n**Live maximum: PR-39.**\n" });
   try {
-    const result = copy.run([copy.folder, ...AGENT], "yes\nyes\n");
+    // E38: an older copy is adopted between tasks only.
+    const result = copy.run([copy.folder, ...AGENT], "yes\nyes\n", { STUB_TASK_PULLS: JSON.stringify([{ number: 61, headRefName: "task/T21" }]) });
     assert.equal(result.status, 1, result.stdout + result.stderr);
-    assert.equal(result.stdout.includes("devos: devtest/demo-app runs an older copy of DEV_OS; adding the engine to an older copy, keeping its documents and settings, comes in a later version\n"), true, result.stdout);
+    assert.equal(result.stdout.includes("devos: devtest/demo-app has a task under way (task/T21, pull request #61); merge or close it first, then run devos adopt again\n"), true, result.stdout);
     assert.equal(copy.rounds().length, 0);
     assert.equal(copy.git(["branch", "--list", "devos/adopt"]).out, "");
   } finally {
@@ -461,4 +462,181 @@ test("adopt-install.test.mjs (y) who deploys: none without a deploy, the project
   const plain = adoptPullBody({ name: "Shop" }, md, {});
   for (const line of ["DEV_OS never deploys", "DEV_OS deploys `main`", "In production"]) assert.equal(plain.includes(line), false, line);
   assert.equal(adoptPullBody({ name: "Shop" }, md, { deploy: "own", gated: 1 }).includes("stops for your review and merge (1 path, `reviewer.human_gate_paths_extra`"), true);
+});
+
+// E38: an older copy of DEV_OS: the engine installed by hand long ago, with no engine lock, no devos/project.json and
+// method files of its time, a devos.config.json of its own, and the project's documents.
+function olderCopy(t) {
+  const step = (args) => assert.equal(t.git(args).status, 0, args.join(" "));
+  step(["rm", "-q", ".github/workflows/ci.yml", ".gitignore"]);
+  const installed = spawnSync(process.execPath, [bin, "install", t.folder, "--key", "SHOP"], { encoding: "utf8", windowsHide: true, env: t.staged.env });
+  assert.equal(installed.status, 0, installed.stdout + installed.stderr);
+  const at = (file) => path.join(t.folder, ...file.split("/"));
+  const write = (file, text) => {
+    mkdirSync(path.dirname(at(file)), { recursive: true });
+    writeFileSync(at(file), text);
+  };
+  const config = JSON.parse(readFileSync(at("devos.config.json"), "utf8"));
+  config.max_attempts = 4;
+  config.reviewer.deep_paths = [...config.reviewer.deep_paths, "src/legacy/**"];
+  delete config.check_timeout_minutes;
+  for (const file of ["devos/engine.lock.json", "devos/project.json", "devos/engine.defaults.json", "devos/answers.json"]) rmSync(at(file), { force: true });
+  write("devos.config.json", `${JSON.stringify(config, null, 2)}\n`);
+  // Method files of the copy's time, and some the engine no longer ships.
+  write("scripts/devos/verdict.mjs", `${readFileSync(at("scripts/devos/verdict.mjs"), "utf8")}// the copy's time\n`);
+  write(".github/workflows/ci.yml", "name: ci\non: push\njobs: {}\n");
+  write("scripts/devos/old-rules.mjs", "export const rules = [];\n");
+  write(".github/workflows/devos-old.yml", "name: devos-old\non: push\njobs: {}\n");
+  write("devos/prompts/old.md", "# Old prompt\n");
+  // The project's own: its precedents, its security rule, its documents.
+  const precedents = readFileSync(at("docs/method/PRECEDENTS.md"), "utf8");
+  const row = precedents.split("\n").find((line) => line.startsWith("| PR-01 |"));
+  write("docs/method/PRECEDENTS.md", `${precedents.replace(row, "| PR-01 | **Environment profile.** The shop builds on Linux with pnpm. | the shop |")}| PR-99 | **The shop's own ruling.** | the shop |\n`);
+  write(".cursor/rules/10-security-data.mdc", "---\nalwaysApply: true\n---\n- The shop keeps no card numbers.\n");
+  for (const file of ["PHASES.md", "GLOSSARY.md"]) write(`docs/${file}`, readFileSync(path.join(root, "test", "fixtures", "docs", file), "utf8"));
+  write("docs/fences/T01.md", readFileSync(path.join(root, "test", "fixtures", "fences", "T01.md"), "utf8"));
+  write("docs/reviews/T01-a1.md", "VERDICT: PASS\n");
+  write("docs/method/CARRY_FORWARDS.md", "# Carry-forwards\n");
+  step(["add", "-A"]);
+  step(["commit", "-q", "-m", "the copy of DEV_OS"]);
+}
+
+test("adopt-install.test.mjs (z) an older copy of DEV_OS: its method files become the engine's, its documents and CLAUDE.md stay, and its settings become devos/project.json", () => {
+  const t = setUp();
+  try {
+    olderCopy(t);
+    const remote = bareOrigin(t);
+    const head = t.git(["rev-parse", "HEAD"]).out;
+    const result = t.run([t.folder, ...AGENT], `yes\nyes\n${asked()}yes\n`);
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    assert.equal(result.stdout.includes("DEV_OS: older copy"), true, result.stdout);
+    assert.match(result.stdout, /devos: an older copy of DEV_OS: 3 of its method files are now the engine's, and 3 it no longer ships are removed \(\.github\/workflows\/devos-old\.yml, devos\/prompts\/old\.md, scripts\/devos\/old-rules\.mjs\)\. Its documents stay, and its precedents file is kept at docs\/method\/before-adopt\/PRECEDENTS\.md\.\n/);
+    assert.match(result.stdout, /devos: your devos\.config\.json became devos\/project\.json, with the 3 settings that differ from DEV_OS's defaults \((?=[^)]*max_attempts)(?=[^)]*scenario)(?=[^)]*reviewer\.deep_paths_extra)[^)]+\); devos\.config\.json is generated from it now\n/);
+    unchanged(t, head);
+    // Only the brief ran: the copy's documents are its own.
+    assert.equal(t.rounds().length, 1);
+    const show = (file) => t.git(["show", `devos/adopt:${file}`]).out;
+    const shipped = (file) => readFileSync(path.join(root, "payload", "files", ...file.replace(/^\.github\//, "dot-github/").split("/")), "utf8").replaceAll("\r\n", "\n");
+    for (const file of ["scripts/devos/verdict.mjs", ".github/workflows/ci.yml"]) assert.equal(show(file), shipped(file), file);
+    const files = t.git(["ls-tree", "-r", "--name-only", "devos/adopt"]).out.split("\n");
+    for (const file of ["scripts/devos/old-rules.mjs", ".github/workflows/devos-old.yml", "devos/prompts/old.md", ".github/workflows/devos-ci.yml", "docs/fences/T02.md"]) assert.equal(files.includes(file), false, file);
+    for (const file of ["docs/PHASES.md", "docs/GLOSSARY.md", "docs/fences/T01.md", "docs/reviews/T01-a1.md", "docs/method/CARRY_FORWARDS.md", ".cursor/rules/10-security-data.mdc", "CLAUDE.md"]) {
+      assert.equal(show(file), t.git(["show", `HEAD:${file}`]).out, file);
+    }
+    // The engine's precedents with the copy's PR-01; the copy's own beside them.
+    const precedents = show("docs/method/PRECEDENTS.md");
+    assert.equal(precedents.includes("| PR-01 | **Environment profile.** The shop builds on Linux with pnpm. | the shop |\n"), true);
+    assert.equal(precedents.includes("PR-99"), false);
+    assert.equal(precedents.includes("| PR-72 |"), true);
+    assert.equal(show("docs/method/before-adopt/PRECEDENTS.md"), t.git(["show", "HEAD:docs/method/PRECEDENTS.md"]).out);
+    const project = JSON.parse(show("devos/project.json"));
+    assert.equal(project.project, "SHOP");
+    assert.equal(project.max_attempts, 4);
+    assert.deepEqual(project.reviewer.deep_paths_extra, ["src/legacy/**"]);
+    assert.equal(typeof project.agents.reviewer.model, "string");
+    const config = JSON.parse(show("devos.config.json"));
+    assert.equal(config.max_attempts, 4);
+    assert.equal(typeof config.check_timeout_minutes, "number");
+    assert.equal(config.reviewer.deep_paths.includes(".github/**") && config.reviewer.deep_paths.includes("src/legacy/**"), true);
+    assert.equal(JSON.parse(show("devos/engine.lock.json")).files.some((entry) => entry.path === ".github/workflows/ci.yml" && !entry.at), true);
+    const answers = JSON.parse(show("devos/answers.json"));
+    assert.equal(answers.key, "SHOP");
+    // Its own settings: max_attempts, its deep path, and the scenario its old install wrote.
+    assert.deepEqual(answers.adopted.copy, {
+      replaced: [".github/workflows/ci.yml", "docs/method/PRECEDENTS.md", "scripts/devos/verdict.mjs"],
+      removed: [".github/workflows/devos-old.yml", "devos/prompts/old.md", "scripts/devos/old-rules.mjs"],
+      settings: answers.adopted.copy.settings,
+      left: [],
+    });
+    assert.deepEqual([...answers.adopted.copy.settings].sort(), ["max_attempts", "reviewer.deep_paths_extra", "scenario"]);
+    // The pull request says what changed, and that the cycle goes on with the next open task.
+    assert.equal(remote("refs/heads/devos/adopt"), t.git(["rev-parse", "devos/adopt"]).out.trim());
+    const body = JSON.parse(readFileSync(path.join(t.staged.parent, "gh.log.bodies"), "utf8").split(/\r?\n/).filter(Boolean)[0]);
+    for (const line of [
+      "- DEV_OS's engine files in place of the older copy's: 3 of its method files are now the engine's (the diff shows each), and these it no longer ships are removed: `.github/workflows/devos-old.yml`, `devos/prompts/old.md`, `scripts/devos/old-rules.mjs`. Your documents, fences, reviews and carry-forwards stay as they are.\n",
+      `- \`devos/project.json\`: the 3 settings of your \`devos.config.json\` that differ from DEV_OS's defaults (${answers.adopted.copy.settings.map((name) => `\`${name}\``).join(", ")}). \`devos.config.json\` is generated from it now.\n`,
+      "- Your precedents file is kept at `docs/method/before-adopt/PRECEDENTS.md` for reference. DEV_OS's rulings bind from now on, with your PR-01; carry over any ruling of your own you still need.\n",
+      "Merge it between tasks: with no task branch open and no `devos-cycle` run going.",
+      "- `CLAUDE.md` stays as it is.\n",
+      "The cycle goes on with the next open task in `docs/PHASES.md`",
+    ]) assert.equal(body.includes(line), true, line);
+    assert.equal(body.includes("fence `T01`"), false, body);
+    assert.equal(result.stdout.includes("devos: after the merge, the supervisor starts your next open task within half an hour"), true, result.stdout);
+  } finally {
+    cleanup(t.staged.parent);
+  }
+});
+
+test("adopt-install.test.mjs (aa) an older copy: a link where devos writes, or a setting that would take away a rule, stops it before the brief; DEV_OS's CI placed beside stays beside", () => {
+  const linked = setUp();
+  try {
+    olderCopy(linked);
+    // Links the repository tracks, made through the index: the generated config, and where the copy's precedents go.
+    const blob = spawnSync("git", ["hash-object", "-w", "--stdin"], { cwd: linked.folder, input: "../../elsewhere", encoding: "utf8", env: linked.staged.env }).stdout.trim();
+    // Its CLAUDE.md is a link too, which is fine: an older copy's CLAUDE.md is never written.
+    for (const args of [["rm", "-q", "--cached", "devos.config.json", "CLAUDE.md"], ["update-index", "--add", "--cacheinfo", `120000,${blob},devos.config.json`], ["update-index", "--add", "--cacheinfo", `120000,${blob},docs/method/before-adopt/PRECEDENTS.md`], ["update-index", "--add", "--cacheinfo", `120000,${blob},CLAUDE.md`], ["commit", "-q", "-m", "links"], ["checkout", "--", "devos.config.json", "docs/method/before-adopt/PRECEDENTS.md", "CLAUDE.md"]]) {
+      assert.equal(linked.git(args).status, 0, args.join(" "));
+    }
+    const result = linked.run([linked.folder, ...AGENT], "yes\nyes\n");
+    assert.equal(result.status, 1, result.stdout + result.stderr);
+    assert.equal(result.stdout.includes("devos: these are links in your repository where DEV_OS writes: devos.config.json, docs/method/before-adopt/PRECEDENTS.md. Replace them with the folders or files, commit, then run devos adopt again.\n"), true, result.stdout);
+    assert.equal(linked.rounds().length, 0);
+  } finally {
+    cleanup(linked.staged.parent);
+  }
+  const unsafe = setUp();
+  try {
+    olderCopy(unsafe);
+    const file = path.join(unsafe.folder, "devos.config.json");
+    const config = JSON.parse(readFileSync(file, "utf8"));
+    config.required_checks = null;
+    config.reviewer.human_gate_paths = "none";
+    writeFileSync(file, `${JSON.stringify(config, null, 2)}\n`);
+    for (const args of [["add", "-A"], ["commit", "-q", "-m", "settings"]]) assert.equal(unsafe.git(args).status, 0, args.join(" "));
+    const result = unsafe.run([unsafe.folder, ...AGENT], "yes\nyes\n");
+    assert.equal(result.status, 1, result.stdout + result.stderr);
+    assert.equal(result.stdout.includes("devos: these settings of your devos.config.json would take away a rule of DEV_OS's: reviewer.human_gate_paths (a string, where DEV_OS has a list), required_checks (null, where DEV_OS has a list); remove them, commit, then run devos adopt again\n"), true, result.stdout);
+    assert.equal(unsafe.rounds().length, 0);
+  } finally {
+    cleanup(unsafe.staged.parent);
+  }
+  const beside = setUp();
+  try {
+    olderCopy(beside);
+    // The copy keeps a CI of its own, with DEV_OS's placed beside it; its surfaces are its own too.
+    writeFileSync(path.join(beside.folder, ".github", "workflows", "devos-ci.yml"), readFileSync(path.join(beside.folder, ".github", "workflows", "ci.yml"), "utf8"));
+    writeFileSync(path.join(beside.folder, ".github", "workflows", "ci.yml"), "name: ci (project)\non: push\njobs: {}\n");
+    const file = path.join(beside.folder, "devos.config.json");
+    const config = JSON.parse(readFileSync(file, "utf8"));
+    // A wider reviewer surface of its own, which must not carry over.
+    config.surfaces.reviewer.allow = [...config.surfaces.reviewer.allow, "**"];
+    writeFileSync(file, `${JSON.stringify(config, null, 2)}\n`);
+    for (const args of [["add", "-A"], ["commit", "-q", "-m", "its own CI"]]) assert.equal(beside.git(args).status, 0, args.join(" "));
+    const result = beside.run([beside.folder, ...AGENT], `yes\nyes\n${asked()}no\n`);
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    assert.equal(result.stdout.includes("devos: your devos.config.json surfaces is left out: the role surfaces are DEV_OS's\n"), true, result.stdout);
+    const show = (name) => beside.git(["show", `devos/adopt:${name}`]).out;
+    assert.equal(show(".github/workflows/ci.yml"), "name: ci (project)\non: push\njobs: {}\n");
+    assert.equal(show(".github/workflows/devos-ci.yml"), readFileSync(path.join(root, "payload", "files", "dot-github", "workflows", "ci.yml"), "utf8").replaceAll("\r\n", "\n"));
+    const defaults = JSON.parse(readFileSync(path.join(root, "payload", "files", "devos", "engine.defaults.json"), "utf8"));
+    assert.deepEqual(JSON.parse(show("devos.config.json")).surfaces, defaults.surfaces);
+    assert.equal(Object.hasOwn(JSON.parse(show("devos/project.json")), "surfaces"), false);
+    assert.deepEqual(JSON.parse(show("devos/answers.json")).adopted.copy.left, ["surfaces"]);
+    assert.equal(JSON.parse(show("devos/engine.lock.json")).files.find((entry) => entry.path === ".github/workflows/ci.yml").at, ".github/workflows/devos-ci.yml");
+  } finally {
+    cleanup(beside.staged.parent);
+  }
+  const besideOnly = setUp();
+  try {
+    olderCopy(besideOnly);
+    // DEV_OS's older CI beside, and no ci.yml at all: the engine's takes the older one's place, and no second runs.
+    for (const args of [["mv", ".github/workflows/ci.yml", ".github/workflows/devos-ci.yml"], ["commit", "-q", "-m", "its CI beside"]]) assert.equal(besideOnly.git(args).status, 0, args.join(" "));
+    const result = besideOnly.run([besideOnly.folder, ...AGENT], `yes\nyes\n${asked()}no\n`);
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    const files = besideOnly.git(["ls-tree", "-r", "--name-only", "devos/adopt", ".github/workflows"]).out.split("\n");
+    assert.equal(files.includes(".github/workflows/ci.yml"), false, files.join("\n"));
+    assert.equal(besideOnly.git(["show", "devos/adopt:.github/workflows/devos-ci.yml"]).out, readFileSync(path.join(root, "payload", "files", "dot-github", "workflows", "ci.yml"), "utf8").replaceAll("\r\n", "\n"));
+  } finally {
+    cleanup(besideOnly.staged.parent);
+  }
 });

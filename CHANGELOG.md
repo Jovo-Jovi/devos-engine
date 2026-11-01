@@ -33,8 +33,7 @@ The notable changes of each DEV_OS Engine release. Versions follow [Semantic Ver
     scope, the open work as the phases, and `T01` to make DEV_OS's checks run on your code. If it changes your
     code, your own documents or an engine file, or commits, DEV_OS stops and removes the branch. So does Ctrl-C.
   - **Beside your files.** Your CI, `.gitignore` and `CLAUDE.md` are kept, with DEV_OS's beside them or after them.
-    A file of yours with one of DEV_OS's names stops it before the brief, and so does an older copy of DEV_OS,
-    which a later version adopts.
+    A file of yours with one of DEV_OS's names stops it before the brief.
   - **The baseline.** The guards' findings on your code as it is go to `devos/baseline.json`, and every guard must
     pass before the commit.
   - **The commit.** It holds only what was checked: your git hooks do not run on it. DEV_OS's files are committed
@@ -52,6 +51,22 @@ The notable changes of each DEV_OS Engine release. Versions follow [Semantic Ver
     kept, and the keys are named. Your workflows' default permissions, your Wiki and your Projects stay as they are.
   - **The cycle** starts once you merge: the supervisor starts `T01` within half an hour. Run again, `--publish`
     does only what is missing.
+- **An older copy of DEV_OS is adopted too.** A project that tracks DEV_OS's cycle workflow and scripts, copied by
+  hand with no engine lock, gets the engine in the same pull request:
+  - **Its method files become the engine's:** scripts, guards, workflows, prompts and kits. Those the engine no
+    longer ships are removed (`scripts/devos/`, `scripts/guards/`, `devos-*.yml` workflows, `devos/` kits), so no
+    old script runs beside the new ones; the pull request names them. Its CI is replaced where it is, beside the
+    project's own when it was placed there.
+  - **Its documents stay:** phases, fences, reviews, carry-forwards, `CLAUDE.md`, its own rules and setup items.
+    No AI tool writes documents; only the brief is written, for the pull request.
+  - **Its settings stay:** `devos.config.json` becomes the smallest `devos/project.json` over DEV_OS's defaults.
+    Its values are kept, and arrays keep everything the engine added. The role surfaces are always DEV_OS's, and a
+    setting that would take away a rule (a null, or a list turned into something else) stops the adoption.
+  - **Its precedents:** DEV_OS's rulings bind, with its own PR-01. Its file is kept at
+    `docs/method/before-adopt/PRECEDENTS.md` for reference, to carry over any ruling of its own.
+  - **Between tasks only.** It stops while a pull request from a `task/` branch is open or a DEV_OS cycle has not
+    completed. After the merge, the cycle goes on with the next open task.
+  - **Links** where devos writes, the generated config and the lock among them, stop it before the brief.
 - **A project in production stays in your hands (PR-72).**
   - **Your deploy stays yours.** A project that deploys itself keeps its deploy: DEV_OS never deploys and never
     sets its deploy variable. For Vercel, `devos adopt` asks first, and you may choose DEV_OS's deploy of `main` at

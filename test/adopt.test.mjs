@@ -6,7 +6,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
 import { cleanup, stage } from "./harness.mjs";
-import { chooseAgent, criticalList, surveyLines, surveyProject } from "../lib/adopt.mjs";
+import { adoptStops, chooseAgent, copyPrecedents, copyStops, criticalList, ownSettings, projectFromConfig, surveyLines, surveyProject } from "../lib/adopt.mjs";
+import { merge } from "../payload/files/scripts/devos/config.mjs";
 import { hubExec } from "../lib/hub.mjs";
 import { matchesAny } from "../payload/files/scripts/devos/lib.mjs";
 
@@ -439,5 +440,109 @@ test("adopt.test.mjs (m) the survey names a project's critical paths: its deploy
     assert.equal(surveyLines(survey).includes("Critical paths: 15 (deploy 3 · schema 3 · sign-in 5 · payments 4)"), true, surveyLines(survey).join("\n"));
   } finally {
     cleanup(folder);
+  }
+});
+
+// E38: an older copy of DEV_OS.
+test("adopt.test.mjs (n) an older copy's devos.config.json becomes the smallest devos/project.json that keeps its settings, and the engine's additions", () => {
+  const defaults = JSON.parse(readFileSync(path.join(root, "payload", "files", "devos", "engine.defaults.json"), "utf8"));
+  const config = JSON.parse(JSON.stringify(merge(defaults, { project: "SHOP" })));
+  config.$comment = "the copy's own note";
+  config.max_attempts = 4;
+  config.legacy_option = { on: true };
+  // The copy's deep paths: one of its own, and one the engine added since is missing.
+  config.reviewer.deep_paths = [...config.reviewer.deep_paths.filter((entry) => entry !== ".github/**"), "src/legacy/**"];
+  config.reviewer.modes.light.effort = "low";
+  delete config.check_timeout_minutes;
+  const project = projectFromConfig(config, defaults);
+  assert.deepEqual(project, {
+    project: "SHOP",
+    max_attempts: 4,
+    legacy_option: { on: true },
+    reviewer: { deep_paths_extra: ["src/legacy/**"], modes: { light: { effort: "low" } } },
+  });
+  assert.deepEqual(ownSettings(project).sort(), ["legacy_option.on", "max_attempts", "reviewer.deep_paths_extra", "reviewer.modes.light.effort"]);
+  const generated = merge(defaults, project);
+  assert.equal(generated.max_attempts, 4);
+  assert.deepEqual(generated.legacy_option, { on: true });
+  assert.equal(generated.reviewer.modes.light.effort, "low");
+  // Nothing the engine has is lost: its deep paths are all there, and its newer settings keep their defaults.
+  assert.deepEqual(generated.reviewer.deep_paths, [...defaults.reviewer.deep_paths, "src/legacy/**"]);
+  assert.equal(generated.check_timeout_minutes, defaults.check_timeout_minutes);
+  assert.deepEqual(projectFromConfig(merge(defaults, {}), defaults), {});
+  assert.deepEqual(projectFromConfig(null, defaults), {});
+  // Nothing takes away a rule of DEV_OS's: a null or a change of kind is reported, and the surfaces stay the engine's.
+  const report = { problems: [], left: [] };
+  const risky = JSON.parse(`{"__proto__": {"polluted": true}, "required_checks": null, "required_checks_extra": ["x"], "reviewer": {"human_gate_paths": "none"}, "surfaces": {"reviewer": {"allow": ["**"]}}, "own_flag": null}`);
+  assert.deepEqual(projectFromConfig(risky, defaults, report), {});
+  // A list of its own the copy adds to DEV_OS's (`_extra`) is never in a generated config, so it is named, not kept.
+  assert.deepEqual(report, { problems: ["required_checks (null, where DEV_OS has a list)", "reviewer.human_gate_paths (a string, where DEV_OS has a list)"], left: ["required_checks_extra", "surfaces"] });
+  assert.equal({}.polluted, undefined);
+});
+
+test("adopt.test.mjs (o) the engine's precedents keep an older copy's own PR-01", () => {
+  const engine = "# Precedents\n\n| PR | Ruling | Born from |\n|---|---|---|\n| PR-01 | **Environment profile.** The engine's. | Dev OS |\n| PR-02 | **Fetch, never paste.** | Dev OS |\n";
+  const own = "# Precedents\n\n**Live maximum: PR-39.**\n\n| PR-01 | **Environment profile.** The shop runs on Linux, $1 and pnpm. | the shop |\n| PR-02 | Old wording. | — |\n";
+  assert.equal(copyPrecedents(engine, own), engine.replace("| PR-01 | **Environment profile.** The engine's. | Dev OS |", "| PR-01 | **Environment profile.** The shop runs on Linux, $1 and pnpm. | the shop |"));
+  assert.equal(copyPrecedents(engine, "# Precedents\n"), engine);
+});
+
+test("adopt.test.mjs (p) an older copy is adopted only between tasks: an open task branch, a running cycle, or no answer from GitHub stops it", () => {
+  const folder = project({ "README.md": "# Shop\n" });
+  try {
+    const survey = { repository: { slug: "devtest/shop" }, devos: { kind: "copy", markers: ["scripts/devos", ".github/workflows/devos-cycle.yml"] } };
+    const gh = (pulls, runs, calls = []) => (cmd, args) => {
+      calls.push(args.slice(0, 2).join(" "));
+      if (args[0] === "pr") return pulls === null ? { status: 1, stdout: "" } : { status: 0, stdout: JSON.stringify(pulls) };
+      return runs === null ? { status: 1, stdout: "" } : { status: 0, stdout: JSON.stringify(runs) };
+    };
+    assert.deepEqual(copyStops(folder, survey, gh([{ number: 3, headRefName: "fix/readme" }], [{ status: "completed" }])), []);
+    assert.deepEqual(copyStops(folder, survey, gh([{ number: 61, headRefName: "task/T21" }], [])), [
+      "devos: devtest/shop has a task under way (task/T21, pull request #61); merge or close it first, then run devos adopt again",
+    ]);
+    // Any run that has not completed counts, a status GitHub adds later included.
+    for (const status of ["in_progress", "queued", "waiting", "action_required"]) {
+      assert.deepEqual(copyStops(folder, survey, gh([], [{ status: "completed" }, { status }])), ["devos: a DEV_OS cycle is running on devtest/shop; wait until it ends, then run devos adopt again"], status);
+    }
+    for (const [pulls, runs] of [[null, []], [[], null]]) {
+      assert.deepEqual(copyStops(folder, survey, gh(pulls, runs)), ["devos: could not ask GitHub whether a task or a DEV_OS cycle is under way on devtest/shop; check gh auth status, then run devos adopt again"]);
+    }
+    // A task branch is DEV_OS's task/, or the copy's own prefix; an odd prefix never hides a task/ one.
+    const prefixed = project({ "README.md": "# Shop\n", "devos.config.json": JSON.stringify({ branch_prefix: "work/" }) });
+    try {
+      assert.deepEqual(copyStops(prefixed, survey, gh([{ number: 7, headRefName: "work/T02" }, { number: 8, headRefName: "task/T03" }, { number: 9, headRefName: "fix/x" }], [])), [
+        "devos: devtest/shop has a task under way (work/T02, pull request #7; task/T03, pull request #8); merge or close it first, then run devos adopt again",
+      ]);
+    } finally {
+      cleanup(prefixed);
+    }
+    // Without the cycle's workflow there is no run to ask about.
+    const calls = [];
+    assert.deepEqual(copyStops(folder, { ...survey, devos: { kind: "copy", markers: ["scripts/devos"] } }, gh([], null, calls)), []);
+    assert.deepEqual(calls, ["pr list"]);
+  } finally {
+    cleanup(folder);
+  }
+});
+
+test("adopt.test.mjs (q) a project is an older copy only when it tracks both DEV_OS's cycle workflow and its scripts; some of its files alone stop the adoption", () => {
+  const cycle = { ".github/workflows/devos-cycle.yml": "name: devos-cycle\non: push\njobs: {}\n" };
+  const folders = [
+    project({ "README.md": "# Shop\n", "scripts/devos/runner.mjs": "export {};\n", "docs/method/PRECEDENTS.md": "# Precedents\n" }),
+    project({ "README.md": "# Shop\n", ...cycle, "devos.config.json": "{}\n" }),
+    // The scripts are there but ignored: an untracked file never makes a copy.
+    project({ "README.md": "# Shop\n", ...cycle, ".gitignore": "scripts/\n", "scripts/devos/runner.mjs": "export {};\n" }),
+  ];
+  try {
+    for (const folder of folders) {
+      const survey = surveyProject(folder, { exec: fakeGh() });
+      assert.equal(survey.devos.kind, "partial", folder);
+      const stops = adoptStops(folder, survey, root, fakeGh());
+      assert.equal(stops.length, 1, stops.join("\n"));
+      assert.match(stops[0], /^devos: devtest\/demo-app tracks some of DEV_OS's files \(.+\) but not an older copy's cycle workflow and scripts; remove them, or commit the copy's whole, then run devos adopt again$/);
+    }
+    assert.equal(surveyLines(surveyProject(folders[1], { exec: fakeGh() })).includes("DEV_OS: some of its files (.github/workflows/devos-cycle.yml, devos.config.json)"), true);
+  } finally {
+    for (const folder of folders) cleanup(folder);
   }
 });
