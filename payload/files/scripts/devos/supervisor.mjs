@@ -108,6 +108,42 @@ function answeredAfter(pr, since) {
   return (Array.isArray(cs) ? cs : []).some((c) => c.created_at > since && /^(\/devos revise|Dev OS: revising)/.test(c.body || ""));
 }
 
+// PR-70: GitHub ends a run that passes its time limit as "cancelled", with a note on the job that it "exceeded
+// the maximum execution time". That run stopped; a run someone cancelled did not. `saved`: the builder's work was
+// pushed before the limit, so only the checks and the review need to run again.
+// The annotations are read with the workflow's own token (`checks: read`), since DEVOS_PAT has no Checks access. If
+// they cannot be read, a job that ran its whole limit (the cycle job's `timeout-minutes`) counts as stopped.
+function cycleJobMinutes() {
+  try {
+    const text = readFileSync(P(".github/workflows/devos-cycle.yml"), "utf8");
+    const job = text.slice(text.search(/^ {2}cycle:\s*$/m));
+    const m = job.match(/^ {4}timeout-minutes:\s*(\d+)/m);
+    return m ? Number(m[1]) : 0;
+  } catch {
+    return 0;
+  }
+}
+function timeLimit(runId) {
+  const jobs = api(`repos/${REPO}/actions/runs/${runId}/jobs`)?.jobs || [];
+  for (const j of jobs) {
+    // Only the cycle job: cancelling `wait-and-resume` is how the owner stops a wait.
+    if (j.name !== "cycle" || j.conclusion !== "cancelled") continue;
+    let notes = null;
+    try { notes = JSON.parse(gh(["api", `repos/${REPO}/check-runs/${j.id}/annotations`], { allowFail: true, report: true }) || "null"); } catch { notes = null; }
+    const limit = cycleJobMinutes();
+    const ran = (new Date(j.completed_at).getTime() - new Date(j.started_at).getTime()) / 60000;
+    const hit = Array.isArray(notes)
+      ? notes.some((a) => /exceeded the maximum execution time/i.test(a.message || ""))
+      : limit > 0 && ran >= limit - 1;
+    if (hit) {
+      const saved = (j.steps || []).some((st) => /^Commit and push the builder's work/.test(st.name || "") && st.conclusion === "success");
+      return { hit: true, saved };
+    }
+  }
+  return { hit: false, saved: false };
+}
+const stoppedRun = (conclusion, runId) => conclusion === "failure" || (conclusion === "cancelled" && timeLimit(runId).hit);
+
 const taskOf = (s) => (String(s).match(/\bT\d\d\b/) || [""])[0];
 const attemptOf = (s) => Number((String(s).match(/attempt (\d+)/) || [0, 0])[1]) || 0;
 
@@ -123,15 +159,15 @@ function detect(facts) {
 
   // 1. A cycle run that just failed (the event) or the latest finished run for an open task that failed.
   const failedRuns = [];
-  if (facts.event.workflow === "devos-cycle" && facts.event.conclusion === "failure" && facts.event.run) {
+  if (facts.event.workflow === "devos-cycle" && facts.event.run && stoppedRun(facts.event.conclusion, facts.event.run)) {
     const r = facts.runs.find((x) => String(x.id) === String(facts.event.run));
     if (r) failedRuns.push(r);
   }
   // Every scan: the latest finished cycle run failed and nothing came after it. A run dispatched with
   // the built-in token (the wait and resume jobs) fires no workflow_run event, so its failure is only
-  // ever seen here.
+  // ever seen here; so is a run GitHub stopped at its time limit, since a cancelled run wakes no supervisor.
   const latest = facts.runs.find((x) => x.status === "completed");
-  if (latest && latest.conclusion === "failure" && minutesSince(latest.updated) < 24 * 60 && !failedRuns.some((x) => x.id === latest.id)) failedRuns.push(latest);
+  if (latest && minutesSince(latest.updated) < 24 * 60 && !failedRuns.some((x) => x.id === latest.id) && stoppedRun(latest.conclusion, latest.id)) failedRuns.push(latest);
   // 1b. The checks (ci) or the production deploy failed on main. An outside failure of ci (network,
   // Google Fonts) is re-run. A deploy is re-run only when an outside service failed it **and** the
   // site was not deployed (the build failed before the upload; migrations are idempotent); every other
@@ -155,6 +191,13 @@ function detect(facts) {
     if (later) continue;
     const f = failingStep(r.id);
     const base = { kind: "runner-failure", task, attempt, run: r.id, url: r.url, step: f.step, evidence: f.tail.slice(-6000), review_only: /review only/i.test(r.title) };
+    if (r.conclusion === "cancelled") {
+      // Only a run stopped at its time limit gets here (stoppedRun). Its attempt runs again, from the branch.
+      const limit = timeLimit(r.id);
+      add({ ...base, key: `${task}:a${attempt}:time-limit`, review_only: base.review_only || limit.saved, action: "redispatch",
+        cause: `GitHub stopped the run at its time limit, in "${f.step || f.job || "?"}"${limit.saved ? "; the builder's work is on the branch, so only the checks and the review run again" : ""}` });
+      continue;
+    }
     if (/exceeds max_attempts/.test(f.tail)) {
       // A resume that lost its revision flag (fixed in next-task.mjs; kept as a rule for old runs).
       add({ ...base, key: `${task}:a${attempt}:attempt-limit:${r.id}`, cause: "the resumed run lost its revision flag and was refused as an attempt over max_attempts", action: "redispatch" });
@@ -273,10 +316,22 @@ function supervisorIssue() {
   const created = JSON.parse(gh(["api", `repos/${REPO}/issues`, "-f", `title=${S.issue_title}`, "-f", `body=${body}`, "-f", `labels[]=${S.issue_label}`], { report: true }));
   return created.number;
 }
+// Every page of the issue's comments: the counts per cause (`max_auto_per_key`) must see them all (PR-70).
+function allComments(issue) {
+  const out = gh(["api", "--paginate", "--slurp", `repos/${REPO}/issues/${issue}/comments?per_page=100`], { allowFail: true });
+  try {
+    const pages = JSON.parse(out);
+    if (Array.isArray(pages)) return pages.flat();
+  } catch {
+    /* a gh without --slurp: the first page only */
+  }
+  const one = api(`repos/${REPO}/issues/${issue}/comments?per_page=100`);
+  return Array.isArray(one) ? one : [];
+}
 function history(issue) {
   if (!issue) return [];
-  const cs = api(`repos/${REPO}/issues/${issue}/comments?per_page=100`) || [];
-  return (Array.isArray(cs) ? cs : []).flatMap((c) => {
+  const cs = allComments(issue);
+  return cs.flatMap((c) => {
     const m = (c.body || "").match(/<!-- devos-supervisor (\{.*?\}) -->/);
     if (!m) return [];
     try { return [{ ...JSON.parse(m[1]), comment: c.id }]; } catch { return []; }
@@ -436,7 +491,7 @@ if (cmd === "scan") {
   const r = api(`repos/${REPO}/actions/runs/${runId}`);
   const facts = { event: { workflow: "devos-cycle", conclusion: r.conclusion, run: String(runId) }, active: [], task_prs: [], intake_prs: [], rescues: [], next_task: null,
     runs: [{ id: r.id, title: r.display_title, status: r.status, conclusion: r.conclusion, created: r.created_at, updated: r.updated_at, url: r.html_url }] };
-  for (const i of detect(facts)) console.log(JSON.stringify({ kind: i.kind, task: i.task, attempt: i.attempt, step: i.step, key: i.key, cause: i.cause, action: i.action, rescue: i.rescue || null }));
+  for (const i of detect(facts)) console.log(JSON.stringify({ kind: i.kind, task: i.task, attempt: i.attempt, step: i.step, key: i.key, cause: i.cause, action: i.action, rescue: i.rescue || null, review_only: Boolean(i.review_only) }));
 } else if (cmd === "approve") {
   const body = opt("body"); const m = body.match(/^\/devos (approve|reject) (\S+)/);
   if (!m) process.exit(0);

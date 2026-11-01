@@ -33,6 +33,10 @@ test("config-equivalence.test.mjs regenerates the Tower config", () => {
   delete merged.structure;
   // PR-61 (E09): the registry's address is an engine addition.
   delete merged.registry;
+  // PR-70 (E40): the checks' time limits are an engine addition.
+  delete merged.check_timeout_minutes;
+  delete merged.checks_budget_minutes;
+  delete merged.check_limits_note;
   // PR-52 (E24, after the Tower pin was retired): the builder may not edit the usage record.
   for (const role of ["builder", "builder_method"]) {
     merged.surfaces[role].deny = merged.surfaces[role].deny.filter((p) => p !== "docs/usage/**" && p !== "docs/USAGE.md");

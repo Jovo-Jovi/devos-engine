@@ -292,6 +292,9 @@
   },
   "retry_build_on": "next/font/google queries have exactly one entry|turbopack-next/internal/font/google|Failed to fetch .*Google Fonts|fonts\\.googleapis\\.com.*(ETIMEDOUT|ECONNRESET|fetch failed)",
   "retry_build_note": "PR-24: a build failure whose log matches retry_build_on is the Google Fonts download, not the code; run-checks and devos-deploy retry it up to 3 times.",
+  "check_timeout_minutes": 30,
+  "checks_budget_minutes": 60,
+  "check_limits_note": "PR-70: run-checks stops a check that passes check_timeout_minutes, with everything it started, and records it as timeout with its log; checks_budget_minutes bounds all the checks together. Playwright's browser install for e2e has 10 minutes (or check_timeout_minutes when shorter). When the cycle job's own limit still stops a run, the supervisor runs its attempt again.",
   "supervisor": {
     "model": "claude-opus-5-5",
     "max_auto_per_key": 2,

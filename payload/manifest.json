@@ -224,7 +224,7 @@
     {
       "path": ".github/workflows/devos-supervisor.yml",
       "stored": "dot-github/workflows/devos-supervisor.yml",
-      "sha256": "b16b3c00207c17f7516abd99136433245c2edbee1f5243e6f3303796f93904aa",
+      "sha256": "7acc81cded137ad074488acf5cffd5ac4a905acdb296e5a2e9fb72195b6e17a5",
       "owner": "engine"
     },
     {
@@ -260,7 +260,7 @@
     {
       "path": "devos/engine.defaults.json",
       "stored": "devos/engine.defaults.json",
-      "sha256": "a6be2284a811c7f1ce643bed9d951ec9f46d82ea1d0c5c5619b765b216001064",
+      "sha256": "6e39aafdc4d6f557c2e63b59a1ea847626639f7c4b77010af8aa48b9be92baca",
       "owner": "engine"
     },
     {
@@ -1466,7 +1466,7 @@
     {
       "path": "docs/method/AUTOMATION.md",
       "stored": "docs/method/AUTOMATION.md",
-      "sha256": "c180b764a102b8c44262036172f9a38f0f93806573906652a2df2a1f30dbf1ef",
+      "sha256": "78ecee2bc9251e9789cff873641a671bee2c54f4f7870cda7b701dc86fb16b07",
       "owner": "engine"
     },
     {
@@ -1490,7 +1490,7 @@
     {
       "path": "docs/method/PRECEDENTS.md",
       "stored": "docs/method/PRECEDENTS.md",
-      "sha256": "e3619ce10a78032f30502edddfa90fc43fbb28c354a9d35280daa60c25d87944",
+      "sha256": "5acce9e9e6c723240901ab849c26af6ec3b4ab0c240abaebf071cacd079b5466",
       "owner": "engine"
     },
     {
@@ -1682,7 +1682,7 @@
     {
       "path": "scripts/devos/run-checks.mjs",
       "stored": "scripts/devos/run-checks.mjs",
-      "sha256": "564ee94e351582f611a0e9df8a7025968dbf179f111dd2a46e31cded83fab2ca",
+      "sha256": "300d0cc13b47726cd6fa4b72b933b7f1b59b36d44567fe10d9a9c4524b5b494c",
       "owner": "engine"
     },
     {
@@ -1724,7 +1724,7 @@
     {
       "path": "scripts/devos/supervisor.mjs",
       "stored": "scripts/devos/supervisor.mjs",
-      "sha256": "2d928b76270fb7696aa58d8b1f72e4dc351c40186daa507f26adba9f626aa812",
+      "sha256": "a6a0b1d9910f7209a0165fb8adbd3e522858e546d9b38054cac8222f19370a09",
       "owner": "engine"
     },
     {

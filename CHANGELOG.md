@@ -53,6 +53,21 @@ The notable changes of each DEV_OS Engine release. Versions follow [Semantic Ver
   - **Your instructions first:** your `CLAUDE.md` and `AGENTS.md` keep your text, with DEV_OS's rules after it.
   - **The manual guard** no longer asks the manual to name a project's own workflows.
 
+### Fixes
+
+- **A check that hangs fails; it never holds the cycle (PR-70).**
+  - **A time limit for every check.** Each check has 30 minutes (`check_timeout_minutes`), and all of them 60
+    (`checks_budget_minutes`), the Supabase CLI's checks included. At its limit, a check is stopped with everything
+    it started, and it is recorded as `timeout`, with its log. A check gets no input, and what it leaves running
+    ends with it. Before, a check that never ended held the run until GitHub cancelled the whole job, and the
+    review never ran.
+  - **The browser install is logged.** Playwright's browser install for `e2e` has 10 minutes, and its output goes
+    to `.devos/logs/e2e-install.log` instead of being thrown away.
+  - **The supervisor resumes a stopped run.** A cycle run GitHub stopped at its job's time limit ends "cancelled",
+    which no rule acted on, so the task waited. The supervisor now dispatches its attempt again: review-only when
+    the builder's work was pushed. A run that someone cancelled is left alone. Its workflow gets `checks: read` to
+    read GitHub's note, and its counts per cause now read every page of its issue.
+
 ## 1.3.2 — 2026-10-28
 
 ### Fixes

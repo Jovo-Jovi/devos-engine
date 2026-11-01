@@ -1,0 +1,11 @@
+{
+  "CHANGELOG.md": "bb7c2ce1a773139c9af307b3337000ad4c944b82bc7e4ada91cc2bcd58abb39a",
+  "payload/files/devos/engine.defaults.json": "a6be2284a811c7f1ce643bed9d951ec9f46d82ea1d0c5c5619b765b216001064",
+  "payload/files/docs/method/AUTOMATION.md": "c180b764a102b8c44262036172f9a38f0f93806573906652a2df2a1f30dbf1ef",
+  "payload/files/docs/method/PRECEDENTS.md": "e3619ce10a78032f30502edddfa90fc43fbb28c354a9d35280daa60c25d87944",
+  "payload/files/dot-github/workflows/devos-supervisor.yml": "b16b3c00207c17f7516abd99136433245c2edbee1f5243e6f3303796f93904aa",
+  "payload/files/scripts/devos/run-checks.mjs": "564ee94e351582f611a0e9df8a7025968dbf179f111dd2a46e31cded83fab2ca",
+  "payload/files/scripts/devos/supervisor.mjs": "2d928b76270fb7696aa58d8b1f72e4dc351c40186daa507f26adba9f626aa812",
+  "test/config-equivalence.test.mjs": "ae8cae0f96f4466ec5a8f61c4450ccd4a2ea70cb38570801188ca3b1e825e93b",
+  "tools/sources.mjs": "b6e35e9cc42a5096288192f3af1e580af318092e7d9bec6879c4a39740e2ba8c"
+}

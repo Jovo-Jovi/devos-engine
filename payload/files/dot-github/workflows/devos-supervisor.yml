@@ -37,6 +37,8 @@ concurrency:
 permissions:
   contents: read
   actions: read
+  # PR-70: the annotation that says a cycle run passed its time limit.
+  checks: read
   issues: write
   pull-requests: read
 
