@@ -2,7 +2,7 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
-## 1.4.0 — Unreleased
+## 1.4.0 — 2026-11-01
 
 ### Adopting an existing project (D-E13)
 
