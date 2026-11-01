@@ -17,7 +17,7 @@
 //               variable, an account or dashboard setting). Grok cannot fix it, so no retry is spent:
 //               the human gets the steps, and the same attempt is re-reviewed once it is in place (PR-27)
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
-import { P, config, parsePhases, isHumanGate, taskAfter, updatePhasesRow, changedPaths, diffPaths, matchesAny, emit, fail } from "./lib.mjs";
+import { P, config, parsePhases, isHumanGate, taskAfter, updatePhasesRow, changedPaths, diffPaths, matchesAny, importsGated, emit, fail } from "./lib.mjs";
 import { looksLikeLimit, readText, resumeMarker, earliestNotBefore, agentStats, parseJsonLoose, finishedRun } from "./limits.mjs";
 import { rulesFiles } from "./firebase.mjs";
 
@@ -80,9 +80,12 @@ function schemaChanges() {
  */
 function gatePaths() {
   const globs = cfg.reviewer?.human_gate_paths ?? [];
-  if (globs.length === 0) return [];
+  const imports = cfg.reviewer?.human_gate_imports ?? [];
+  if (globs.length === 0 && imports.length === 0) return [];
   try {
-    return diffPaths(`origin/${cfg.base_branch ?? "main"}`).filter((p) => matchesAny(p, globs));
+    const changed = diffPaths(`origin/${cfg.base_branch ?? "main"}`);
+    const matched = [...changed.filter((p) => matchesAny(p, globs)), ...importsGated(changed, imports)];
+    return [...new Set(matched)].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
   } catch {
     return [UNREAD];
   }

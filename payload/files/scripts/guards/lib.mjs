@@ -33,8 +33,52 @@ export function walk(relDir) {
   return out;
 }
 
-export const srcFiles = (exts) => repoFiles().filter((f) => f.startsWith("src/") && exts.some((e) => f.endsWith(e)));
-export const hasSrc = () => exists("src");
+const SOURCE_ROOT = /^[A-Za-z0-9._-]+(?:\/[A-Za-z0-9._-]+)*$/;
+const SOURCE_ROOT_ERROR = 'config: guards.source_roots must list folders of the repository, such as "src"';
+
+/** The folders the code guards read (PR-73). `devos.config.json`, else the engine defaults; a missing key is `src`. */
+export function sourceRoots() {
+  const file = exists("devos.config.json") ? "devos.config.json" : "devos/engine.defaults.json";
+  const cfg = JSON.parse(read(file));
+  const guards = cfg && typeof cfg.guards === "object" && cfg.guards ? cfg.guards : {};
+  const listed = Object.hasOwn(guards, "source_roots") ? guards.source_roots : ["src"];
+  if (!Array.isArray(listed)) throw new Error(SOURCE_ROOT_ERROR);
+  const seen = new Set();
+  const roots = [];
+  for (const root of listed) {
+    if (typeof root !== "string" || !SOURCE_ROOT.test(root) || root.split("/").some((part) => part === "." || part === "..")) {
+      throw new Error(SOURCE_ROOT_ERROR);
+    }
+    if (seen.has(root)) continue;
+    seen.add(root);
+    roots.push(root);
+  }
+  return roots;
+}
+
+/** Files under any source root, in repository order, once. */
+export function srcFiles(exts) {
+  const prefixes = sourceRoots().map((root) => `${root}/`);
+  return repoFiles().filter((f) => prefixes.some((prefix) => f.startsWith(prefix)) && exts.some((e) => f.endsWith(e)));
+}
+
+export const hasSrc = () => sourceRoots().some((root) => exists(root));
+
+/** `<root>/app` for each source root, and a root named `app` itself, when that folder exists (PR-73). */
+export function appDirs() {
+  const seen = new Set();
+  const dirs = [];
+  const add = (dir) => {
+    if (seen.has(dir) || !exists(dir)) return;
+    seen.add(dir);
+    dirs.push(dir);
+  };
+  for (const root of sourceRoots()) {
+    add(`${root}/app`);
+    if (root === "app" || root.endsWith("/app")) add(root);
+  }
+  return dirs;
+}
 
 export const isComment = (line) => /^\s*(\/\/|\*|\/\*)/.test(line);
 

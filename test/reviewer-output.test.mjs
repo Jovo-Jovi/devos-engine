@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 import assert from "node:assert/strict";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { looksLikeLimit, LIMIT_TAIL } from "../payload/files/scripts/devos/limits.mjs";
 import { reviewPlan } from "../payload/files/scripts/devos/review-mode.mjs";
 
@@ -162,4 +162,57 @@ test("reviewer-output.test.mjs (e) a production path makes the review deep (PR-7
   const plan = reviewPlan(row, ["src/billing/plan.ts", "src/app/page.tsx"], 1, cfg);
   assert.equal(plan.mode, "deep");
   assert.deepEqual(plan.critical, ["src/billing/plan.ts"]);
+});
+
+function setImports(dir, globs) {
+  const file = path.join(dir, "devos", "project.json");
+  const data = JSON.parse(readFileSync(file, "utf8"));
+  data.reviewer = { ...(data.reviewer ?? {}), human_gate_imports: globs };
+  writeFileSync(file, `${JSON.stringify(data, null, 2)}\n`);
+  const written = spawnSync(process.execPath, ["scripts/devos/config.mjs", "--write"], { cwd: dir, encoding: "utf8", windowsHide: true });
+  assert.equal(written.status, 0, written.stderr);
+}
+
+function commitOn(dir, args) {
+  const git = spawnSync("git", ["-c", "user.name=t", "-c", "user.email=t@t", ...args], { cwd: dir, encoding: "utf8", windowsHide: true });
+  assert.equal(git.status, 0, `git ${args.join(" ")}: ${git.stderr}`);
+}
+
+test("reviewer-output.test.mjs (f) a changed file that imports a gated package stops at the human gate and is reviewed deep (PR-73)", async () => {
+  const stripeFile = "import Stripe from \"stripe\";\nexport const pay = Stripe;\n";
+  const reactFile = "import React from \"react\";\nexport const pay = React;\n";
+  for (const [what, text, action] of [["stripe", stripeFile, "human_gate"], ["react", reactFile, "merge"]]) {
+    const dir = project();
+    try {
+      setImports(dir, ["stripe"]);
+      commitOn(dir, ["add", "-A"]);
+      commitOn(dir, ["commit", "-q", "-m", "gate imports"]);
+      const bare = path.join(dir, ".git", "devos-origin.git");
+      commitOn(dir, ["init", "-q", "--bare", bare]);
+      commitOn(dir, ["remote", "add", "origin", bare]);
+      commitOn(dir, ["push", "-q", "origin", "main"]);
+      commitOn(dir, ["switch", "-q", "-c", "task/T01"]);
+      mkdirSync(path.join(dir, "lib"), { recursive: true });
+      writeFileSync(path.join(dir, "lib", "pay.ts"), text);
+      commitOn(dir, ["add", "-A"]);
+      commitOn(dir, ["commit", "-q", "-m", "T01 a1: builder"]);
+      writeFileSync(path.join(dir, ".devos", "reviewer.json"), stream([{ type: "system", subtype: "init" }, resultEvent]));
+      writeFileSync(path.join(dir, ".devos", "reviewer.err"), "");
+      writeFileSync(path.join(dir, ".devos", "reviewer-run.env"), 'code=0\nused=1\naccounts="1"\ntool=cursor\n');
+      const { run, fields, summary } = verdict(dir);
+      assert.equal(run.status, 0, run.stderr);
+      assert.equal(fields.verdict, "PASS", `${what}: ${summary}`);
+      assert.equal(fields.action, action, `${what}: ${summary}`);
+      if (action === "human_gate") {
+        assert.equal(summary.includes("production paths changed (PR-72): `lib/pay.ts`"), true, summary);
+        const { reviewPlan: localPlan } = await import(pathToFileURL(path.join(dir, "scripts", "devos", "review-mode.mjs")).href);
+        const plan = localPlan({ task: "T05", risk: 2, gate: "—" }, ["src/app/page.tsx", "lib/pay.ts"], 1, {
+          reviewer: { deep_paths: [], human_gate_paths: [], human_gate_imports: ["stripe"], modes: { light: { model: "s", effort: "medium" }, deep: { model: "o", effort: "high" } } },
+        });
+        assert.deepEqual(plan.critical, ["lib/pay.ts"]);
+      } else assert.equal(/PR-72/.test(summary), false, summary);
+    } finally {
+      rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+    }
+  }
 });

@@ -39,7 +39,7 @@ function hostRule(hosts) {
 export default function design() {
   const hosts = readSetting(["guards", "design", "allowed_hosts"], Array.isArray);
   const HOST_RULE = hostRule(hosts);
-  if (!hasSrc()) return result("N/A", [], "src/ does not exist yet");
+  if (!hasSrc()) return result("N/A", [], "no source folder yet (guards.source_roots)");
   const css = srcFiles([".css"]).filter((f) => f !== TOKENS);
   const code = srcFiles([".ts", ".tsx"]);
   const findings = [

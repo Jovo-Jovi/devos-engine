@@ -271,3 +271,43 @@ test("guards-structure.test.mjs (h) guard:scope reads the branch's paths as they
     rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
+
+function setRoots(dir, list) {
+  const projectPath = path.join(dir, "devos", "project.json");
+  const data = JSON.parse(readFileSync(projectPath, "utf8"));
+  data.guards = { ...(data.guards ?? {}), source_roots: list };
+  writeFileSync(projectPath, `${JSON.stringify(data, null, 2)}\n`);
+  const written = spawnSync(process.execPath, ["scripts/devos/config.mjs", "--write"], { cwd: dir, encoding: "utf8", windowsHide: true });
+  assert.equal(written.status, 0, written.stdout + written.stderr);
+}
+
+test("guards-structure.test.mjs (i) the code guards read guards.source_roots, and a root outside the repository fails (PR-73)", () => {
+  const dir = project();
+  try {
+    put(dir, {
+      "src/ok.ts": "export const ok = 1;\n",
+      "app/x/page.tsx": "export default function Page() {\n  return <form><input defaultValue=\"owner@example.com\" /></form>;\n}\n",
+      "app/item/page.tsx": "export default function Item() {\n  return null;\n}\n",
+    });
+    for (const name of ["literals", "boundary", "naming"]) {
+      const quiet = guard(dir, name);
+      assert.equal(quiet.findings.some((finding) => finding.includes("app/x") || finding.includes("app/item")), false, `${name}: ${JSON.stringify(quiet)}`);
+    }
+    setRoots(dir, ["src", "app"]);
+    const literals = guard(dir, "literals");
+    assert.equal(literals.status, "FAIL", JSON.stringify(literals));
+    assert.equal(literals.findings.some((finding) => finding.startsWith("app/x/page.tsx:") && finding.includes("email literal")), true, JSON.stringify(literals));
+    const boundary = guard(dir, "boundary");
+    assert.equal(boundary.status, "FAIL", JSON.stringify(boundary));
+    assert.equal(boundary.findings.some((finding) => finding.startsWith("app/x/page.tsx:") && finding.includes("<form")), true, JSON.stringify(boundary));
+    const naming = guard(dir, "naming");
+    assert.equal(naming.status, "FAIL", JSON.stringify(naming));
+    assert.equal(naming.findings.includes('app/item — bare route segment "item"'), true, JSON.stringify(naming));
+    setRoots(dir, ["../x"]);
+    const bad = guard(dir, "literals");
+    assert.equal(bad.status, "FAIL", JSON.stringify(bad));
+    assert.deepEqual(bad.findings, ['guard crashed: config: guards.source_roots must list folders of the repository, such as "src"']);
+  } finally {
+    rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+  }
+});

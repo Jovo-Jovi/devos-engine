@@ -6,7 +6,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
 import { cleanup, stage } from "./harness.mjs";
-import { adoptStops, chooseAgent, copyPrecedents, copyStops, criticalList, ownSettings, projectFromConfig, surveyLines, surveyProject, uiReader } from "../lib/adopt.mjs";
+import { ADOPT_IGNORE, AREA_IMPORTS, GATE_IMPORTS, adoptStops, chooseAgent, copyPrecedents, copyStops, criticalList, ownSettings, projectFromConfig, sourceRoots, surveyLines, surveyProject, uiReader } from "../lib/adopt.mjs";
 import { merge } from "../payload/files/scripts/devos/config.mjs";
 import { hubExec } from "../lib/hub.mjs";
 import { matchesAny } from "../payload/files/scripts/devos/lib.mjs";
@@ -587,4 +587,28 @@ test("adopt.test.mjs (r) uiReader is a no-op without DEVOS_UI, and with it the m
     if (previous === undefined) delete process.env.DEVOS_UI;
     else process.env.DEVOS_UI = previous;
   }
+});
+
+test("adopt.test.mjs (s) source folders, the gate's import patterns, and the gitignore lines adopting merges (PR-73)", () => {
+  assert.deepEqual(sourceRoots([
+    "README.md",
+    "src/lib/pay.ts",
+    "lib/only.mjs",
+    "styles/x.css",
+    "components/a.tsx",
+    "app/page.tsx",
+    "pages/index.js",
+    "hooks/use.ts",
+    "utils/a.jsx",
+    "features/b.js",
+    "server/c.ts",
+  ]), ["app", "pages", "components", "hooks", "utils", "features", "server", "styles"]);
+  const specifiers = ["next-auth", "next-auth/react", "@clerk/nextjs", "better-auth", "stripe", "@stripe/stripe-js", "firebase/auth", "react-native-purchases", "react", "next", "firebase/app", "@supabase/supabase-js"];
+  const area = (spec) => AREA_IMPORTS.some(([, re]) => re.test(spec));
+  assert.equal(specifiers.filter(area).length, 8);
+  assert.equal(specifiers.filter((spec) => !area(spec)).length, 4);
+  for (const spec of specifiers) assert.equal(matchesAny(spec, GATE_IMPORTS), area(spec), spec);
+  const head = readFileSync(path.join(root, "payload", "files", "dot-gitignore"), "utf8").split("# Node / Next.js")[0];
+  const lines = head.split(/\r?\n/).map((line) => line.trim()).filter((line) => line !== "" && !line.startsWith("#"));
+  assert.deepEqual(ADOPT_IGNORE, lines);
 });

@@ -7,7 +7,7 @@
 // Everything outside a zone keeps the full rule. Analytics and third-party scripts are never
 // allowed by a zone. A zone with personal_data:true requires docs/PROTECTION_MODEL.md (handbook
 // §10.3, the Personal-Data Protection gate).
-import { hasSrc, srcFiles, walk, scan, result, exists, read } from "./lib.mjs";
+import { hasSrc, srcFiles, walk, appDirs, scan, result, exists, read } from "./lib.mjs";
 
 const ZONE_RULES = [
   { re: /<(form|input|textarea|select)\b/i, label: "form control" },
@@ -45,7 +45,7 @@ export function boundaryConfig() {
 }
 
 export default function boundary() {
-  if (!hasSrc()) return result("N/A", [], "src/ does not exist yet");
+  if (!hasSrc()) return result("N/A", [], "no source folder yet (guards.source_roots)");
   let cfg;
   try { cfg = boundaryConfig(); } catch (e) { return result("FAIL", [`docs/BOUNDARY_MODEL.md — the devos:boundary line is not valid JSON: ${e.message}`]); }
   const inZone = (f) => cfg.zones.find((z) => z.srcRe.some((re) => re.test(f)));
@@ -54,8 +54,10 @@ export default function boundary() {
     ...scan(files.filter((f) => !inZone(f)), ZONE_RULES),
     ...scan(files, ALWAYS_RULES),
   ];
-  for (const f of walk("src/app")) {
-    if (/\/route\.(t|j)sx?$/.test(f) && !inZone(f)) findings.push(`${f} — route handler outside a declared zone`);
+  for (const appDir of appDirs()) {
+    for (const f of walk(appDir)) {
+      if (/\/route\.(t|j)sx?$/.test(f) && !inZone(f)) findings.push(`${f} — route handler outside a declared zone`);
+    }
   }
   if (cfg.zones.some((z) => z.personal_data) && !exists("docs/PROTECTION_MODEL.md")) {
     findings.push("docs/PROTECTION_MODEL.md — a zone holds personal data, so the Personal-Data Protection model is required (handbook §10.3)");

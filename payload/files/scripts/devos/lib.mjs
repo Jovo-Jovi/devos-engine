@@ -1,8 +1,8 @@
 // Shared helpers for the Dev OS runner. Dependency-free on purpose: it must run before T01
 // creates package.json, on Linux CI and on a developer machine.
-import { readFileSync, writeFileSync, existsSync, appendFileSync, mkdirSync, readdirSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, appendFileSync, mkdirSync, readdirSync, lstatSync } from "node:fs";
 import { execFileSync } from "node:child_process";
-import { join, dirname } from "node:path";
+import { join, dirname, relative, resolve, isAbsolute } from "node:path";
 import { fileURLToPath } from "node:url";
 
 export const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -187,6 +187,61 @@ export function globToRegExp(glob) {
 }
 
 export const matchesAny = (path, globs) => globs.some((g) => globToRegExp(g).test(path));
+
+// The same import pattern adopt uses when it surveys sign-in and payment packages (PR-73). A changed source file
+// that imports one of reviewer.human_gate_imports stops at the human gate.
+const IMPORT_EXTS = new Set(["ts", "tsx", "js", "jsx", "mjs", "cjs", "mts", "cts", "vue", "svelte", "astro"]);
+const IMPORT_RE = /(?:\bfrom\s*|\bimport\s*\(\s*|\brequire\s*\(\s*|^\s*import\s+)["']([^"'\s]+)["']/gm;
+const MAX_IMPORT_BYTES = 1024 * 1024;
+
+function insideRepo(rel) {
+  const abs = resolve(ROOT, rel);
+  const fromRoot = relative(ROOT, abs);
+  if (fromRoot === "" || fromRoot.split(/[/\\]/).includes("..") || isAbsolute(fromRoot)) return "";
+  return abs;
+}
+
+/**
+ * Paths in `paths` whose file imports a package matching `globs`, sorted and unique (PR-73). An empty `globs` returns
+ * [] and reads nothing. Only a regular file outside docs/, of a source extension, of at most 1 MiB, is read; a link
+ * is never followed, and a path that is no longer there is skipped.
+ */
+export function importsGated(paths, globs) {
+  if (!Array.isArray(globs) || globs.length === 0) return [];
+  const found = [];
+  for (const rel of paths) {
+    if (typeof rel !== "string") continue;
+    const slash = rel.split("\\").join("/");
+    if (slash === "docs" || slash.startsWith("docs/")) continue;
+    const base = slash.slice(slash.lastIndexOf("/") + 1);
+    const dot = base.lastIndexOf(".");
+    if (dot <= 0 || !IMPORT_EXTS.has(base.slice(dot + 1).toLowerCase())) continue;
+    if (isAbsolute(slash)) continue;
+    const abs = insideRepo(slash);
+    if (!abs) continue;
+    let st;
+    try {
+      st = lstatSync(abs);
+    } catch {
+      continue;
+    }
+    if (st.isSymbolicLink() || !st.isFile() || st.size > MAX_IMPORT_BYTES) continue;
+    let text;
+    try {
+      text = readFileSync(abs, "utf8");
+    } catch {
+      continue;
+    }
+    IMPORT_RE.lastIndex = 0;
+    for (const match of text.matchAll(IMPORT_RE)) {
+      if (matchesAny(match[1], globs)) {
+        found.push(slash);
+        break;
+      }
+    }
+  }
+  return [...new Set(found)].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+}
 
 // ---------- outputs ------------------------------------------------------------------------
 

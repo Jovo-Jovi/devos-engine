@@ -39,6 +39,7 @@ test("config-equivalence.test.mjs regenerates the Tower config", () => {
   delete merged.check_limits_note;
   // PR-72 (E37): the paths that stop at the human gate in production are an engine addition.
   delete merged.reviewer.human_gate_paths;
+  delete merged.reviewer.human_gate_imports;
   delete merged.reviewer.human_gate_note;
   // PR-52 (E24, after the Tower pin was retired): the builder may not edit the usage record.
   for (const role of ["builder", "builder_method"]) {

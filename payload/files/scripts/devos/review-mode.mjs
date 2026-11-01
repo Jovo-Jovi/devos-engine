@@ -4,7 +4,8 @@
 //   light  risk 1–2, no gate, no critical path touched: the light reviewer (or the reviewer), evidence-first, spot checks.
 //   deep   risk 3, a gate, or the diff touches a critical path (devos.config.json
 //          reviewer.deep_paths: migrations, auth, headers, workflows…, and every path of
-//          reviewer.human_gate_paths, PR-72): the reviewer, every changed line of the critical files,
+//          reviewer.human_gate_paths, PR-72, and a changed file that imports a package of
+//          reviewer.human_gate_imports, PR-73): the reviewer, every changed line of the critical files,
 //          targeted probes only.
 // The agents and models are the ones the developer chose (agents in devos.config.json, PR-53). The model here is the
 // reviewer's first; the cycle tries its fallback_models after it (agents.mjs, accounts.sh devos_slots, PR-64).
@@ -12,7 +13,7 @@
 // A retry (attempt 2+) raises the effort one step: the cheap review missed something or the task is hard.
 // Usage: node scripts/devos/review-mode.mjs --task T12 --attempt 1
 // Emits: mode, model, effort, max_turns, fallback, reasons, critical (comma-separated paths)
-import { P, config, parsePhases, globToRegExp, diffPaths, emit, fail, isMethodRow } from "./lib.mjs";
+import { P, config, parsePhases, globToRegExp, diffPaths, emit, fail, isMethodRow, importsGated } from "./lib.mjs";
 import { reviewerFor } from "./agents.mjs";
 
 const arg = (n) => { const i = process.argv.indexOf(`--${n}`); return i >= 0 ? (process.argv[i + 1] ?? "") : ""; };
@@ -23,7 +24,16 @@ const hasGate = (row) => Boolean(row.gate && row.gate !== "—" && row.gate !== 
 export function reviewPlan(row, changed = [], attempt = 1, cfg = config()) {
   const r = cfg.reviewer;
   const deepRes = [...(r.deep_paths ?? []), ...(r.human_gate_paths ?? [])].map(globToRegExp);
-  const critical = changed.filter((p) => deepRes.some((re) => re.test(p)));
+  const imported = new Set(importsGated(changed, r.human_gate_imports ?? []));
+  const seen = new Set();
+  const critical = [];
+  for (const p of changed) {
+    if (seen.has(p)) continue;
+    if (deepRes.some((re) => re.test(p)) || imported.has(p)) {
+      seen.add(p);
+      critical.push(p);
+    }
+  }
   const reasons = [];
   if (hasGate(row)) reasons.push(`closes gate ${row.gate}`);
   if (row.risk >= 3) reasons.push("risk 3");

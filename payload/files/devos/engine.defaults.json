@@ -73,7 +73,8 @@
       ".github/**"
     ],
     "human_gate_paths": [],
-    "human_gate_note": "PR-72: a PASS that changes one of these paths stops at the human gate, as a schema change does (PR-17), and its review is deep. devos adopt fills it, as reviewer.human_gate_paths_extra in devos/project.json, for a project in production: its deploy, schema, sign-in and payment files.",
+    "human_gate_imports": [],
+    "human_gate_note": "PR-72, PR-73: a PASS that changes one of these paths, or adds or changes a source file that imports a package of human_gate_imports, stops at the human gate, as a schema change does (PR-17), and its review is deep. devos adopt fills both, as reviewer.human_gate_paths_extra and reviewer.human_gate_imports_extra in devos/project.json, for a project in production.",
     "escalate_on_retry": true
   },
   "required_checks": [
@@ -308,6 +309,8 @@
     "note": "devos-supervisor.yml + scripts/devos/supervisor.mjs: notices stopped or stalled work, explains it with fixed rules (Claude, read-only, only when none fits), fixes what is safe (re-run, resume, continue, recover a rescue branch, start the next task) at most max_auto_per_key times per cause, and turns everything else into an issue, a proposal (/devos approve <id>) or setup steps. Never merges, pushes to main or handles a secret. Off: variable DEVOS_SUPERVISOR=off."
   },
   "guards": {
+    "$comment": "PR-73: the folders the code guards read. devos adopt adds a project's own as source_roots_extra in devos/project.json.",
+    "source_roots": ["src"],
     "design": {
       "allowed_hosts": []
     },

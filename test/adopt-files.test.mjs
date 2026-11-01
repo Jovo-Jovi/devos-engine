@@ -6,7 +6,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
 import { cleanup } from "./harness.mjs";
-import { AGENT_END, AGENT_START, mergeAgentFile, mergeLines, placeEngineFiles } from "../lib/adopt.mjs";
+import { ADOPT_IGNORE, AGENT_END, AGENT_START, mergeAgentFile, mergeLines, placeEngineFiles } from "../lib/adopt.mjs";
 import { buildManifest, manifestText } from "../tools/build-manifest.mjs";
 
 // E36a (PR-69, D-E13): DEV_OS's files beside an existing project's own; nothing of the project's is overwritten.
@@ -110,14 +110,14 @@ test("adopt-files.test.mjs (d) devos upgrade updates DEV_OS's CI where it lives 
     mkdirSync(next);
     for (const part of ["package.json", "bin", "lib", "payload"]) cpSync(path.join(root, part), path.join(next, part), { recursive: true });
     const pkg = path.join(next, "package.json");
-    writeFileSync(pkg, readFileSync(pkg, "utf8").replace("\"version\": \"1.4.0\"", "\"version\": \"1.4.1\""));
+    writeFileSync(pkg, readFileSync(pkg, "utf8").replace("\"version\": \"1.4.1\"", "\"version\": \"1.4.2\""));
     const ci = path.join(next, "payload", "files", "dot-github", "workflows", "ci.yml");
     writeFileSync(ci, `${readFileSync(ci, "utf8").replaceAll("\r\n", "\n")}# Upgrade test line.\n`);
     writeFileSync(path.join(next, "payload", "manifest.json"), manifestText(buildManifest(next)));
     const upgraded = spawnSync(process.execPath, [path.join(next, "bin", "devos.mjs"), "upgrade", "--local"], { cwd: folder, encoding: "utf8", windowsHide: true, timeout: 180000 });
     assert.equal(upgraded.status, 0, upgraded.stdout + upgraded.stderr);
-    assert.equal(upgraded.stdout.includes("devos upgrade 1.4.0 to 1.4.1: 1 updated, 0 added, 0 removed, 0 conflicts"), true, upgraded.stdout);
-    const branch = "devos/upgrade-1.4.1";
+    assert.equal(upgraded.stdout.includes("devos upgrade 1.4.1 to 1.4.2: 1 updated, 0 added, 0 removed, 0 conflicts"), true, upgraded.stdout);
+    const branch = "devos/upgrade-1.4.2";
     const changed = git(["diff", "--name-only", `main..${branch}`], folder).split("\n").filter(Boolean).sort();
     assert.deepEqual(changed, [".github/workflows/devos-ci.yml", "devos/engine.lock.json"]);
     assert.equal(git(["show", `${branch}:.github/workflows/devos-ci.yml`], folder).endsWith("# Upgrade test line.\n"), true);
@@ -148,5 +148,27 @@ test("adopt-files.test.mjs (e) without a lock the manual still names every workf
     assert.equal(read(root, "payload/files/docs/method/AUTOMATION.md").includes("**DEV_OS beside a project's own files (PR-69).**"), true);
   } finally {
     cleanup(folder);
+  }
+});
+
+test("adopt-files.test.mjs (f) placeEngineFiles merges only DEV_OS's own gitignore lines (PR-73)", () => {
+  const own = "keep-me\n";
+  const folder = existing({ ".gitignore": own, "README.md": "# Demo\n" });
+  const bare = existing({ "README.md": "# Demo\n" });
+  const banned = ["dist/", "out/", "/build", "*.pem", "node_modules/"];
+  try {
+    assert.equal(placeEngineFiles(folder, "DEMO").code, 0);
+    const ignore = read(folder, ".gitignore");
+    assert.equal(ignore.startsWith(`${own}\n# DEV_OS (added by devos adopt)\n`), true, ignore);
+    const added = ignore.split("\n").map((line) => line.trim()).filter((line) => line !== "" && !line.startsWith("#") && line !== "keep-me");
+    assert.deepEqual(added, ADOPT_IGNORE);
+    for (const line of banned) assert.equal(ignore.split("\n").includes(line), false, line);
+    assert.equal(placeEngineFiles(bare, "DEMO").code, 0);
+    const only = read(bare, ".gitignore").split("\n").filter((line) => line !== "" && !line.startsWith("#"));
+    assert.deepEqual(only, ADOPT_IGNORE);
+    for (const line of banned) assert.equal(only.includes(line), false, line);
+  } finally {
+    cleanup(folder);
+    cleanup(bare);
   }
 });

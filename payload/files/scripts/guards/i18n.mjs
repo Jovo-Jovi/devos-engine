@@ -24,7 +24,7 @@ function flatten(obj, prefix = "", out = {}) {
 }
 
 export default function i18n() {
-  if (!hasSrc()) return result("N/A", [], "src/ does not exist yet");
+  if (!hasSrc()) return result("N/A", [], "no source folder yet (guards.source_roots)");
   const findings = [];
   const flat = {};
   for (const [loc, file] of Object.entries(catalogues())) {
