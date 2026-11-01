@@ -4,7 +4,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { cloneProject, compareVersions, engineRepository, hubState, parseRepositoryInput } from "../lib/hub.mjs";
+import { cloneProject, compareVersions, engineRepository, hubExec, hubState, parseRepositoryInput } from "../lib/hub.mjs";
 import { startUiServer } from "../lib/ui-server.mjs";
 import { cleanup, stage } from "./harness.mjs";
 
@@ -183,6 +183,31 @@ test("hub.test.mjs (d) the server reads a project's page and clones from GitHub 
     assert.equal(noToken.status, 401);
   } finally {
     await chooser.close();
+    restore();
+    cleanup(staged.parent);
+  }
+});
+
+test("hub.test.mjs (f) cloneProject for adoption refuses a repository that has the lock, and clones one whose lock is missing", () => {
+  const staged = stage();
+  const source = path.join(staged.parent, "source");
+  const base = path.join(staged.parent, "devos-projects");
+  const restore = useStubs(staged, { STUB_REPO: "full", STUB_CLONE_FROM: source });
+  try {
+    setUpProject(source, { origin: null });
+    assert.deepEqual(cloneProject("devtest/demo-shop", base, hubExec, { adopt: true }), {
+      ok: false,
+      error: "devtest/demo-shop is already a DEV_OS project: open it as a current project.",
+    });
+    process.env.STUB_CONTENTS = "missing";
+    const target = path.join(base, "demo-shop");
+    assert.deepEqual(cloneProject("https://github.com/devtest/demo-shop", base, hubExec, { adopt: true }), {
+      ok: true,
+      slug: "devtest/demo-shop",
+      folder: target,
+      reused: false,
+    });
+  } finally {
     restore();
     cleanup(staged.parent);
   }

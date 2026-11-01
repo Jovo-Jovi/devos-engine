@@ -169,6 +169,21 @@ test("ui-page.test.mjs (g) the page shows the agent at work and ends a run with 
   assert.equal(css.includes(".agent-now, .now-pulse { animation: none; }"), true);
 });
 
+test("ui-page.test.mjs (i) the page offers an existing project, the adoption screens and the pull request link", () => {
+  const js = readFileSync(path.join(ui, "app.js"), "utf8");
+  for (const text of [
+    "Existing project",
+    "SCREENS.adopt = () => {",
+    "SCREENS.adopting = () => {",
+    "\"/api/adopt/check\"",
+    "\"/api/adopt/start\"",
+    "adopt: true",
+    "https:\\/\\/github\\.com\\/[A-Za-z0-9._-]+\\/[A-Za-z0-9._-]+\\/pull\\/[0-9]+$",
+  ]) {
+    assert.equal(js.includes(text), true, text);
+  }
+});
+
 test("ui-page.test.mjs (h) a new start offers the last choices, and a continued project shows its own", () => {
   const js = readFileSync(path.join(ui, "app.js"), "utf8");
   for (const text of ["return withRemembered(draft, st.choices);", "app.draft = withChoices(app.draft, found.choices, found.folder);", 'readiness(blueprint.tool) === "ready"']) {

@@ -6,7 +6,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
 import { cleanup, stage } from "./harness.mjs";
-import { adoptStops, chooseAgent, copyPrecedents, copyStops, criticalList, ownSettings, projectFromConfig, surveyLines, surveyProject } from "../lib/adopt.mjs";
+import { adoptStops, chooseAgent, copyPrecedents, copyStops, criticalList, ownSettings, projectFromConfig, surveyLines, surveyProject, uiReader } from "../lib/adopt.mjs";
 import { merge } from "../payload/files/scripts/devos/config.mjs";
 import { hubExec } from "../lib/hub.mjs";
 import { matchesAny } from "../payload/files/scripts/devos/lib.mjs";
@@ -544,5 +544,47 @@ test("adopt.test.mjs (q) a project is an older copy only when it tracks both DEV
     assert.equal(surveyLines(surveyProject(folders[1], { exec: fakeGh() })).includes("DEV_OS: some of its files (.github/workflows/devos-cycle.yml, devos.config.json)"), true);
   } finally {
     for (const folder of folders) cleanup(folder);
+  }
+});
+
+test("adopt.test.mjs (r) uiReader is a no-op without DEVOS_UI, and with it the marker comes before each read", async () => {
+  const previous = process.env.DEVOS_UI;
+  delete process.env.DEVOS_UI;
+  const plain = () => Promise.resolve("kept");
+  plain.drain = () => 1;
+  assert.equal(uiReader(plain), plain);
+  assert.equal(plain.isTTY, undefined);
+  assert.equal(plain.interactive, undefined);
+  const chunks = [];
+  const write = process.stdout.write;
+  process.env.DEVOS_UI = "1";
+  process.stdout.write = function writeCaptured(...args) {
+    chunks.push(String(args[0]));
+    return write.apply(process.stdout, args);
+  };
+  try {
+    const source = () => {
+      chunks.push("READ");
+      return Promise.resolve("line");
+    };
+    source.drain = () => 2;
+    const wrapped = uiReader(source);
+    assert.equal(wrapped.raw, source);
+    assert.equal(wrapped.drain, source.drain);
+    assert.equal(wrapped.interactive, true);
+    assert.equal(source.isTTY, false);
+    assert.equal(await wrapped(), "line");
+    assert.equal(await wrapped(), "line");
+    const out = chunks.join("");
+    const marker = "::devos-ask {\"kind\":\"line\"}";
+    const first = out.indexOf(marker);
+    const read1 = out.indexOf("READ");
+    const second = out.indexOf(marker, first + marker.length);
+    const read2 = out.indexOf("READ", read1 + 4);
+    assert.equal(first >= 0 && first < read1 && read1 < second && second < read2, true, out);
+  } finally {
+    process.stdout.write = write;
+    if (previous === undefined) delete process.env.DEVOS_UI;
+    else process.env.DEVOS_UI = previous;
   }
 });

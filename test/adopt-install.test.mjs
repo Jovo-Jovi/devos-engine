@@ -640,3 +640,19 @@ test("adopt-install.test.mjs (aa) an older copy: a link where devos writes, or a
     cleanup(besideOnly.staged.parent);
   }
 });
+
+test("adopt-install.test.mjs (ab) the page's line marker follows the brief question, the run ends with its code, and the folder is unchanged", () => {
+  const t = setUp();
+  try {
+    const head = t.git(["rev-parse", "HEAD"]).out;
+    const result = t.run([t.folder], "\n", { DEVOS_UI: "1" });
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    const prompt = result.stdout.indexOf("Type yes to keep this brief");
+    const marker = "::devos-ask {\"kind\":\"line\"}";
+    assert.equal(prompt >= 0 && result.stdout.indexOf(marker, prompt) > prompt, true, result.stdout);
+    assert.equal(result.stdout.trimEnd().endsWith(`::devos-step {"step":"done","code":${result.status}}`), true, result.stdout);
+    unchanged(t, head);
+  } finally {
+    cleanup(t.staged.parent);
+  }
+});

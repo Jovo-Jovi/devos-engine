@@ -791,7 +791,72 @@ async function workerZ() {
   }
 }
 
-const workers = { l: workerL, n: workerN, m: workerM, o: workerO, p: workerP, q: workerQ, s: workerS, t: workerT, u: workerU, v: workerV, w: workerW, z: workerZ };
+async function workerAb() {
+  const staged = stage();
+  Object.assign(process.env, staged.env);
+  process.env.STUB_REPO = "full";
+  const folder = staged.project;
+  const files = {
+    "package.json": JSON.stringify({ name: "demo-app", scripts: { build: "next build", test: "vitest run" }, dependencies: { next: "15.0.0", react: "19.0.0" }, devDependencies: { typescript: "5.6.0", vitest: "2.0.0" } }, null, 2),
+    "app/page.tsx": "export default function Page() {\n  return null;\n}\n",
+    "src/lib/contact.ts": "export const mail = \"team@example.com\";\n",
+    ".github/workflows/ci.yml": "name: ci\non: push\njobs: {}\n",
+    ".gitignore": "node_modules\n.env\n",
+    "docs/notes.md": "# Notes\n",
+    "CLAUDE.md": "# Our own notes\nUse pnpm.\n",
+  };
+  for (const [file, text] of Object.entries(files)) {
+    mkdirSync(path.dirname(path.join(folder, file)), { recursive: true });
+    writeFileSync(path.join(folder, file), text);
+  }
+  const git = (args) => spawnSync("git", args, { cwd: folder, encoding: "utf8", windowsHide: true, env: staged.env });
+  for (const args of [["init", "-q", "-b", "main"], ["config", "core.autocrlf", "false"], ["add", "-A"], ["commit", "-q", "-m", "the project"], ["remote", "add", "origin", "https://github.com/devtest/demo-app.git"]]) {
+    const result = git(args);
+    if (result.status !== 0) throw new Error(`git ${args.join(" ")}: ${result.stderr}`);
+  }
+  let server;
+  try {
+    server = await startUiServer({ folder: null, port: 0 });
+    const origin = `http://127.0.0.1:${server.port}`;
+    const headers = { "Content-Type": "application/json", Origin: origin, "X-DEVOS-Token": server.token };
+    const post = async (route, body) => {
+      const response = await fetch(`${origin}${route}`, { method: "POST", headers, body: JSON.stringify(body) });
+      const text = await response.text();
+      return { status: response.status, body: text ? JSON.parse(text) : null };
+    };
+    const bad = await post("/api/adopt/start", { folder, agent: "vim" });
+    if (bad.status !== 400 || bad.body?.errors?.[0] !== "The AI tool must be claude, cursor, codex or gemini, then :model if you want one.") {
+      throw new Error(`bad agent: ${bad.status} ${JSON.stringify(bad.body)}`);
+    }
+    const started = await post("/api/adopt/start", { folder });
+    if (started.status !== 202) throw new Error(`start: ${started.status} ${JSON.stringify(started.body)}`);
+    const state = await fetch(`${origin}/api/state`, { headers: { "X-DEVOS-Token": server.token } });
+    const stateBody = await state.json();
+    if (state.status !== 200 || stateBody.runKind !== "adopt") throw new Error(`runKind: ${JSON.stringify(stateBody.runKind)}`);
+    let asked = false;
+    const events = await readEvents(server.port, server.token, async (event) => {
+      if (event.kind !== "line" || asked) return;
+      asked = true;
+      const two = await post("/api/answer", { kind: "line", value: "yes\nno" });
+      if (two.status !== 400 || two.body?.errors?.[0] !== "An answer must be one line.") {
+        throw new Error(`two lines: ${two.status} ${JSON.stringify(two.body)}`);
+      }
+      const empty = await post("/api/answer", { kind: "line", value: "" });
+      if (empty.status !== 204) throw new Error(`empty line: ${empty.status} ${JSON.stringify(empty.body)}`);
+    });
+    if (!asked) throw new Error("the brief's line ask did not arrive");
+    const done = events.find((event) => event.type === "done");
+    if (!done) throw new Error("done did not arrive");
+    if (!events.some((event) => event.type === "log" && String(event.text).includes("devos: stopped; nothing in"))) {
+      throw new Error(`stop was not logged: ${events.filter((event) => event.type === "log").map((event) => event.text).join("\n")}`);
+    }
+  } finally {
+    if (server) await server.close();
+    cleanup(staged.parent);
+  }
+}
+
+const workers = { l: workerL, n: workerN, m: workerM, o: workerO, p: workerP, q: workerQ, s: workerS, t: workerT, u: workerU, v: workerV, w: workerW, z: workerZ, ab: workerAb };
 const workerName = process.env.DEVOS_UI_WORKER;
 if (workers[workerName]) {
   workers[workerName]().then(() => process.exit(0)).catch((error) => {
@@ -1011,6 +1076,71 @@ if (workers[workerName]) {
   test("ui-server.test.mjs (w) the agent's steps stream to the page and the last 40 replay", { timeout: 180000 }, () => {
     const result = runWorker("w");
     assert.equal(result.status, 0, result.stderr);
+  });
+
+  test("ui-server.test.mjs (aa) /api/adopt/check needs the token, refuses one folder, and surveys a git project", async () => {
+    const staged = stage();
+    const folder = staged.project;
+    mkdirSync(folder, { recursive: true });
+    writeFileSync(path.join(folder, "README.md"), "# Demo\n");
+    const git = (args) => spawnSync("git", args, { cwd: folder, encoding: "utf8", windowsHide: true, env: staged.env });
+    for (const args of [["init", "-q", "-b", "main"], ["config", "core.autocrlf", "false"], ["add", "-A"], ["commit", "-q", "-m", "the project"], ["remote", "add", "origin", "https://github.com/devtest/demo-app.git"]]) {
+      assert.equal(git(args).status, 0, args.join(" "));
+    }
+    const saved = { PATH: process.env.PATH, STUB_REPO: process.env.STUB_REPO, DEVOS_GH_LOG: process.env.DEVOS_GH_LOG };
+    process.env.PATH = staged.env.PATH;
+    process.env.STUB_REPO = "full";
+    process.env.DEVOS_GH_LOG = staged.env.DEVOS_GH_LOG;
+    const chooser = await startUiServer({ folder: null, port: 0 });
+    const bound = await startUiServer({ folder, port: 0 });
+    const call = async (server, body) => {
+      const origin = `http://127.0.0.1:${server.port}`;
+      const response = await fetch(`${origin}/api/adopt/check`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Origin: origin, "X-DEVOS-Token": server.token },
+        body: JSON.stringify(body),
+      });
+      return { status: response.status, body: await response.json() };
+    };
+    try {
+      const origin = `http://127.0.0.1:${chooser.port}`;
+      const denied = await fetch(`${origin}/api/adopt/check`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Origin: origin },
+        body: JSON.stringify({ folder }),
+      });
+      assert.equal(denied.status, 401);
+      await denied.json();
+      const fixed = await call(bound, { folder });
+      assert.deepEqual(fixed, { status: 400, body: { ok: false, errors: ["This page was opened for one folder. Run devos ui without a folder to add DEV_OS to a project."] } });
+      const relative = await call(chooser, { folder: "src" });
+      assert.deepEqual(relative, { status: 200, body: { ok: false, errors: ["The project folder must be a full path."] } });
+      const empty = path.join(staged.parent, "empty");
+      mkdirSync(empty);
+      const notGit = await call(chooser, { folder: empty });
+      assert.equal(notGit.status, 200);
+      assert.equal(notGit.body.ok, false);
+      assert.equal(String(notGit.body.errors?.[0]).includes("is not a git repository"), true, JSON.stringify(notGit.body));
+      const surveyed = await call(chooser, { folder });
+      assert.equal(surveyed.status, 200);
+      assert.equal(surveyed.body.ok, true);
+      assert.equal(Array.isArray(surveyed.body.lines) && surveyed.body.lines.length > 0, true, JSON.stringify(surveyed.body.lines));
+    } finally {
+      await chooser.close();
+      await bound.close();
+      if (saved.PATH === undefined) delete process.env.PATH;
+      else process.env.PATH = saved.PATH;
+      if (saved.STUB_REPO === undefined) delete process.env.STUB_REPO;
+      else process.env.STUB_REPO = saved.STUB_REPO;
+      if (saved.DEVOS_GH_LOG === undefined) delete process.env.DEVOS_GH_LOG;
+      else process.env.DEVOS_GH_LOG = saved.DEVOS_GH_LOG;
+      cleanup(staged.parent);
+    }
+  });
+
+  test("ui-server.test.mjs (ab) an adopt run through the page asks for the brief and stops on an empty line", { timeout: 180000 }, () => {
+    const result = runWorker("ab");
+    assert.equal(result.status, 0, result.stdout + result.stderr);
   });
 
   test("ui-server.test.mjs (z) attachments are sent one by one at full quality, and a plan names what was sent (PR-60)", { timeout: 180000 }, () => {

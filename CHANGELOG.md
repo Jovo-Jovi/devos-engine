@@ -76,6 +76,9 @@ The notable changes of each DEV_OS Engine release. Versions follow [Semantic Ver
     are always reviewed deep. When the brief you confirm says production, a task that changes one stops for your
     review and merge (`reviewer.human_gate_paths_extra` in `devos/project.json`), even at risk 1 or 2. A move or a
     deletion counts. The list is what exists when DEV_OS is added; name a later file there yourself.
+- **The guided page can add DEV_OS to an existing project.** `devos ui`, with no folder, offers Existing project:
+  a folder on this computer or a GitHub address, then the survey and the same questions `devos adopt` asks.
+  Nothing in the project changes until you merge DEV_OS's pull request.
 - **The code a project already has gets a baseline (PR-68).** The guards pass what `devos/baseline.json` records:
   the findings of `naming`, `design`, `i18n`, `literals` and `imports` on the code that existed when DEV_OS was
   added, matched by file, rule and line text. New or changed code must pass. `secrets`, `boundary`, `data` and
