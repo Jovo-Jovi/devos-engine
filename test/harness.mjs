@@ -286,8 +286,16 @@ if (args[0] === "pr" && args[1] === "list") {
   if (pulls[head]) process.stdout.write(pulls[head] + "\\n");
   process.exit(0);
 }
+// E36c: the repository's default workflow permissions (STUB_WORKFLOW_DEFAULT, read when unset).
+if (args[0] === "api" && /^repos\\/[^/]+\\/[^/]+\\/actions\\/permissions\\/workflow$/.test(args[1] ?? "")) {
+  process.stdout.write((process.env.STUB_WORKFLOW_DEFAULT || "read") + "\\n");
+  process.exit(0);
+}
 if (args[0] === "pr" && args[1] === "create") {
   if (process.env.STUB_PR === "fail") process.exit(1);
+  // E36c: the description, as GitHub would get it, in a log of its own (the gh log stays one line per call).
+  const bodyAt = args.indexOf("--body-file");
+  if (log && bodyAt >= 0) appendFileSync(log + ".bodies", JSON.stringify(readFileSync(args[bodyAt + 1], "utf8")) + "\\n");
   process.stdout.write("https://github.com/" + args[args.indexOf("--repo") + 1] + "/pull/7\\n");
   process.exit(0);
 }

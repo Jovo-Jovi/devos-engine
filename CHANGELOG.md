@@ -39,7 +39,19 @@ The notable changes of each DEV_OS Engine release. Versions follow [Semantic Ver
     pass before the commit.
   - **The commit.** It holds only what was checked: your git hooks do not run on it. DEV_OS's files are committed
     even where your `.gitignore` leaves them out, and devos names them.
-  - It needs a default branch named `main`. Pushing the branch and opening its pull request come next.
+  - **Before anything is written,** it shows the contract and asks for the Control Tower link and the cycle's agents,
+    as `devos init` does.
+  - It needs a default branch named `main`.
+- **`devos adopt --publish [folder]` opens the pull request.** It pushes `devos/adopt` and opens its pull request
+  into `main` once you type `yes`, the same step `devos adopt` ends with:
+  - **The description** summarises the brief: what it is, its stage, the open work and what DEV_OS adds, with the
+    settings by name. The brief's risks, personal data and questions stay on your computer.
+  - **The repository** gets what the cycle needs, as `devos init` sets it: the keys (typed hidden, or by name to set
+    later), the variables, the labels `devos:request` and `devos:method`, and GitHub Actions allowed to create and
+    approve pull requests, which applies to every workflow of the repository. Keys and variables already there are
+    kept, and the keys are named. Your workflows' default permissions, your Wiki and your Projects stay as they are.
+  - **The cycle** starts once you merge: the supervisor starts `T01` within half an hour. Run again, `--publish`
+    does only what is missing.
 - **The code a project already has gets a baseline (PR-68).** The guards pass what `devos/baseline.json` records:
   the findings of `naming`, `design`, `i18n`, `literals` and `imports` on the code that existed when DEV_OS was
   added, matched by file, rule and line text. New or changed code must pass. `secrets`, `boundary`, `data` and

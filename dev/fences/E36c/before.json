@@ -1,0 +1,12 @@
+{
+  "lib/adopt.mjs": "60173330aa7f19ad26ae1432e021ee1ea313c95d635c49d94700a48aa4209789",
+  "lib/init.mjs": "9b00b8b03cf95981268b98aafaec6f7bbd363310ed89bc026fe4a1bc67d1bf11",
+  "lib/setup.mjs": "0a44a5f345a71d8dcc141909a984907cbf9ca7dd216ba5d6f5dae5931ef792b2",
+  "lib/menu.mjs": "1235c4a0a087d387a6630dfef9ac997cd0be7138beed2530006c67414c68cb11",
+  "bin/devos.mjs": "26317efaa052e64fa430b18160c06dcca990f59f64d5508915c7dd5d6c67a22a",
+  "test/harness.mjs": "f9da10c6ce8418c72ae63b460e005a1a91a2155529c0f4cd17dc04cc4edcf388",
+  "test/adopt.test.mjs": "69799e4a0052dedf49e029d39ea05fb81c5f56073c1a21dbaf4369e342af864b",
+  "test/adopt-install.test.mjs": "43fd97292c9a821b0d78bfdbfafdee2abe2777d533898c85fa7d41b73dacf66c",
+  "README.md": "bfb1b6e71249b2af3a634cc93972468b0dffccd61c650e9e746d998c61cea736",
+  "CHANGELOG.md": "228432b4f35e7885834882f37943131e769a000abb4de6db36377c137efdb23d"
+}

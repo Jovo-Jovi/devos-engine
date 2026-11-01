@@ -235,7 +235,7 @@ test("adopt.test.mjs (f) devos adopt --check prints the survey, --json gives the
     assert.equal(git(["status", "--porcelain", "--ignored"], folder), "");
     const usage = runDevos(["adopt", "--nope"]);
     assert.equal(usage.status, 2);
-    assert.equal(usage.stdout, "usage: devos adopt [folder] [--install] [--agent <tool>[:<model>]] · devos adopt --check [folder] [--json]\n");
+    assert.equal(usage.stdout, "usage: devos adopt [folder] [--install | --publish] [--agent <tool>[:<model>]] · devos adopt --check [folder] [--json]\n");
     const loose = runDevos(["adopt", "--check", staged.parent]);
     assert.equal(loose.status, 1);
     assert.equal(loose.stdout, `devos: ${staged.parent} is not a git repository; run devos adopt --check in the project's own clone\n`);
