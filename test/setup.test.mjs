@@ -7,7 +7,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
 import { installInto } from "../lib/install.mjs";
-import { finishSetup, setupItems, setupMarkdown } from "../lib/setup.mjs";
+import { finishSetup, setupItems, setupMarkdown, switchVariables } from "../lib/setup.mjs";
 
 // Git 2.47 and later run their automatic maintenance in the background after a commit or a fetch, and it can still be
 // writing into .git while a test removes its folder (ENOTEMPTY on the CI runner, E32). Every git a test starts, itself
@@ -126,9 +126,13 @@ function writeStubs(dir) {
   mkdirSync(dir);
   writeFileSync(path.join(dir, "claude-stub.mjs"), claudeStub);
   writeFileSync(path.join(dir, "gh-stub.mjs"), ghStub);
+  // The dispatch test's builder model is the engine default grok-4.7. A Cursor CLI on PATH that does not list
+  // that id would make an empty answer pick its first model instead, so the probe stops at this stub.
+  writeFileSync(path.join(dir, "agent-stub.mjs"), "process.exit(1);\n");
   if (windows) {
     writeFileSync(path.join(dir, "claude.cmd"), "@node \"%~dp0claude-stub.mjs\" %*\r\n");
     writeFileSync(path.join(dir, "gh.cmd"), "@node \"%~dp0gh-stub.mjs\" %*\r\n");
+    writeFileSync(path.join(dir, "agent.cmd"), "@node \"%~dp0agent-stub.mjs\" %*\r\n");
     return;
   }
   const claude = path.join(dir, "claude");
@@ -137,6 +141,9 @@ function writeStubs(dir) {
   const gh = path.join(dir, "gh");
   writeFileSync(gh, `#!/usr/bin/env node\n${ghStub}`);
   chmodSync(gh, 0o755);
+  const agent = path.join(dir, "agent");
+  writeFileSync(agent, "#!/usr/bin/env node\nprocess.exit(1);\n");
+  chmodSync(agent, 0o755);
 }
 
 function stage(options = {}) {
@@ -260,6 +267,16 @@ test("setup.test.mjs creates the repository and dispatches the cycle", () => {
       "label create devos:method --color 5319e7 --description A DEV_OS method fix (the Dev OS method fix form) --force --repo devtest/demo-shop",
       "repo edit devtest/demo-shop --enable-wiki=false --enable-projects=false",
       "variable set DEVOS_VERCEL --body true --repo devtest/demo-shop",
+      "variable set DEVOS_PAUSED --body false --repo devtest/demo-shop",
+      "variable set DEVOS_SUPERVISOR --body on --repo devtest/demo-shop",
+      "variable set DEVOS_HEAVY --body notify --repo devtest/demo-shop",
+      "variable set DEVOS_ACCOUNT_SWITCH --body auto --repo devtest/demo-shop",
+      "variable set DEVOS_CLAUDE_ACCOUNT --body 1 --repo devtest/demo-shop",
+      "variable set DEVOS_CURSOR_ACCOUNT --body 1 --repo devtest/demo-shop",
+      "variable set DEVOS_REVIEWER_MODEL --body claude-opus-5-5 --repo devtest/demo-shop",
+      "variable set DEVOS_REVIEWER_LIGHT_MODEL --body claude-sonnet-5-5 --repo devtest/demo-shop",
+      "variable set DEVOS_BUILDER_MODEL --body grok-4.7 --repo devtest/demo-shop",
+      "variable set DEVOS_SCREENS_RETENTION_DAYS --body 3 --repo devtest/demo-shop",
       "secret list --repo devtest/demo-shop --json name",
       "variable list --repo devtest/demo-shop --json name,value",
       "workflow run devos-cycle.yml --repo devtest/demo-shop",
@@ -283,7 +300,7 @@ test("setup.test.mjs writes SETUP headings for vercel and for none", () => {
     assert.equal(plain.status, 0, plain.stdout + plain.stderr);
     const fewer = readFileSync(path.join(none.project, "SETUP.md"), "utf8").split("\n").filter((line) => line.startsWith("## "));
     assert.deepEqual(fewer, headingsFor(["cursor", "claude"]));
-    assert.equal(ghLines(none.parent).some((line) => line.startsWith("variable set")), false);
+    assert.equal(ghLines(none.parent).some((line) => line.startsWith("variable set DEVOS_VERCEL")), false);
   } finally {
     cleanup(vercel.parent);
     cleanup(none.parent);
@@ -505,4 +522,40 @@ test("setup.test.mjs (u) a skipped key is printed and not uploaded", () => {
   } finally {
     cleanup(staged.parent);
   }
+});
+
+test("setup.test.mjs (v) switchVariables lists every switch with its value", () => {
+  assert.deepEqual(switchVariables({
+    reviewer: { tool: "claude", model: "claude-opus-5-5" },
+    reviewer_light: { tool: "claude", model: "claude-sonnet-5-5" },
+    pool: [
+      { tool: "cursor", model: "grok-4.7", default: true },
+      { tool: "codex", model: "gpt-5" },
+    ],
+  }), [
+    ["DEVOS_PAUSED", "false"],
+    ["DEVOS_SUPERVISOR", "on"],
+    ["DEVOS_HEAVY", "notify"],
+    ["DEVOS_ACCOUNT_SWITCH", "auto"],
+    ["DEVOS_CLAUDE_ACCOUNT", "1"],
+    ["DEVOS_CURSOR_ACCOUNT", "1"],
+    ["DEVOS_CODEX_ACCOUNT", "1"],
+    ["DEVOS_REVIEWER_MODEL", "claude-opus-5-5"],
+    ["DEVOS_REVIEWER_LIGHT_MODEL", "claude-sonnet-5-5"],
+    ["DEVOS_BUILDER_MODEL", "grok-4.7"],
+    ["DEVOS_SCREENS_RETENTION_DAYS", "3"],
+  ]);
+  const partial = switchVariables({
+    reviewer: { tool: "claude", model: "claude-opus-5-5" },
+    pool: [{ tool: "cursor", model: "bad model", default: true }],
+  }).map(([name]) => name);
+  assert.equal(partial.includes("DEVOS_REVIEWER_LIGHT_MODEL"), false);
+  assert.equal(partial.includes("DEVOS_BUILDER_MODEL"), false);
+  assert.deepEqual(switchVariables({}), [
+    ["DEVOS_PAUSED", "false"],
+    ["DEVOS_SUPERVISOR", "on"],
+    ["DEVOS_HEAVY", "notify"],
+    ["DEVOS_ACCOUNT_SWITCH", "auto"],
+    ["DEVOS_SCREENS_RETENTION_DAYS", "3"],
+  ]);
 });

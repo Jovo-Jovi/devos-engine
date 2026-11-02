@@ -32,7 +32,7 @@ function project(url) {
 }
 
 /** A fake registry and GitHub OIDC endpoint on this computer. Every request is recorded. */
-async function registry({ link = 200, ingest = () => 200 } = {}) {
+async function registry({ link = 200, ingest = () => 200, token = 200 } = {}) {
   const seen = [];
   const server = createServer((req, res) => {
     let body = "";
@@ -48,6 +48,8 @@ async function registry({ link = 200, ingest = () => 200 } = {}) {
       };
       if (url.pathname === "/token") {
         if (req.headers.authorization !== "Bearer request-token") return send(403, {});
+        const status = typeof token === "function" ? token() : token;
+        if (status !== 200) return send(status, {});
         return send(200, { value: "oidc-jwt" });
       }
       if (url.pathname === "/api/link") {
@@ -180,7 +182,7 @@ test("report.test.mjs (c) flush sends each unsent event once, in order, and neve
   const dir = project(server.base);
   try {
     for (const step of ["build", "checks", "verdict", "merge"]) await report(dir, ["note", "--step", step, "--status", "pass"]);
-    assert.deepEqual(await report(dir, ["flush"], oidcEnv(server.base)), ["devos report: not linked (not asked); 4 events kept, not sent"]);
+    assert.deepEqual(await report(dir, ["flush"], oidcEnv(server.base)), ["devos report: not linked (not asked); 4 events not sent. They stay in this run's evidence: re-run this report job once the project is linked"]);
     await report(dir, ["link"], oidcEnv(server.base));
     server.seen.length = 0;
     assert.deepEqual(await report(dir, ["flush"], oidcEnv(server.base)), [
@@ -243,7 +245,7 @@ test("report.test.mjs (e) reporting never blocks: every command exits 0, even wi
       env: { ...process.env, ...ENV, ...oidcEnv(base) },
     });
     assert.equal(run.status, 0, run.stderr);
-    assert.match(run.stdout, /devos report: no OIDC token|devos report: the registry did not answer \(network\)/);
+    assert.match(run.stdout, /devos report: no OIDC token|devos report: the registry did not answer \(network\)|devos report: GitHub gave no OIDC token after 3 tries \(network\)/);
     assert.deepEqual(await report(dir, ["bogus"]), [
       "usage: node scripts/devos/report.mjs note --step <step> --status <status> [--evidence <path@sha>] | note --failed | link | flush [--dry] | history [--dry]",
     ]);
@@ -271,4 +273,163 @@ test("report.test.mjs (f) only the report job holds the OIDC permission, and it 
   const notes = rest.split("\n      - name: devos-report").slice(1);
   assert.equal(notes.length, 7);
   for (const step of notes) assert.equal(step.split("\n      - ")[0].includes("continue-on-error: true"), true, step.slice(0, 60));
+});
+
+/** A token endpoint this test owns. `answer` is the status of each request, or a function of how many have arrived. */
+async function tokenServer(answer) {
+  const seen = [];
+  const sockets = new Set();
+  const server = createServer((req, res) => {
+    seen.push(new URL(req.url, "http://127.0.0.1").pathname);
+    const status = typeof answer === "function" ? answer(seen.length) : answer;
+    if (status === 0) return;
+    res.writeHead(status, { "content-type": "application/json" });
+    res.end(status === 200 ? JSON.stringify({ value: "oidc-jwt" }) : "{}");
+  });
+  server.on("connection", (socket) => {
+    sockets.add(socket);
+    socket.on("close", () => sockets.delete(socket));
+  });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const base = `http://127.0.0.1:${server.address().port}`;
+  return {
+    base,
+    seen,
+    close: () => {
+      for (const socket of sockets) socket.destroy();
+      return new Promise((resolve) => server.close(resolve));
+    },
+  };
+}
+
+test("report.test.mjs (g) oidcResult tries three times, 2 and 5 seconds apart, and names why it got no token", async () => {
+  const reportFile = pathToFileURL(path.join(scripts, "report.mjs")).href;
+  const { oidcResult } = await import(reportFile);
+  const slept = [];
+  const sleep = (ms) => {
+    slept.push(ms);
+    return Promise.resolve();
+  };
+  const envFor = (base) => ({ ACTIONS_ID_TOKEN_REQUEST_URL: `${base}/token`, ACTIONS_ID_TOKEN_REQUEST_TOKEN: "request-token" });
+
+  const recovers = await tokenServer((n) => (n < 3 ? 503 : 200));
+  try {
+    slept.length = 0;
+    assert.deepEqual(await oidcResult("https://registry.example", envFor(recovers.base), { sleep }), { token: "oidc-jwt", reason: "" });
+    assert.equal(recovers.seen.length, 3);
+    assert.deepEqual(slept, [2000, 5000]);
+  } finally {
+    await recovers.close();
+  }
+
+  const down = await tokenServer(503);
+  try {
+    slept.length = 0;
+    assert.deepEqual(await oidcResult("https://registry.example", envFor(down.base), { sleep }), { token: null, reason: "HTTP 503" });
+    assert.equal(down.seen.length, 3);
+  } finally {
+    await down.close();
+  }
+
+  const silent = await tokenServer(0);
+  try {
+    slept.length = 0;
+    const result = await oidcResult("https://registry.example", envFor(silent.base), { sleep, timeoutMs: 200 });
+    assert.equal(result.token, null);
+    assert.equal(result.reason, "timeout");
+    assert.equal(silent.seen.length, 3);
+  } finally {
+    await silent.close();
+  }
+
+  const closed = await tokenServer(200);
+  try {
+    const before = closed.seen.length;
+    assert.deepEqual(await oidcResult("https://registry.example", {}, { sleep }), { token: null, reason: "permission" });
+    assert.equal(closed.seen.length, before);
+  } finally {
+    await closed.close();
+  }
+});
+
+test("report.test.mjs (h) link and flush name the real cause and say where unsent events stay", async () => {
+  let open = false;
+  const server = await registry({
+    token: () => (open ? 200 : 503),
+  });
+  const dir = project(server.base);
+  try {
+    assert.deepEqual(await report(dir, ["link"], oidcEnv(server.base)), [
+      "devos report: GitHub gave no OIDC token after 3 tries (HTTP 503); nothing sent, and the next run asks again",
+    ]);
+    assert.deepEqual(JSON.parse(readFileSync(path.join(dir, ".devos", "link.json"), "utf8")), { status: "none" });
+    assert.equal(server.seen.some((item) => item.path === "/api/link"), false);
+
+    open = true;
+    await report(dir, ["link"], oidcEnv(server.base));
+    await report(dir, ["note", "--step", "build", "--status", "pass"]);
+    await report(dir, ["note", "--step", "checks", "--status", "pass"]);
+    open = false;
+    server.seen.length = 0;
+    assert.deepEqual(await report(dir, ["flush"], oidcEnv(server.base)), [
+      "devos report: GitHub gave no OIDC token after 3 tries (HTTP 503); 2 events not sent. They stay in this run's evidence: re-run this report job to send them",
+    ]);
+  } finally {
+    await server.close();
+    cleanup(dir);
+  }
+});
+
+test("report.test.mjs (i) flush stops at the first event the registry does not answer", async () => {
+  const seen = [];
+  const sockets = new Set();
+  const server = createServer((req, res) => {
+    let body = "";
+    req.on("data", (chunk) => {
+      body += chunk;
+    });
+    req.on("end", () => {
+      const url = new URL(req.url, "http://127.0.0.1");
+      const parsed = body ? JSON.parse(body) : null;
+      seen.push({ path: url.pathname, body: parsed });
+      const send = (status, value) => {
+        res.writeHead(status, { "content-type": "application/json" });
+        res.end(JSON.stringify(value));
+      };
+      if (url.pathname === "/token") return send(200, { value: "oidc-jwt" });
+      if (url.pathname === "/api/link") return send(200, { status: "linked", key: "DEMO-SHOP-2" });
+      if (url.pathname === "/api/ingest" && parsed?.seq === 2) {
+        req.socket.destroy();
+        return;
+      }
+      if (url.pathname === "/api/ingest") return send(200, { stored: true, duplicate: false });
+      return send(404, {});
+    });
+  });
+  server.on("connection", (socket) => {
+    sockets.add(socket);
+    socket.on("close", () => sockets.delete(socket));
+  });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const dir = project(base);
+  try {
+    await report(dir, ["link"], oidcEnv(base));
+    for (const step of ["build", "checks", "verdict", "merge"]) await report(dir, ["note", "--step", step, "--status", "pass"]);
+    seen.length = 0;
+    assert.deepEqual(await report(dir, ["flush"], oidcEnv(base)), ["devos report: sent 1, duplicate 0, conflict 0, kept 3"]);
+    assert.deepEqual(seen.filter((item) => item.path === "/api/ingest").map((item) => item.body.seq), [1, 2]);
+    const lines = journal(dir);
+    assert.deepEqual(lines.map((line) => line.sent), [true, false, false, false]);
+    assert.equal(lines[1].attempts, 1);
+    assert.equal(lines[1].last_error, "network");
+    assert.equal(lines[2].attempts, 0);
+    assert.equal(lines[2].last_error, null);
+    assert.equal(lines[3].attempts, 0);
+    assert.equal(lines[3].last_error, null);
+  } finally {
+    for (const socket of sockets) socket.destroy();
+    await new Promise((resolve) => server.close(resolve));
+    cleanup(dir);
+  }
 });

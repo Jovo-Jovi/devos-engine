@@ -280,9 +280,15 @@
   },
   "builderStrengths": [
     "ui",
+    "motion",
+    "accessibility",
+    "i18n",
     "backend",
     "data",
+    "security",
+    "devops",
     "tests",
+    "docs",
     "fast and cheap",
     "deep reasoning"
   ]

@@ -1,5 +1,5 @@
 {
-  "engine_version": "1.4.2",
+  "engine_version": "1.4.3",
   "source": {
     "repo": "Jovo-Jovi/devos-control-tower",
     "commit": "a49ca6db268b98d6558077bf3e95b8ae759d91b3"
@@ -1466,7 +1466,7 @@
     {
       "path": "docs/method/AUTOMATION.md",
       "stored": "docs/method/AUTOMATION.md",
-      "sha256": "8f820ba0fe053b707107486bd200d32004be8cf72b13fd4bf4af7ecae4609e79",
+      "sha256": "c36024c3219bd7e42023047c7fef4f3d281e663de513e050f919113a6f2ec44f",
       "owner": "engine"
     },
     {
@@ -1490,7 +1490,7 @@
     {
       "path": "docs/method/PRECEDENTS.md",
       "stored": "docs/method/PRECEDENTS.md",
-      "sha256": "9636b7a3d9589090b33ea5a47968a2c6fdae5a737ce3c47292e7a3ddf45a49ed",
+      "sha256": "81af1c4f115b0bc48c2d1494ed760ef83b3392d2bcee1da051e21407d642b541",
       "owner": "engine"
     },
     {
@@ -1652,7 +1652,7 @@
     {
       "path": "scripts/devos/report.mjs",
       "stored": "scripts/devos/report.mjs",
-      "sha256": "7a56bc1185b7fc23adda77f33ce8521b1ecac8f63f594374869c77a76a84b1e2",
+      "sha256": "bfba6d7d41af415b386b75f246341a993c305ea0d03ce2598f99edd95f11323d",
       "owner": "engine"
     },
     {

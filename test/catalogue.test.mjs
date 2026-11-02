@@ -279,3 +279,21 @@ test("catalogue.test.mjs (t) the scope choice is mvp or full", () => {
     cleanup(full.parent);
   }
 });
+
+test("catalogue.test.mjs (u) the builder strengths cover the layers DEV_OS checks", () => {
+  const tools = JSON.parse(readFileSync(path.join(root, "lib", "data", "tools.json"), "utf8"));
+  assert.deepEqual(tools.builderStrengths, [
+    "ui",
+    "motion",
+    "accessibility",
+    "i18n",
+    "backend",
+    "data",
+    "security",
+    "devops",
+    "tests",
+    "docs",
+    "fast and cheap",
+    "deep reasoning",
+  ]);
+});
