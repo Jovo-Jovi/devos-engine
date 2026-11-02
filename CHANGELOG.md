@@ -2,7 +2,7 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
-## 1.4.2 — Unreleased
+## 1.4.2 — 2026-11-02
 
 - **The blueprint agent starts on Windows when its CLI came from npm.** DEV_OS looked the program up with `where`, which lists npm's shell script with no extension before `claude.cmd`; it now tries only the PATHEXT extensions, as the agent check does. When an agent cannot start, the message says why.
 
