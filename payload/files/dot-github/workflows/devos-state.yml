@@ -1,0 +1,50 @@
+name: devos-state
+run-name: "devos state"
+
+# PR-75: the project's state for the DEV_OS registry, twice a day, in its own concurrency group so it never holds a
+# devos-cycle run. With DEVOS_REPORTING on and DEVOS_STATE not off: ask for the link (dispatched with minutes, wait for
+# a pending link's approval), then send the task history (PR-66). It runs no agent and reads no secret.
+on:
+  schedule:
+    - cron: "41 3 * * *"
+    - cron: "41 15 * * *"
+  workflow_dispatch:
+    inputs:
+      wait_minutes:
+        description: "Minutes to wait for the registry owner's approval of a pending link (0 to 30)"
+        required: false
+        default: "0"
+
+concurrency:
+  group: devos-state
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  state:
+    if: vars.DEVOS_REPORTING == 'on' && vars.DEVOS_STATE != 'off' && vars.DEVOS_PAUSED != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /scripts/devos/
+            /devos/
+            /devos.config.json
+            /docs/PHASES.md
+      - name: devos-state link and history
+        timeout-minutes: 40
+        env:
+          WAIT_MINUTES: ${{ inputs.wait_minutes || '0' }}
+        run: |
+          node scripts/devos/report.mjs link --wait "$WAIT_MINUTES"
+          node scripts/devos/report.mjs history

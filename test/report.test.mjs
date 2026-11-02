@@ -53,10 +53,11 @@ async function registry({ link = 200, ingest = () => 200, token = 200 } = {}) {
         return send(200, { value: "oidc-jwt" });
       }
       if (url.pathname === "/api/link") {
-        if (link === 200) return send(200, { status: "linked", key: "DEMO-SHOP-2" });
-        if (link === 202) return send(202, { status: "pending" });
-        if (link === 403) return send(403, { status: "declined" });
-        return send(link, { error: "unavailable" });
+        const status = typeof link === "function" ? link() : link;
+        if (status === 200) return send(200, { status: "linked", key: "DEMO-SHOP-2" });
+        if (status === 202) return send(202, { status: "pending" });
+        if (status === 403) return send(403, { status: "declined" });
+        return send(status, { error: "unavailable" });
       }
       if (url.pathname === "/api/ingest") {
         const status = ingest(JSON.parse(body));
@@ -247,7 +248,7 @@ test("report.test.mjs (e) reporting never blocks: every command exits 0, even wi
     assert.equal(run.status, 0, run.stderr);
     assert.match(run.stdout, /devos report: no OIDC token|devos report: the registry did not answer \(network\)|devos report: GitHub gave no OIDC token after 3 tries \(network\)/);
     assert.deepEqual(await report(dir, ["bogus"]), [
-      "usage: node scripts/devos/report.mjs note --step <step> --status <status> [--evidence <path@sha>] | note --failed | link | flush [--dry] | history [--dry]",
+      "usage: node scripts/devos/report.mjs note --step <step> --status <status> [--evidence <path@sha>] | note --failed | link [--wait <minutes>] | flush [--dry] | history [--dry]",
     ]);
     assert.equal(existsSync(path.join(dir, ".devos", "journal.jsonl")), false);
   } finally {
@@ -432,4 +433,102 @@ test("report.test.mjs (i) flush stops at the first event the registry does not a
     await new Promise((resolve) => server.close(resolve));
     cleanup(dir);
   }
+});
+
+test("report.test.mjs (j) waitForLink asks every minute until the link is approved or declined, for at most the minutes given", async () => {
+  const mod = await import(pathToFileURL(path.join(scripts, "report.mjs")).href);
+  const run = async (answers, minutes) => {
+    let t = 0;
+    const slept = [];
+    let asks = 0;
+    const result = await mod.waitForLink(async () => {
+      const status = answers[Math.min(asks, answers.length - 1)];
+      asks += 1;
+      return { status, line: status };
+    }, {
+      minutes,
+      everyMs: 60000,
+      sleep: async (ms) => {
+        slept.push(ms);
+        t += ms;
+      },
+      now: () => t,
+    });
+    return { result, asks, slept };
+  };
+  const linked = await run(["pending", "pending", "linked"], 15);
+  assert.equal(linked.result.status, "linked");
+  assert.equal(linked.asks, 3);
+  assert.deepEqual(linked.slept, [60000, 60000, 60000]);
+  const pending = await run(["pending"], 3);
+  assert.equal(pending.asks, 3);
+  assert.equal(pending.result.status, "pending");
+  const declined = await run(["declined"], 15);
+  assert.equal(declined.asks, 1);
+  assert.equal(declined.result.status, "declined");
+  const none = await run(["linked"], 0);
+  assert.equal(none.asks, 0);
+  assert.deepEqual(none.result, { status: "pending" });
+});
+
+test("report.test.mjs (k) link --wait says it waits and how it ended", async () => {
+  const ask = async (codes, args) => {
+    let n = 0;
+    const server = await registry({ link: () => codes[Math.min(n++, codes.length - 1)] });
+    const dir = project(server.base);
+    let t = 0;
+    try {
+      const mod = await import(pathToFileURL(path.join(dir, "scripts", "devos", "report.mjs")).href);
+      const lines = [];
+      await mod.link(args, (line) => lines.push(line), oidcEnv(server.base), {
+        everyMs: 60000,
+        sleep: async (ms) => {
+          t += ms;
+        },
+        now: () => t,
+      });
+      const kept = existsSync(path.join(dir, ".devos", "link.json")) ? JSON.parse(readFileSync(path.join(dir, ".devos", "link.json"), "utf8")) : null;
+      const links = server.seen.filter((item) => item.path === "/api/link").length;
+      return { lines, kept, links };
+    } finally {
+      await server.close();
+      cleanup(dir);
+    }
+  };
+  const approved = await ask([202, 202, 200], ["--wait", "2"]);
+  assert.deepEqual(approved.lines, [
+    "devos report: link requested; waiting up to 2 minutes for the registry owner's approval",
+    "devos report: linked to the DEV_OS registry as DEMO-SHOP-2",
+  ]);
+  const waiting = await ask([202], ["--wait", "2"]);
+  assert.deepEqual(waiting.lines, [
+    "devos report: link requested; waiting up to 2 minutes for the registry owner's approval",
+    "devos report: still waiting for the registry owner's approval after 2 minutes; the next run asks again",
+  ]);
+  assert.deepEqual(waiting.kept, { status: "pending" });
+  for (const args of [["--wait", "45"], ["--wait", "x"]]) {
+    const once = await ask([202], args);
+    assert.deepEqual(once.lines, ["devos report: link requested; it waits for the registry owner's approval, and the next run asks again"]);
+    assert.equal(once.links, 1);
+  }
+});
+
+test("report.test.mjs (l) devos-state runs twice a day in its own group, holds id-token, and runs no agent", () => {
+  const state = readFileSync(path.join(root, "payload", "files", "dot-github", "workflows", "devos-state.yml"), "utf8").replaceAll("\r\n", "\n");
+  const advance = readFileSync(path.join(root, "payload", "files", "dot-github", "workflows", "devos-advance.yml"), "utf8").replaceAll("\r\n", "\n");
+  for (const line of [
+    '    - cron: "41 3 * * *"',
+    '    - cron: "41 15 * * *"',
+    "  group: devos-state",
+    "    if: vars.DEVOS_REPORTING == 'on' && vars.DEVOS_STATE != 'off' && vars.DEVOS_PAUSED != 'true'",
+    "      id-token: write",
+    '          node scripts/devos/report.mjs link --wait "$WAIT_MINUTES"',
+    "          node scripts/devos/report.mjs history",
+  ]) {
+    assert.equal(state.includes(line), true, line);
+  }
+  for (const agent of ["secrets.", "run-agent.sh", "agent -p", "claude -p", "codex", "gemini"]) assert.equal(state.includes(agent), false, agent);
+  assert.equal(advance.includes("      - name: Wait for the approval with devos-state"), true);
+  assert.equal(advance.includes('gh workflow run devos-state.yml --repo "$REPO" --ref main -f wait_minutes=15'), true);
+  assert.equal(advance.includes("id-token"), false);
 });
