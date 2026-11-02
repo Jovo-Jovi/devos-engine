@@ -2,6 +2,12 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
+## 1.4.3 — Unreleased
+
+- **Reporting survives a slow token service.** The report job gives each call 20 seconds and asks GitHub for the OIDC token up to 3 times. Its messages name the real cause, and say that events not sent stay in the run's evidence, where re-running the report job sends them.
+- **Every switch shows on the Variables page.** `devos init` and `devos adopt` set the pause, supervisor, heavy-run and account switches, each agent tool's account, the three role models and screenshot retention, each with its value. A variable already set keeps its value.
+- **More builder strengths:** motion, accessibility, i18n, security, devops and docs.
+
 ## 1.4.2 — 2026-11-02
 
 - **The blueprint agent starts on Windows when its CLI came from npm.** DEV_OS looked the program up with `where`, which lists npm's shell script with no extension before `claude.cmd`; it now tries only the PATHEXT extensions, as the agent check does. When an agent cannot start, the message says why.
