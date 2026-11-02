@@ -111,3 +111,13 @@ jobs:
               echo "::notice title=Dev OS::A devos-cycle run is queued or going; it asks the DEV_OS registry to link this repository."
               ;;
           esac
+      - name: Wait for the approval with devos-state
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          if gh workflow run devos-state.yml --repo "$REPO" --ref main -f wait_minutes=15; then
+            echo "::notice title=Dev OS::devos-state waits up to 15 minutes for the DEV_OS registry to approve the link."
+          else
+            echo "::notice title=Dev OS::gh could not start devos-state; it asks the DEV_OS registry twice a day."
+          fi

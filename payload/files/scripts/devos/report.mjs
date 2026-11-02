@@ -378,47 +378,86 @@ function off(env) {
   return String(env.DEVOS_REPORTING ?? "").toLowerCase() === "off";
 }
 
-async function link(args, out, env = process.env) {
+function linkRequest() {
+  const cfg = readJson("devos.config.json", {});
+  return {
+    v: 1,
+    key: String(cfg.project ?? ""),
+    engine: String(readJson("devos/engine.lock.json", {}).engine_version ?? ""),
+    contract: String(readJson("devos/answers.json", {}).contract_version ?? ""),
+  };
+}
+
+/** One ask: the token, then `/api/link`, then `.devos/link.json`. */
+async function askLink(env) {
+  const registry = registryUrl();
+  const request = linkRequest();
+  const got = await oidcResult(registry, env);
+  if (!got.token) {
+    writeJson(LINK, { status: "none" });
+    const line = got.reason === "permission"
+      ? "devos report: no OIDC token (the job needs id-token: write; a fork has none); nothing sent"
+      : `devos report: GitHub gave no OIDC token after 3 tries (${got.reason}); nothing sent, and the next run asks again`;
+    return { status: "none", key: "", line };
+  }
+  const reply = await post(`${registry}/api/link`, got.token, request);
+  if (reply.status === 200 && reply.answer?.status === "linked" && PATTERN.project.test(String(reply.answer.key ?? ""))) {
+    writeJson(LINK, { status: "linked", key: reply.answer.key });
+    return { status: "linked", key: reply.answer.key, line: `devos report: linked to the DEV_OS registry as ${reply.answer.key}` };
+  }
+  if (reply.status === 202) {
+    writeJson(LINK, { status: "pending" });
+    return { status: "pending", key: "", line: "devos report: link requested; it waits for the registry owner's approval, and the next run asks again" };
+  }
+  if (reply.status === 403) {
+    writeJson(LINK, { status: "declined" });
+    return { status: "declined", key: "", line: "devos report: the registry declined this repository's link; nothing is sent. To stop asking, set the repository variable DEVOS_REPORTING to off" };
+  }
+  if (reply.status === 429) {
+    writeJson(LINK, { status: "busy" });
+    return { status: "busy", key: "", line: "devos report: the registry takes no new link requests right now; the next run asks again" };
+  }
+  writeJson(LINK, { status: "unreachable" });
+  return { status: "unreachable", key: "", line: `devos report: the registry did not answer (${reply.error ?? reply.status}); the next run asks again` };
+}
+
+/** Whole minutes from 0 to 30. Anything else waits nothing, so `link` prints today's line. */
+function waitMinutes(args) {
+  const raw = value(args, "--wait");
+  if (!/^(?:0|[1-9]|[12][0-9]|30)$/.test(raw)) return 0;
+  return Number(raw);
+}
+
+/**
+ * While another `everyMs` fits inside `minutes` from the start, wait and ask again.
+ * The first `linked` or `declined` answer ends it. No ask returns pending.
+ */
+export async function waitForLink(ask, { minutes, everyMs = 60000, sleep = delay, now = Date.now } = {}) {
+  const start = now();
+  let answer;
+  while (now() + everyMs <= start + minutes * 60000) {
+    await sleep(everyMs);
+    answer = await ask();
+    if (answer?.status === "linked" || answer?.status === "declined") return answer;
+  }
+  return answer ?? { status: "pending" };
+}
+
+export async function link(args, out, env = process.env, { everyMs = 60000, sleep = delay, now = Date.now } = {}) {
   const registry = registryUrl();
   if (off(env)) return out("devos report: reporting is off (DEVOS_REPORTING); nothing sent");
   if (!registry) {
     writeJson(LINK, { status: "none" });
     return out("devos report: no registry address in devos.config.json (registry.url); nothing sent");
   }
-  const cfg = readJson("devos.config.json", {});
-  const request = {
-    v: 1,
-    key: String(cfg.project ?? ""),
-    engine: String(readJson("devos/engine.lock.json", {}).engine_version ?? ""),
-    contract: String(readJson("devos/answers.json", {}).contract_version ?? ""),
-  };
-  if (args.includes("--dry")) return out(JSON.stringify({ url: `${registry}/api/link`, body: request }));
-  const got = await oidcResult(registry, env);
-  if (!got.token) {
-    writeJson(LINK, { status: "none" });
-    if (got.reason === "permission") return out("devos report: no OIDC token (the job needs id-token: write; a fork has none); nothing sent");
-    return out(`devos report: GitHub gave no OIDC token after 3 tries (${got.reason}); nothing sent, and the next run asks again`);
-  }
-  const token = got.token;
-  const reply = await post(`${registry}/api/link`, token, request);
-  if (reply.status === 200 && reply.answer?.status === "linked" && PATTERN.project.test(String(reply.answer.key ?? ""))) {
-    writeJson(LINK, { status: "linked", key: reply.answer.key });
-    return out(`devos report: linked to the DEV_OS registry as ${reply.answer.key}`);
-  }
-  if (reply.status === 202) {
-    writeJson(LINK, { status: "pending" });
-    return out("devos report: link requested; it waits for the registry owner's approval, and the next run asks again");
-  }
-  if (reply.status === 403) {
-    writeJson(LINK, { status: "declined" });
-    return out("devos report: the registry declined this repository's link; nothing is sent. To stop asking, set the repository variable DEVOS_REPORTING to off");
-  }
-  if (reply.status === 429) {
-    writeJson(LINK, { status: "busy" });
-    return out("devos report: the registry takes no new link requests right now; the next run asks again");
-  }
-  writeJson(LINK, { status: "unreachable" });
-  return out(`devos report: the registry did not answer (${reply.error ?? reply.status}); the next run asks again`);
+  if (args.includes("--dry")) return out(JSON.stringify({ url: `${registry}/api/link`, body: linkRequest() }));
+  const minutes = waitMinutes(args);
+  const first = await askLink(env);
+  if (!(minutes > 0 && first.status === "pending")) return out(first.line);
+  out(`devos report: link requested; waiting up to ${minutes} minutes for the registry owner's approval`);
+  const answer = await waitForLink(() => askLink(env), { minutes, everyMs, sleep, now });
+  if (answer.status === "linked" || answer.status === "declined") return out(answer.line);
+  return out(`devos report: still waiting for the registry owner's approval after ${minutes} minutes; the next run asks again`);
 }
 
 async function flush(args, out, env = process.env) {
@@ -520,7 +559,7 @@ export async function main(argv = process.argv.slice(2), out = (line) => console
     else if (command === "link") await link(args, out);
     else if (command === "flush") await flush(args, out);
     else if (command === "history") await history(args, out);
-    else out("usage: node scripts/devos/report.mjs note --step <step> --status <status> [--evidence <path@sha>] | note --failed | link | flush [--dry] | history [--dry]");
+    else out("usage: node scripts/devos/report.mjs note --step <step> --status <status> [--evidence <path@sha>] | note --failed | link [--wait <minutes>] | flush [--dry] | history [--dry]");
   } catch (error) {
     out(`devos report: ${error?.message ?? error}; nothing more is sent this run`);
   }

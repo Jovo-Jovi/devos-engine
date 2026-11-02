@@ -111,6 +111,26 @@ test("consent.test.mjs (e) the page's plan must say yes or no, and no choice is 
   }
 });
 
+test("consent.test.mjs (g) a yes also turns devos-state on and starts it with a 15-minute wait; a no does neither", () => {
+  for (const link of ["yes", "no"]) {
+    const staged = stage();
+    try {
+      const result = init(staged, `${flow({ link }).trimEnd()}\n\n\n`);
+      assert.equal(result.status, 0, result.stdout + result.stderr);
+      const lines = ghLines(staged.parent);
+      if (link === "yes") {
+        assert.equal(lines.includes("variable set DEVOS_STATE --body on --repo devtest/demo-shop"), true, lines.join("\n"));
+        assert.equal(lines.includes("workflow run devos-state.yml --repo devtest/demo-shop -f wait_minutes=15"), true, lines.join("\n"));
+        assert.equal(result.stdout.trim().split(/\r?\n/).at(-1), "devos init: devtest/demo-shop is set up; devos-cycle dispatched");
+      } else {
+        assert.equal(lines.some((line) => line.includes("DEVOS_STATE") || line.includes("devos-state.yml")), false, lines.join("\n"));
+      }
+    } finally {
+      cleanup(staged.parent);
+    }
+  }
+});
+
 test("consent.test.mjs (f) the cycle reports only when the project said yes, and from the report job only", () => {
   const cycle = readFileSync(path.join(root, "payload", "files", "dot-github", "workflows", "devos-cycle.yml"), "utf8").replaceAll("\r\n", "\n");
   assert.equal(cycle.includes("vars.DEVOS_REPORTING == 'on'"), true);

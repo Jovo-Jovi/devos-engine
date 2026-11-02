@@ -2,6 +2,11 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
+## 1.4.4 — Unreleased
+
+- **The project's state reaches the Control Tower twice a day.** A new workflow, `devos-state`, asks for the link and sends the task history at 03:41 and 15:41 UTC, in its own concurrency group so it never holds a task. The repository variable `DEVOS_STATE` switches it off.
+- **A link waits for its approval.** After the connect pull request, and after `devos init` links a project, `devos-state` asks the Control Tower every minute for up to 15 minutes until the link is approved or declined.
+
 ## 1.4.3 — 2026-11-02
 
 - **Reporting survives a slow token service.** The report job gives each call 20 seconds and asks GitHub for the OIDC token up to 3 times. Its messages name the real cause, and say that events not sent stay in the run's evidence, where re-running the report job sends them.

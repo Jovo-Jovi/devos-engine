@@ -340,6 +340,7 @@ export const LOCAL = {
     "scripts/guards/fences.mjs": "E23c",
     "scripts/guards/imports.mjs": "E23c",
     "scripts/guards/scope.mjs": "E23c, E37",
+    ".github/workflows/devos-state.yml": "E44",
   },
   removed: {
     ".cursor/rules/10-security-data.mdc": "E03",
