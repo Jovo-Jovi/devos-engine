@@ -111,7 +111,7 @@ test("consent.test.mjs (e) the page's plan must say yes or no, and no choice is 
   }
 });
 
-test("consent.test.mjs (e) a yes also turns devos-state on and starts it with a 15-minute wait; a no does neither", () => {
+test("consent.test.mjs (g) a yes also turns devos-state on and starts it with a 15-minute wait; a no does neither", () => {
   for (const link of ["yes", "no"]) {
     const staged = stage();
     try {

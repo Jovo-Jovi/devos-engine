@@ -10,9 +10,5 @@
   {
     "path": "devos/LICENSE.md",
     "text": "Copyright (c) 2026 Jovo-Jovi"
-  },
-  {
-    "path": "docs/method/PRECEDENTS.md",
-    "text": "| PR-75 | **The project's state reaches the Control Tower twice a day, and a link waits for its approval.** `devos-state` runs at 03:41 and 15:41 UTC in its own concurrency group: with `DEVOS_REPORTING` on and `DEVOS_STATE` not off, it asks for the link and sends the task history. After the connect pull request, and after `devos init` links a project, it runs with a 15-minute wait and asks every minute until the link is approved or declined. The cycle's `report` job is unchanged. | Mawsim, the first new-project test (owner, 2026-11-02): \"a cyclic report … away from the report\"; \"only two slots a day every 12 hrs\". Engine E44. |"
   }
 ]
