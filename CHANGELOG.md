@@ -2,7 +2,7 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
-## 1.4.3 — Unreleased
+## 1.4.3 — 2026-11-02
 
 - **Reporting survives a slow token service.** The report job gives each call 20 seconds and asks GitHub for the OIDC token up to 3 times. Its messages name the real cause, and say that events not sent stay in the run's evidence, where re-running the report job sends them.
 - **Every switch shows on the Variables page.** `devos init` and `devos adopt` set the pause, supervisor, heavy-run and account switches, each agent tool's account, the three role models and screenshot retention, each with its value. A variable already set keeps its value.
