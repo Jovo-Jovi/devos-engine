@@ -392,8 +392,13 @@ function writeStubs(dir, tools = []) {
   for (const name of tools) writeFileSync(path.join(dir, `${name}-stub.mjs`), toolStub);
   if (windows) {
     writeFileSync(path.join(dir, "claude.cmd"), "@node \"%~dp0claude-stub.mjs\" %*\r\n");
+    writeFileSync(path.join(dir, "claude"), "#!/bin/sh\nexit 1\n");
     writeFileSync(path.join(dir, "gh.cmd"), "@node \"%~dp0gh-stub.mjs\" %*\r\n");
-    for (const name of tools) writeFileSync(path.join(dir, `${name}.cmd`), `@node "%~dp0${name}-stub.mjs" %*\r\n`);
+    writeFileSync(path.join(dir, "gh"), "#!/bin/sh\nexit 1\n");
+    for (const name of tools) {
+      writeFileSync(path.join(dir, `${name}.cmd`), `@node "%~dp0${name}-stub.mjs" %*\r\n`);
+      writeFileSync(path.join(dir, name), "#!/bin/sh\nexit 1\n");
+    }
     return;
   }
   const claude = path.join(dir, "claude");

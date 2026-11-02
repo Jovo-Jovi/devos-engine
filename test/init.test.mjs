@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
 import { CONTRACT_VERSION } from "../lib/contract.mjs";
 import { doctorCommand } from "../lib/doctor.mjs";
-import { BLUEPRINT_POINTER, blueprintArgs } from "../lib/init.mjs";
+import { BLUEPRINT_POINTER, blueprintArgs, startFailureLines } from "../lib/init.mjs";
 import { KEY_RE, keyFromName } from "../lib/install.mjs";
 import { checkRoster } from "../lib/roster.mjs";
 import { cleanup, flow, init, processGone, runs, stage, toolRuns } from "./harness.mjs";
@@ -157,6 +157,20 @@ test("init.test.mjs stops when the blueprint fails", () => {
   } finally {
     cleanup(staged.parent);
   }
+});
+
+test("init.test.mjs startFailureLines names why the agent could not start", () => {
+  const error = new Error("spawn claude ENOENT");
+  error.code = "ENOENT";
+  assert.deepEqual(startFailureLines("claude", error, "/x"), [
+    "devos: claude could not start: spawn claude ENOENT",
+    "devos: claude is not on PATH as a program (an .exe, or the .cmd an npm install adds); run devos agents detect in a new terminal",
+    "devos: the blueprint failed; delete /x and run devos init again",
+  ]);
+  assert.deepEqual(startFailureLines("claude", undefined, "/x"), [
+    "devos: claude could not start: no result",
+    "devos: the blueprint failed; delete /x and run devos init again",
+  ]);
 });
 
 test("init.test.mjs refuses a folder that is not empty", () => {
