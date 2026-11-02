@@ -2,7 +2,7 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
-## 1.4.4 — Unreleased
+## 1.4.4 — 2026-11-02
 
 - **The project's state reaches the Control Tower twice a day.** A new workflow, `devos-state`, asks for the link and sends the task history at 03:41 and 15:41 UTC, in its own concurrency group so it never holds a task. The repository variable `DEVOS_STATE` switches it off.
 - **A link waits for its approval.** After the connect pull request, and after `devos init` links a project, `devos-state` asks the Control Tower every minute for up to 15 minutes until the link is approved or declined.
