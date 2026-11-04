@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 import { CONTRACT_VERSION } from "../lib/contract.mjs";
 import { doctorCommand } from "../lib/doctor.mjs";
 import { validatePlan } from "../lib/plan.mjs";
-import { projectRows, projectSteps } from "../lib/verify.mjs";
+import { audit, formatRows, projectRows, projectSteps } from "../lib/verify.mjs";
 import { resumePoint } from "../lib/continue.mjs";
 import { cleanup, stage } from "./harness.mjs";
 import { which } from "../lib/which.mjs";
@@ -294,5 +294,93 @@ test("local-mode.test.mjs (e) yes to the GitHub backup creates a private reposit
     assert.equal(git(["rev-parse", "main"], remote).stdout.trim(), git(["rev-parse", "HEAD"], staged.project).stdout.trim());
   } finally {
     cleanup(staged.parent);
+  }
+});
+
+test("local-mode.test.mjs (f) devos doctor --local checks only Node and git", () => {
+  const saved = process.env.PATH;
+  const dir = mkdtempSync(path.join(tmpdir(), "devos-git-"));
+  try {
+    if (process.platform === "win32") {
+      writeFileSync(path.join(dir, "git.cmd"), "@echo off\r\necho git version 2.0.0\r\n");
+    } else {
+      const stub = path.join(dir, "git");
+      writeFileSync(stub, "#!/bin/sh\necho 'git version 2.0.0'\n");
+      chmodSync(stub, 0o755);
+    }
+    const env = { ...process.env, PATH: dir };
+    const local = spawnSync(process.execPath, [bin, "doctor", "--local"], { encoding: "utf8", windowsHide: true, env });
+    assert.equal(local.status, 0, `${local.stdout}\n${local.stderr}`);
+    assert.equal(local.stdout.includes(`devos: doctor ok (this computer: Node.js ${process.versions.node}, git)`), true, local.stdout);
+    const github = spawnSync(process.execPath, [bin, "doctor"], { encoding: "utf8", windowsHide: true, env });
+    assert.equal(github.status, 1, github.stdout);
+  } finally {
+    process.env.PATH = saved;
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("local-mode.test.mjs (g) a project that already has an origin is not asked for a backup", () => {
+  const staged = stage();
+  const saved = process.env.PATH;
+  try {
+    mkdirSync(path.join(staged.project, "devos"), { recursive: true });
+    mkdirSync(path.join(staged.project, ".claude"), { recursive: true });
+    writeFileSync(path.join(staged.project, "devos", "answers.json"), `${JSON.stringify({ name: "Demo Shop", cycle: "local", modules: {} }, null, 2)}\n`);
+    writeFileSync(path.join(staged.project, "devos", "engine.lock.json"), "{}\n");
+    writeFileSync(path.join(staged.project, ".claude", "settings.json"), "{}\n");
+    writeFileSync(path.join(staged.project, "devos.config.json"), `${JSON.stringify({
+      agents: {
+        reviewer: { id: "claude-deep", tool: "claude", model: "claude-opus-5-5" },
+        pool: [{ id: "claude-builder", tool: "claude", model: "claude-sonnet-5-5", default: true }],
+      },
+    }, null, 2)}\n`);
+    const remote = path.join(staged.parent, "origin.git");
+    assert.equal(git(["init", "--bare", remote]).status, 0);
+    assert.equal(git(["init", "-b", "main"], staged.project).status, 0);
+    assert.equal(git(["remote", "add", "origin", remote], staged.project).status, 0);
+    const env = { ...staged.env, PATH: `${path.join(staged.parent, "bin")}${path.delimiter}${nodeBin}${path.delimiter}${gitBin}` };
+    const result = spawnSync(process.execPath, [bin, "continue", staged.project], {
+      encoding: "utf8",
+      windowsHide: true,
+      timeout: 180000,
+      input: "",
+      env,
+    });
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+    const lines = result.stdout.split(/\r?\n/);
+    const originAt = lines.indexOf("devos init: this project already has a remote named origin, so the backup question is not asked");
+    const readyAt = lines.indexOf(`devos init: ${path.resolve(staged.project)} is set up on this computer; build T01 in your IDE from docs/fences/T01.md on the branch task/T01`);
+    assert.equal(originAt >= 0 && readyAt > originAt, true, result.stdout);
+    assert.equal(result.stdout.includes("Also create a private GitHub repository as a backup?"), false, result.stdout);
+    assert.equal(result.stdout.includes(remote), false, result.stdout);
+    assert.equal(ghText(staged).trim(), "");
+    assert.equal(git(["rev-list", "--all"], remote).stdout, "");
+  } finally {
+    process.env.PATH = saved;
+    cleanup(staged.parent);
+  }
+});
+
+test("local-mode.test.mjs (h) verify notes a missing gh for a local project, and still blocks for a GitHub one", () => {
+  const root = mkdtempSync(path.join(tmpdir(), "devos-audit-"));
+  const localDir = path.join(root, "local");
+  const githubDir = path.join(root, "github");
+  try {
+    mkdirSync(path.join(localDir, "devos"), { recursive: true });
+    mkdirSync(path.join(githubDir, "devos"), { recursive: true });
+    writeFileSync(path.join(localDir, "devos", "answers.json"), `${JSON.stringify({ name: "Demo Shop", cycle: "local" })}\n`);
+    writeFileSync(path.join(githubDir, "devos", "answers.json"), `${JSON.stringify({ name: "Demo Shop" })}\n`);
+    const preflight = () => ({ installed: false });
+    const local = audit({ folder: localDir, preflight });
+    const gh = local.rows.find((row) => row.label === "gh");
+    assert.equal(gh.state, "info");
+    assert.equal(gh.detail, "not installed; needed only for a GitHub backup");
+    assert.equal(gh.who, null);
+    assert.equal(formatRows(local).includes("note"), true, formatRows(local));
+    const github = audit({ folder: githubDir, preflight });
+    assert.equal(github.rows.find((row) => row.label === "gh").state, "block");
+  } finally {
+    rmSync(root, { recursive: true, force: true });
   }
 });

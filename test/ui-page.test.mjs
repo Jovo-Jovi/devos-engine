@@ -184,6 +184,23 @@ test("ui-page.test.mjs (i) the page offers an existing project, the adoption scr
   }
 });
 
+test("ui-page.test.mjs (j) the first screen offers automated or local development, and the local path has its own steps", () => {
+  const js = readFileSync(path.join(ui, "app.js"), "utf8");
+  for (const text of [
+    "Automated development (GitHub)",
+    "Local development (this computer)",
+    "cycle: \"local\"",
+    "{ id: \"backup\", group: \"github\", label: \"Backup\" }",
+    "answer(\"backup\", \"yes\")",
+    "Run devos doctor --local in a terminal",
+    "Your project is set up on this computer",
+    "app.draft.modules.hosting = \"none\"",
+    "turns an empty folder into a project that AI agents build and review",
+  ]) {
+    assert.equal(js.includes(text), true, text);
+  }
+});
+
 test("ui-page.test.mjs (h) a new start offers the last choices, and a continued project shows its own", () => {
   const js = readFileSync(path.join(ui, "app.js"), "utf8");
   for (const text of ["return withRemembered(draft, st.choices);", "app.draft = withChoices(app.draft, found.choices, found.folder);", 'readiness(blueprint.tool) === "ready"']) {

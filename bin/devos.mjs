@@ -34,9 +34,11 @@ function exitFlushed(code) {
   return new Promise(() => {});
 }
 
-if (args.length === 0) {
+const help = args.length === 1 && (args[0] === "help" || args[0] === "--help" || args[0] === "-h");
+if (args.length === 0 || help) {
   process.stdout.write(`devos ${pkg.version}
-devos doctor
+devos help
+devos doctor [--local]
 devos status
 devos profile show
 devos profile set <key> <value>
@@ -45,8 +47,9 @@ devos agents show
 devos agents import <file>
 devos install [folder] --key <KEY>
 devos upgrade [--local]
-devos init [--continue] [folder]
+devos init [--local] [--continue] [folder]
 devos init --plan <file> [folder]
+devos init --help
 devos ui [folder] [--no-open]
 devos continue [folder]
 devos adopt [folder] [--install | --publish] [--agent <tool>[:<model>]]
@@ -57,7 +60,7 @@ devos models [folder]
 devos models set <reviewer|light|builder> <model> [folder]
 devos models reset <reviewer|light|builder> [folder]
 `);
-  await exitFlushed(2);
+  await exitFlushed(help ? 0 : 2);
 }
 
 if (args[0] === "--version" || args[0] === "-v") {
@@ -66,7 +69,8 @@ if (args[0] === "--version" || args[0] === "-v") {
 }
 
 let code = 2;
-if (args[0] === "doctor" && args.length === 1) code = doctorCommand();
+if (args[0] === "doctor" && args.length === 2 && args[1] === "--local") code = doctorCommand({ local: true });
+else if (args[0] === "doctor" && args.length === 1) code = doctorCommand();
 else if (args[0] === "status" && args.length === 1) code = statusCommand();
 else if (args[0] === "profile") code = profileCommand(args.slice(1));
 else if (args[0] === "agents" && args[1] === "detect" && args.length === 2) code = detectCommand();
