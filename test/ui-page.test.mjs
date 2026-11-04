@@ -194,6 +194,8 @@ test("ui-page.test.mjs (j) the first screen offers automated or local developmen
     "answer(\"backup\", \"yes\")",
     "Run devos doctor --local in a terminal",
     "Your project is set up on this computer",
+    "app.draft.modules.hosting = \"none\"",
+    "turns an empty folder into a project that AI agents build and review",
   ]) {
     assert.equal(js.includes(text), true, text);
   }

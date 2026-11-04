@@ -858,7 +858,7 @@ async function workerAb() {
 
 async function workerAc() {
   const terminal = stage();
-  const planned = stage();
+  const planned = stage({ tools: ["agent"] });
   Object.assign(process.env, planned.env);
   let server;
   try {
