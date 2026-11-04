@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -167,18 +168,21 @@ test("local-mode.test.mjs (b) a local plan asks no link, visibility or hosting, 
 
 test("local-mode.test.mjs (c) the local doctor needs Node and git, not gh", () => {
   const saved = process.env.PATH;
-  const dirs = String(saved ?? "").split(path.delimiter).filter((dir) => {
-    if (!dir) return false;
-    if (process.platform === "win32") return !["gh.exe", "gh.cmd", "gh.bat"].some((name) => existsSync(path.join(dir, name)));
-    return !existsSync(path.join(dir, "gh"));
-  });
-  process.env.PATH = dirs.join(path.delimiter);
+  const dir = mkdtempSync(path.join(tmpdir(), "devos-git-"));
   const lines = [];
   const original = console.log;
   console.log = (...args) => {
     lines.push(args.map(String).join(" "));
   };
   try {
+    if (process.platform === "win32") {
+      writeFileSync(path.join(dir, "git.cmd"), "@echo off\r\necho git version 2.0.0\r\n");
+    } else {
+      const stub = path.join(dir, "git");
+      writeFileSync(stub, "#!/bin/sh\necho 'git version 2.0.0'\n");
+      chmodSync(stub, 0o755);
+    }
+    process.env.PATH = dir;
     const code = doctorCommand({ local: true });
     assert.equal(code, 0);
     assert.equal(lines.includes(`devos: doctor ok (this computer: Node.js ${process.versions.node}, git)`), true, lines.join("\n"));
@@ -186,6 +190,7 @@ test("local-mode.test.mjs (c) the local doctor needs Node and git, not gh", () =
   } finally {
     console.log = original;
     process.env.PATH = saved;
+    rmSync(dir, { recursive: true, force: true });
   }
 });
 
@@ -259,7 +264,7 @@ test("local-mode.test.mjs (d) verify and continue know a local project", () => {
       env,
     });
     assert.equal(second.status, 0, `${second.stdout}\n${second.stderr}`);
-    assert.equal(second.stdout.includes("devos: everything is done — build each task in your IDE from its fence in docs/fences/."), true, second.stdout);
+    assert.equal(second.stdout.split(/\r?\n/).includes("devos: everything is done — build each task in your IDE from its fence in docs/fences/"), true, second.stdout);
     assert.equal(ghText(staged).trim(), "");
   } finally {
     process.env.PATH = saved;
