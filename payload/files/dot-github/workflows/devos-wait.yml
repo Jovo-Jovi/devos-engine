@@ -101,11 +101,11 @@ jobs:
           if [ "$wait" -gt 0 ]; then echo "Sleeping $(( wait / 60 )) minutes, until $NOT_BEFORE (UTC)."; sleep "$wait"; fi
           still_parked || { echo "The devos:quota-wait label is gone; the wait is cancelled."; exit 0; }
           if [ "$KIND" = "intake" ]; then
-            gh issue edit "$ISSUE" --repo "$REPO" --remove-label "devos:quota-wait"
+            gh issue edit "$ISSUE" --repo "$REPO" --remove-label "devos:quota-wait" || echo "::warning title=Dev OS::GitHub did not remove the devos:quota-wait label; the run starts anyway (PR-76)."
             gh workflow run devos-intake.yml --repo "$REPO" --ref main -f issue="$ISSUE" -f resume=true
             echo "::notice title=Dev OS::Resumed the planning of issue #$ISSUE."
           else
-            gh pr edit "$PR" --repo "$REPO" --remove-label "devos:quota-wait"
+            gh pr edit "$PR" --repo "$REPO" --remove-label "devos:quota-wait" || echo "::warning title=Dev OS::GitHub did not remove the devos:quota-wait label; the run starts anyway (PR-76)."
             gh workflow run devos-cycle.yml --repo "$REPO" --ref main \
               -f task="$TASK" -f attempt="$ATTEMPT" -f review_only="$REVIEW_ONLY" -f revision="$REVISION" -f go=true
             echo "::notice title=Dev OS::Resumed $TASK attempt $ATTEMPT (review_only=$REVIEW_ONLY)."

@@ -18,6 +18,13 @@ export function readJson(rel) {
 export const MODEL_VARIABLES = { reviewer: "DEVOS_REVIEWER_MODEL", light: "DEVOS_REVIEWER_LIGHT_MODEL", builder: "DEVOS_BUILDER_MODEL" };
 export const MODEL_ID = /^[A-Za-z0-9][A-Za-z0-9._:/+-]{0,99}$/;
 
+// PR-76: a model variable keeps the configured model as the next one, so a model the tool cannot use moves on to it.
+function keepConfigured(agent, chosen) {
+  if (!agent?.model || agent.model === chosen) return;
+  const list = Array.isArray(agent.fallback_models) ? agent.fallback_models : [];
+  agent.fallback_models = [agent.model, ...list.filter((id) => id !== agent.model && id !== chosen)].slice(0, 4);
+}
+
 export function withModelOverrides(cfg, env = process.env) {
   const notes = [];
   if (!cfg?.agents || typeof cfg.agents !== "object") return { config: cfg, notes };
@@ -34,18 +41,22 @@ export function withModelOverrides(cfg, env = process.env) {
   };
   const reviewer = chosen("reviewer");
   if (reviewer && agents.reviewer) {
+    keepConfigured(agents.reviewer, reviewer);
     agents.reviewer.model = reviewer;
     notes.push(`reviewer model ${reviewer} from DEVOS_REVIEWER_MODEL`);
   }
   const light = chosen("light");
   if (light && agents.reviewer) {
-    if (agents.reviewer_light) agents.reviewer_light.model = light;
-    else agents.reviewer_light = { id: `${agents.reviewer.id}-light`, tool: agents.reviewer.tool, model: light };
+    if (agents.reviewer_light) {
+      keepConfigured(agents.reviewer_light, light);
+      agents.reviewer_light.model = light;
+    } else agents.reviewer_light = { id: `${agents.reviewer.id}-light`, tool: agents.reviewer.tool, model: light };
     notes.push(`light reviewer model ${light} from DEVOS_REVIEWER_LIGHT_MODEL`);
   }
   const builder = chosen("builder");
   const item = Array.isArray(agents.pool) ? agents.pool.find((entry) => entry?.default === true) : null;
   if (builder && item) {
+    keepConfigured(item, builder);
     item.model = builder;
     notes.push(`builder ${item.id} model ${builder} from DEVOS_BUILDER_MODEL`);
   }

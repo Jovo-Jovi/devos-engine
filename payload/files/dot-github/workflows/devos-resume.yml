@@ -52,7 +52,7 @@ jobs:
             if [ -n "$nb" ] && [ "$(date -u +%s)" -lt "$(date -u -d "$nb" +%s)" ]; then
               echo "Issue #$issue waits until $nb UTC; not yet."; exit 0
             fi
-            gh issue edit "$issue" --repo "$REPO" --remove-label "devos:quota-wait"
+            gh issue edit "$issue" --repo "$REPO" --remove-label "devos:quota-wait" || echo "::warning title=Dev OS::GitHub did not remove the devos:quota-wait label; the run starts anyway (PR-76)."
             gh workflow run devos-intake.yml --repo "$REPO" --ref main -f issue="$issue" -f resume=true
             echo "::notice title=Dev OS::Resumed the planning of issue #$issue."
             exit 0
@@ -74,7 +74,7 @@ jobs:
             exit 0
           fi
 
-          gh pr edit "$pr" --repo "$REPO" --remove-label "devos:quota-wait"
+          gh pr edit "$pr" --repo "$REPO" --remove-label "devos:quota-wait" || echo "::warning title=Dev OS::GitHub did not remove the devos:quota-wait label; the run starts anyway (PR-76)."
           gh workflow run devos-cycle.yml --repo "$REPO" --ref main \
             -f task="$task" -f attempt="$attempt" -f review_only="$review_only" -f go=true
           echo "::notice title=Dev OS::Resumed $task attempt $attempt (review_only=$review_only) from PR #$pr."

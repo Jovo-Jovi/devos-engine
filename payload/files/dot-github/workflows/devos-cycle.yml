@@ -272,7 +272,13 @@ jobs:
 
       - name: Choose the builder from the pool
         id: ag
-        run: node scripts/devos/agents.mjs pick --task "$TASK"
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # PR-76: a task whose PR has the devos:fallback-builder label is built by agents.fallback_builder.
+          labels=$(gh pr list --repo "$REPO" --head "$BR" --state open --json labels --jq '[.[0].labels[]?.name] | join(",")' 2>/dev/null || true)
+          case ",$labels," in *",devos:fallback-builder,"*) export DEVOS_FALLBACK_BUILDER=true ;; esac
+          node scripts/devos/agents.mjs pick --task "$TASK"
 
       - name: Resolve the builder model (fence effort/fast, checked against `agent models`)
         id: bm
@@ -597,7 +603,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.DEVOS_PAT || github.token }}
         run: |
-          for l in "devos:0e8a16" "risk-1:c5def5" "risk-2:fbca04" "risk-3:d93f0b" "devos:human-gate:5319e7" "devos:halted:b60205" "devos:auto-merged:0e8a16" "devos:quota-wait:fbca04" "devos:setup-wait:fbca04" "devos:method:5319e7"; do
+          for l in "devos:0e8a16" "risk-1:c5def5" "risk-2:fbca04" "risk-3:d93f0b" "devos:human-gate:5319e7" "devos:halted:b60205" "devos:auto-merged:0e8a16" "devos:quota-wait:fbca04" "devos:fallback-builder:c2e0c6" "devos:setup-wait:fbca04" "devos:method:5319e7"; do
             gh label create "${l%:*}" --color "${l##*:}" --force --repo "$REPO" >/dev/null
           done
           # Use the OPEN PR for this branch only. A PR merged early by hand must not be reused (PR-13).
@@ -620,7 +626,7 @@ jobs:
 
       - name: Builder outcome (PR-12)
         id: bs
-        run: node scripts/devos/builder-status.mjs --task "$TASK" --attempt "$ATTEMPT" --tool "${{ steps.ag.outputs.builder_tool || 'cursor' }}" --exit "${{ steps.builder.outputs.exit }}" --review-only "$REVIEW_ONLY" --slice "${{ steps.builder.outputs.slice || 1 }}" --max-slices "${{ steps.builder.outputs.max_slices || 4 }}" --changed "${{ steps.builder.outputs.changed || 0 }}" --stage "${{ steps.builder.outputs.stage || 1 }}" --stages "${{ steps.builder.outputs.stages || 1 }}"
+        run: node scripts/devos/builder-status.mjs --task "$TASK" --attempt "$ATTEMPT" --tool "${{ steps.ag.outputs.builder_tool || 'cursor' }}" --builder "${{ steps.ag.outputs.builder_id }}" --exit "${{ steps.builder.outputs.exit }}" --review-only "$REVIEW_ONLY" --slice "${{ steps.builder.outputs.slice || 1 }}" --max-slices "${{ steps.builder.outputs.max_slices || 4 }}" --changed "${{ steps.builder.outputs.changed || 0 }}" --stage "${{ steps.builder.outputs.stage || 1 }}" --stages "${{ steps.builder.outputs.stages || 1 }}"
 
       - name: Continue (next time slice), park (usage limit) or halt (builder error) without spending a review
         if: steps.bs.outputs.state != 'ok'
@@ -638,6 +644,10 @@ jobs:
           if [ "$STATE" = "continue" ]; then
             gh workflow run devos-cycle.yml --repo "$REPO" --ref main -f task="$TASK" -f attempt="$ATTEMPT" -f revision="${{ inputs.revision || false }}"
             echo "::notice title=Dev OS::$TASK attempt $ATTEMPT: the next time slice or stage is queued and continues from the branch."
+          elif [ "$STATE" = "switch" ]; then
+            gh pr edit "$PRN" --repo "$REPO" --add-label "devos:fallback-builder"
+            gh workflow run devos-cycle.yml --repo "$REPO" --ref main -f task="$TASK" -f attempt="$ATTEMPT" -f revision="${{ inputs.revision || false }}"
+            echo "::notice title=Dev OS::$TASK attempt $ATTEMPT: ${{ steps.bs.outputs.builder }} builds it from the branch while the builder's tool has no usage left (PR-76)."
           elif [ "$STATE" = "quota" ]; then
             gh pr edit "$PRN" --repo "$REPO" --add-label "devos:quota-wait"
             echo "::warning title=Dev OS::$TASK parked (Cursor usage limit or lost connection); it resumes on its own. See the PR comment."
@@ -653,7 +663,7 @@ jobs:
           STATE: ${{ steps.bs.outputs.state }}
         run: |
           # A time slice that continues in a new run ends nothing: that run reports the build.
-          case "$STATE" in ok) s=pass ;; quota) s=waiting ;; continue) exit 0 ;; *) s=fail ;; esac
+          case "$STATE" in ok) s=pass ;; quota) s=waiting ;; continue|switch) exit 0 ;; *) s=fail ;; esac
           node scripts/devos/report.mjs note --step build --status "$s"
 
       - name: Checks (evidence for the reviewer)
@@ -1181,7 +1191,7 @@ jobs:
             *",devos:quota-wait,"*) ;;
             *) echo "The devos:quota-wait label was removed; not resuming."; exit 0 ;;
           esac
-          gh pr edit "$PR" --repo "$REPO" --remove-label "devos:quota-wait"
+          gh pr edit "$PR" --repo "$REPO" --remove-label "devos:quota-wait" || echo "::warning title=Dev OS::GitHub did not remove the devos:quota-wait label; the run starts anyway (PR-76)."
           gh workflow run devos-cycle.yml --repo "$REPO" --ref main \
             -f task="$TASK" -f attempt="$ATTEMPT" -f review_only="$REVIEW_ONLY" -f revision="$REVISION" -f go=true
           echo "::notice title=Dev OS::Resumed $TASK attempt $ATTEMPT (review_only=$REVIEW_ONLY)."

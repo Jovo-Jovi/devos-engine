@@ -50,8 +50,8 @@ test("models.test.mjs (a) each model variable replaces one role's model, keeps i
   const cfg = { base_branch: "main", agents: AGENTS };
   const env = { DEVOS_REVIEWER_MODEL: "claude-opus-5-6", DEVOS_REVIEWER_LIGHT_MODEL: "claude-haiku-5-5", DEVOS_BUILDER_MODEL: "grok-5" };
   const { config, notes } = withModelOverrides(cfg, env);
-  assert.deepEqual(config.agents.reviewer, { id: "claude-deep", tool: "claude", model: "claude-opus-5-6" });
-  assert.deepEqual(config.agents.reviewer_light, { id: "claude-light", tool: "claude", model: "claude-haiku-5-5" });
+  assert.deepEqual(config.agents.reviewer, { id: "claude-deep", tool: "claude", model: "claude-opus-5-6", fallback_models: ["claude-opus-5-5"] });
+  assert.deepEqual(config.agents.reviewer_light, { id: "claude-light", tool: "claude", model: "claude-haiku-5-5", fallback_models: ["claude-sonnet-5-5"] });
   assert.deepEqual(config.agents.pool.map((item) => [item.id, item.tool, item.model]), [
     ["cursor-grok", "cursor", "grok-5"],
     ["claude-build", "claude", "claude-sonnet-5-5"],
@@ -187,4 +187,27 @@ test("models.test.mjs (e) setup offers each agent tool's second account key, opt
     ["GEMINI_API_KEY_2", true],
   ]);
   for (const key of keys.filter((item) => item.optional)) assert.match(key.where, /^Optional: a second .* account.*usage limit/);
+});
+
+test("models.test.mjs (f) a model variable keeps the configured model as its role's next one, at most 4", () => {
+  const reviewerOf = (model) => withModelOverrides({
+    agents: {
+      reviewer: { id: "r", tool: "claude", model: "A", fallback_models: ["B", "C", "D", "E"] },
+      pool: [{ id: "b", tool: "cursor", model: "grok", default: true, note: "" }],
+      policy: "reviewer-picks",
+    },
+  }, { DEVOS_REVIEWER_MODEL: model }).config.agents.reviewer;
+  assert.deepEqual(reviewerOf("X"), { id: "r", tool: "claude", model: "X", fallback_models: ["A", "B", "C", "D"] });
+  assert.deepEqual(reviewerOf("C"), { id: "r", tool: "claude", model: "C", fallback_models: ["A", "B", "D", "E"] });
+  assert.deepEqual(reviewerOf("A"), { id: "r", tool: "claude", model: "A", fallback_models: ["B", "C", "D", "E"] });
+
+  const builder = withModelOverrides({
+    agents: {
+      reviewer: { id: "r", tool: "claude", model: "m" },
+      pool: [{ id: "claude", tool: "claude", model: "claude-sonnet-5-5", default: true, note: "" }],
+      policy: "always-default",
+    },
+  }, { DEVOS_BUILDER_MODEL: "grok-4.7-xhigh-fast" }).config.agents.pool[0];
+  assert.equal(builder.model, "grok-4.7-xhigh-fast");
+  assert.deepEqual(builder.fallback_models, ["claude-sonnet-5-5"]);
 });

@@ -663,3 +663,14 @@ test("cycle-tools.test.mjs (u) the watchdog feeds the prompt file, ends the agen
     rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
+
+test("cycle-tools.test.mjs (v) a failed label removal never stops a resume, and the supervisor may restart a task", () => {
+  const warning = ' || echo "::warning title=Dev OS::GitHub did not remove the devos:quota-wait label; the run starts anyway (PR-76)."';
+  const names = ["devos-cycle.yml", "devos-wait.yml", "devos-resume.yml", "devos-intake.yml"];
+  const lines = names.flatMap((name) => readFileSync(path.join(root, "payload", "files", "dot-github", "workflows", name), "utf8").split(/\r?\n/));
+  assert.equal(lines.filter((line) => line.endsWith(warning)).length, 6);
+  assert.equal(lines.some((line) => line.endsWith('--remove-label "devos:quota-wait"')), false);
+  const supervisor = readFileSync(path.join(root, "payload", "files", "dot-github", "workflows", "devos-supervisor.yml"), "utf8");
+  assert.equal(supervisor.includes("\n  actions: write\n"), true);
+  assert.equal(supervisor.includes("\n  actions: read\n"), false);
+});

@@ -55,10 +55,10 @@ export function fallbacks(item) {
 export function validate(agents) {
   if (!agents || typeof agents !== "object" || Array.isArray(agents)) bad("missing");
   // PR-53: reviewer_light may be absent (the generated config drops a null): the reviewer then reviews every task.
-  const allowed = ["reviewer", "reviewer_light", "pool", "policy"];
+  const allowed = ["reviewer", "reviewer_light", "pool", "policy", "fallback_builder"];
   const rootKeys = Object.keys(agents);
   if (rootKeys.some((key) => !allowed.includes(key)) || ["reviewer", "pool", "policy"].some((key) => !rootKeys.includes(key))) {
-    bad("must have reviewer, pool and policy, and may have reviewer_light");
+    bad("must have reviewer, pool and policy, and may have reviewer_light and fallback_builder");
   }
   const reviewerError = isAgent(agents.reviewer, "reviewer");
   if (reviewerError) bad(reviewerError);
@@ -84,6 +84,13 @@ export function validate(agents) {
   }
   if (defaults !== 1) bad("pool must have exactly one default");
   if (!POLICIES.has(agents.policy)) bad("policy must be reviewer-picks or always-default");
+  // PR-76: optional. A pool builder of another tool, used only when the run's tool is out past a run's wait.
+  if (Object.hasOwn(agents, "fallback_builder")) {
+    const id = agents.fallback_builder;
+    const item = typeof id === "string" ? agents.pool.find((entry) => entry.id === id) : null;
+    const usual = agents.pool.find((entry) => entry.default);
+    if (!item || item.tool === usual.tool) bad("fallback_builder must name a pool builder whose tool is not the default builder's");
+  }
   return agents;
 }
 
@@ -135,8 +142,13 @@ export function toolList(agents = config().agents) {
   return [...names].sort().join(" ");
 }
 
-export function pick(task, agents = config().agents) {
+export function pick(task, agents = config().agents, env = process.env) {
   const value = validate(agents);
+  // PR-76: before the policy. The cycle sets this when the task's PR carries devos:fallback-builder.
+  if (env?.DEVOS_FALLBACK_BUILDER === "true" && value.fallback_builder) {
+    const item = byId(value.fallback_builder, value);
+    if (item) return { item, note: "the fallback builder (devos:fallback-builder, PR-76)" };
+  }
   const chosen = defaultItem(value);
   if (value.policy === "always-default") return { item: chosen, note: "" };
   const file = P(`docs/fences/${task}.md`);

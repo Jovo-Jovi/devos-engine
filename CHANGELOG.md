@@ -2,6 +2,13 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
+## 1.4.5 — Unreleased
+
+- **A weekly limit waits days, not an hour.** A reset stated in days ("resets in 5 days") is read half a day early; before, it was read as nothing and retried every hour.
+- **A fallback builder of another tool.** When the builder's tool is out for longer than a run waits, `agents.fallback_builder` builds the rest of the task, under the `devos:fallback-builder` label.
+- **A model variable never strands a role.** The configured model becomes the variable's next model, so a model the tool cannot use moves on to it.
+- **A resume never stops on its label, and the supervisor can restart a task.** A failed removal of the `devos:quota-wait` label no longer ends the step before the run starts, and the supervisor's own token may re-dispatch (`actions: write`).
+
 ## 1.4.4 — 2026-11-02
 
 - **The project's state reaches the Control Tower twice a day.** A new workflow, `devos-state`, asks for the link and sends the task history at 03:41 and 15:41 UTC, in its own concurrency group so it never holds a task. The repository variable `DEVOS_STATE` switches it off.

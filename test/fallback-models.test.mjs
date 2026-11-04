@@ -5,8 +5,8 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { fallbacks, MAX_FALLBACKS, validate } from "../payload/files/scripts/devos/agents.mjs";
-import { looksLikeLimit, looksUnavailable, modelUnavailable } from "../payload/files/scripts/devos/limits.mjs";
+import { fallbacks, MAX_FALLBACKS, pick, validate } from "../payload/files/scripts/devos/agents.mjs";
+import { looksLikeLimit, looksUnavailable, modelUnavailable, notBefore, parseResetTime } from "../payload/files/scripts/devos/limits.mjs";
 
 // E26c1 (PR-64, D-E12): several models per role. An agent's fallback_models are tried after its model, each on every
 // account of its tool: a usage limit moves to the other account, then to the next model; a model the account cannot use
@@ -61,8 +61,8 @@ test("fallback-models.test.mjs (a) an agent may list fallback_models of its own 
     assert.match(run(["pick", "--task", "T01"]).stdout, /^builder_model=B1\nbuilder_fallbacks=B2\n/m);
     assert.match(run(["reviewer", "--mode", "deep"]).stdout, /^reviewer_model=M1\nreviewer_fallbacks=M2 M3\n/m);
     assert.match(run(["reviewer", "--mode", "light"]).stdout, /^reviewer_model=L1\nreviewer_fallbacks=\n/m);
-    // PR-63: a model variable replaces the first model only, and a fallback it names is not tried twice.
-    assert.match(run(["reviewer", "--mode", "deep"], { DEVOS_REVIEWER_MODEL: "M2" }).stdout, /^reviewer_model=M2\nreviewer_fallbacks=M3\n/m);
+    // PR-63, PR-76: a model variable replaces the first model, the configured one comes next, and a fallback it names is not tried twice.
+    assert.match(run(["reviewer", "--mode", "deep"], { DEVOS_REVIEWER_MODEL: "M2" }).stdout, /^reviewer_model=M2\nreviewer_fallbacks=M1 M3\n/m);
     assert.match(run(["pool"]).stdout, /^- b — codex · B1 \(then B2\) · default$/m);
   } finally {
     rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
@@ -339,4 +339,93 @@ test("fallback-models.test.mjs (h) every builder and reviewer run of the cycle t
     assert.equal(text.includes("for acc in $accounts"), false, file);
     assert.equal(text.includes("devos_slots \"$tool\" $models"), true, file);
   }
+});
+
+test("fallback-models.test.mjs (i) a reset stated in days is read half a day early, and with hours or minutes exactly", () => {
+  const now = new Date("2026-11-03T19:39:00Z");
+  const at = (text) => parseResetTime(text, now).toISOString();
+  assert.equal(at("Weekly usage limit reached. It resets in 5 days."), "2026-11-08T07:39:00.000Z");
+  assert.equal(at("resets in 1 day"), "2026-11-04T07:39:00.000Z");
+  assert.equal(at("resets in 2 days 3 hours"), "2026-11-05T22:39:00.000Z");
+  assert.equal(at("resets in 2d 4h 30m"), "2026-11-06T00:09:00.000Z");
+  assert.equal(at("resets in 2h 15m"), "2026-11-03T21:54:00.000Z");
+  assert.equal(notBefore("Weekly usage limit reached. It resets in 5 days.", 60, now), "2026-11-08T07:42:00Z");
+});
+
+test("fallback-models.test.mjs (j) agents.fallback_builder names a builder of another tool, and the label picks it", () => {
+  const message = "agents: fallback_builder must name a pool builder whose tool is not the default builder's";
+  const agents = {
+    reviewer: { id: "r", tool: "cursor", model: "m" },
+    pool: [
+      { id: "cursor-x", tool: "cursor", model: "grok", default: true, note: "" },
+      { id: "cursor-y", tool: "cursor", model: "grok-2", default: false, note: "" },
+      { id: "claude-b", tool: "claude", model: "sonnet", default: false, note: "" },
+    ],
+    policy: "reviewer-picks",
+    fallback_builder: "claude-b",
+  };
+  assert.equal(validate(agents), agents);
+  for (const id of ["missing", "cursor-y", 1]) {
+    assert.throws(() => validate({ ...agents, fallback_builder: id }), { message });
+  }
+  const chosen = pick("T01", agents, { DEVOS_FALLBACK_BUILDER: "true" });
+  assert.equal(chosen.item.id, "claude-b");
+  assert.equal(chosen.note, "the fallback builder (devos:fallback-builder, PR-76)");
+  const { fallback_builder: _drop, ...without } = agents;
+  const usual = pick("T01", without, {});
+  assert.equal(usual.item.id, "cursor-x");
+  assert.equal(pick("T01", agents, {}).item.id, usual.item.id);
+  assert.equal(pick("T01", agents, {}).note, usual.note);
+  assert.equal(pick("T01", without, { DEVOS_FALLBACK_BUILDER: "true" }).item.id, usual.item.id);
+  assert.equal(pick("T01", without, { DEVOS_FALLBACK_BUILDER: "true" }).note, usual.note);
+});
+
+test("fallback-models.test.mjs (k) a builder whose tool is out for longer than a run waits moves to the fallback builder", () => {
+  const dir = staged("devos-fallback-switch-");
+  const agents = {
+    reviewer: { id: "r", tool: "cursor", model: "m" },
+    pool: [
+      { id: "cursor-x", tool: "cursor", model: "grok-4.7", default: true, note: "" },
+      { id: "claude-b", tool: "claude", model: "claude-sonnet-5-5", default: false, note: "" },
+    ],
+    policy: "reviewer-picks",
+    fallback_builder: "claude-b",
+  };
+  try {
+    withAgents(dir, agents);
+    const run = (err, args) => {
+      writeFileSync(path.join(dir, ".devos", "builder.err"), err);
+      writeFileSync(path.join(dir, ".devos", "builder.json"), "");
+      return spawnSync(process.execPath, ["scripts/devos/builder-status.mjs", "--task", "T01", "--attempt", "1", "--exit", "1", ...args], {
+        cwd: dir,
+        encoding: "utf8",
+        windowsHide: true,
+        env: { ...process.env, GITHUB_OUTPUT: "", DEVOS_BUILDER_MODEL: "", DEVOS_REVIEWER_MODEL: "", DEVOS_REVIEWER_LIGHT_MODEL: "" },
+      });
+    };
+    const five = "Weekly usage limit reached. It resets in 5 days.\n";
+    const switched = run(five, ["--tool", "cursor", "--builder", "cursor-x"]);
+    assert.equal(switched.status, 0, switched.stderr);
+    assert.match(switched.stdout, /^state=switch$/m);
+    assert.match(switched.stdout, /^builder=claude-b$/m);
+    assert.match(switched.stdout, /^not_before=$/m);
+    assert.equal(readFileSync(path.join(dir, ".devos", "builder-summary.md"), "utf8").startsWith("### Dev OS T01 · attempt 1 · **cursor has no usage until"), true);
+    assert.match(run("resets in 2h\n", ["--tool", "cursor", "--builder", "cursor-x"]).stdout, /^state=quota$/m);
+    assert.match(run(five, ["--tool", "claude", "--builder", "claude-b"]).stdout, /^state=quota$/m);
+    const { fallback_builder: _drop, ...plain } = agents;
+    withAgents(dir, plain);
+    assert.match(run(five, ["--tool", "cursor", "--builder", "cursor-x"]).stdout, /^state=quota$/m);
+  } finally {
+    rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+  }
+});
+
+test("fallback-models.test.mjs (l) the cycle reads the label before it picks, moves on switch, and creates the label", () => {
+  assert.equal(workflow.includes("labels=$(gh pr list"), true);
+  assert.equal(workflow.includes('case ",$labels," in *",devos:fallback-builder,"*) export DEVOS_FALLBACK_BUILDER=true ;; esac'), true);
+  assert.equal(workflow.includes('--builder "${{ steps.ag.outputs.builder_id }}"'), true);
+  assert.equal(workflow.includes('elif [ "$STATE" = "switch" ]; then'), true);
+  assert.equal(workflow.includes('--add-label "devos:fallback-builder"'), true);
+  assert.equal(workflow.includes("continue|switch) exit 0"), true);
+  assert.equal(workflow.includes('"devos:fallback-builder:c2e0c6"'), true);
 });

@@ -85,8 +85,9 @@ export function parseJsonLoose(text) {
 
 /**
  * Work out when a usage limit resets from the agent's own message. Understands
- * "resets 12:30pm (UTC)", "resets 3pm", "resets at 18:00", "resets in 2h 15m", "try again in 45
- * minutes" and Claude's "…limit reached|1760112000". Times without a zone are read as UTC, the
+ * "resets 12:30pm (UTC)", "resets 3pm", "resets at 18:00", "resets in 2h 15m", "resets in 5 days", "try again in 45
+ * minutes" and Claude's "…limit reached|1760112000". A reset stated in days alone ("resets in 5 days") is read half a
+ * day early, and never as less than 60 minutes; with hours or minutes it is exact. Times without a zone are read as UTC, the
  * runner's zone. Returns a Date, or null when nothing parseable is found.
  */
 export function parseResetTime(text, now = new Date()) {
@@ -94,8 +95,15 @@ export function parseResetTime(text, now = new Date()) {
   const epoch = /\|(\d{10})\b/.exec(text);
   if (epoch) return new Date(Number(epoch[1]) * 1000);
 
-  const rel = /(?:resets?|try again)\s+in\s+(?:(\d+)\s*h(?:ours?|rs?)?)?\s*(?:(\d+)\s*m(?:in(?:utes?)?)?)?/i.exec(text);
-  if (rel && (rel[1] || rel[2])) return new Date(now.getTime() + ((Number(rel[1] || 0) * 60) + Number(rel[2] || 0)) * 60000);
+  const rel = /(?:resets?|try again)\s+in\s+(?:(\d+)\s*d(?:ays?)?)?\s*(?:(\d+)\s*h(?:ours?|rs?)?)?\s*(?:(\d+)\s*m(?:in(?:utes?)?)?)?/i.exec(text);
+  if (rel && (rel[1] || rel[2] || rel[3])) {
+    const days = Number(rel[1] || 0);
+    const hours = Number(rel[2] || 0);
+    const minutes = Number(rel[3] || 0);
+    // PR-76: days alone may be rounded ("resets in 5 days"), so the reset is half a day early and at least an hour.
+    const total = rel[1] && !rel[2] && !rel[3] ? Math.max(days * 24 * 60 - 12 * 60, 60) : (days * 24 + hours) * 60 + minutes;
+    return new Date(now.getTime() + total * 60000);
+  }
 
   const abs = /resets?\s+(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i.exec(text);
   if (abs) {

@@ -40,7 +40,7 @@ questions in your browser or your terminal, and an AI agent on your computer wri
 approve it, DEV_OS creates the GitHub repository and starts the automated cycle on GitHub Actions. From then on, a
 builder agent writes each task, a reviewer agent reviews it, and you merge at the gates.
 
-Version `1.4.4`. The engine is under PolyForm Shield 1.0.0 and the files it installs into your project under MIT
+Version `1.4.5`. The engine is under PolyForm Shield 1.0.0 and the files it installs into your project under MIT
 (see [Licence](#licence)).
 
 ## Why DEV_OS
@@ -287,7 +287,7 @@ it.
   Change them with `devos models fallback <reviewer|light|builder> <model>,<model>` (or `none`), or with **Next
   models** in a project's Models panel: either opens a pull request with `devos/project.json` and the
   `devos.config.json` made from it, and they apply once you merge it. Another builder of the pool lists them in
-  `devos/project.json` by hand; then run `node scripts/devos/config.mjs --write`.
+  `devos/project.json` by hand; then run `node scripts/devos/config.mjs --write`. A builder of another tool can take over when the default's tool is out for longer than a run waits: name it as `agents.fallback_builder` in `devos/project.json` (PR-76).
 - **A project's page.** Start DEV_OS, then choose **Current project** after the computer check. Pick a project from
   your projects folder, press **Choose a folder…** to pick its folder in this computer's folder dialog (or paste its
   path), or paste its GitHub address: your GitHub account (the gh sign-in) must own or administer that repository, and
@@ -295,7 +295,7 @@ it.
   project's setup, its version next to this engine's and the latest release, its models and its Control Tower link.
   Opening a project changes nothing in it.
 - **Upgrade and connect from a project's page.** When the project on GitHub is older than this engine, **Upgrade to
-  1.4.4 by pull request** (this engine's version) runs `devos upgrade` for you. Merge the pull request on GitHub, then
+  1.4.5 by pull request** (this engine's version) runs `devos upgrade` for you. Merge the pull request on GitHub, then
   press **Bring this folder up to date**. **Read the contract** shows the Control Tower contract. Once this engine,
   the project and the latest release are the same version, tick the box and press **Connect by pull request**: a pull
   request records your answer, and `DEVOS_REPORTING` turns on. To stop reporting, set `DEVOS_REPORTING` to `off`.

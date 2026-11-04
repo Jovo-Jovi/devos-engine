@@ -334,7 +334,7 @@ jobs:
           if [ "$wait" -gt 0 ]; then echo "Waiting $(( wait / 60 )) minutes, until $NOT_BEFORE (UTC)."; sleep "$wait"; fi
           labels=$(gh issue view "$ISSUE" --repo "$REPO" --json labels --jq '[.labels[].name] | join(",")')
           case ",$labels," in *",devos:quota-wait,"*) ;; *) echo "Label removed; not resuming."; exit 0 ;; esac
-          gh issue edit "$ISSUE" --repo "$REPO" --remove-label "devos:quota-wait"
+          gh issue edit "$ISSUE" --repo "$REPO" --remove-label "devos:quota-wait" || echo "::warning title=Dev OS::GitHub did not remove the devos:quota-wait label; the run starts anyway (PR-76)."
           gh workflow run devos-intake.yml --repo "$REPO" --ref main -f issue="$ISSUE" -f resume=true
           echo "::notice title=Dev OS::Resumed the planning of issue #$ISSUE."
 
