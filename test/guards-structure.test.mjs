@@ -272,6 +272,28 @@ test("guards-structure.test.mjs (h) guard:scope reads the branch's paths as they
   }
 });
 
+test("guards-structure.test.mjs (i) guard:scope: a task never deletes the README its base has, even when its Paths allow it (PR-77)", () => {
+  const dir = project();
+  try {
+    put(dir, { "README.md": "# Shop\n\n## Features\n\n- [ ] Invoices\n" });
+    branch(dir, FENCE("`*` · `src/**`"));
+    rmSync(path.join(dir, "README.md"));
+    assert.deepEqual(guard(dir, "scope", { TASK: "T07" }), {
+      status: "FAIL",
+      findings: ["README.md — deleted; the product README is never deleted (PR-77)"],
+      note: "1 changed path(s), 2 Paths entries in docs/fences/T07.md",
+    });
+    put(dir, { "README.md": "# Shop\n\n## Features\n\n- [x] Invoices\n" });
+    assert.deepEqual(guard(dir, "scope", { TASK: "T07" }), {
+      status: "PASS",
+      findings: [],
+      note: "1 changed path(s), 2 Paths entries in docs/fences/T07.md",
+    });
+  } finally {
+    rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+  }
+});
+
 function setRoots(dir, list) {
   const projectPath = path.join(dir, "devos", "project.json");
   const data = JSON.parse(readFileSync(projectPath, "utf8"));

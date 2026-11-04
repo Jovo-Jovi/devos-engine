@@ -4,12 +4,21 @@
 // DEVOS_SCOPE_BASE) plus the working tree, so every attempt and stage counts. Paths no builder may
 // change are the surface guard's (guard-surfaces.mjs), and the runner's own files (docs/PHASES.md,
 // reviews, fences, usage) are not the task's. N/A outside a task run (no TASK) and for a fence
-// written before PR-58 (no Paths line).
+// written before PR-58 (no Paths line). PR-77: a task never deletes the README.md its base has.
 import { execFileSync } from "node:child_process";
 import { exists, read, result, ROOT } from "./lib.mjs";
 import { changedPaths, config, matchesAny } from "../devos/lib.mjs";
 import { fencePaths, inScope } from "../devos/fence-check.mjs";
 import { isMethodFence } from "../devos/skills.mjs";
+
+function baseHas(base, file) {
+  try {
+    execFileSync("git", ["cat-file", "-e", `${base}:${file}`], { cwd: ROOT, stdio: "ignore" });
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export default function scope() {
   const task = process.env.TASK ?? "";
@@ -34,6 +43,8 @@ export default function scope() {
   const skip = [...(surfaces.ignore ?? []), ...deny, "docs/PHASES.md"];
   const changed = [...new Set([...committed, ...changedPaths()])].filter((file) => !matchesAny(file, skip)).sort();
   const outside = changed.filter((file) => !inScope(file, paths, task));
+  const findings = outside.map((file) => `${file} — outside the Paths of ${rel}`);
+  if (!exists("README.md") && baseHas(base, "README.md")) findings.push("README.md — deleted; the product README is never deleted (PR-77)");
   const note = `${changed.length} changed path(s), ${paths.length} Paths entr${paths.length === 1 ? "y" : "ies"} in ${rel}`;
-  return result(outside.length ? "FAIL" : "PASS", outside.map((file) => `${file} — outside the Paths of ${rel}`), note);
+  return result(findings.length ? "FAIL" : "PASS", findings, note);
 }

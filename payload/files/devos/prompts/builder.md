@@ -23,6 +23,11 @@ Rules for this run:
   report, `docs/SESSION_CONTEXT.md`, `docs/DEVELOPMENT_JOURNAL.md` and a lockfile beside a listed
   manifest: `guard:scope` fails anything else. Reach another feature module only through its public
   entry (`devos.config.json` `structure.modules`): `guard:imports` fails an import of its internals.
+- **The README is the product's (PR-77).** Never delete `README.md` or remove one of its sections.
+  Change it only as the fence says: tick in `## Features` what this task built, and for a screen,
+  copy its settled desktop capture `.devos/screens/<state>-1280.png` to `docs/screenshots/<state>.png`
+  and link it under `## Screenshots`. A fence step that would delete or empty it is the fence's
+  defect: HALT.
 - If the task changes anything visible, follow the `devos-compose-ui` skill: compose the approved
   design in `docs/DESIGN_SYSTEM.md` and `docs/design/`, never improvise a look.
 {{SKILLS_BLOCK}}- **Method fix** (the fence has `- Surface: method`, PR-28): change only the method files the fence

@@ -243,6 +243,10 @@ Ledgers and method files: `SESSION_CONTEXT.md` (state), `DEVELOPMENT_JOURNAL.md`
 `method/CARRY_FORWARDS.md` (findings), `QUOTATION_AMENDMENTS.md`, `commercial/` (no prices in the
 repository unless the human decides otherwise), `HANDOVER.md`, `ADMIN_GUIDE.md`.
 
+The root `README.md` is the product's own page for the people who use or try it (PR-77): what it does, its
+features, screenshots, getting started, what it is built with and its status. The blueprint writes it, every task
+that builds a feature or changes a screen keeps it current, and no task deletes it.
+
 **Where two documents conflict, the earlier one wins and the conflict becomes an amendment.**
 
 ---
@@ -313,6 +317,10 @@ Rules for every fence:
 - **Self-contained.** Everything it refers to is inside it, or attached with a verifiable hash.
 - **Checked by machine.** `scripts/devos/fence-check.mjs` passes before the fence is issued, and
   `guard:scope` holds the task to its Paths (PR-58).
+- **The README is kept (PR-77).** A fence that builds a feature or changes what a user sees ends with
+  a step that updates `README.md` (`## Features`, and for a screen `## Screenshots` from
+  `docs/screenshots/`), and names it in its Paths. No fence deletes or empties `README.md`, and no
+  Done-when checks that it is absent.
 - **Preconditions first.** The previous task merged (`git merge-base --is-ancestor`), a clean
   tree, the live counts it builds on.
 - **Byte-exact payloads** are staged outside the working tree and verified by

@@ -101,6 +101,9 @@ part: a red required check fails the verdict whatever you write (PR-08), and the
    **Baseline (PR-68):** a guard line noting `N known (baseline)` passed on findings of the code that existed
    when DEV_OS was added (`devos/baseline.json`); judge only the findings it lists. A change that adds to
    `devos/baseline.json`, or a builder that fixed baseline findings outside the fence's paths, is a FAIL.
+   **README (PR-77):** a deleted or emptied `README.md`, or a removed section, is a FAIL (`guard:scope`
+   fails a deletion). When the task built a feature of `## Features` or changed a screen, confirm the
+   README was updated as its fence asks.
 4. Write `docs/reviews/{{TASK}}-a{{ATTEMPT}}.md`. **First line exactly** `VERDICT: PASS` or
    `VERDICT: FAIL`, then the Dev OS verdict format from `CLAUDE.md`. Keep it short: ledger lines cite
    evidence ("pack §Checks: test pass, 57 tests"), they do not repeat it. `Next prompt:` gives the
@@ -118,6 +121,7 @@ part: a red required check fails the verdict whatever you write (PR-08), and the
      **Fast: yes** only for low/medium mechanical work.
    - Every fence you write carries `- Layers: <layer> · <layer>` in its header: the layers of `devos/skills/INDEX.md` the task touches (`design`, `motion`, `frontend`, `accessibility`, `architecture`, `backend`, `api`, `database`, `security`, `reliability`, `testing`, `ops`). The runner gives the builder and the reviewer the skills of those layers, and a server-side or deep task always the security layer and a code task the testing layer (PR-55, PR-56, PR-57).
    - Every fence you write carries `- Paths: \`<glob>\` · …` in its header: every file and folder the task may change, each in backticks, with module folders from `devos.config.json` `structure.modules`. `guard:scope` fails the run on a change outside them; the report, `docs/SESSION_CONTEXT.md`, `docs/DEVELOPMENT_JOURNAL.md` and a lockfile beside a listed manifest are always allowed (PR-58).
+   - A fence that builds a feature or changes what a user sees ends with a step that updates `README.md` (PR-77): it ticks the feature in `## Features`, and for a UI fence copies the settled desktop capture of its first `- Screens:` state, `.devos/screens/<state>-1280.png`, to `docs/screenshots/<state>.png` and links it under `## Screenshots`. Its `- Paths:` then name `README.md` and `docs/screenshots/**`. No fence deletes or empties `README.md`, and no Done-when checks that it is absent.
    - A UI fence carries `- Screens: \`<name> <path>[ click|hover|focus <selector>]\` · …` in its header, naming every page, state and interaction to capture. It also carries a `### Design specification` (`docs/method/DESIGN_METHOD.md` §3) whose `- States:` are exactly those names and whose `- Criteria:` are rows of `docs/design/UI_ACCEPTANCE.md`; `guard:design-spec` fails the run otherwise.
    - **Judge its size first and split a big task into stages (PR-38).** Follow the
      `devos-fence-writing` skill: count steps, files, concerns and Done-when items; when the task does

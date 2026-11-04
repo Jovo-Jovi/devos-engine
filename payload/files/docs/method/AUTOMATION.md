@@ -206,7 +206,7 @@ once (it refuses when the file exists), and `--shrink-baseline` removes what is 
 `.gitattributes` merges `docs/DEVELOPMENT_JOURNAL.md` by union.
 
 Every fence carries a header line `- Layers: <layer> · <layer>` naming the layers it touches; `skills.mjs` gives the builder and the reviewer the skills of those layers (PR-55). A fence may add `- Topics: <topic> · <topic>` for a topic its text does not name; a server-side layer or a deep task always adds the security layer (the security gate, PR-56), and a code layer the testing layer (the test gate, PR-57).
-Every fence also carries `- Paths: \`<glob>\` · …`, every file and folder the task may change; `guard:scope` holds the task to it, and `fence-check.mjs` checks the fence before a builder runs it (PR-58).
+Every fence also carries `- Paths: \`<glob>\` · …`, every file and folder the task may change; `guard:scope` holds the task to it, and `fence-check.mjs` checks the fence before a builder runs it (PR-58). A task never deletes the product's `README.md`: `guard:scope` fails it when the task's base has one and the tree does not (PR-77).
 A UI fence carries a header line `- Screens: \`<name> <path>[ click|hover|focus <selector>]\` · …` naming every page, state and interaction to capture. `screens.mjs` reads that line; without it, `devos.config.json` `screens.pages` is used.
 
 | Surface | Files |
