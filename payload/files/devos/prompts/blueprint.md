@@ -66,6 +66,15 @@ Work in this order.
    and the Blueprint rows of `devos/skills/INDEX.md`, for each layer the product needs.
    `DESIGN_SYSTEM.md` opens with its Direction and signature. Never copy a reference, and never reuse one look for
    every project of a type.
+   Also write the product's `README.md` at the root, for the people who will use or try the product (PR-77), from
+   the brief, the scope and the design direction: `# <name>` and one line saying what it is and for whom, then
+   `## What it does` (the problem and the core flow, in a few sentences), `## Features` (one line per feature of
+   `docs/SCOPE.md` as `- [ ] <feature>`, ticked by the task that builds it, and the **Later** items under
+   `### Later`), `## Screenshots` (the line `Screenshots arrive with the first screen.`), `## Getting started`
+   (what to install, the stack's `install` command and how to run the product locally; keys by name only),
+   `## Built with` (the stack and each chosen provider) and `## Status`
+   (`In development: <n> tasks in <m> phases; see docs/PHASES.md.`). Write nothing after them: setup adds
+   `## How this project is built`. Never a secret, a price or personal data.
    Two formats are read by guards and must be exact:
    - `docs/PHASES.md`: the header `| Task | Phase | Station | Name | Risk | Gate | Done | Verdict |`, a separator
      row, then one row per task — `T01` first, ids ascending, Risk 1, 2 or 3, Done `[ ]`, Verdict `—`.
@@ -90,7 +99,9 @@ Work in this order.
    set, and one architecture test that proves the `architecture` rule with the test runner (`tests`). When `ui` is
    `true`, it also adds `@playwright/test` and `@axe-core/playwright` as dev dependencies, the tools of the
    runner's UI evidence (`docs/method/DESIGN_METHOD.md` §4). Its Done-when
-   is `node scripts/devos/run-checks.mjs --strict` exiting 0. T01 is not a UI fence: it carries no `- Screens:` line.
+   is `node scripts/devos/run-checks.mjs --strict` exiting 0. T01 keeps the root `README.md` (PR-77): the
+   generator's own README is never copied, T01 only fills `## Getting started` with the commands it makes work, and
+   no Done-when asks for `README.md` to be absent. T01 is not a UI fence: it carries no `- Screens:` line.
    Every fence carries `- Layers: <layer> · <layer>` in its header: the layers of `devos/skills/INDEX.md` the task touches (`design`, `motion`, `frontend`, `accessibility`, `architecture`, `backend`, `api`, `database`, `security`, `reliability`, `testing`, `ops`); T01's are usually `ops · testing`. The runner gives the builder and the reviewer the skills of those layers, and a server-side or deep task always the security layer and a code task the testing layer (PR-55, PR-56, PR-57).
    Every fence also carries the builder line `- Builder: <an id of devos.config.json agents.pool> · Effort:
    <low|medium|high|xhigh> · Fast: <yes|no>` (T01: `high`, `no`) and `- Paths: \`<glob>\` · …`: every file and
