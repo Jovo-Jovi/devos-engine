@@ -2,6 +2,10 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
+## 1.5.0 — Unreleased
+
+- **Local mode, step 1: a project set up on this computer.** `devos init --local` ends with the approved blueprint, a local SETUP.md and the first commit, with no gh needed. One question can add a private GitHub backup where only CI runs (`DEVOS_PAUSED` is set before the first push). `devos continue`, `devos verify` and the project's page know a local project. Each task is then built in your IDE from its fence and reviewed on its branch.
+
 ## 1.4.5 — Unreleased
 
 - **A weekly limit waits days, not an hour.** A reset stated in days ("resets in 5 days") is read half a day early; before, it was read as nothing and retried every hour.

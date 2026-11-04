@@ -40,7 +40,7 @@ questions in your browser or your terminal, and an AI agent on your computer wri
 approve it, DEV_OS creates the GitHub repository and starts the automated cycle on GitHub Actions. From then on, a
 builder agent writes each task, a reviewer agent reviews it, and you merge at the gates.
 
-Version `1.4.5`. The engine is under PolyForm Shield 1.0.0 and the files it installs into your project under MIT
+Version `1.5.0`. The engine is under PolyForm Shield 1.0.0 and the files it installs into your project under MIT
 (see [Licence](#licence)).
 
 ## Why DEV_OS
@@ -295,7 +295,7 @@ it.
   project's setup, its version next to this engine's and the latest release, its models and its Control Tower link.
   Opening a project changes nothing in it.
 - **Upgrade and connect from a project's page.** When the project on GitHub is older than this engine, **Upgrade to
-  1.4.5 by pull request** (this engine's version) runs `devos upgrade` for you. Merge the pull request on GitHub, then
+  1.5.0 by pull request** (this engine's version) runs `devos upgrade` for you. Merge the pull request on GitHub, then
   press **Bring this folder up to date**. **Read the contract** shows the Control Tower contract. Once this engine,
   the project and the latest release are the same version, tick the box and press **Connect by pull request**: a pull
   request records your answer, and `DEVOS_REPORTING` turns on. To stop reporting, set `DEVOS_REPORTING` to `off`.
@@ -393,7 +393,7 @@ change applies from the next run. The project's `docs/method/AUTOMATION.md` list
 | Command | What it does |
 |---|---|
 | `devos doctor` | Checks the GitHub CLI, its sign-in and its token scopes, and prints the exact fix. It changes nothing. |
-| `devos init [folder]` | Guided setup of a new project in a new or empty folder outside the engine folder. |
+| `devos init [folder]` | Guided setup of a new project in a new or empty folder outside the engine folder. With `--local`, the project is built on this computer from its fences, with no automated cycle on GitHub. |
 | `devos ui [folder] [--no-open]` | The same setup as a guided page in your browser, on this computer only. Without a folder, the page asks where to create the project, and it can also add DEV_OS to an existing project. `--no-open` prints the link without opening it. |
 | `devos continue [folder]` | Shows what is done and finishes what is missing. |
 | `devos adopt [folder] [--agent <tool>[:<model>]]` | After the survey, your own AI tool (Claude Code, Cursor, Codex or Gemini, signed in on this computer) writes a brief of the project: what it is, its stage and why, how it is built, what is done and open, its risks, its personal data, what DEV_OS will add, and its questions for you. It works in `~/.devos/adopt/` on a copy of the tracked files, never in the project. The copy leaves out environment files other than an example one, and private keys. DEV_OS checks the project is unchanged after every round. Type `yes` to keep the brief, or write what to change. It then asks whether to add DEV_OS now, as `devos adopt --install` does. |
