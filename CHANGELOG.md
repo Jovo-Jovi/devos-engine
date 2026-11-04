@@ -2,7 +2,7 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
-## 1.5.0 — Unreleased
+## 1.5.0 — 2026-11-04
 
 - **Local mode, step 1: a project set up on this computer.** `devos init --local` ends with the approved blueprint, a local SETUP.md and the first commit, with no gh needed. One question can add a private GitHub backup where only CI runs (`DEVOS_PAUSED` is set before the first push). `devos continue`, `devos verify` and the project's page know a local project. Each task is then built in your IDE from its fence and reviewed on its branch.
 - **The guided page offers automated or local development.** Its first screen asks "Automated development (GitHub)" or "Local development (this computer)". The local path asks no link, visibility or hosting, lists no keys, and ends with the optional private backup. `devos init --help` and `devos help` explain both ways, `devos doctor --local` checks only Node.js and git, a project that already has an `origin` is not asked for a backup again, and `devos verify` shows a missing gh as a note for a local project.
