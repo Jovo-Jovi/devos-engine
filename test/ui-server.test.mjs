@@ -856,7 +856,71 @@ async function workerAb() {
   }
 }
 
-const workers = { l: workerL, n: workerN, m: workerM, o: workerO, p: workerP, q: workerQ, s: workerS, t: workerT, u: workerU, v: workerV, w: workerW, z: workerZ, ab: workerAb };
+async function workerAc() {
+  const terminal = stage();
+  const planned = stage();
+  Object.assign(process.env, planned.env);
+  let server;
+  try {
+    const plan = planFrom(terminal);
+    plan.cycle = "local";
+    plan.link = false;
+    if (plan.project.modules && Object.hasOwn(plan.project.modules, "hosting")) plan.project.modules.hosting = "none";
+    server = await startUiServer({ folder: planned.project, port: 0 });
+    const origin = `http://127.0.0.1:${server.port}`;
+    const headers = { "Content-Type": "application/json", Origin: origin, "X-DEVOS-Token": server.token };
+    const posted = await fetch(`${origin}/api/plan`, { method: "POST", headers, body: JSON.stringify(plan) });
+    const postedBody = await posted.json();
+    if (posted.status !== 200 || !Array.isArray(postedBody.keys) || postedBody.keys.length !== 0) {
+      throw new Error(`plan: ${posted.status} ${JSON.stringify(postedBody)}`);
+    }
+    const started = await fetch(`${origin}/api/start`, { method: "POST", headers });
+    if (started.status !== 202) throw new Error("start was not accepted");
+    const asks = [];
+    const events = await readEvents(server.port, server.token, async (event) => {
+      asks.push(event.kind);
+      if (event.kind === "approve") {
+        const answer = await fetch(`${origin}/api/answer`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ kind: "approve", value: "approve" }),
+        });
+        if (answer.status !== 204) throw new Error(`approve ${answer.status}`);
+        return;
+      }
+      if (event.kind !== "backup") throw new Error(`unexpected ask ${event.kind}`);
+      const maybe = await fetch(`${origin}/api/answer`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ kind: "backup", value: "maybe" }),
+      });
+      const maybeBody = await maybe.json();
+      if (maybe.status !== 400 || maybeBody.errors?.[0] !== "Answer yes or no.") {
+        throw new Error(`maybe: ${maybe.status} ${JSON.stringify(maybeBody)}`);
+      }
+      const no = await fetch(`${origin}/api/answer`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ kind: "backup", value: "no" }),
+      });
+      if (no.status !== 204) throw new Error(`no ${no.status}`);
+    });
+    if (asks.join(",") !== "approve,backup") throw new Error(`asks ${asks.join(",")}`);
+    const done = events.find((event) => event.type === "done");
+    if (!done || done.code !== 0) throw new Error(`run did not finish ${done ? done.code : "none"}`);
+    const log = planned.env.DEVOS_GH_LOG;
+    const gh = existsSync(log) ? readFileSync(log, "utf8").trim() : "";
+    if (gh !== "") throw new Error(`gh log: ${gh}`);
+    const answers = JSON.parse(readFileSync(path.join(planned.project, "devos", "answers.json"), "utf8"));
+    if (answers.cycle !== "local") throw new Error(`cycle ${answers.cycle}`);
+  } finally {
+    if (server) await server.close();
+    cleanup(terminal.parent);
+    cleanup(planned.parent);
+  }
+}
+
+const workers = { l: workerL, n: workerN, m: workerM, o: workerO, p: workerP, q: workerQ, s: workerS, t: workerT, u: workerU, v: workerV, w: workerW, z: workerZ, ab: workerAb, ac: workerAc };
 const workerName = process.env.DEVOS_UI_WORKER;
 if (workers[workerName]) {
   workers[workerName]().then(() => process.exit(0)).catch((error) => {
@@ -1134,6 +1198,28 @@ if (workers[workerName]) {
       else process.env.STUB_REPO = saved.STUB_REPO;
       if (saved.DEVOS_GH_LOG === undefined) delete process.env.DEVOS_GH_LOG;
       else process.env.DEVOS_GH_LOG = saved.DEVOS_GH_LOG;
+      cleanup(staged.parent);
+    }
+  });
+
+  test("ui-server.test.mjs (ac) a local plan runs through the page: no keys, one backup ask, no gh call", { timeout: 180000 }, () => {
+    const result = runWorker("ac");
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+  });
+
+  test("ui-server.test.mjs (ad) state reports the GitHub doctor and the local doctor", async () => {
+    const staged = stage();
+    const server = await startUiServer({ folder: staged.project, port: 0 });
+    try {
+      const origin = `http://127.0.0.1:${server.port}`;
+      const response = await fetch(`${origin}/api/state`, { headers: { "X-DEVOS-Token": server.token } });
+      assert.equal(response.status, 200);
+      const body = await response.json();
+      assert.equal(typeof body.doctor.ok, "boolean");
+      assert.equal(typeof body.doctor.local, "boolean");
+      assert.equal(body.doctor.local, true);
+    } finally {
+      await server.close();
       cleanup(staged.parent);
     }
   });
