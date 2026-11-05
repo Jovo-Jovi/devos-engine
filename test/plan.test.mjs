@@ -68,7 +68,7 @@ test("plan.test.mjs (a) buildAnswers matches a terminal init", () => {
         languages: written.languages,
         visibility: written.visibility,
       },
-      { type: written.type, stack: written.stack, modules: written.modules, scope: written.scope },
+      { type: written.type, stack: written.stack, modules: written.modules, scope: written.scope, ambition: written.visual_ambition },
       written.blueprint_agent,
       [],
     );

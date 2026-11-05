@@ -1,5 +1,5 @@
 {
-  "$comment": "DEV_OS Engine catalogue (E18). Types, the stacks the method can run, each with its toolchain, its manifest file and the commands of its checks, modules with providers, and the documents worth preparing. A provider with method names the DEV_OS module or variable it turns on; its keys come from devos/setup.json. A provider with env lists the keys the app reads. Each stack's scaffold is the recipe of fence T01 (PR-49): the generator commands, the health route (empty: none), the logger, the test runner and the one architecture rule its test proves. A stack that serves a web interface has preview: the command that serves its production build for the runner's captures ({port} is replaced and PORT is set, PR-51).",
+  "$comment": "DEV_OS Engine catalogue (E18). Types, the stacks the method can run, each with its toolchain, its manifest file and the commands of its checks, modules with providers, and the documents worth preparing. A provider with method names the DEV_OS module or variable it turns on; its keys come from devos/setup.json. A provider with env lists the keys the app reads. Each stack's scaffold is the recipe of fence T01 (PR-49): the generator commands, the health route (empty: none), the logger, the test runner and the one architecture rule its test proves. A stack that serves a web interface has preview: the command that serves its production build for the runner's captures ({port} is replaced and PORT is set, PR-51). A type whose defaults include media also asks its visual ambition (E53a): one of ambitions. The media module's kinds are what its provider makes (E53a).",
   "version": 1,
   "types": [
     {
@@ -15,7 +15,8 @@
         "payments": "none",
         "email": "resend",
         "hosting": "vercel",
-        "observability": "structured-logs"
+        "observability": "structured-logs",
+        "media": "none"
       },
       "prepare": [
         "brief",
@@ -39,7 +40,8 @@
         "storage": "none",
         "auth": "email",
         "hosting": "vercel",
-        "observability": "structured-logs"
+        "observability": "structured-logs",
+        "media": "none"
       },
       "prepare": [
         "brief",
@@ -60,7 +62,8 @@
       "defaults": {
         "email": "none",
         "hosting": "vercel",
-        "observability": "none"
+        "observability": "none",
+        "media": "none"
       },
       "prepare": [
         "brief",
@@ -80,7 +83,8 @@
         "database": "supabase",
         "auth": "email",
         "hosting": "vercel",
-        "observability": "structured-logs"
+        "observability": "structured-logs",
+        "media": "none"
       },
       "prepare": [
         "brief",
@@ -105,7 +109,8 @@
         "email": "resend",
         "search": "none",
         "hosting": "vercel",
-        "observability": "structured-logs"
+        "observability": "structured-logs",
+        "media": "none"
       },
       "prepare": [
         "brief",
@@ -132,7 +137,8 @@
         "email": "resend",
         "search": "none",
         "hosting": "vercel",
-        "observability": "structured-logs"
+        "observability": "structured-logs",
+        "media": "none"
       },
       "prepare": [
         "brief",
@@ -175,7 +181,8 @@
         "database": "supabase",
         "auth": "email",
         "payments": "none",
-        "observability": "none"
+        "observability": "none",
+        "media": "none"
       },
       "prepare": [
         "brief",
@@ -199,7 +206,8 @@
         "auth": "email",
         "product-ai": "chat",
         "hosting": "vercel",
-        "observability": "structured-logs"
+        "observability": "structured-logs",
+        "media": "none"
       },
       "prepare": [
         "brief",
@@ -221,7 +229,8 @@
         "database": "supabase",
         "auth": "email",
         "hosting": "vercel",
-        "observability": "structured-logs"
+        "observability": "structured-logs",
+        "media": "none"
       },
       "prepare": [
         "brief",
@@ -241,7 +250,8 @@
       "defaults": {
         "search": "none",
         "hosting": "vercel",
-        "observability": "none"
+        "observability": "none",
+        "media": "none"
       },
       "prepare": [
         "brief",
@@ -303,7 +313,8 @@
       "stack": "vite-react",
       "ui": true,
       "defaults": {
-        "storage": "none"
+        "storage": "none",
+        "media": "none"
       },
       "prepare": [
         "brief",
@@ -330,7 +341,8 @@
         "search": "none",
         "product-ai": "none",
         "hosting": "vercel",
-        "observability": "structured-logs"
+        "observability": "structured-logs",
+        "media": "none"
       },
       "prepare": [
         "brief",
@@ -1407,6 +1419,53 @@
           ]
         }
       ]
+    },
+    {
+      "id": "media",
+      "label": "Generated media",
+      "consequence": "Images, video or voice made for the product by an AI provider, planned by the blueprint. Nothing is generated or paid for until generation is set up.",
+      "providers": [
+        {
+          "id": "none",
+          "label": "None"
+        },
+        {
+          "id": "xai",
+          "label": "xAI (Grok Imagine and text to speech)"
+        }
+      ],
+      "kinds": [
+        {
+          "id": "image",
+          "label": "Images"
+        },
+        {
+          "id": "video",
+          "label": "Video"
+        },
+        {
+          "id": "voice",
+          "label": "Voice"
+        }
+      ]
+    }
+  ],
+  "ambitions": [
+    {
+      "id": "calm",
+      "label": "Calm",
+      "line": "Content first: type, space and colour carry the product, and images appear only where they inform."
+    },
+    {
+      "id": "expressive",
+      "label": "Expressive",
+      "line": "A clear personality: imagery and motion wherever they serve the content.",
+      "default": true
+    },
+    {
+      "id": "showcase",
+      "label": "Showcase",
+      "line": "Made to impress: hero media, rich motion and depth, still fast and accessible."
     }
   ],
   "documents": [

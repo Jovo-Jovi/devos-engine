@@ -66,6 +66,8 @@ function localFlow(backup = "") {
     "email none",
     "",
     "",
+    "",
+    "",
     "Demo Shop",
     "A small shop.",
     "Customers",
