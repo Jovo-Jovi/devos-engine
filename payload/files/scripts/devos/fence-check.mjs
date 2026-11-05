@@ -81,6 +81,18 @@ function denied(entry, method) {
   return matchesAny(sample, deny);
 }
 
+function fixedEffort(id) {
+  try {
+    const pool = config().agents?.pool;
+    if (!Array.isArray(pool)) return null;
+    const item = pool.find((entry) => entry?.id === id);
+    if (!item || !item.effort) return null;
+    return { effort: item.effort, fast: item.fast === true ? "yes" : "no" };
+  } catch {
+    return null;
+  }
+}
+
 /** Findings for one fence's text. `file` names it (its task id comes from the name). */
 export function checkFence(text, file) {
   const findings = [];
@@ -96,6 +108,10 @@ export function checkFence(text, file) {
   else {
     if (!EFFORTS.includes(builder[2])) findings.push(`Effort \`${builder[2]}\` is not one of ${EFFORTS.join(", ")}`);
     if (!["yes", "no"].includes(builder[3])) findings.push(`Fast \`${builder[3]}\` is not yes or no`);
+    const fixed = fixedEffort(builder[1]);
+    if (fixed && (builder[2] !== fixed.effort || builder[3] !== fixed.fast)) {
+      findings.push(`builder \`${builder[1]}\` has a fixed effort in devos.config.json: the line must say \`Effort: ${fixed.effort} · Fast: ${fixed.fast}\` (PR-78)`);
+    }
   }
 
   if (!method) {

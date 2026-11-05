@@ -104,7 +104,7 @@ Work in this order.
    no Done-when asks for `README.md` to be absent. T01 is not a UI fence: it carries no `- Screens:` line.
    Every fence carries `- Layers: <layer> · <layer>` in its header: the layers of `devos/skills/INDEX.md` the task touches (`design`, `motion`, `frontend`, `accessibility`, `architecture`, `backend`, `api`, `database`, `security`, `reliability`, `testing`, `ops`); T01's are usually `ops · testing`. The runner gives the builder and the reviewer the skills of those layers, and a server-side or deep task always the security layer and a code task the testing layer (PR-55, PR-56, PR-57).
    Every fence also carries the builder line `- Builder: <an id of devos.config.json agents.pool> · Effort:
-   <low|medium|high|xhigh> · Fast: <yes|no>` (T01: `high`, `no`) and `- Paths: \`<glob>\` · …`: every file and
+   <low|medium|high|xhigh> · Fast: <yes|no>` (T01: `high`, `no`, or the builder's fixed `effort` and `fast` when `devos.config.json` gives it one, PR-78) and `- Paths: \`<glob>\` · …`: every file and
    folder the task may change, each in backticks (T01's are the scaffold's: `*` for the files at the root, and its
    folders such as `src/**`, `public/**` and the test folders). `guard:scope` fails a change outside them; the report,
    `docs/SESSION_CONTEXT.md`, `docs/DEVELOPMENT_JOURNAL.md` and a lockfile beside a listed manifest are always

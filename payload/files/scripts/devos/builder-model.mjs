@@ -15,6 +15,7 @@ const arg = (n, d = "") => { const i = process.argv.indexOf(`--${n}`); return i 
 const cfg = config();
 const b = cfg.builder;
 const EFFORTS = ["low", "medium", "high", "xhigh"];
+const NAMED_EFFORT = /-(low|medium|high|xhigh)(?:-fast)?$|-fast(?:-(low|medium|high|xhigh))?$/;
 const norm = (e) => {
   const v = String(e || "").toLowerCase().replace(/[\s_-]+/g, "");
   if (v === "extrahigh" || v === "xhigh") return "xhigh";
@@ -38,6 +39,17 @@ export function candidates(effort, fast) {
 }
 
 export function resolve({ task, effortIn = "fence", fastIn = "fence", modelsText = "" }) {
+  const family = process.env.DEVOS_BUILDER_FAMILY || "";
+  const named = NAMED_EFFORT.exec(family);
+  if (named) {
+    return {
+      model: family,
+      effort: named[1] || named[2] || b.default_effort || "high",
+      fast: named[0].includes("fast"),
+      source: "builder model",
+      note: `the pool's model ${family} names its own effort; the fence's Effort and Fast are not used`,
+    };
+  }
   const { rows } = parsePhases();
   const row = rows.find((r) => r.task === task);
   const fence = readFenceChoice(task);

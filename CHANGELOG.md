@@ -2,6 +2,11 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
+## 1.5.1 — Unreleased
+
+- **Effort you can choose.** The guided page asks the blueprint agent's effort (high by default; Claude Code and Codex) and each builder's: chosen by the reviewer for each task, or fixed for every task, with Fast for Cursor. A fixed effort is written in every fence, and `fence-check` refuses another (PR-78). A Cursor model id that names its effort runs as it is, and the runner reports that effort.
+- **Two small fixes.** A README with no final newline gets a blank line before `## How this project is built`, and two tests no longer share a name.
+
 ## 1.5.0 — 2026-11-04
 
 - **Local mode, step 1: a project set up on this computer.** `devos init --local` ends with the approved blueprint, a local SETUP.md and the first commit, with no gh needed. One question can add a private GitHub backup where only CI runs (`DEVOS_PAUSED` is set before the first push). `devos continue`, `devos verify` and the project's page know a local project. Each task is then built in your IDE from its fence and reviewed on its branch.
