@@ -2,6 +2,10 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
+## 1.8.0 — Unreleased
+
+- **`devos remove`** takes DEV_OS out of a project, in two runs. The first removes, on a new branch `devos/remove`, every file DEV_OS installed and still owns, with the engine lock and `devos.config.json`, opens a pull request and pauses the cycle (`--local`: one commit, nothing pushed). It keeps your documents, fences, reviews and `devos/answers.json`, the settings written for your project at setup, `docs/method/` (your fences and reviews cite it), `.gitignore` and `.gitattributes`, and lists every DEV_OS file you edited, which it keeps. After the merge, the second run lists what DEV_OS left on GitHub (its secrets, `DEVOS_*` variables, including the Control Tower link, and `devos:` labels) and deletes it only after you type yes. Your services' keys (hosting, database, storage) are asked apart, and a secret DEV_OS does not know is never touched. It also deletes the branch `devos/adopt` of an adoption that was never merged: on this computer after yes, and on GitHub after a typed yes.
+
 ## 1.7.0 — 2026-11-05
 
 - **Images you own (PR-82).** A project with screens takes your own images (a logo, product or team photos) at setup, apart from the design references: a second drop zone on the guided page, and one more question in `devos init`. They are kept as they are in `docs/design/own/`, and the media plan lists each one with the source `own`, with or without generated media (without it, the plan holds only these). The "Generated media" step and `devos media` place each one where the product serves it: a checked copy, free, with no key and at any budget. It is never generated, edited or cropped, and the builder never changes it.

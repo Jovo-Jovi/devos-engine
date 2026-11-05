@@ -11,6 +11,7 @@ import { installCommand } from "../lib/install.mjs";
 import { mediaCommand } from "../lib/media.mjs";
 import { modelsCommand } from "../lib/models.mjs";
 import { profileCommand } from "../lib/profile.mjs";
+import { removeCommand } from "../lib/remove.mjs";
 import { rosterCommand } from "../lib/roster.mjs";
 import { upgradeCommand } from "../lib/upgrade.mjs";
 import { uiCommand } from "../lib/ui-server.mjs";
@@ -48,6 +49,7 @@ devos agents show
 devos agents import <file>
 devos install [folder] --key <KEY>
 devos upgrade [--local]
+devos remove [folder] [--local]
 devos init [--local] [--continue] [folder]
 devos init --plan <file> [folder]
 devos init --help
@@ -79,6 +81,7 @@ else if (args[0] === "agents" && args[1] === "detect" && args.length === 2) code
 else if (args[0] === "agents") code = rosterCommand(args.slice(1));
 else if (args[0] === "install") code = installCommand(args.slice(1));
 else if (args[0] === "upgrade") code = upgradeCommand(args.slice(1));
+else if (args[0] === "remove") code = await removeCommand(args.slice(1));
 else if (args[0] === "init") code = await initCommand(args.slice(1));
 else if (args[0] === "ui") code = await uiCommand(args.slice(1));
 else if (args[0] === "continue") code = await continueCommand(path.resolve(args[1] ?? process.cwd()));
