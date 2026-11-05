@@ -2,7 +2,7 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
-## 1.8.0 — Unreleased
+## 1.8.0 — 2026-11-05
 
 - **`devos remove`** takes DEV_OS out of a project, in two runs. The first removes, on a new branch `devos/remove`, every file DEV_OS installed and still owns, with the engine lock and `devos.config.json`, opens a pull request and pauses the cycle (`--local`: one commit, nothing pushed). It keeps your documents, fences, reviews and `devos/answers.json`, the settings written for your project at setup, `docs/method/` (your fences and reviews cite it), `.gitignore` and `.gitattributes`, and lists every DEV_OS file you edited, which it keeps. After the merge, the second run lists what DEV_OS left on GitHub (its secrets, `DEVOS_*` variables, including the Control Tower link, and `devos:` labels) and deletes it only after you type yes. Your services' keys (hosting, database, storage) are asked apart, and a secret DEV_OS does not know is never touched. It also deletes the branch `devos/adopt` of an adoption that was never merged: on this computer after yes, and on GitHub after a typed yes.
 
