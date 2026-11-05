@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Generated media (PR-80): makes the items of docs/design/media.json (PR-79) that are still to make, within a budget.
-//   node scripts/devos/media.mjs [--budget <usd>] [--only <id,id>]
+//   node scripts/devos/media.mjs [--budget <usd>] [--only <id,id> | --fence docs/fences/Tnn.md]
+// With --fence, the items are the ones the fence's `- Media:` line names (PR-81); a fence with none makes nothing.
 // The budget is the authorization: --budget, else DEVOS_MEDIA_BUDGET, else 0. At 0 nothing is generated: each item
 // still to make is listed with its estimate. The key is DEVOS_MEDIA_<PROVIDER>_KEY in the environment, read here and
 // passed to the provider only, never printed or written. An item is made once: a generated item whose file exists and
@@ -12,6 +13,7 @@ import { createHash } from "node:crypto";
 import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { fenceMedia } from "./fence-check.mjs";
 import { keyName, provider as providerOf } from "./media-providers/index.mjs";
 import { makeRecord } from "./usage.mjs";
 
@@ -19,6 +21,7 @@ const HERE = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..")
 const PLAN = "docs/design/media.json";
 const ANSWERS = "devos/answers.json";
 const REPORT = ".devos/media-report.md";
+const CHANGED = ".devos/media-files.txt";
 const LEDGER = "docs/usage/media.jsonl";
 const RETRIES = 3;
 const RESUME_HOURS = 24;
@@ -75,10 +78,11 @@ function readJson(root, rel) {
   return JSON.parse(readFileSync(path.join(root, rel), "utf8"));
 }
 
-function writePlan(root, plan) {
+function writePlan(root, plan, changed) {
   const file = path.join(root, PLAN);
   writeFileSync(`${file}.part`, `${JSON.stringify(plan, null, 2)}\n`);
   renameSync(`${file}.part`, file);
+  changed?.add(PLAN);
 }
 
 /** Whether an item is made already: generated, its file present, and its request unchanged. */
@@ -104,8 +108,9 @@ export async function runMedia(options = {}) {
   const sleep = options.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
   const now = options.now ?? (() => Date.now());
   const lines = [];
+  const changed = new Set();
   const say = (line) => lines.push(line);
-  const stop = (line) => ({ code: 2, lines: [...lines, line], spent: 0, results: [] });
+  const stop = (line) => ({ code: 2, lines: [...lines, line], spent: 0, results: [], changed: [] });
 
   if (!existsSync(path.join(root, PLAN))) return stop(`media: no ${PLAN}; generated media is planned by the blueprint (PR-79)`);
   let plan;
@@ -127,7 +132,17 @@ export async function runMedia(options = {}) {
   const budget = Number(budgetText === "" ? "0" : budgetText);
   if (!Number.isFinite(budget) || budget < 0) return stop(`media: the budget must be a number of US dollars, 0 or more (got "${budgetText}")`);
 
-  const only = options.only ? String(options.only).split(",").map((id) => id.trim()).filter(Boolean) : null;
+  let only = options.only ? String(options.only).split(",").map((id) => id.trim()).filter(Boolean) : null;
+  if (options.fence) {
+    let named = null;
+    try {
+      named = fenceMedia(readFileSync(path.join(root, options.fence), "utf8"));
+    } catch (error) {
+      return stop(`media: ${options.fence}: ${error.message}`);
+    }
+    if (!named || named.length === 0) return { code: 0, lines: [`media: ${options.fence} names no media`], spent: 0, results: [], changed: [] };
+    only = named;
+  }
   if (only) {
     const unknown = only.filter((id) => !items.some((item) => item?.id === id));
     if (unknown.length > 0) return stop(`media: not in ${PLAN}: ${unknown.join(", ")}`);
@@ -150,7 +165,7 @@ export async function runMedia(options = {}) {
       say(unmakeable.has(item.id) ? `- ${item.id} (${item.kind}): cannot be made: ${unmakeable.get(item.id)}` : `- ${item.id} (${item.kind}): estimated ${usd(provider.estimate(item))}`);
     }
     if (todo.length > 0) say("media: the budget is $0, so nothing is generated; set a budget to make these items");
-    return { code: 0, lines, spent: 0, results: [] };
+    return { code: 0, lines, spent: 0, results: [], changed: [] };
   }
 
   const key = env[keyName(provider.id)];
@@ -177,7 +192,7 @@ export async function runMedia(options = {}) {
     const started = (requestId) => {
       item.request_id = requestId;
       item.requested_on = new Date(now()).toISOString();
-      writePlan(root, plan);
+      writePlan(root, plan, changed);
     };
     if (!resuming) {
       delete item.request_id;
@@ -190,6 +205,7 @@ export async function runMedia(options = {}) {
       mkdirSync(path.dirname(target), { recursive: true });
       writeFileSync(`${target}.part`, out.bytes);
       renameSync(`${target}.part`, target);
+      changed.add(item.file);
       spent += out.cost_usd - estimate;
       Object.assign(item, {
         status: "generated",
@@ -203,7 +219,7 @@ export async function runMedia(options = {}) {
       delete item.request_id;
       delete item.requested_on;
       delete item.last_error;
-      writePlan(root, plan);
+      writePlan(root, plan, changed);
       const record = makeRecord({
         stage: "media",
         tool: provider.id,
@@ -218,6 +234,7 @@ export async function runMedia(options = {}) {
       });
       mkdirSync(path.dirname(path.join(root, LEDGER)), { recursive: true });
       appendFileSync(path.join(root, LEDGER), `${JSON.stringify({ ...record, item: item.id })}\n`);
+      changed.add(LEDGER);
       results.push({ id: item.id, state: "made", cost_usd: out.cost_usd });
       say(`- ${item.id} (${item.kind}): made ${item.file} · ${usd(out.cost_usd)} (${out.cost_source})`);
     } catch (error) {
@@ -230,14 +247,14 @@ export async function runMedia(options = {}) {
       }
       spent -= estimate;
       item.last_error = scrub(error.message).slice(0, 240);
-      writePlan(root, plan);
+      writePlan(root, plan, changed);
       results.push({ id: item.id, state: "failed" });
       say(`- ${item.id} (${item.kind}): failed: ${item.last_error}`);
     }
   }
   const count = (state) => results.filter((result) => result.state === state).length;
   say(`media: ${count("made")} made, ${count("failed")} failed, ${count("over budget")} over budget, ${count("pending")} pending · spent ${usd(Math.max(spent, 0))} of ${usd(budget)}`);
-  return { code: count("failed") > 0 ? 1 : 0, lines: lines.map(scrub), spent: Math.max(spent, 0), results };
+  return { code: count("failed") > 0 ? 1 : 0, lines: lines.map(scrub), spent: Math.max(spent, 0), results, changed: [...changed].sort() };
 }
 
 function flag(name) {
@@ -246,12 +263,14 @@ function flag(name) {
 }
 
 async function main() {
-  const result = await runMedia({ budget: flag("budget"), only: flag("only") });
+  const result = await runMedia({ budget: flag("budget"), only: flag("only"), fence: flag("fence") });
   const text = `${result.lines.join("\n")}\n`;
   process.stdout.write(text);
   try {
     mkdirSync(path.join(HERE, ".devos"), { recursive: true });
     writeFileSync(path.join(HERE, REPORT), `# Generated media\n\n${text}`);
+    // The files this run changed, for the runner's commit (git add --pathspec-from-file).
+    writeFileSync(path.join(HERE, CHANGED), result.changed.length > 0 ? `${result.changed.join("\n")}\n` : "");
     if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, `\n### Generated media\n\n${text}`);
   } catch {
     /* the report is evidence, never a gate */

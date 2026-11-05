@@ -14,7 +14,7 @@
 // Environment: SECRETS_JSON, VARS_JSON (from the workflow). Missing ones are treated as empty.
 import { existsSync, mkdirSync, readFileSync, writeFileSync, appendFileSync } from "node:fs";
 import { P, parsePhases, isMethodRow, emit, config } from "./lib.mjs";
-import { plannedModules, activeModules, chosenModules } from "./modules.mjs";
+import { plannedModules, activeModules, chosenModules, mediaProvider } from "./modules.mjs";
 
 const mode = process.argv.includes("--for") ? process.argv[process.argv.indexOf("--for") + 1] : "all";
 const forDeploy = mode === "deploy";
@@ -44,6 +44,8 @@ const holds = (cond) => {
     const chosen = chosenModules();
     return chosen === null || chosen.has(cond.slice(7));
   }
+  // PR-81: the provider of generated media the developer chose at setup.
+  if (cond.startsWith("media:")) return mediaProvider() === cond.slice(6);
   return false;
 };
 const needed = items.filter((i) => (i.when ?? ["always"]).every(holds));

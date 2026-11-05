@@ -336,6 +336,23 @@ jobs:
         timeout-minutes: 15
         run: node scripts/devos/modules.mjs start --task "$TASK"
 
+      # PR-81: the media the fence's `- Media:` line names, made before the builder within DEVOS_MEDIA_BUDGET (unset: 0,
+      # an estimate only). Only this step holds the media key; no agent runs here. The runner commits what it made, and
+      # the builder's push takes the commit with it. A failure never stops the task: the screens keep their fallbacks.
+      - name: Generated media (PR-81)
+        if: env.REVIEW_ONLY != 'true'
+        continue-on-error: true
+        timeout-minutes: 20
+        env:
+          DEVOS_MEDIA_XAI_KEY: ${{ secrets.DEVOS_MEDIA_XAI_KEY }}
+          DEVOS_MEDIA_BUDGET: ${{ vars.DEVOS_MEDIA_BUDGET }}
+        run: |
+          node scripts/devos/media.mjs --fence "docs/fences/$TASK.md" || echo "media: not every item was made; their screens keep their fallbacks (.devos/media-report.md)"
+          if [ -s .devos/media-files.txt ]; then
+            git add --pathspec-from-file=.devos/media-files.txt
+            git commit -m "$TASK a$ATTEMPT: media" || true
+          fi
+
       # PR-61: events are only noted here, in .devos/journal.jsonl. The report job sends them: this job, where
       # the agents run, never holds the OIDC permission.
       - name: devos-report build started

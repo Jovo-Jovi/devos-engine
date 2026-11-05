@@ -41,6 +41,22 @@ export function fencePaths(text) {
   return line ? backticked(line[1]) : null;
 }
 
+/** The ids on the fence's `- Media:` line (PR-81), or null when it has none. */
+export function fenceMedia(text) {
+  const line = /^- Media:[ \t]*(.*)$/m.exec(headOf(text));
+  return line ? backticked(line[1]) : null;
+}
+
+/** The items of docs/design/media.json (PR-79), or null when there is no readable plan. */
+export function mediaItems() {
+  try {
+    const items = JSON.parse(readFileSync(P("docs/design/media.json"), "utf8")).items;
+    return Array.isArray(items) ? items.filter((item) => item && typeof item === "object") : null;
+  } catch {
+    return null;
+  }
+}
+
 /** True when `file` is one the fence lets the task change: its Paths, the always-allowed files, a lockfile beside an allowed manifest. */
 export function inScope(file, paths, task) {
   if (matchesAny(file, paths) || ALWAYS_ALLOWED(task).includes(file)) return true;
@@ -134,6 +150,15 @@ export function checkFence(text, file) {
       else if (globToRegExp(entry).test("any/file.txt") && globToRegExp(entry).test("x")) findings.push(`path \`${entry}\` allows every file`);
       else if (denied(entry, method)) findings.push(`path \`${entry}\` is one the builder may never change (devos.config.json surfaces)`);
     }
+  }
+
+  // PR-81: the media a task's screens show, made before its builder.
+  const media = fenceMedia(text);
+  if (media !== null) {
+    const items = mediaItems();
+    if (media.length === 0) findings.push("the `- Media:` line names no item");
+    else if (items === null) findings.push("a `- Media:` line needs docs/design/media.json, the media plan (PR-79)");
+    else for (const id of media) if (!items.some((item) => item.id === id)) findings.push(`media item \`${id}\` is not in docs/design/media.json`);
   }
 
   if (!hasPart(text, "Done when")) findings.push("no Done when section");

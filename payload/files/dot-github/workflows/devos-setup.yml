@@ -68,6 +68,7 @@ jobs:
               "VERCEL_ORG_ID":"${{ secrets.VERCEL_ORG_ID != '' && '1' || '' }}",
               "VERCEL_PROJECT_ID":"${{ secrets.VERCEL_PROJECT_ID != '' && '1' || '' }}",
               "VERCEL_AUTOMATION_BYPASS_SECRET":"${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET != '' && '1' || '' }}",
+              "DEVOS_MEDIA_XAI_KEY":"${{ secrets.DEVOS_MEDIA_XAI_KEY != '' && '1' || '' }}",
               "SUPABASE_ACCESS_TOKEN":"${{ secrets.SUPABASE_ACCESS_TOKEN != '' && '1' || '' }}",
               "SUPABASE_PROJECT_REF":"${{ secrets.SUPABASE_PROJECT_REF != '' && '1' || '' }}",
               "SUPABASE_DB_PASSWORD":"${{ secrets.SUPABASE_DB_PASSWORD != '' && '1' || '' }}",

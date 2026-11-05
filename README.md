@@ -137,6 +137,7 @@ flowchart LR
 | **Automated only:** the GitHub CLI, signed in with the `repo` and `workflow` scopes | creates the repository, sets secrets and variables | `gh auth status` |
 | **Automated only:** a key for each tool that runs on GitHub | the reviewer and builders run on GitHub Actions | see below |
 | Optional: a Vercel account | deploys | `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`, which you can set later |
+| Optional: an xAI API key | generated media | `DEVOS_MEDIA_XAI_KEY`, used only when `DEVOS_MEDIA_BUDGET` is above 0 |
 
 | Tool | Key on GitHub | Where to get it |
 |---|---|---|
@@ -274,7 +275,7 @@ commas, or a name; Enter takes the default.
 | Product AI | Chat, tools and agents, retrieval |
 | Hosting | Vercel |
 | Observability | Structured logs, Sentry |
-| Generated media | xAI (Grok Imagine and text to speech): images, video or voice. The blueprint plans each item in `docs/design/media.json`; `devos media` makes them within a budget you set (0 by default) |
+| Generated media | xAI (Grok Imagine and text to speech): images, video or voice. The blueprint plans each item in `docs/design/media.json`; the cycle (or `devos media`) makes them within a budget you set (0 by default) |
 
 Each menu starts on the type's usual choice. A migration always waits for your merge. A product with screens also
 chooses its **visual ambition**: Calm (content first), Expressive (imagery and motion where they serve, the default) or
@@ -389,6 +390,7 @@ change applies from the next run. The project's `docs/method/AUTOMATION.md` list
 | `DEVOS_SCREENS_RETENTION_DAYS` | `3` | How many days GitHub keeps a cycle run's screenshots. |
 | `DEVOS_REPORTING` | not set (off) | `on` links the project to the Control Tower: your answer at setup. |
 | `DEVOS_STATE` | `on` | With the link on, the project's state is sent twice a day; `off` stops it. |
+| `DEVOS_MEDIA_BUDGET` | not set (0) | The most one cycle run may spend making the media its fence names. 0 only estimates. |
 | `DEVOS_VERCEL`, `DEVOS_SUPABASE`, `DEVOS_R2`, `DEVOS_FIREBASE` | not set | `true` turns on the deploy and that module's steps. Setup sets the ones you chose. |
 | `DEVOS_PREVIEW_DB` | not set | `true`: with the database module, each preview gets its own database. |
 
@@ -481,7 +483,6 @@ change applies from the next run. The project's `docs/method/AUTOMATION.md` list
 
 | Next | What it adds |
 |---|---|
-| Generated media in the cycle | A runner step makes a task's planned media before its builder, within the budget you set. |
 | Media inside products | Image, voice and video features for a product's own users, as Product AI providers. |
 | Local commands | `devos next` and `devos review` for IDE builds, then an automatic local runner, `devos run`. |
 | From local to GitHub | `devos cycle github` moves a local project onto the automated cycle. |
