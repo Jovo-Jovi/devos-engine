@@ -101,7 +101,7 @@ Work in this order.
    only through its public entry (`guard:imports`, PR-58); the task that first builds a module creates its folder
    and its public entry. Fill `.cursor/rules/10-security-data.mdc` and
    `.cursor/rules/30-vocabulary.mdc`. Write `.cursor/mcp.example.json` and `devos/ci/mcp.ci.json` from step 3, and
-   `CLAUDE.md` from the handbook's §15.1 template. Write the `devos:boundary` line in `docs/BOUNDARY_MODEL.md`
+   `CLAUDE.md` from the handbook's §15.1 template (not in a local project: it is handed over, PR-83). Write the `devos:boundary` line in `docs/BOUNDARY_MODEL.md`
    (PR-19). With the backend module, plan T01 or the first J4 task to create `supabase/`.
 6. **Issue fence T01** as `docs/fences/T01.md` in the format of handbook §6.3, and rehearse every path it names.
    T01 is always the scaffold, from `devos.config.json` `stack.scaffold`, and builds no feature: run its `create`
@@ -114,6 +114,10 @@ Work in this order.
    is `node scripts/devos/run-checks.mjs --strict` exiting 0. T01 keeps the root `README.md` (PR-77): the
    generator's own README is never copied, T01 only fills `## Getting started` with the commands it makes work, and
    no Done-when asks for `README.md` to be absent. T01 is not a UI fence: it carries no `- Screens:` line.
+   In a local project (`devos/answers.json` `cycle` is `local`), DEV_OS hands the project over once the developer
+   approves (PR-83): its scripts, guards, workflows and agent settings leave and `docs/method/` stays. So no fence
+   there names `scripts/devos/`, a guard or a `devos` command: T01's Done-when is each of `devos.config.json`
+   `stack.commands` exiting 0, and the developer ticks `docs/PHASES.md`.
    Every fence carries `- Layers: <layer> · <layer>` in its header: the layers of `devos/skills/INDEX.md` the task touches (`design`, `motion`, `frontend`, `accessibility`, `architecture`, `backend`, `api`, `database`, `security`, `reliability`, `testing`, `ops`); T01's are usually `ops · testing`. The runner gives the builder and the reviewer the skills of those layers, and a server-side or deep task always the security layer and a code task the testing layer (PR-55, PR-56, PR-57).
    Every fence also carries the builder line `- Builder: <an id of devos.config.json agents.pool> · Effort:
    <low|medium|high|xhigh> · Fast: <yes|no>` (T01: `high`, `no`, or the builder's fixed `effort` and `fast` when `devos.config.json` gives it one, PR-78) and `- Paths: \`<glob>\` · …`: every file and

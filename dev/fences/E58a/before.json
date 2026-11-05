@@ -1,0 +1,23 @@
+{
+  "CHANGELOG.md": "e83db56f2163a9e03dc9ebb9d5a57eadf5dfbf2750d90c0b95e6e115b3936b6a",
+  "README.md": "8a3985177c70b8d31ffaad1f32e7e1fbd127c7cc428f7645e78e2abca3bf3f68",
+  "lib/continue.mjs": "0fe2d0929b37fbfdd61e83f74b81d21ea2ddd60088821930de2072aba81a960b",
+  "lib/init.mjs": "f876d1317684dec26246ca36b4ead020d8c26852d696839b63a5e121e984756e",
+  "lib/setup.mjs": "112d2b610cc6b34ec1bd8af53c0409b54dc0c7af742c8c836660c787ce20aac0",
+  "lib/ui/app.js": "abea9b8f5f2073d81c7c06f611756719b84075228faeea33e1d63f008add34b7",
+  "lib/verify.mjs": "fe307d634ff3fe0580b80f30397494a324ce8329a4abb129cc81011a7145cc68",
+  "package.json": "9fed5ee8ef7f1e078c2df3fe592cf955c757639152d68dfb0675c2c8d22d22c9",
+  "payload/files/devos/prompts/blueprint.md": "90ac8a51cbc224cd6c64be534fad2cca585653ab72199cad68a1078e5631d757",
+  "payload/files/docs/method/PRECEDENTS.md": "bc8e980cc6bfbe422ae4175a37370fd22ed0e890682b686eafecda113daa1bef",
+  "payload/manifest.json": "a0c79bb5fe0ff68ca0e2a92dee9c954a82b95a1c26de0d3f364940521763dcdb",
+  "test/adopt-files.test.mjs": "3bdd87be5c5be904c4152e6ad7dc383efb79e7d63aab21e60257b8df0cb2de67",
+  "test/adopt-install.test.mjs": "bf1862c4f151e6700d0743f5ec33e796dd51e96f915f71d0af1d8b3448f060c2",
+  "test/cli-help.test.mjs": "b7c6bc11abb3e908ff53bf137ea882aa8793d1a23f847a32c5faa7d97efe5ffc",
+  "test/install.test.mjs": "656e80e94822ff8d1d952abd760c759aa1499761711e36b48d59dba7e9fe8b71",
+  "test/local-mode.test.mjs": "1b3fedfcd4665015cb3971f65fb454117b04fa144b2198fb42945acdcef4ead1",
+  "test/own-images.test.mjs": "94b8b427dc9b697424ad719977141380bd0fcd055c392bd92c7aae799a3d44f0",
+  "test/readme.test.mjs": "b9f2d5667109c24ee660617d117f5a08d42aed5b13527a259caec6ec42366424",
+  "test/remove.test.mjs": "65ac7a873c8d305e5d2ba528f24be2153f1faa29ec79182c0adc00588982141f",
+  "test/upgrade.test.mjs": "25620eb376ede6ed9225626da4aeed6919e89b83739cc2564145fceb0af3cb2e",
+  "test/version.test.mjs": "e6e3ac05cd09f221bb97dc6f237e9c53f5622650bb25e587baba4b30b5f9f12a"
+}

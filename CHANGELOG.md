@@ -2,6 +2,10 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
+## 1.9.0 — Unreleased
+
+- **Local development is a handover (PR-83).** `devos init --local` (and the guided page's "Local development") writes the plan with you, then hands the project over: once you approve the blueprint, DEV_OS's scripts, guards, workflows, agent settings and engine lock leave the folder before the first commit. The plan in `docs/` (with `docs/method/`, which the fences cite), `README.md`, `SETUP.md` and `devos/answers.json` stay, and you build the rest your own way, ticking each task in `docs/PHASES.md`. A local project's fences name only the stack's own commands. No agent tool needs to be signed in, and the optional GitHub backup is a plain private repository where nothing runs. `devos continue` and `devos verify` know a handed-over project, and `devos adopt` brings DEV_OS back later.
+
 ## 1.8.0 — 2026-11-05
 
 - **`devos remove`** takes DEV_OS out of a project, in two runs. The first removes, on a new branch `devos/remove`, every file DEV_OS installed and still owns, with the engine lock and `devos.config.json`, opens a pull request and pauses the cycle (`--local`: one commit, nothing pushed). It keeps your documents, fences, reviews and `devos/answers.json`, the settings written for your project at setup, `docs/method/` (your fences and reviews cite it), `.gitignore` and `.gitattributes`, and lists every DEV_OS file you edited, which it keeps. After the merge, the second run lists what DEV_OS left on GitHub (its secrets, `DEVOS_*` variables, including the Control Tower link, and `devos:` labels) and deletes it only after you type yes. Your services' keys (hosting, database, storage) are asked apart, and a secret DEV_OS does not know is never touched. It also deletes the branch `devos/adopt` of an adoption that was never merged: on this computer after yes, and on GitHub after a typed yes.

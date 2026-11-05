@@ -33,7 +33,7 @@ test("readme.test.mjs (a) setup keeps the blueprint's README and adds how the pr
     writeFileSync(readme, blueprint);
     writeProjectReadme(dir, { ...answers, cycle: "local" });
     const local = readFileSync(readme, "utf8");
-    assert.equal(local.includes("DEV_OS builds this project on this computer"), true);
+    assert.equal(local.includes("DEV_OS planned this project with its method and handed it over"), true);
     assert.equal(local.split("## How this project is built").length, 2);
   } finally {
     rmSync(dir, { recursive: true, force: true });

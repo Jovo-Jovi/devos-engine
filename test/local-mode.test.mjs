@@ -29,7 +29,7 @@ function ghText(staged) {
 }
 
 function doneLine(folder) {
-  return `devos init: ${folder} is set up on this computer; build T01 in your IDE from docs/fences/T01.md on the branch task/T01`;
+  return `devos init: ${folder} is handed over; build T01 your own way from docs/fences/T01.md, and tick each task in docs/PHASES.md when it is built`;
 }
 
 function quoted(folder) {
@@ -118,7 +118,7 @@ function localPlan() {
   return plan;
 }
 
-test("local-mode.test.mjs (a) devos init --local ends with a local project and never calls gh", () => {
+test("local-mode.test.mjs (a) devos init --local ends with a handed-over project and never calls gh", () => {
   const staged = stage({ tools: ["agent"] });
   try {
     const result = initLocal(staged, localFlow());
@@ -131,9 +131,12 @@ test("local-mode.test.mjs (a) devos init --local ends with a local project and n
     assert.equal(answers.cycle, "local");
     assert.equal(answers.registry_link, false);
     const readme = readFileSync(path.join(staged.project, "README.md"), "utf8");
-    assert.equal(readme.includes("DEV_OS builds this project on this computer, one task at a time, with the agents and models chosen at `devos init`:"), true, readme);
+    assert.equal(readme.includes("DEV_OS planned this project with its method and handed it over: you build it your own way."), true, readme);
     const setup = readFileSync(path.join(staged.project, "SETUP.md"), "utf8");
     assert.equal(setup.includes("## 3. Add a GitHub backup later"), true, setup);
+    assert.equal(setup.includes("DEVOS_PAUSED"), false, setup);
+    assert.equal(typeof answers.handover?.engine, "string");
+    assert.equal(existsSync(path.join(staged.project, "devos", "engine.lock.json")), false);
     assert.equal(ghText(staged).trim(), "");
   } finally {
     cleanup(staged.parent);
@@ -221,10 +224,10 @@ test("local-mode.test.mjs (d) verify and continue know a local project", () => {
       return { status: 1, stdout: "" };
     });
     process.env.PATH = saved;
-    assert.deepEqual(state.steps.map((step) => step.name), ["answers", "engine files", "blueprint approved", "local commit", "local tools"]);
+    assert.deepEqual(state.steps.map((step) => step.name), ["answers", "engine files", "blueprint approved", "handed over", "local commit"]);
     assert.equal(state.slug, "");
     assert.equal(calls.some((line) => line.startsWith("gh")), false, calls.join("\n"));
-    assert.equal(resumePoint(staged.project).step, "the local commit");
+    assert.equal(resumePoint(staged.project).step, "the handover and the local commit");
 
     const open = projectRows(staged.project, {
       slug: "",
@@ -232,20 +235,20 @@ test("local-mode.test.mjs (d) verify and continue know a local project", () => {
         { ok: true, name: "answers", who: "devos" },
         { ok: true, name: "engine files", who: "devos" },
         { ok: true, name: "blueprint approved", who: "you" },
-        { ok: true, name: "local commit", who: "devos" },
-        { ok: false, name: "local tools", who: "you" },
+        { ok: false, name: "handed over", who: "devos" },
+        { ok: false, name: "local commit", who: "devos" },
       ],
     });
-    const missing = open.find((row) => row.label === "local tools");
+    const missing = open.find((row) => row.label === "handed over");
     assert.equal(missing.state, "block");
-    assert.equal(missing.detail, "an agent tool is missing or not signed in");
-    assert.equal(missing.fix, `Sign in to each agent tool (devos agents detect lists them), then run devos continue ${quoted(staged.project)}`);
-    assert.equal(missing.who, "you");
+    assert.equal(missing.detail, "DEV_OS's automation is still in the project");
+    assert.equal(missing.fix, `devos continue ${quoted(staged.project)}`);
+    assert.equal(missing.who, "devos");
     const done = projectRows(staged.project, {
       slug: "",
-      steps: [{ ok: true, name: "local tools", who: "you" }],
+      steps: [{ ok: true, name: "handed over", who: "devos" }],
     });
-    assert.equal(done[0].detail, "every agent tool is signed in");
+    assert.equal(done[0].detail, "the plan is yours; DEV_OS's automation is gone");
 
     const env = { ...staged.env, PATH: `${path.join(staged.parent, "bin")}${path.delimiter}${nodeBin}${path.delimiter}${gitBin}` };
     const first = spawnSync(process.execPath, [bin, "continue", staged.project], {
@@ -258,7 +261,9 @@ test("local-mode.test.mjs (d) verify and continue know a local project", () => {
     assert.equal(first.status, 0, `${first.stdout}\n${first.stderr}`);
     assert.equal(git(["log", "-1", "--format=%s"], staged.project).stdout.trim(), "DEV_OS bootstrap: Demo Shop");
     assert.equal(ghText(staged).trim(), "");
-    assert.equal(resumePoint(staged.project).step, "build the next task in your IDE from its fence");
+    assert.equal(resumePoint(staged.project).step, "build the next task your own way from its fence");
+    assert.deepEqual(projectSteps(staged.project).steps.map((step) => step.ok), [true, true, true, true, true]);
+    assert.equal(existsSync(path.join(staged.project, "devos.config.json")), false);
 
     const second = spawnSync(process.execPath, [bin, "continue", staged.project], {
       encoding: "utf8",
@@ -268,7 +273,7 @@ test("local-mode.test.mjs (d) verify and continue know a local project", () => {
       env,
     });
     assert.equal(second.status, 0, `${second.stdout}\n${second.stderr}`);
-    assert.equal(second.stdout.split(/\r?\n/).includes("devos: everything is done — build each task in your IDE from its fence in docs/fences/"), true, second.stdout);
+    assert.equal(second.stdout.split(/\r?\n/).includes("devos: everything is done — build each task your own way from its fence in docs/fences/, and tick it in docs/PHASES.md"), true, second.stdout);
     assert.equal(ghText(staged).trim(), "");
   } finally {
     process.env.PATH = saved;
@@ -276,21 +281,20 @@ test("local-mode.test.mjs (d) verify and continue know a local project", () => {
   }
 });
 
-test("local-mode.test.mjs (e) yes to the GitHub backup creates a private repository, pauses DEV_OS there before the push, and pushes", () => {
+test("local-mode.test.mjs (e) yes to the GitHub backup creates a plain private repository and pushes", () => {
   const staged = stage({ tools: ["agent"] });
   try {
     const result = initLocal(staged, localFlow("yes"));
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
     const out = result.stdout.trim().split(/\r?\n/);
-    const backup = "devos init: backup on GitHub: devtest/demo-shop (only ci.yml runs there; DEVOS_PAUSED is true)";
+    const backup = "devos init: backup on GitHub: devtest/demo-shop (a private repository; nothing runs there)";
     const done = doneLine(path.resolve(staged.project));
     assert.equal(out.at(-1), done, result.stdout);
     assert.equal(out.indexOf(backup) >= 0 && out.indexOf(backup) < out.indexOf(done), true, result.stdout);
     const lines = ghText(staged).split(/\r?\n/).filter(Boolean);
     const createAt = lines.indexOf("repo create devtest/demo-shop --private --source . --remote origin");
-    const pausedAt = lines.indexOf("variable set DEVOS_PAUSED --body true --repo devtest/demo-shop");
-    assert.equal(createAt >= 0 && pausedAt > createAt, true, lines.join("\n"));
-    assert.equal(lines.filter((line) => line.startsWith("variable set")).length, 1, lines.join("\n"));
+    assert.equal(createAt >= 0, true, lines.join("\n"));
+    assert.equal(lines.some((line) => line.startsWith("variable set")), false, lines.join("\n"));
     assert.equal(lines.some((line) => line.startsWith("secret set")), false, lines.join("\n"));
     assert.equal(lines.some((line) => line.startsWith("workflow run")), false, lines.join("\n"));
     const remote = path.join(staged.parent, "remote.git");
@@ -354,7 +358,7 @@ test("local-mode.test.mjs (g) a project that already has an origin is not asked 
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
     const lines = result.stdout.split(/\r?\n/);
     const originAt = lines.indexOf("devos init: this project already has a remote named origin, so the backup question is not asked");
-    const readyAt = lines.indexOf(`devos init: ${path.resolve(staged.project)} is set up on this computer; build T01 in your IDE from docs/fences/T01.md on the branch task/T01`);
+    const readyAt = lines.indexOf(doneLine(path.resolve(staged.project)));
     assert.equal(originAt >= 0 && readyAt > originAt, true, result.stdout);
     assert.equal(result.stdout.includes("Also create a private GitHub repository as a backup?"), false, result.stdout);
     assert.equal(result.stdout.includes(remote), false, result.stdout);

@@ -39,7 +39,7 @@ DEV_OS sets a project up from an empty folder and runs it as small, reviewed tas
 writes the blueprint: the brief, the scope, the design system, the phases and the first task. You approve it. Each
 task is then built from a written fence, checked, reviewed, and merged by you.
 
-Version `1.8.0`. The engine is under PolyForm Shield 1.0.0 and the files it installs into your project under MIT
+Version `1.9.0`. The engine is under PolyForm Shield 1.0.0 and the files it installs into your project under MIT
 (see [Licence](#licence)).
 
 ## Contents
@@ -74,12 +74,12 @@ setup asks for, in order, with a worksheet.
 
 |  | Automated development (GitHub) | Local development (this computer) |
 |---|---|---|
-| **Builds each task** | The builder agent, on GitHub Actions | You, in your IDE, from the task's fence (Cursor rules are installed) |
-| **Reviews each task** | The reviewer agent, on GitHub Actions | Your reviewer, on the task branch you push (`docs/method/DEV_OS_V2_REVIEWER.md`) |
+| **Builds each task** | The builder agent, on GitHub Actions | You, your own way, from the plan and the first task's fence: DEV_OS hands the project over after the blueprint |
+| **Reviews each task** | The reviewer agent, on GitHub Actions | You; `devos adopt` brings DEV_OS's agents back later, from the first task left open |
 | **Merges** | You, at the gates | You |
 | **Needs** | Node.js 22, git, the GitHub CLI signed in, a key for each agent tool | Node.js 22 and git |
-| **Setup ends with** | The repository on GitHub, keys as secrets, the first cycle started | The approved blueprint, `README.md`, `SETUP.md` and the first commit |
-| **GitHub** | Required | Optional: a private backup where only `ci.yml` runs (`DEVOS_PAUSED` is `true`) |
+| **Setup ends with** | The repository on GitHub, keys as secrets, the first cycle started | The approved blueprint, `README.md`, `SETUP.md` and the first commit, without DEV_OS's scripts, guards, workflows or agent settings (`docs/method/` stays) |
+| **GitHub** | Required | Optional: a private backup that holds the project; nothing runs there |
 | **Start** | `devos init <folder>` | `devos init --local <folder>` |
 | **Check this computer** | `devos doctor` | `devos doctor --local` |
 
