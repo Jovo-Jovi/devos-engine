@@ -1,0 +1,17 @@
+{
+  "CHANGELOG.md": "d4b4ba172b9908b3b0d9f5aa867486d6ecf747aab4ed1544cf26aa87377b1d55",
+  "README.md": "5c2da19896504dfd35d67138205cbacbaeb6e809e411cd5e1c7001c8516c6f9f",
+  "lib/catalogue.mjs": "03a6966d3838ad0d207ff2f7fe3c4ffa61b434e2fdfd0c9124dd929ced926830",
+  "lib/data/catalogue.json": "3956ce01d946edeb601322d7ccc9eedc0ad99e58f021080fae19825127189792",
+  "lib/init.mjs": "2ae4f8a432850e6fe462d4a0adf4f8de209aa9c2645c6c73dfeaf0437ed1149e",
+  "lib/plan.mjs": "0e9fbc12123ec71ab4348aa3d91165dbde84b5084ed8cdc2f02a1c8bfee71b5d",
+  "lib/ui-server.mjs": "f774f2d46cd8ea84df9d904bdb9d1a340215d2c4a0dc73798bc339e3da3558e0",
+  "lib/ui/app.css": "b0cf18484e8a4f1d5f3c95ee6f394cc089e9c7d191472710615cafab4a59def9",
+  "lib/ui/app.js": "56b84cd33a4603021a9792b69bbaefcc55f12fefa29749b5c6f333d011758a8f",
+  "test/catalogue.test.mjs": "d398ed25fbe2a5728df68b998c8f3f1b30a47edfcc4a97ac20d3ff2026fda8f8",
+  "test/harness.mjs": "b73ad607a7f048d731a8368cc9e631c3ce9e85ed4b0cf3452477c69432493937",
+  "test/init.test.mjs": "c76c15b6bdb4cb8649c15aee71fb805fa8fe19fb84ae15fd1b4cc8c61f17a536",
+  "test/local-mode.test.mjs": "adf122ff3d60af4ee30fc7167c8fff129dea895509a2cc4ce77fa222a7f96617",
+  "test/plan.test.mjs": "ed33a6d97d0915ee531d7d153e754947882cf715e2a19b1efbc5a14c154b4401",
+  "test/setup.test.mjs": "b1bf67ffe522ac2003c2c93f3c3175eb6afa89d1ea36959f753a64cc440ac3ec"
+}
