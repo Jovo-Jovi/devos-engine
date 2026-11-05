@@ -317,7 +317,6 @@ if (process.env.DEVOS_OWN_WORKER === "page") {
 
   test("own-images.test.mjs (g) the method says so (PR-82), and the engine's own files ignore PowerShell's cache and allow secret names to gitleaks", () => {
     const has = (rel, needle) => assert.equal(readFileSync(path.join(root, rel), "utf8").includes(needle), true, `${rel}: ${needle}`);
-    has("payload/files/docs/method/PRECEDENTS.md", "**Live maximum: PR-82.**");
     has("payload/files/docs/method/PRECEDENTS.md", "| PR-82 | **Images the developer owns are shown as they are.**");
     has("payload/files/docs/method/DESIGN_METHOD.md", "**Images you own** (PR-82) are the developer's own");
     has("payload/files/docs/method/AUTOMATION.md", "An image the developer owns (source `own`, PR-82) is placed first");

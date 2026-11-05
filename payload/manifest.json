@@ -1,5 +1,5 @@
 {
-  "engine_version": "1.8.0",
+  "engine_version": "1.9.0",
   "source": {
     "repo": "Jovo-Jovi/devos-control-tower",
     "commit": "a49ca6db268b98d6558077bf3e95b8ae759d91b3"
@@ -272,7 +272,7 @@
     {
       "path": "devos/prompts/blueprint.md",
       "stored": "devos/prompts/blueprint.md",
-      "sha256": "90ac8a51cbc224cd6c64be534fad2cca585653ab72199cad68a1078e5631d757",
+      "sha256": "a6c55e84fdce0155e0a013bc5a3d4a40b3e131d0c6fd5f2bb3b17dd362f4b594",
       "owner": "engine"
     },
     {
@@ -1496,7 +1496,7 @@
     {
       "path": "docs/method/PRECEDENTS.md",
       "stored": "docs/method/PRECEDENTS.md",
-      "sha256": "bc8e980cc6bfbe422ae4175a37370fd22ed0e890682b686eafecda113daa1bef",
+      "sha256": "afdb21bf1233689b9fb55ab3b8b268afc2f626333f79bc14766f4fbc22f399f4",
       "owner": "engine"
     },
     {
