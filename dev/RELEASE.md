@@ -21,8 +21,10 @@ never into this one.
    - `SECURITY.md`;
    - D-E11 is confirmed;
    - no secret in a shipped file.
-3. **The history.** `gitleaks git --redact --no-banner .` (gitleaks 8.24 or newer) over the whole history.
-   - Only secret *names* may appear, never values (on 2026-10-26: 11 hits, every one a name in a workflow or setup file).
+3. **The history.** `gitleaks git --redact --no-banner .` (gitleaks 8.24 or newer) over the whole history prints
+   `no leaks found`.
+   - `.gitleaks.toml` allows two things that are never credentials: the content hashes in a fence's `before.json`,
+     and the *names* of secrets (`ANTHROPIC_API_KEY_2`, `secrets.CURSOR_API_KEY`). A value is still reported.
    - A real secret is revoked at its provider first, then removed from history.
 4. **Windows.** Actions → `engine-ci` → *Run workflow* on `main`; both test jobs are green.
    - The push of step 1 has its own `engine-ci` run, and it must be green too.

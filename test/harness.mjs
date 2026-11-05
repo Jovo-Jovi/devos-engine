@@ -110,6 +110,19 @@ process.stdin.on("end", () => {
     const items = (stubAnswers.media_kinds || ["image"]).map((kind) => stubPlan[kind]);
     writeFileSync(path.join(docs, "design", "media.json"), JSON.stringify({ version: 1, provider: stubAnswers.modules.media, items }, null, 2) + "\\n");
   }
+  // E56: the stub lists every image the developer owns in the media plan (PR-82).
+  const stubOwnDir = path.join(docs, "design", "own");
+  if (existsSync(stubOwnDir) && !(mode === "own-unlisted-then-good" && !args.includes("--continue"))) {
+    const stubPlanFile = path.join(docs, "design", "media.json");
+    const stubGenerated = Boolean(stubAnswers.modules && stubAnswers.modules.media && stubAnswers.modules.media !== "none");
+    const stubMedia = existsSync(stubPlanFile) ? JSON.parse(readFileSync(stubPlanFile, "utf8")) : { version: 1, provider: stubGenerated ? stubAnswers.modules.media : "none", items: [] };
+    const ownAlt = Object.fromEntries((stubAnswers.languages || ["en"]).map((language) => [language, "Our own image"]));
+    for (const name of readdirSync(stubOwnDir).sort()) {
+      const id = "own-" + name.toLowerCase().replace(/\\.[^.]+$/, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+      stubMedia.items.push({ id, kind: "image", source: "own", from: "docs/design/own/" + name, use: "Header", file: "public/media/" + name, alt: ownAlt, status: "planned" });
+    }
+    writeFileSync(stubPlanFile, JSON.stringify(stubMedia, null, 2) + "\\n");
+  }
   if (existsSync(path.join(process.cwd(), ".devos", "adopt", "brief.json"))) {
     // E36b: the documents of an adopted project. DEV_OS's CLAUDE.md goes to .devos/adopt/. As a tool that ignored
     // the adoption rules would: touch-code edits a product file and stages it, touch-docs edits a document of the
@@ -218,6 +231,19 @@ process.stdin.on("end", () => {
     };
     const items = (stubAnswers.media_kinds || ["image"]).map((kind) => stubPlan[kind]);
     writeFileSync(path.join(docs, "design", "media.json"), JSON.stringify({ version: 1, provider: stubAnswers.modules.media, items }, null, 2) + "\\n");
+  }
+  // E56: the stub lists every image the developer owns in the media plan (PR-82).
+  const stubOwnDir = path.join(docs, "design", "own");
+  if (existsSync(stubOwnDir) && !(process.env.STUB_TOOL_MODE === "own-unlisted-then-good" && !args.includes("--resume"))) {
+    const stubPlanFile = path.join(docs, "design", "media.json");
+    const stubGenerated = Boolean(stubAnswers.modules && stubAnswers.modules.media && stubAnswers.modules.media !== "none");
+    const stubMedia = existsSync(stubPlanFile) ? JSON.parse(readFileSync(stubPlanFile, "utf8")) : { version: 1, provider: stubGenerated ? stubAnswers.modules.media : "none", items: [] };
+    const ownAlt = Object.fromEntries((stubAnswers.languages || ["en"]).map((language) => [language, "Our own image"]));
+    for (const name of readdirSync(stubOwnDir).sort()) {
+      const id = "own-" + name.toLowerCase().replace(/\\.[^.]+$/, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+      stubMedia.items.push({ id, kind: "image", source: "own", from: "docs/design/own/" + name, use: "Header", file: "public/media/" + name, alt: ownAlt, status: "planned" });
+    }
+    writeFileSync(stubPlanFile, JSON.stringify(stubMedia, null, 2) + "\\n");
   }
   // E36b: an adopted project's DEV_OS CLAUDE.md goes to .devos/adopt/.
   if (existsSync(path.join(process.cwd(), ".devos", "adopt", "brief.json"))) writeFileSync(path.join(process.cwd(), ".devos", "adopt", "CLAUDE.md"), "# CLAUDE.md\\n\\nStub reviewer rules.\\n");
@@ -496,7 +522,7 @@ export function toolRuns(parent) {
   return readFileSync(log, "utf8").trim().split("\n").filter(Boolean).map((line) => JSON.parse(line));
 }
 
-export function flow({ link = "no", pool = "", blueprint = "", attachment = "", tail = "approve", confirmAnswer = "", type = "", stack = "", modules, scope = "", ambition = ["api", "cli"].includes(type) ? null : "" } = {}) {
+export function flow({ link = "no", pool = "", blueprint = "", attachment = "", own = "", tail = "approve", confirmAnswer = "", type = "", stack = "", modules, scope = "", ambition = ["api", "cli"].includes(type) ? null : "" } = {}) {
   const agent = ["", "", "", "", "", "", ""];
   agent[2] = pool;
   agent[5] = blueprint;
@@ -516,6 +542,8 @@ export function flow({ link = "no", pool = "", blueprint = "", attachment = "", 
     "",
     "",
     attachment,
+    // E56: a project with screens is asked for the images it owns after the documents (PR-82).
+    ...(ambition === null ? [] : [own]),
     "",
     tail,
     confirmAnswer,

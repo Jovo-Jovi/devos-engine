@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { searchPathWin } from "../lib/spawn.mjs";
+import { searchPathWin, splitPathWin } from "../lib/spawn.mjs";
 
 const pathext = ".COM;.EXE;.BAT;.CMD";
 
@@ -37,4 +37,14 @@ test("spawn.test.mjs searchPathWin returns null without a PATHEXT match and defa
   assert.equal(emptyExt.path.toLowerCase(), "c:\\npm\\claude.cmd");
   const skipped = searchPathWin("claude", ";;C:\\npm;", "", check);
   assert.equal(skipped.path.toLowerCase(), "c:\\npm\\claude.cmd");
+});
+
+test("spawn.test.mjs searchPathWin takes a PATH entry in double quotes, and a quoted semicolon (E42 a2)", () => {
+  const check = isFile(["C:\\Program Files\\Claude\\claude.exe", "D:\\a;b\\codex.cmd"]);
+  const quoted = searchPathWin("claude", "C:\\npm;\"C:\\Program Files\\Claude\"", pathext, check);
+  assert.equal(quoted.path.toLowerCase(), "c:\\program files\\claude\\claude.exe");
+  const semicolon = searchPathWin("codex", "\"D:\\a;b\";C:\\npm", pathext, check);
+  assert.equal(semicolon.path.toLowerCase(), "d:\\a;b\\codex.cmd");
+  assert.equal(semicolon.viaShell, true);
+  assert.deepEqual(splitPathWin(" C:\\npm ;;\"C:\\x y\"; \"\" ;C:\\bin"), ["C:\\npm", "C:\\x y", "C:\\bin"]);
 });

@@ -38,6 +38,8 @@ const accepted = [
   "",
   "",
   "",
+  // E56: the images the project owns (PR-82)
+  "",
   "",
 ].join("\n");
 

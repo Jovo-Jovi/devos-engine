@@ -325,7 +325,9 @@ Rules for every fence:
   `docs/screenshots/`), and names it in its Paths. No fence deletes or empties `README.md`, and no
   Done-when checks that it is absent.
 - **Media is planned (PR-79).** With generated media chosen, `docs/design/media.json` plans every image,
-  video and voice item (`DESIGN_METHOD.md` §8). A fence whose screen shows one names it in its header,
+  video and voice item (`DESIGN_METHOD.md` §8). It also lists each image the developer owns, with or without
+  generated media: the source `own`, its `from` in `docs/design/own/`, shown as it is (PR-82). A fence whose
+  screen shows one names it in its header,
   `- Media: \`<id>\` · …` (PR-81): the cycle makes those items before the builder, within `DEVOS_MEDIA_BUDGET`.
   The screen uses each item's `file` path and draws its fallback until the file exists.
 - **Preconditions first.** The previous task merged (`git merge-base --is-ancestor`), a clean

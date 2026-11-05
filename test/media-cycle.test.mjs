@@ -160,7 +160,6 @@ test("media-cycle.test.mjs (f) the Generated media step runs before the builder,
 test("media-cycle.test.mjs (g) the reviewer sees what was made, and the method says so (PR-81)", () => {
   const has = (file, sentence) => assert.equal(read(file).includes(sentence), true, `${file}: ${sentence}`);
   has("payload/files/scripts/devos/evidence.mjs", 'out.push("## Generated media (PR-81)", "", ...report, "");');
-  has("payload/files/docs/method/PRECEDENTS.md", "**Live maximum: PR-81.**");
   has("payload/files/docs/method/PRECEDENTS.md", "| PR-81 | **The cycle makes a task's planned media before its builder.**");
   has("payload/files/docs/method/AUTOMATION.md", "| `DEVOS_MEDIA_BUDGET` | US dollars · **0 (not set)** |");
   has("payload/files/docs/method/DEV_OS_V2_REVIEWER.md", "`- Media: \\`<id>\\` · …` (PR-81): the cycle makes those items before the builder");

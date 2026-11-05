@@ -7,7 +7,8 @@
 // passed to the provider only, never printed or written. An item is made once: a generated item whose file exists and
 // whose request is unchanged is kept. Each made item is written through a .part file, checked, moved into place and
 // recorded in the plan at once, so a stopped run loses nothing it finished. A started video's request id is recorded
-// before it is polled, so the next run resumes it instead of paying again.
+// before it is polled, so the next run resumes it instead of paying again. An image the developer owns (source `own`,
+// PR-82) is placed as it is: its `from` in docs/design/own/ is copied to its file, free, with no provider, key or budget.
 // Exit: 0 (nothing failed), 1 (an item failed), 2 (a bad call: no plan, a broken plan, no key with a budget).
 import { createHash } from "node:crypto";
 import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
@@ -31,6 +32,7 @@ const SIGNATURES = {
   ".jpg": (b) => b.length > 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff,
   ".jpeg": (b) => b.length > 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff,
   ".webp": (b) => b.length > 12 && b.toString("latin1", 0, 4) === "RIFF" && b.toString("latin1", 8, 12) === "WEBP",
+  ".gif": (b) => b.length > 6 && (b.toString("latin1", 0, 6) === "GIF87a" || b.toString("latin1", 0, 6) === "GIF89a"),
   ".mp4": (b) => b.length > 12 && b.toString("latin1", 4, 8) === "ftyp",
   ".mp3": (b) => b.length > 3 && (b.toString("latin1", 0, 3) === "ID3" || (b[0] === 0xff && (b[1] & 0xe0) === 0xe0)),
   ".wav": (b) => b.length > 12 && b.toString("latin1", 0, 4) === "RIFF" && b.toString("latin1", 8, 12) === "WAVE",
@@ -38,6 +40,8 @@ const SIGNATURES = {
 
 const usd = (value) => `$${value.toFixed(2)}`;
 const extension = (file) => path.extname(String(file)).toLowerCase();
+const OWN_DIR = "docs/design/own/";
+const unsafe = (rel) => typeof rel !== "string" || rel === "" || path.isAbsolute(rel) || /^[A-Za-z]:/.test(rel) || rel.includes("\\") || rel.split("/").includes("..");
 
 /** What an item asks the provider for; a change here makes the item again. */
 export function requestSha(item) {
@@ -110,8 +114,18 @@ export async function runMedia(options = {}) {
   const lines = [];
   const changed = new Set();
   const say = (line) => lines.push(line);
-  const stop = (line) => ({ code: 2, lines: [...lines, line], spent: 0, results: [], changed: [] });
+  const stop = (line) => ({ code: 2, lines: [...lines, line], spent: 0, results: [], changed: [...changed].sort() });
 
+  // PR-81: a fence that names no media makes nothing, whether or not the project has a plan.
+  let named = null;
+  if (options.fence) {
+    try {
+      named = fenceMedia(readFileSync(path.join(root, options.fence), "utf8"));
+    } catch (error) {
+      return stop(`media: ${options.fence}: ${error.message}`);
+    }
+    if (!named || named.length === 0) return { code: 0, lines: [`media: ${options.fence} names no media`], spent: 0, results: [], changed: [] };
+  }
   if (!existsSync(path.join(root, PLAN))) return stop(`media: no ${PLAN}; generated media is planned by the blueprint (PR-79)`);
   let plan;
   let answers = {};
@@ -121,11 +135,6 @@ export async function runMedia(options = {}) {
   } catch (error) {
     return stop(`media: ${error.message}`);
   }
-  const chosen = answers?.modules?.media;
-  const providerId = typeof plan?.provider === "string" ? plan.provider : chosen;
-  const provider = providerOf(providerId);
-  if (!provider) return stop(`media: no provider "${providerId}"; this engine knows: xai`);
-  if (typeof chosen === "string" && chosen !== providerId) return stop(`media: ${PLAN} says ${providerId}, ${ANSWERS} says ${chosen}`);
   const items = Array.isArray(plan?.items) ? plan.items : [];
 
   const budgetText = options.budget ?? env.DEVOS_MEDIA_BUDGET ?? "0";
@@ -133,23 +142,69 @@ export async function runMedia(options = {}) {
   if (!Number.isFinite(budget) || budget < 0) return stop(`media: the budget must be a number of US dollars, 0 or more (got "${budgetText}")`);
 
   let only = options.only ? String(options.only).split(",").map((id) => id.trim()).filter(Boolean) : null;
-  if (options.fence) {
-    let named = null;
-    try {
-      named = fenceMedia(readFileSync(path.join(root, options.fence), "utf8"));
-    } catch (error) {
-      return stop(`media: ${options.fence}: ${error.message}`);
-    }
-    if (!named || named.length === 0) return { code: 0, lines: [`media: ${options.fence} names no media`], spent: 0, results: [], changed: [] };
-    only = named;
-  }
+  if (named) only = named;
   if (only) {
     const unknown = only.filter((id) => !items.some((item) => item?.id === id));
     if (unknown.length > 0) return stop(`media: not in ${PLAN}: ${unknown.join(", ")}`);
   }
   const wanted = items.filter((item) => item && (!only || only.includes(item.id)));
-  const todo = wanted.filter((item) => !made(root, item));
-  const kept = wanted.length - todo.length;
+  const own = wanted.filter((item) => item.source === "own");
+  const generated = wanted.filter((item) => item.source !== "own");
+
+  let provider = null;
+  if (generated.length > 0) {
+    const chosen = answers?.modules?.media;
+    const providerId = typeof plan?.provider === "string" ? plan.provider : chosen;
+    provider = providerOf(providerId);
+    if (!provider) return stop(`media: no provider "${providerId}"; this engine knows: xai`);
+    if (typeof chosen === "string" && chosen !== providerId) return stop(`media: ${PLAN} says ${providerId}, ${ANSWERS} says ${chosen}`);
+  }
+
+  // PR-82: the images the developer owns, placed as they are before anything is generated.
+  const ownResults = [];
+  if (own.length > 0) {
+    const inPlace = (item) => {
+      if (item.status !== "placed" || unsafe(item.file) || unsafe(item.from)) return false;
+      const target = path.join(root, item.file);
+      const from = path.join(root, item.from);
+      return existsSync(target) && existsSync(from) && readFileSync(target).equals(readFileSync(from));
+    };
+    const toPlace = own.filter((item) => !inPlace(item));
+    say(`media: images you own · ${toPlace.length} to place · ${own.length - toPlace.length} in place`);
+    for (const item of toPlace) {
+      try {
+        if (unsafe(item.from) || !item.from.startsWith(OWN_DIR)) throw new Error(`from must name a file in ${OWN_DIR}`);
+        if (unsafe(item.file)) throw new Error("file must be a relative path inside the project, with / and no ..");
+        const from = path.join(root, item.from);
+        if (!existsSync(from)) throw new Error(`${item.from} does not exist`);
+        const bytes = readFileSync(from);
+        if (!verifyBytes(item.file, bytes)) throw new Error(`${item.from} is not a ${extension(item.file)} file`);
+        const target = path.join(root, item.file);
+        if (!existsSync(target) || !readFileSync(target).equals(bytes)) {
+          mkdirSync(path.dirname(target), { recursive: true });
+          writeFileSync(`${target}.part`, bytes);
+          renameSync(`${target}.part`, target);
+          changed.add(item.file);
+        }
+        item.status = "placed";
+        delete item.last_error;
+        writePlan(root, plan, changed);
+        ownResults.push({ id: item.id, state: "placed" });
+        say(`- ${item.id} (own image): placed ${item.file} from ${item.from}`);
+      } catch (error) {
+        ownResults.push({ id: item.id, state: "failed" });
+        say(`- ${item.id} (own image): failed: ${error.message}`);
+      }
+    }
+  }
+  const ownFailed = ownResults.filter((result) => result.state === "failed").length;
+  if (generated.length === 0) {
+    say(own.length > 0 ? `media: ${ownResults.length - ownFailed} placed, ${ownFailed} failed · nothing to generate` : "media: the plan names nothing to make");
+    return { code: ownFailed > 0 ? 1 : 0, lines, spent: 0, results: ownResults, changed: [...changed].sort() };
+  }
+
+  const todo = generated.filter((item) => !made(root, item));
+  const kept = generated.length - todo.length;
   const unmakeable = new Map();
   for (const item of todo) {
     if (!provider.kinds.includes(item.kind)) unmakeable.set(item.id, `${provider.id} makes no ${item.kind}`);
@@ -165,7 +220,7 @@ export async function runMedia(options = {}) {
       say(unmakeable.has(item.id) ? `- ${item.id} (${item.kind}): cannot be made: ${unmakeable.get(item.id)}` : `- ${item.id} (${item.kind}): estimated ${usd(provider.estimate(item))}`);
     }
     if (todo.length > 0) say("media: the budget is $0, so nothing is generated; set a budget to make these items");
-    return { code: 0, lines, spent: 0, results: [], changed: [] };
+    return { code: ownFailed > 0 ? 1 : 0, lines, spent: 0, results: ownResults, changed: [...changed].sort() };
   }
 
   const key = env[keyName(provider.id)];
@@ -254,7 +309,7 @@ export async function runMedia(options = {}) {
   }
   const count = (state) => results.filter((result) => result.state === state).length;
   say(`media: ${count("made")} made, ${count("failed")} failed, ${count("over budget")} over budget, ${count("pending")} pending · spent ${usd(Math.max(spent, 0))} of ${usd(budget)}`);
-  return { code: count("failed") > 0 ? 1 : 0, lines: lines.map(scrub), spent: Math.max(spent, 0), results, changed: [...changed].sort() };
+  return { code: count("failed") + ownFailed > 0 ? 1 : 0, lines: lines.map(scrub), spent: Math.max(spent, 0), results: [...ownResults, ...results], changed: [...changed].sort() };
 }
 
 function flag(name) {

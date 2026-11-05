@@ -19,7 +19,7 @@ payload/files/         the method, installed and upgraded (dot-directories are s
 payload/templates/     project-owned starting points, written once at install
 payload/contract/      the contract shown by devos init
 payload/manifest.json  every engine-owned path with its sha256 (generated: npm run manifest)
-tools/                 build-manifest, verify-source, find-specifics, stage
+tools/                 build-manifest, find-specifics, release-check, sources, stage
 test/                  node:test suites, no dependencies (npm test)
 dev/                   plan, decisions, ledger, fences, reports, reviews
 ```
@@ -28,34 +28,64 @@ dev/                   plan, decisions, ledger, fences, reports, reviews
 
 Every task is built and reviewed on its own branch, and reaches `main` only after the review of record.
 
-1. **Branch (you).** Run `git switch main`, `git pull`, then `git switch -c task/E16` (the task id).
-2. **Build (Cursor).** Open `devos-engine` in Cursor and start a new Agent chat with the model the fence header names.
-   The prompt is `Execute dev/fences/E16.md exactly — attempt 1.` The rule `.cursor/rules/00-engine-dev.mdc` binds the
-   builder: no git.
+1. **Fence (the reviewer).** Claude in the DEVOS project writes `dev/fences/E16.md`, with its package (below), and
+   pushes it to a new branch `task/E16` from `main`.
+2. **Build (Cursor).** Run `git fetch`, then `git switch task/E16`. Open `devos-engine` in Cursor and start a new
+   Agent chat with the model the fence header names. The prompt is `Execute dev/fences/E16.md exactly — attempt 1.`,
+   and it may ask Cursor to commit and push `E16 a1: builder` when the steps are done. The rule
+   `.cursor/rules/00-engine-dev.mdc` binds the builder: no git unless your prompt asks for it.
 3. **Local review (optional, Claude Code).** In `devos-engine`, run `claude`, then `/engine-review E16`. It writes
    `dev/reviews/E16-a1.md`.
-4. **Push (you).** Run `git add -A`, `git commit -m "E16 a1: build"`, then `git push -u origin task/E16`. The push
-   starts `engine-ci` with two jobs, `checks` and `test (ubuntu-latest)`. The Windows tests are the builder's own
-   run (*Done when* D1 in the report).
+4. **Push.** When Cursor did not push, run `git add -A`, `git commit -m "E16 a1: builder"`, then `git push`. The push
+   starts `engine-ci` with two jobs, `checks` and `test (ubuntu-latest)`. The Windows tests are the builder's own run
+   (*Done when* D1 in the report).
 5. **Remote review (the review of record).** Tell Claude in the DEVOS project "check task/E16". It runs every
    *Done when* check and writes `dev/reviews/E16-a1-remote.md` on the branch, with MERGE or FIX. It also updates the
-   ledger and writes the next fence.
+   ledger and writes or reissues the next fence.
 6. **On FIX, or when `engine-ci` is red:** pull the branch, run the next attempt in Cursor (`attempt 2`), and repeat
    from step 4.
 7. **Merge (you), after MERGE:**
    ```
    git switch main
    git pull
-   git merge --squash task/E16
+   git merge --squash origin/task/E16
    git commit -m "<the commit message from the review>"
    git push
    git push origin --delete task/E16
    git branch -D task/E16
    ```
-   `main` keeps one commit per accepted task. The push to `main` runs `checks` and the Linux tests. If a job is red,
-   tell the reviewer before the next task starts.
+   `main` keeps one commit per accepted task, the review included. The push to `main` runs `checks` and the Linux
+   tests. If a job is red, tell the reviewer before the next task starts.
 
 If Cursor halts, that is the system working: send its report to the review as it is.
+
+## Fences: exact-file packages
+
+Since E53, a task that changes code ships as an exact-file package. It costs one build and one review, and every
+package so far passed on its first attempt.
+
+- **The reviewer writes the change.** It applies the change to a scratch copy of `main` and rehearses it in full:
+  - the whole suite;
+  - the manifest and `find-specifics`;
+  - the staged guards;
+  - `actionlint` when a workflow changes;
+  - the page in Chromium when the page changes.
+
+  Every existing test the change moves (a version pin, a manual count, a scripted answer, the live maximum) is fixed
+  in the package before the fence is issued.
+- **The package is the requirement.** Every changed file is under `dev/fences/E16/files/`, at its path from the
+  repository root. `dev/fences/E16/before.json` holds the SHA-256 of each file it replaces, with CRLF read as LF.
+- **The builder copies.** Cursor copies each file byte for byte, edits nothing, and runs the *Done when* rows:
+  - the preconditions: `N files, 0 moved`;
+  - the byte compare: `N files, 0 differ`;
+  - the suite, the manifest, the staged guards and the version.
+
+  A file of the package that would need an edit is a HALT, never a fix.
+- **One fence for small things.** Small decided items (follow-ups, a fix, a policy line) ride together in one
+  package. A task that needs the owner's design decision gets a fence of its own, so a failure never repeats the
+  rest.
+- **Short fences.** The fence states the owner's decision, the files, the rows and their exact expected output, and
+  nothing the package already shows.
 
 ## GitHub Actions minutes
 

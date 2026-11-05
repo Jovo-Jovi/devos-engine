@@ -263,11 +263,26 @@ per image, video or voice item of `media_kinds` the screens show:
 | `alt` | image, video | one text per language of the project; `"decorative": true` instead for a purely decorative item |
 | `duration`, `audio` | video | 1 to 15 seconds; a sound track or not |
 | `text`, `language`, `voice` | voice | the words, their language and the provider's voice |
-| `status` | every item | `planned`, or `generated` once its file exists |
+| `status` | every item | `planned`, or `generated` once its file exists (`placed` for an image you own) |
 | `quality` | image | `low` (the default) or `medium` |
 | `model`, `generated_on`, `terms_url`, `cost_usd` | generated | the provenance of the file |
 | `cost_source`, `prompt_sha` | generated | `reported` (by the provider) or `price list`; the request the file was made from |
 | `request_id`, `requested_on`, `last_error` | planned | a started video the next run resumes; why the last try failed |
+
+**Images you own** (PR-82) are the developer's own: a logo, product or team photos, given at setup apart from the
+design references and kept as they are in `docs/design/own/`. Each one is an item of the plan, with or without
+generated media, and is never generated, edited or cropped:
+
+| Field | Rule |
+|---|---|
+| `source` | `own` (a generated item has none) |
+| `from` | its file in `docs/design/own/` |
+| `kind`, `id`, `use`, `alt` | as above; the kind is `image`, whatever `media_kinds` holds |
+| `file` | where the product serves it, in the stack's static folder, with the extension of `from` (`.png`, `.jpg`, `.jpeg`, `.webp` or `.gif`) |
+| `status` | `planned`, or `placed` once its file is a copy of `from` |
+
+A project without generated media writes the plan for its own images only, with `provider` `none`. The developer adds
+one later by putting it in `docs/design/own/` and asking for a change request that lists it.
 
 Plan what the screens need for the ambition, no more. A screen uses an item by its `file` path and draws a designed
 fallback while the file does not exist (the colour, shape or illustration `DESIGN_SYSTEM.md` gives it), never a
@@ -276,4 +291,5 @@ never edits the plan. `guard:media` checks the plan and the ambition line.
 
 **Generation** (PR-80) is `scripts/devos/media.mjs`, or `devos media` on the developer's computer. It makes only what
 is still to make, within the budget the developer sets (0 by default: an estimate only), and records each file's
-provenance and cost in its row and in `docs/usage/media.jsonl`.
+provenance and cost in its row and in `docs/usage/media.jsonl`. It places an image you own first, as it is: a copy of
+`from`, free, with no key and at any budget.

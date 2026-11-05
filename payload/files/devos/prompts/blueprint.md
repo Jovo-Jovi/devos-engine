@@ -7,9 +7,10 @@ stores data, sign-in, languages, deploy target and repository visibility. Nobody
 run: where the answers and your research leave something open, choose the safer option and record it as an
 **assumption** in `docs/DEVOS_FIT.md`.
 
-When `devos/intake-docs/` exists, read every file in it before step 1 (PDFs too), and every image in
-`docs/design/references/` (the developer's design references and brand assets, named for what they show; your Read
-tool shows an image). A file your tool cannot open (a format it does not read, or an image too large for it) is
+When `devos/intake-docs/` exists, read every file in it before step 1 (PDFs too). Read every image in
+`docs/design/references/` too (the developer's design references and brand assets, named for what they show; your Read
+tool shows an image), and in `docs/design/own/` (images the developer owns, such as a logo or product photos, which the
+product shows as they are). A file your tool cannot open (a format it does not read, or an image too large for it) is
 worked from its name and the developer's notes, and recorded as an assumption. Where a document and the answers
 disagree, the answers win. Anything the product needs that neither gives goes into `docs/OPEN_QUESTIONS.md`, one
 question per line; when nothing is open, that file holds the single line `No open questions.`
@@ -81,6 +82,11 @@ Work in this order.
    image, video and voice item of `media_kinds` the phases' screens need for that ambition, each with its use, its
    file in the stack's static folder, its prompt (or, for voice, its text, language and voice) written from the
    direction, and `status` `planned`; `DESIGN_SYSTEM.md` gives each a fallback. Nothing is generated in this run.
+   Every image in `docs/design/own/` is an item of that plan too, whatever `modules.media` says (PR-82): `"source":
+   "own"`, `from` its path there, `kind` `image`, its use, its alt text (or `decorative`), its file in the stack's
+   static folder with the same extension, and `status` `planned`. When `modules.media` is `none`, the plan lists only
+   these, with `provider` `none`. Never regenerate, edit or crop one, and never use it as a design reference: the
+   direction is built around it.
    Two formats are read by guards and must be exact:
    - `docs/PHASES.md`: the header `| Task | Phase | Station | Name | Risk | Gate | Done | Verdict |`, a separator
      row, then one row per task — `T01` first, ids ascending, Risk 1, 2 or 3, Done `[ ]`, Verdict `—`.

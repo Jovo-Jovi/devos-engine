@@ -73,6 +73,8 @@ function localFlow(backup = "") {
     "Customers",
     "",
     "",
+    // E56: the images the project owns (PR-82)
+    "",
     "",
     "approve",
     backup,
