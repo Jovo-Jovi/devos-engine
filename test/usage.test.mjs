@@ -91,7 +91,7 @@ test("usage.test.mjs (b) record adds a line, flush moves the lines to the task's
     assert.equal(missing.stdout, "usage: builder cursor grok-4.7 · not reported\n");
     const wrong = usage(dir, ["record", "--stage", "lunch", "--command", "agent", "--out", ".devos/builder.json"], env);
     assert.equal(wrong.status, 0);
-    assert.equal(wrong.stdout, "usage: --stage must be one of blueprint, intake, revise, builder, reviewer, doctor, supervisor; nothing recorded\n");
+    assert.equal(wrong.stdout, "usage: --stage must be one of blueprint, intake, revise, builder, reviewer, doctor, supervisor, media; nothing recorded\n");
     const pending = lines(path.join(dir, ".devos", "usage", "pending.jsonl"));
     assert.deepEqual(pending.map(brief), [
       ["builder", "T03", 2, "cursor", "grok-4.7", 4000, 900, 120000, 0, null, true],

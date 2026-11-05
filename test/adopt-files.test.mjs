@@ -76,7 +76,7 @@ test("adopt-files.test.mjs (b) the project's CI stays, DEV_OS's goes beside it, 
     assert.equal(existsSync(path.join(folder, "devos.config.json")), true);
     const manual = guard(folder, "manual");
     assert.equal(manual.status, 0, manual.stdout);
-    assert.equal(manual.stdout.startsWith("guard:manual    PASS  (121 names checked)"), true, manual.stdout);
+    assert.equal(manual.stdout.startsWith("guard:manual    PASS  (122 names checked)"), true, manual.stdout);
   } finally {
     cleanup(folder);
   }
@@ -110,14 +110,14 @@ test("adopt-files.test.mjs (d) devos upgrade updates DEV_OS's CI where it lives 
     mkdirSync(next);
     for (const part of ["package.json", "bin", "lib", "payload"]) cpSync(path.join(root, part), path.join(next, part), { recursive: true });
     const pkg = path.join(next, "package.json");
-    writeFileSync(pkg, readFileSync(pkg, "utf8").replace("\"version\": \"1.5.1\"", "\"version\": \"1.5.2\""));
+    writeFileSync(pkg, readFileSync(pkg, "utf8").replace("\"version\": \"1.6.0\"", "\"version\": \"1.6.1\""));
     const ci = path.join(next, "payload", "files", "dot-github", "workflows", "ci.yml");
     writeFileSync(ci, `${readFileSync(ci, "utf8").replaceAll("\r\n", "\n")}# Upgrade test line.\n`);
     writeFileSync(path.join(next, "payload", "manifest.json"), manifestText(buildManifest(next)));
     const upgraded = spawnSync(process.execPath, [path.join(next, "bin", "devos.mjs"), "upgrade", "--local"], { cwd: folder, encoding: "utf8", windowsHide: true, timeout: 180000 });
     assert.equal(upgraded.status, 0, upgraded.stdout + upgraded.stderr);
-    assert.equal(upgraded.stdout.includes("devos upgrade 1.5.1 to 1.5.2: 1 updated, 0 added, 0 removed, 0 conflicts"), true, upgraded.stdout);
-    const branch = "devos/upgrade-1.5.2";
+    assert.equal(upgraded.stdout.includes("devos upgrade 1.6.0 to 1.6.1: 1 updated, 0 added, 0 removed, 0 conflicts"), true, upgraded.stdout);
+    const branch = "devos/upgrade-1.6.1";
     const changed = git(["diff", "--name-only", `main..${branch}`], folder).split("\n").filter(Boolean).sort();
     assert.deepEqual(changed, [".github/workflows/devos-ci.yml", "devos/engine.lock.json"]);
     assert.equal(git(["show", `${branch}:.github/workflows/devos-ci.yml`], folder).endsWith("# Upgrade test line.\n"), true);

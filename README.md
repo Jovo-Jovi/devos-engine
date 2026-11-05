@@ -39,7 +39,7 @@ DEV_OS sets a project up from an empty folder and runs it as small, reviewed tas
 writes the blueprint: the brief, the scope, the design system, the phases and the first task. You approve it. Each
 task is then built from a written fence, checked, reviewed, and merged by you.
 
-Version `1.5.1`. The engine is under PolyForm Shield 1.0.0 and the files it installs into your project under MIT
+Version `1.6.0`. The engine is under PolyForm Shield 1.0.0 and the files it installs into your project under MIT
 (see [Licence](#licence)).
 
 ## Contents
@@ -274,7 +274,7 @@ commas, or a name; Enter takes the default.
 | Product AI | Chat, tools and agents, retrieval |
 | Hosting | Vercel |
 | Observability | Structured logs, Sentry |
-| Generated media | xAI (Grok Imagine and text to speech): images, video or voice. The blueprint plans each item in `docs/design/media.json`; nothing is generated yet |
+| Generated media | xAI (Grok Imagine and text to speech): images, video or voice. The blueprint plans each item in `docs/design/media.json`; `devos media` makes them within a budget you set (0 by default) |
 
 Each menu starts on the type's usual choice. A migration always waits for your merge. A product with screens also
 chooses its **visual ambition**: Calm (content first), Expressive (imagery and motion where they serve, the default) or
@@ -357,6 +357,7 @@ while no task branch is open and no cycle runs.
 | `devos doctor [--local]` | Checks the GitHub CLI, its sign-in and scopes; `--local`, Node.js 22 and git. Changes nothing. |
 | `devos verify [folder]` | Checks everything between this computer and a green cycle run, and quotes a failed run. Changes nothing. |
 | `devos watch [folder] [--interval <s>] [--once]` | Runs `devos verify` every 30 seconds until all is green. |
+| `devos media [folder] [--budget <usd>] [--only <id,…>] [--yes]` | Makes the project's planned media with the key in your shell (`DEVOS_MEDIA_XAI_KEY`). Without `--budget` it only estimates; with one it asks before it pays. It never commits. |
 | `devos adopt [folder] [--install \| --publish] [--agent <tool>[:<model>]]` | Adds DEV_OS to a project you have ([steps](#add-dev_os-to-a-project-you-have)). |
 | `devos adopt --check [folder] [--json]` | The read-only survey of a project you have. |
 | `devos upgrade [--local]` | Updates the project's engine files on a new branch and opens a pull request; `--local` commits without pushing. |
@@ -480,7 +481,7 @@ change applies from the next run. The project's `docs/method/AUTOMATION.md` list
 
 | Next | What it adds |
 |---|---|
-| Generated media | A runner step makes the planned images, video and voice, with a cost cap per run. |
+| Generated media in the cycle | A runner step makes a task's planned media before its builder, within the budget you set. |
 | Media inside products | Image, voice and video features for a product's own users, as Product AI providers. |
 | Local commands | `devos next` and `devos review` for IDE builds, then an automatic local runner, `devos run`. |
 | From local to GitHub | `devos cycle github` moves a local project onto the automated cycle. |

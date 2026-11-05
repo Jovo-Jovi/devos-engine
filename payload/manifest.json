@@ -1,5 +1,5 @@
 {
-  "engine_version": "1.5.1",
+  "engine_version": "1.6.0",
   "source": {
     "repo": "Jovo-Jovi/devos-control-tower",
     "commit": "a49ca6db268b98d6558077bf3e95b8ae759d91b3"
@@ -1472,13 +1472,13 @@
     {
       "path": "docs/method/AUTOMATION.md",
       "stored": "docs/method/AUTOMATION.md",
-      "sha256": "aac71a2e4f62e0d73d88db71c6dd661e3f0ef43c26203b1a9fd07b41a098e5ba",
+      "sha256": "9221571bb828c2c57fd95f94566d9928677f350f17de6a61667e991a2618eaa1",
       "owner": "engine"
     },
     {
       "path": "docs/method/DESIGN_METHOD.md",
       "stored": "docs/method/DESIGN_METHOD.md",
-      "sha256": "f6f8cba3c7f974d0852054a02fcd2ff964d8d79dcc768a7de9682f3155ff5d16",
+      "sha256": "9ee2ee3c3675559cf74b681779daca4cfaa8dac9108314b25944b838dc7cb808",
       "owner": "engine"
     },
     {
@@ -1496,7 +1496,7 @@
     {
       "path": "docs/method/PRECEDENTS.md",
       "stored": "docs/method/PRECEDENTS.md",
-      "sha256": "aeb44ef3d44573c960707503b5084b70a2211a4f54f9e2c798a7b8c35931df18",
+      "sha256": "c5636206915e3f4f27f06eb77e1ca75d4ffc5a1fc8a8fba1a09fdbab34624ba3",
       "owner": "engine"
     },
     {
@@ -1611,6 +1611,24 @@
       "path": "scripts/devos/loop.mjs",
       "stored": "scripts/devos/loop.mjs",
       "sha256": "4351f88c3de88fbf7ab7f08e44b8277873684f0c1e3a71f3548d77a0279d315a",
+      "owner": "engine"
+    },
+    {
+      "path": "scripts/devos/media-providers/index.mjs",
+      "stored": "scripts/devos/media-providers/index.mjs",
+      "sha256": "1305ba2a9d35a1103b4344185269d1be6e6b9eb631aa41f2b06b7851fcf6ba98",
+      "owner": "engine"
+    },
+    {
+      "path": "scripts/devos/media-providers/xai.mjs",
+      "stored": "scripts/devos/media-providers/xai.mjs",
+      "sha256": "b6a7e6ad4614fcadaa6a5dfd373bb1881d4f46836e408c1e7d5f4599e2980422",
+      "owner": "engine"
+    },
+    {
+      "path": "scripts/devos/media.mjs",
+      "stored": "scripts/devos/media.mjs",
+      "sha256": "9c8d62ec23de7ed5d268516f735dc8dd7c29e2aff15a3b4b1d16ce2b4f64cbf6",
       "owner": "engine"
     },
     {
@@ -1748,7 +1766,7 @@
     {
       "path": "scripts/devos/usage.mjs",
       "stored": "scripts/devos/usage.mjs",
-      "sha256": "781ff3e475e7755b94eaf6d8ddbba9c10a6f0895cb58a289755a015144d73053",
+      "sha256": "cdd6f9d32130507387b7b28fd22684976f28ca22160e4a7d732c786910acb65c",
       "owner": "engine"
     },
     {
