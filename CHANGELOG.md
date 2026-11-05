@@ -2,7 +2,7 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
-## 1.6.0 — Unreleased
+## 1.6.0 — 2026-11-05
 
 - **Effort you can choose.** The guided page asks the blueprint agent's effort (high by default; Claude Code and Codex) and each builder's: chosen by the reviewer for each task, or fixed for every task, with Fast for Cursor. A fixed effort is written in every fence, and `fence-check` refuses another (PR-78). A Cursor model id that names its effort runs as it is, and the runner reports that effort.
 - **Generated media and the visual ambition, chosen at setup.** A project with screens can choose generated media (xAI: images, video or voice) and its visual ambition (Calm, Expressive or Showcase), on the guided page and in `devos init`. Both are kept in `devos/answers.json` for the blueprint. Nothing is generated yet.
