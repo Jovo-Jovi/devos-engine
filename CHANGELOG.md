@@ -2,7 +2,7 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
-## 1.9.0 — Unreleased
+## 1.9.0 — 2026-11-06
 
 - **Local development is a handover (PR-83).** `devos init --local` (and the guided page's "Local development") writes the plan with you, then hands the project over: once you approve the blueprint, DEV_OS's scripts, guards, workflows, agent settings and engine lock leave the folder before the first commit. The plan in `docs/` (with `docs/method/`, which the fences cite), `README.md`, `SETUP.md` and `devos/answers.json` stay, and you build the rest your own way, ticking each task in `docs/PHASES.md`. A local project's fences name only the stack's own commands. No agent tool needs to be signed in, and the optional GitHub backup is a plain private repository where nothing runs. `devos continue` and `devos verify` know a handed-over project, and `devos adopt` brings DEV_OS back later.
 - **`devos adopt` brings a handed-over project back (PR-84).** On a project `devos init --local` handed over, it needs no AI tool: the brief comes from the project's own plan, and its documents, its settings, the cycle's agents and your answers stay. DEV_OS's files come back on the branch `devos/adopt` with a pull request, `docs/method/` is the engine's again with your PR-01, and `CLAUDE.md` gets the reviewer's rules. The tasks you ticked as built are listed and, after your yes, accepted as attempt 0 (`docs/reviews/Tnn-a0.md`, `PASS a0`), and the cycle resumes from the first open task. A tick after an open task, or a first open task without a committed fence, stops it before anything is written.
