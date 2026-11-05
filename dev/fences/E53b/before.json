@@ -1,0 +1,22 @@
+{
+  "CHANGELOG.md": "33e904577247ba4702d6369828e6943f27cae48dc42184f4826cc2dbbb759715",
+  "README.md": "79733706819ada51a82ffe4de2c37290de1394bc73b145616fab3819ecf63a4c",
+  "lib/init.mjs": "b3c3f3a50c3795786c52b132a7b316a9b2102f112398c4f613c380f53233d6f0",
+  "payload/files/devos/engine.defaults.json": "bb35d12b5a4fddb5e29af44909e40247238df9e7f2f7d6806ad6cb2e94a4e4be",
+  "payload/files/devos/prompts/blueprint.md": "bba38b81c7acd99899103a9e8dcb9200090e5a553aff035a653841f9b123396a",
+  "payload/files/devos/prompts/builder.md": "b75c3a7ad71ebcb8db6cb85a40de311757af2d4651246810158e8f365c4c0cb2",
+  "payload/files/devos/prompts/reviewer.md": "4863cbe8b988b80f0ed9e8a45788020c69304cb6a12def466db0e6ec04f8a610",
+  "payload/files/docs/method/AUTOMATION.md": "12127046baf65e7b808ceed3babeb84b75f4a8403fefc5b406e3c009a493c1b8",
+  "payload/files/docs/method/DESIGN_METHOD.md": "18cc39f4a3164a026b48b9dda75dc562f6615d9a8fa8d80f8838995030e4d501",
+  "payload/files/docs/method/DEV_OS_V2_REVIEWER.md": "63133ad845e92a9a97aa56adc75cc1352037056a314d38a81aaab377a5c2aea1",
+  "payload/files/docs/method/PRECEDENTS.md": "d60db26e6c293c93201728c71a8c7e865840cbf1e6e918e937fb597102e8f7c3",
+  "payload/files/dot-cursor/rules/00-project.mdc": "db82c57f9a04392407d9640f5e528068369dfd324e96cf73095ad28096335384",
+  "payload/files/scripts/guards/run-all.mjs": "21530390f9a133bc055b00675df469daa2bcd5550c9310705df24e97e7891f13",
+  "payload/manifest.json": "20ae23a8d543475f95752fe977fddd31f323bb2debca33d47ad8605f5ec2f7e8",
+  "test/adopt-files.test.mjs": "36d39dad92df3d76991d4d1357cde04c85eacfab914a4afd9a46323e51b2dc69",
+  "test/config-equivalence.test.mjs": "563880408be0ef567a9c1a129366153471ffa4943cfc28316f742972be4ddb06",
+  "test/effort.test.mjs": "6d0d89aee10bb90a893306e6203887b21f485affbed77e81909fca4ac272a09f",
+  "test/harness.mjs": "42516bceaf1398e73b026eb9d7b30fc35abc9d201522c8139f8b650ea23aa3f1",
+  "test/setup.test.mjs": "3c640ba176c95937205f929a905ec323b48aeacdb033cbf104ebebc23a0b5e21",
+  "tools/sources.mjs": "9e56b2a78c96e55488303364170c179884246d931b972417253b8f59de59ea1d"
+}
