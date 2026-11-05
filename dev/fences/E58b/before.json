@@ -1,0 +1,10 @@
+{
+  "CHANGELOG.md": "20ec7def43a94d36a04fb72021c57942463e6e1b212097ebd315c1818ec92e41",
+  "README.md": "d88cd314e3964990aa5ecd8ab2c650b8195a985fcc62380ad082b99a5f4133fe",
+  "lib/adopt.mjs": "bca3ca769fbf89652e5695875af87a47dd0cefbd4b2da00ec95b5e686ebbd5f6",
+  "lib/handover.mjs": "c9f142559f1109f083ac1969c8a22d1cc29a61197096165859990b04ee1dc815",
+  "payload/files/docs/method/AUTOMATION.md": "e3df213b0e069e3de9c4f40143f0940918b20e8c87d14d51c9a6d6c58012b755",
+  "payload/files/docs/method/PRECEDENTS.md": "afdb21bf1233689b9fb55ab3b8b268afc2f626333f79bc14766f4fbc22f399f4",
+  "payload/manifest.json": "ee4f8a8df0ced656aac6c6cd84c75a589717a5fd48653ed31ada5d08238cafe3",
+  "test/handover.test.mjs": "219d3cd996c79c51eaba5eea99f2ad6c6ef6e9f6123e085eadaec9fc526caf02"
+}
