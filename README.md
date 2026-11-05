@@ -340,6 +340,10 @@ From the project's own clone on GitHub, in development or in production:
 An older hand-copied DEV_OS keeps its documents and settings; its method files become the engine's. It is adopted only
 while no task branch is open and no cycle runs.
 
+A project DEV_OS handed over (`devos init --local`) comes back without an AI tool: its brief comes from its own plan,
+the tasks you ticked as built are accepted after your yes, and the cycle resumes from the first open task, whose fence
+must be committed.
+
 ## Stop and resume
 
 - **Stop** with **Stop run** on the page, or Ctrl-C. The folder keeps what was written.
