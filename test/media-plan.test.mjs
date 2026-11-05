@@ -145,7 +145,6 @@ test("media-plan.test.mjs (f) the method plans media before it is shown (PR-79)"
   const has = (file, sentence) => assert.equal(readFileSync(path.join(root, file), "utf8").includes(sentence), true, `${file}: ${sentence}`);
   has("lib/init.mjs", '"--only", "phases,naming,design-spec,media"');
   has("payload/files/scripts/guards/run-all.mjs", "GUARDS.media = media;");
-  has("payload/files/docs/method/PRECEDENTS.md", "**Live maximum: PR-79.**");
   has("payload/files/docs/method/PRECEDENTS.md", "| PR-79 | **Generated media is planned before it is shown.**");
   has("payload/files/docs/method/DESIGN_METHOD.md", "## 8. Visual ambition and the media plan");
   has("payload/files/docs/method/AUTOMATION.md", "· `media` (with generated media chosen at setup, `docs/design/media.json` plans every image, video and voice item");

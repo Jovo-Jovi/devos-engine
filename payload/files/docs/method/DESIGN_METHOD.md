@@ -257,16 +257,23 @@ per image, video or voice item of `media_kinds` the screens show:
 | `id` | every item | lower-case words joined by `-`, unique |
 | `kind` | every item | `image`, `video` or `voice`, one of `media_kinds` |
 | `use` | every item | where it appears: the screen and the section |
-| `file` | every item | the path it is served from, in the stack's static folder (`public/media/hero.webp`), with `/`; an image ends `.png`, `.jpg`, `.jpeg` or `.webp`, a video `.mp4`, a voice `.mp3` or `.wav` |
+| `file` | every item | the path it is served from, in the stack's static folder (`public/media/hero.jpg`), with `/`; an image ends `.png`, `.jpg`, `.jpeg` or `.webp`, a video `.mp4`, a voice `.mp3` or `.wav`. xAI makes `.jpg` images, `.mp4` video and `.mp3` or `.wav` voice |
 | `prompt` | image, video | what to make, from the direction: subject, composition, light, palette, style |
 | `aspect_ratio`, `resolution` | image, video | xAI: an image `1k` or `2k`; a video `480p`, `720p` or `1080p` |
 | `alt` | image, video | one text per language of the project; `"decorative": true` instead for a purely decorative item |
 | `duration`, `audio` | video | 1 to 15 seconds; a sound track or not |
 | `text`, `language`, `voice` | voice | the words, their language and the provider's voice |
 | `status` | every item | `planned`, or `generated` once its file exists |
+| `quality` | image | `low` (the default) or `medium` |
 | `model`, `generated_on`, `terms_url`, `cost_usd` | generated | the provenance of the file |
+| `cost_source`, `prompt_sha` | generated | `reported` (by the provider) or `price list`; the request the file was made from |
+| `request_id`, `requested_on`, `last_error` | planned | a started video the next run resumes; why the last try failed |
 
 Plan what the screens need for the ambition, no more. A screen uses an item by its `file` path and draws a designed
 fallback while the file does not exist (the colour, shape or illustration `DESIGN_SYSTEM.md` gives it), never a
 remote URL, a placeholder service or a broken image. The builder never adds, replaces or deletes a planned file and
 never edits the plan. `guard:media` checks the plan and the ambition line.
+
+**Generation** (PR-80) is `scripts/devos/media.mjs`, or `devos media` on the developer's computer. It makes only what
+is still to make, within the budget the developer sets (0 by default: an estimate only), and records each file's
+provenance and cost in its row and in `docs/usage/media.jsonl`.

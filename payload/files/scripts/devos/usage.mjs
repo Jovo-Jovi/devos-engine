@@ -15,7 +15,7 @@ const PENDING = path.join(ROOT, ".devos", "usage", "pending.jsonl");
 const DIR = path.join(ROOT, "docs", "usage");
 const SUMMARY = path.join(ROOT, "docs", "USAGE.md");
 const PRICES = path.join(ROOT, "devos", "prices.json");
-export const STAGES = ["blueprint", "intake", "revise", "builder", "reviewer", "doctor", "supervisor"];
+export const STAGES = ["blueprint", "intake", "revise", "builder", "reviewer", "doctor", "supervisor", "media"];
 const TOOLS = { claude: "claude", agent: "cursor", "cursor-agent": "cursor", cursor: "cursor", codex: "codex", gemini: "gemini" };
 
 function flag(name, fallback = "") {

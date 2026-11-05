@@ -8,6 +8,7 @@ import { doctorCommand, statusCommand } from "../lib/doctor.mjs";
 import { continueCommand } from "../lib/continue.mjs";
 import { initCommand } from "../lib/init.mjs";
 import { installCommand } from "../lib/install.mjs";
+import { mediaCommand } from "../lib/media.mjs";
 import { modelsCommand } from "../lib/models.mjs";
 import { profileCommand } from "../lib/profile.mjs";
 import { rosterCommand } from "../lib/roster.mjs";
@@ -56,6 +57,7 @@ devos adopt [folder] [--install | --publish] [--agent <tool>[:<model>]]
 devos adopt --check [folder] [--json]
 devos verify [folder]
 devos watch [folder] [--interval <seconds>] [--once]
+devos media [folder] [--budget <usd>] [--only <id,id>] [--yes]
 devos models [folder]
 devos models set <reviewer|light|builder> <model> [folder]
 devos models reset <reviewer|light|builder> [folder]
@@ -84,6 +86,7 @@ else if (args[0] === "adopt") code = await adoptCommand(args.slice(1));
 else if (args[0] === "verify") code = verifyCommand(args.slice(1));
 else if (args[0] === "watch") code = await watchCommand(args.slice(1));
 else if (args[0] === "models") code = modelsCommand(args.slice(1));
+else if (args[0] === "media") code = await mediaCommand(args.slice(1));
 else {
   console.log(`devos: unknown command ${args[0]}`);
   code = 2;
