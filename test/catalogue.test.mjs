@@ -25,7 +25,7 @@ test("catalogue.test.mjs (a) integrity", () => {
   assert.equal(catalogue.types.length, 16);
   assert.equal(catalogue.stacks.length, 20);
   assert.equal(catalogue.stacks.filter((stack) => stack.runs === true).length, 20);
-  assert.equal(catalogue.modules.length, 10);
+  assert.equal(catalogue.modules.length, 11);
   assert.equal(catalogue.documents.length, 8);
   for (const type of catalogue.types) {
     const stack = catalogue.stacks.find((item) => item.id === type.stack);
@@ -55,8 +55,8 @@ test("catalogue.test.mjs (b) stacks for an api", () => {
 
 test("catalogue.test.mjs (c) modules for saas", () => {
   const modules = modulesFor("saas");
-  assert.deepEqual(modules.map((module) => module.id), ["database", "storage", "auth", "payments", "email", "hosting", "observability"]);
-  assert.deepEqual(modules.map((module) => module.default), ["supabase", "none", "email", "none", "resend", "vercel", "structured-logs"]);
+  assert.deepEqual(modules.map((module) => module.id), ["database", "storage", "auth", "payments", "email", "hosting", "observability", "media"]);
+  assert.deepEqual(modules.map((module) => module.default), ["supabase", "none", "email", "none", "resend", "vercel", "structured-logs", "none"]);
 });
 
 test("catalogue.test.mjs (d) method modules", () => {
@@ -111,6 +111,7 @@ test("catalogue.test.mjs (g) init asks the type, the stack and the saas modules"
       email: "none",
       hosting: "vercel",
       observability: "structured-logs",
+      media: "none",
     });
     assert.equal(answers.stores_data, false);
     assert.equal(answers.sign_in, "none");
@@ -184,7 +185,7 @@ test("catalogue.test.mjs (i) module keys follow the cycle keys", () => {
 test("catalogue.test.mjs (j) a supabase database lists its secret and sets no variable", () => {
   const staged = stage();
   try {
-    const result = init(staged, flow({ modules: ["supabase", "", "auth none", "", "email none", "", ""] }));
+    const result = init(staged, flow({ modules: ["supabase", "", "auth none", "", "email none", "", "", ""] }));
     assert.equal(result.status, 0, result.stdout + result.stderr);
     assert.equal(result.stdout.includes("SUPABASE_PROJECT_REF"), true, result.stdout);
     const setup = readFileSync(path.join(staged.project, "SETUP.md"), "utf8");
@@ -242,7 +243,7 @@ test("catalogue.test.mjs (k) a file key is read and never printed", async () => 
 test("catalogue.test.mjs (l) app keys close SETUP.md", () => {
   const staged = stage();
   try {
-    const result = init(staged, flow({ modules: ["database none", "", "auth none", "stripe", "email none", "", ""] }));
+    const result = init(staged, flow({ modules: ["database none", "", "auth none", "stripe", "email none", "", "", ""] }));
     assert.equal(result.status, 0, result.stdout + result.stderr);
     const setup = readFileSync(path.join(staged.project, "SETUP.md"), "utf8");
     const ending = [

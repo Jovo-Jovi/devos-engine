@@ -222,6 +222,8 @@ function answers(overrides = {}) {
     overrides.deploy === "none" ? "none" : "",
     "",
     "",
+    "",
+    "",
     overrides.name ?? "Demo Shop",
     "A small shop.",
     "Customers",
@@ -373,11 +375,11 @@ test("setup.test.mjs rejects a project name whose key is invalid", () => {
   const staged = stage();
   const again = stage();
   try {
-    const result = init(staged, ["accept", "no", "", "", "", "", "", "", "", "", "", "database none", "", "auth none", "", "email none", "", "", "", "X", "Demo Shop", "A small shop.", "Customers", "", "", "", "", "approve", ""].join("\n") + "\n");
+    const result = init(staged, ["accept", "no", "", "", "", "", "", "", "", "", "", "database none", "", "auth none", "", "email none", "", "", "", "", "", "X", "Demo Shop", "A small shop.", "Customers", "", "", "", "", "approve", ""].join("\n") + "\n");
     assert.equal(result.status, 0, result.stdout + result.stderr);
     const project = JSON.parse(readFileSync(path.join(staged.project, "devos", "project.json"), "utf8"));
     assert.equal(project.project, "DEMO-SHOP");
-    const rejected = init(again, "accept\nno\n\n\n\n\n\n\n\n\n\ndatabase none\n\nauth none\n\nemail none\n\n\n\nX\nX\nX\n");
+    const rejected = init(again, "accept\nno\n\n\n\n\n\n\n\n\n\ndatabase none\n\nauth none\n\nemail none\n\n\n\n\n\nX\nX\nX\n");
     assert.equal(rejected.status, 1, rejected.stdout + rejected.stderr);
     assert.equal(rejected.stdout.includes("no valid answer for Project name"), true, rejected.stdout);
   } finally {

@@ -30,6 +30,8 @@ const accepted = [
   "",
   "",
   "",
+  "",
+  "",
   "Demo Shop",
   "A small shop.",
   "Customers",

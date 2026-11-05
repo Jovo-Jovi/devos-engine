@@ -199,7 +199,7 @@ commas, or a name; Enter takes the default.
 | 1 | **Doctor** | Checks the tools this way of building needs, and prints the exact fix for anything missing. |
 | 2 | **Contract** | Read it and accept it. Anything else stops setup; nothing is written or sent. |
 | 3 | **Agents** | A tool and model for the reviewer, the light reviewer, the builder pool and the blueprint agent, and each one's effort ([Agents, models and effort](#agents-models-and-effort)). |
-| 4 | **Type, stack, modules, scope** | One of 16 types, a stack that fits it, a provider (or None) for each module, and **MVP** or **Full product for production** ([Types, stacks and modules](#types-stacks-and-modules)). |
+| 4 | **Type, stack, modules, scope** | One of 16 types, a stack that fits it, a provider (or None) for each module, **MVP** or **Full product for production**, and for a product with screens its visual ambition ([Types, stacks and modules](#types-stacks-and-modules)). |
 | 5 | **Five questions** | The name, a one-paragraph brief, who uses it, its languages, and the repository's visibility (`private` by default). |
 | 6 | **Documents (optional)** | The documents worth preparing for your type. Give the ones you have; the blueprint writes the rest and lists what is open in `docs/OPEN_QUESTIONS.md`. |
 | 7 | **Summary** | Check your answers, then confirm or answer again. |
@@ -273,8 +273,11 @@ commas, or a name; Enter takes the default.
 | Product AI | Chat, tools and agents, retrieval |
 | Hosting | Vercel |
 | Observability | Structured logs, Sentry |
+| Generated media | xAI (Grok Imagine and text to speech): images, video or voice. Chosen at setup; nothing is generated yet |
 
-Each menu starts on the type's usual choice. A migration always waits for your merge.
+Each menu starts on the type's usual choice. A migration always waits for your merge. A product with screens also
+chooses its **visual ambition**: Calm (content first), Expressive (imagery and motion where they serve, the default) or
+Showcase (hero media, rich motion and depth).
 
 ## After setup
 
@@ -476,7 +479,7 @@ change applies from the next run. The project's `docs/method/AUTOMATION.md` list
 
 | Next | What it adds |
 |---|---|
-| Generated media | Images, video and voice made for a project from a manifest the blueprint plans, with a cost cap per run. |
+| Generated media | The blueprint plans each image, video and voice item; then a runner step makes them, with a cost cap per run. |
 | Media inside products | Image, voice and video features for a product's own users, as Product AI providers. |
 | Local commands | `devos next` and `devos review` for IDE builds, then an automatic local runner, `devos run`. |
 | From local to GitHub | `devos cycle github` moves a local project onto the automated cycle. |

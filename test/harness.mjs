@@ -470,11 +470,11 @@ export function toolRuns(parent) {
   return readFileSync(log, "utf8").trim().split("\n").filter(Boolean).map((line) => JSON.parse(line));
 }
 
-export function flow({ link = "no", pool = "", blueprint = "", attachment = "", tail = "approve", confirmAnswer = "", type = "", stack = "", modules, scope = "" } = {}) {
+export function flow({ link = "no", pool = "", blueprint = "", attachment = "", tail = "approve", confirmAnswer = "", type = "", stack = "", modules, scope = "", ambition = ["api", "cli"].includes(type) ? null : "" } = {}) {
   const agent = ["", "", "", "", "", "", ""];
   agent[2] = pool;
   agent[5] = blueprint;
-  const moduleLines = modules ?? ["database none", "", "auth none", "", "email none", "", ""];
+  const moduleLines = modules ?? ["database none", "", "auth none", "", "email none", "", "", ""];
   return [
     "accept",
     link,
@@ -483,6 +483,7 @@ export function flow({ link = "no", pool = "", blueprint = "", attachment = "", 
     stack,
     ...moduleLines,
     scope,
+    ...(ambition === null ? [] : [ambition]),
     "Demo Shop",
     "A small shop.",
     "Customers",
