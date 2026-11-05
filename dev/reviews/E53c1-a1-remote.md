@@ -42,8 +42,8 @@ Method (payload changes only):
 
 Owner attention:
 - **The xAI documentation shows JPEG images only,** so the generator saves `.jpg` and refuses, before paying, an
-  image the plan names `.webp` or `.png`. `DESIGN_METHOD.md` §8 now says so, which steers new blueprints. Mawsim's
-  OD-10 rows already use `.png`: its change request (after E53c2) renames them or keeps them owner-made.
+  image the plan names `.webp` or `.png`. `DESIGN_METHOD.md` §8 now says so, which steers new blueprints. Mawsim keeps
+  its own image list (`content/photos.json`, OD-10); its change request after E53c2 decides how it moves to the plan.
 - **No real call was made in this task.** The first paid run is yours, by `devos media <folder> --budget <usd>`
   with the key exported in your shell.
 
