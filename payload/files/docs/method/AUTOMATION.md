@@ -193,6 +193,7 @@ once (it refuses when the file exists), and `--shrink-baseline` removes what is 
 - **`CLAUDE.md` and `AGENTS.md`** keep the project's text first. DEV_OS's rules follow between
   `<!-- devos:start` and `<!-- devos:end -->`.
 - **Other engine files** that exist and differ stop the adoption until the developer moves them.
+- **A project DEV_OS handed over (PR-83)** keeps its plan, `devos/project.json` with the cycle's agents, the settings written at setup and the developer's answers; `docs/method/` is the engine's again, with the project's PR-01. The tasks ticked as built are accepted as attempt 0, and the cycle resumes from the first open task (PR-84).
 - **`guard:manual`** checks DEV_OS's workflows only: those the lock lists, by their engine name, and every
   `devos-*.yml`.
 

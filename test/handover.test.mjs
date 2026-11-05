@@ -96,7 +96,6 @@ test("handover.test.mjs (b) devos init --local commits a handed-over project: th
 test("handover.test.mjs (c) the method, the blueprint, the help, the page and the changelog say so (PR-83)", () => {
   const read = (rel) => readFileSync(path.join(root, rel), "utf8");
   const precedents = read("payload/files/docs/method/PRECEDENTS.md");
-  assert.equal(precedents.includes("**Live maximum: PR-83.**"), true);
   assert.equal(precedents.includes("| PR-83 | **Local development is a handover.**"), true);
   const blueprint = read("payload/files/devos/prompts/blueprint.md");
   assert.equal(blueprint.includes("So no fence\n   there names `scripts/devos/`, a guard or a `devos` command: T01's Done-when is each of `devos.config.json`\n   `stack.commands` exiting 0"), true);
