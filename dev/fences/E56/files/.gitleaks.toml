@@ -1,0 +1,14 @@
+# gitleaks (dev/RELEASE.md step 3): the default rules, plus two allowlists. Neither is ever a credential.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Content hashes in fence before-files, and the names of secrets"
+# A fence's before.json holds the SHA-256 content hashes of the files its preconditions check: a path such as
+# "lib/keys.mjs" next to a 64-hex hash reads like a key to the generic rule.
+paths = ['''^dev/fences/[^/]+/before\.json$''']
+# The name of a secret, never its value: a workflow's `secrets.ANTHROPIC_API_KEY || secrets.ANTHROPIC_API_KEY_2`, or
+# setup's list of key names ("CURSOR_API_KEY", "CURSOR_API_KEY_2"). Upper case and underscores only, ending in KEY,
+# TOKEN, SECRET or PASSWORD with an optional number; a real value never has that shape.
+regexTarget = "secret"
+regexes = ['''^(secrets\.)?[A-Z][A-Z0-9]*(_[A-Z0-9]+)*_(KEY|TOKEN|SECRET|PASSWORD)(_[0-9]+)?$''']

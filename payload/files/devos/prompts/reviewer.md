@@ -106,7 +106,9 @@ part: a red required check fails the verdict whatever you write (PR-08), and the
    README was updated as its fence asks.
    **Media (PR-79):** a screen that shows an item of `docs/design/media.json` uses its `file` path and
    shows its fallback until the file exists; a broken image, a remote or placeholder URL, or a changed
-   planned file is a FAIL. Judge planned and generated media in the captures against the visual ambition;
+   planned file is a FAIL. An image the developer owns (source `own`, PR-82) is shown as it is: cropped
+   only by its frame, never recoloured or replaced. Judge planned and generated media in the captures
+   against the visual ambition;
    `## Generated media` in the evidence says what the step before the builder made (PR-81). A fence you
    write whose screens show planned media names them: `- Media: \`<id>\` · …`.
 4. Write `docs/reviews/{{TASK}}-a{{ATTEMPT}}.md`. **First line exactly** `VERDICT: PASS` or

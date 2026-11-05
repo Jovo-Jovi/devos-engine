@@ -39,7 +39,7 @@ DEV_OS sets a project up from an empty folder and runs it as small, reviewed tas
 writes the blueprint: the brief, the scope, the design system, the phases and the first task. You approve it. Each
 task is then built from a written fence, checked, reviewed, and merged by you.
 
-Version `1.6.0`. The engine is under PolyForm Shield 1.0.0 and the files it installs into your project under MIT
+Version `1.7.0`. The engine is under PolyForm Shield 1.0.0 and the files it installs into your project under MIT
 (see [Licence](#licence)).
 
 ## Contents
@@ -112,7 +112,7 @@ flowchart LR
 | **Guided setup** | A page (`devos ui`) or the terminal (`devos init`). A new project starts from your last choices. |
 | **Blueprint** | Brief, scope, decisions, design system, data model, phases, fence T01 and the product's `README.md`, written on your computer. Up to five rounds of changes. |
 | **Design from references** | Your reference images become a direction of the project's own, never a copy. Every UI fence has a design specification. |
-| **Visual ambition and media** | Calm, Expressive or Showcase sets the direction. With generated media, the blueprint plans every image, video and voice item before a screen shows it. |
+| **Visual ambition and media** | Calm, Expressive or Showcase sets the direction. With generated media, the blueprint plans every image, video and voice item before a screen shows it; images you own are shown as they are. |
 | **The cycle** | 11 workflows on GitHub Actions: build, checks, review, change requests, the next task, gates, setup, deploys, waits, a supervisor. |
 | **Agents** | Claude Code, Cursor, Codex and Gemini, each as reviewer or builder. The reviewer can pick the builder for each task. |
 | **Effort** | Set per agent: chosen by the reviewer for each task, or fixed, with Fast for Cursor. |
@@ -218,6 +218,10 @@ commas, or a name; Enter takes the default.
   CSV, JSON or YAML up to 1 MB, or PDF up to 20 MB. They are copied to `devos/intake-docs/`.
 - **Design references:** images of designs you like, PNG, JPEG, WebP or GIF, up to 20 MB each, 30 files and 200 MB in
   all. They are kept in `docs/design/references/`, and the blueprint lists each one in `docs/design/REFERENCES.md`.
+- **Images you own** (a project with screens): your logo, product or team photos, PNG, JPEG, WebP or GIF, counted
+  with the files above. They are kept as they are in `docs/design/own/`, the media plan lists each one, and the
+  cycle (or `devos media`) places it where the product serves it: free, with no key, and with or without generated
+  media.
 - **Names:** name each file for what it holds (`brief.md`, `brand-guide.pdf`) and each image for what it shows
   (`ref-checkout-stripe.png`, `logo.png`). The agents cite them by name.
 

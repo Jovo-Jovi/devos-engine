@@ -233,6 +233,8 @@ function answers(overrides = {}) {
     "",
     overrides.visibility ?? "",
     "",
+    // E56: the images the project owns (PR-82)
+    "",
     "",
     "approve",
     "",
@@ -378,7 +380,7 @@ test("setup.test.mjs rejects a project name whose key is invalid", () => {
   const staged = stage();
   const again = stage();
   try {
-    const result = init(staged, ["accept", "no", "", "", "", "", "", "", "", "", "", "database none", "", "auth none", "", "email none", "", "", "", "", "", "X", "Demo Shop", "A small shop.", "Customers", "", "", "", "", "approve", ""].join("\n") + "\n");
+    const result = init(staged, ["accept", "no", "", "", "", "", "", "", "", "", "", "database none", "", "auth none", "", "email none", "", "", "", "", "", "X", "Demo Shop", "A small shop.", "Customers", "", "", "", "", "", "approve", ""].join("\n") + "\n");
     assert.equal(result.status, 0, result.stdout + result.stderr);
     const project = JSON.parse(readFileSync(path.join(staged.project, "devos", "project.json"), "utf8"));
     assert.equal(project.project, "DEMO-SHOP");

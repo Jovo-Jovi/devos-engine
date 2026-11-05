@@ -8,3 +8,6 @@ node_modules/
 # local environment — never committed
 .env
 .env.*
+
+# PowerShell's module cache, when a Windows shell writes it into the working folder (E53c2 a1)
+/Microsoft/
