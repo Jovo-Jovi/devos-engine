@@ -2,7 +2,7 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
-## 1.7.0 — Unreleased
+## 1.7.0 — 2026-11-05
 
 - **Images you own (PR-82).** A project with screens takes your own images (a logo, product or team photos) at setup, apart from the design references: a second drop zone on the guided page, and one more question in `devos init`. They are kept as they are in `docs/design/own/`, and the media plan lists each one with the source `own`, with or without generated media (without it, the plan holds only these). The "Generated media" step and `devos media` place each one where the product serves it: a checked copy, free, with no key and at any budget. It is never generated, edited or cropped, and the builder never changes it.
 - **The media step is quiet without media.** A fence that names no media makes nothing, even in a project without a media plan; before, each task's run said the plan was missing.
