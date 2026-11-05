@@ -1,0 +1,12 @@
+{
+  "CHANGELOG.md": "c1eb1d2df0ae30d5a3c0e99ef43b16b6609a8ab5c860a27581447279e0367325",
+  "README.md": "df4e4fb4c7c059b7df004e1d8cdba69e803e08b6da70bafc99bc334b59f6c4f4",
+  "bin/devos.mjs": "c67ca5c99a14974956a94e2d44f9271fa7b1864ade8c6bdc47479edc1e4dacef",
+  "package.json": "ce7220ec3c2a8748cabb95edb357a4fd234257fea0ac27fe0185bb004376eca4",
+  "payload/manifest.json": "382269e9e10c631aef10a5cc47b42fbec625fc6b6630d2c84c398d1551b34300",
+  "test/adopt-files.test.mjs": "d96417dfc26e74ddb2f8a088c3c3fa3685451c3f3e8391bb3d8b475422c21616",
+  "test/adopt-install.test.mjs": "aa0ac7251dabcc0e3378c2734002003a7b24416a501bc9da9cbc1fca2c7427dc",
+  "test/install.test.mjs": "3d28cd4b45799d7c3c714c8cd15f6b7ce1a1c461f5f645a2af393ade70ce3827",
+  "test/upgrade.test.mjs": "c1949614a6cb4ba3e5da5bf6bb25ca35afc2a2d8d4672e5eaf53ddce20ac06c4",
+  "test/version.test.mjs": "bb730137cdb60c752fe5b621cb0d7c04a829b3f7e9e45a1a1d4c075a1aac40b5"
+}
