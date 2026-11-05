@@ -8,6 +8,7 @@ alwaysApply: true
 - Never invent scope. Anything not in `docs/SCOPE.md`, `docs/DECISIONS.md` or the fence stops the task and is reported.
 - One task per branch (`task/Tnn`). **Automated runs** (`DEVOS_AUTOMATED=1`, the default in CI): never run `git add/commit/push` or `gh`, never open or merge a PR — the runner does (PR-04). **Manual IDE runs**: push only to the fence's branch with an explicit refspec; never push to `main`; never open or merge a PR.
 - Never delete `README.md` or remove one of its sections (PR-77). Update it only as the fence says.
+- A screen shows an item of `docs/design/media.json` by its `file` path, with its fallback while the file does not exist; never add, replace or delete a planned file (PR-79).
 - Never tick `docs/PHASES.md`; the runner records verdicts. Update `docs/SESSION_CONTEXT.md` and `docs/DEVELOPMENT_JOURNAL.md` only as the fence says.
 - Never edit the method surfaces: `.github/workflows/devos-*.yml`, `scripts/devos/**`, `scripts/guards/**`, `devos/**`, `devos.config.json`, `docs/fences/**`, `docs/reviews/**`, `docs/DECISIONS.md`, `docs/method/DEVOS_FIT.md`, `CLAUDE.md`, `.claude/**`, `.cursor/cli.json`, `.cursor/hooks*`, `content/**`. The runner's surface guard fails the task if you do.
 - Allocate CF, PR and OD ids from the live maximum and report them. State every count with the command that produced it.

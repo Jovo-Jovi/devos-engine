@@ -252,6 +252,5 @@ test("effort.test.mjs (g) the page asks each effort, and the method keeps a fixe
   has("payload/files/devos/prompts/blueprint.md", "or the builder's fixed `effort` and `fast` when `devos.config.json` gives it one, PR-78");
   has("payload/files/docs/method/DEV_OS_V2_REVIEWER.md", "**A fixed effort is kept (PR-78).**");
   has("payload/files/docs/method/AUTOMATION.md", "Effort (PR-78): a builder's effort is the reviewer's choice for each task, written in the fence's builder line,");
-  has("payload/files/docs/method/PRECEDENTS.md", "**Live maximum: PR-78.**");
   has("payload/files/docs/method/PRECEDENTS.md", "| PR-78 | **A builder's effort is the reviewer's for each task, or fixed by the developer.**");
 });

@@ -28,6 +28,9 @@ Rules for this run:
   copy its settled desktop capture `.devos/screens/<state>-1280.png` to `docs/screenshots/<state>.png`
   and link it under `## Screenshots`. A fence step that would delete or empty it is the fence's
   defect: HALT.
+- **Media (PR-79).** A screen that shows an item of `docs/design/media.json` uses its `file` path and
+  draws its fallback from `docs/DESIGN_SYSTEM.md` while the file does not exist: never a remote URL, a
+  placeholder service or a broken image. Never add, replace or delete a file the plan lists.
 - If the task changes anything visible, follow the `devos-compose-ui` skill: compose the approved
   design in `docs/DESIGN_SYSTEM.md` and `docs/design/`, never improvise a look.
 {{SKILLS_BLOCK}}- **Method fix** (the fence has `- Surface: method`, PR-28): change only the method files the fence

@@ -6,6 +6,7 @@ The notable changes of each DEV_OS Engine release. Versions follow [Semantic Ver
 
 - **Effort you can choose.** The guided page asks the blueprint agent's effort (high by default; Claude Code and Codex) and each builder's: chosen by the reviewer for each task, or fixed for every task, with Fast for Cursor. A fixed effort is written in every fence, and `fence-check` refuses another (PR-78). A Cursor model id that names its effort runs as it is, and the runner reports that effort.
 - **Generated media and the visual ambition, chosen at setup.** A project with screens can choose generated media (xAI: images, video or voice) and its visual ambition (Calm, Expressive or Showcase), on the guided page and in `devos init`. Both are kept in `devos/answers.json` for the blueprint. Nothing is generated yet.
+- **The media plan (PR-79).** With generated media chosen, the blueprint writes `docs/design/media.json`: every image, video and voice item the screens need, with its use, file, prompt (or text and voice) and `planned` status. `DESIGN_SYSTEM.md` names the visual ambition and follows it. A screen shows an item by its file path, with a designed fallback until the file exists, and a new guard, `guard:media`, checks the plan, the ambition and, once an item is generated, its provenance. A change request may add items.
 - **Two small fixes.** A README with no final newline gets a blank line before `## How this project is built`, and two tests no longer share a name.
 
 ## 1.5.0 — 2026-11-04
