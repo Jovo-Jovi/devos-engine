@@ -315,6 +315,7 @@ test("remove.test.mjs (f) devos help, the README and the changelog name devos re
   const readme = readFileSync(path.join(root, "README.md"), "utf8");
   assert.equal(readme.includes("| `devos remove [folder] [--local]` |"), true);
   const changelog = readFileSync(path.join(root, "CHANGELOG.md"), "utf8");
-  assert.equal(changelog.includes("## 1.8.0 — Unreleased"), true);
+  const heading = changelog.split("\n").find((line) => line.startsWith("## "));
+  assert.match(heading, /^## 1\.8\.0 — (?:Unreleased|[0-9]{4}-[0-9]{2}-[0-9]{2})$/);
   assert.equal(changelog.includes("**`devos remove`**"), true);
 });
