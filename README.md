@@ -5,12 +5,12 @@
   </picture>
 </p>
 
-<h3 align="center">From an empty folder to a GitHub project that AI agents build, review and ship.<br>You approve every step.</h3>
+<h3 align="center">From an empty folder to a project that AI agents build and review, task by task.<br>You approve every step.</h3>
 
 <p align="center">
   <img alt="Node.js 22 or newer" src="https://img.shields.io/badge/Node.js-%E2%89%A5%2022-5FA04E?style=for-the-badge&logo=nodedotjs&logoColor=white">
   <img alt="Zero dependencies" src="https://img.shields.io/badge/dependencies-zero-2F8CFF?style=for-the-badge">
-  <img alt="Runs on GitHub Actions" src="https://img.shields.io/badge/runs%20on-GitHub%20Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white">
+  <img alt="On GitHub Actions or this computer" src="https://img.shields.io/badge/runs-GitHub%20Actions%20%7C%20local-2088FF?style=for-the-badge&logo=githubactions&logoColor=white">
   <img alt="Tested on Linux and Windows" src="https://img.shields.io/badge/tested%20on-Linux%20%7C%20Windows-6E7781?style=for-the-badge">
 </p>
 <p align="center">
@@ -20,7 +20,7 @@
   <img alt="Gemini" src="https://img.shields.io/badge/Gemini-reviewer%20%26%20builder-8E75B2?style=flat-square&logo=googlegemini&logoColor=white">
 </p>
 <p align="center">
-  <img alt="Version 1.0.0" src="https://img.shields.io/badge/version-1.0.0-C9A96E?style=flat-square">
+  <img alt="Latest release" src="https://img.shields.io/github/v/release/Jovo-Jovi/devos-engine?style=flat-square&label=release&color=C9A96E">
   <img alt="Licence PolyForm Shield 1.0.0" src="https://img.shields.io/badge/licence-PolyForm%20Shield%201.0.0-0C1628?style=flat-square">
   <img alt="20 stacks" src="https://img.shields.io/badge/stacks-20-0C1628?style=flat-square">
   <img alt="16 project types" src="https://img.shields.io/badge/project%20types-16-0C1628?style=flat-square">
@@ -28,52 +28,148 @@
 </p>
 
 <p align="center">
-  <a href="#install">Install</a> &nbsp;·&nbsp; <a href="#create-a-project">Create a project</a> &nbsp;·&nbsp; <a href="#the-guided-setup">Screens</a> &nbsp;·&nbsp; <a href="#commands">Commands</a> &nbsp;·&nbsp; <a href="#roadmap">Roadmap</a>
+  <a href="#quick-start">Quick start</a> &nbsp;·&nbsp; <a href="#two-ways-to-build">Two ways to build</a> &nbsp;·&nbsp; <a href="#features-at-a-glance">Features</a> &nbsp;·&nbsp; <a href="#commands">Commands</a> &nbsp;·&nbsp; <a href="#roadmap">Roadmap</a>
 </p>
 
 <p align="center">
   <img alt="The guided setup drafting a project's blueprint: the stack in the middle, each module around it, and the keys to get ready" src="docs/assets/screens/blueprint.png" width="900">
 </p>
 
-DEV_OS takes you from an empty folder to a GitHub project that AI agents build task by task. You answer a few
-questions in your browser or your terminal, and an AI agent on your computer writes the project's blueprint. When you
-approve it, DEV_OS creates the GitHub repository and starts the automated cycle on GitHub Actions. From then on, a
-builder agent writes each task, a reviewer agent reviews it, and you merge at the gates.
+DEV_OS sets a project up from an empty folder and runs it as small, reviewed tasks. An AI agent on your computer
+writes the blueprint: the brief, the scope, the design system, the phases and the first task. You approve it. Each
+task is then built from a written fence, checked, reviewed, and merged by you.
 
 Version `1.5.1`. The engine is under PolyForm Shield 1.0.0 and the files it installs into your project under MIT
 (see [Licence](#licence)).
 
-## Why DEV_OS
+## Contents
 
-<table>
-  <tr>
-    <td width="50%" valign="top"><b>Bring the agents you have.</b> Claude Code, Cursor, Codex and Gemini can each review or build. The reviewer can pick the builder whose strengths fit each task.</td>
-    <td width="50%" valign="top"><b>A blueprint you approve.</b> Your agent writes the phases, the glossary and the first task into your folder. You approve them or ask for changes, up to five rounds.</td>
-  </tr>
-  <tr>
-    <td width="50%" valign="top"><b>Gates, not guesses.</b> Every task is reviewed against a written fence, a red check overrides a pass, and nothing merges without you.</td>
-    <td width="50%" valign="top"><b>Your keys stay yours.</b> Each key is typed once and handed to <code>gh secret set</code> over standard input. It is never stored, logged or shown to a model.</td>
-  </tr>
-  <tr>
-    <td width="50%" valign="top"><b>Lean by default.</b> Choose an MVP or a full product. The first task builds only the skeleton of your stack and makes every check green.</td>
-    <td width="50%" valign="top"><b>Any stack it knows.</b> 16 project types and 20 stacks, from Next.js to FastAPI, Go and Flutter, with modules for data, auth, payments, email and more.</td>
-  </tr>
-</table>
+| Start | Build | Reference |
+|---|---|---|
+| [Quick start](#quick-start) | [Create a project](#create-a-project) | [Commands](#commands) |
+| [Two ways to build](#two-ways-to-build) | [Agents, models and effort](#agents-models-and-effort) | [Settings you can change on GitHub](#settings-you-can-change-on-github) |
+| [How a task runs](#how-a-task-runs) | [Types, stacks and modules](#types-stacks-and-modules) | [GitHub minutes and storage](#github-minutes-and-storage) |
+| [Features at a glance](#features-at-a-glance) | [After setup](#after-setup) | [Your keys and data](#your-keys-and-data) |
+| [Requirements](#requirements) | [Add DEV_OS to a project you have](#add-dev_os-to-a-project-you-have) | [The Control Tower (optional)](#the-dev_os-control-tower-optional) |
+| [Install](#install) | [Stop and resume](#stop-and-resume) | [Limits](#current-limits) · [Roadmap](#roadmap) · [Licence](#licence) · [Security](#security) |
 
-## How it works
+## Quick start
+
+```
+git clone https://github.com/Jovo-Jovi/devos-engine.git
+cd devos-engine
+./devos ui
+```
+
+On Windows, double-click `Start DEV_OS.cmd`; on macOS, `Start DEV_OS.command`. The setup opens in your browser:
+
+1. **This computer.** The page checks the engine, git, the GitHub CLI and the AI tools signed in.
+2. **How it is built.** Automated on GitHub, or local on this computer ([Two ways to build](#two-ways-to-build)).
+3. **The questions, then the blueprint.** Your agent writes the documents; you read them and approve.
+
+Before a first project, read [Before you start a project](docs/PROJECT-CHECKLIST.md): every decision, file and key the
+setup asks for, in order, with a worksheet.
+
+## Two ways to build
+
+|  | Automated development (GitHub) | Local development (this computer) |
+|---|---|---|
+| **Builds each task** | The builder agent, on GitHub Actions | You, in your IDE, from the task's fence (Cursor rules are installed) |
+| **Reviews each task** | The reviewer agent, on GitHub Actions | Your reviewer, on the task branch you push (`docs/method/DEV_OS_V2_REVIEWER.md`) |
+| **Merges** | You, at the gates | You |
+| **Needs** | Node.js 22, git, the GitHub CLI signed in, a key for each agent tool | Node.js 22 and git |
+| **Setup ends with** | The repository on GitHub, keys as secrets, the first cycle started | The approved blueprint, `README.md`, `SETUP.md` and the first commit |
+| **GitHub** | Required | Optional: a private backup where only `ci.yml` runs (`DEVOS_PAUSED` is `true`) |
+| **Start** | `devos init <folder>` | `devos init --local <folder>` |
+| **Check this computer** | `devos doctor` | `devos doctor --local` |
+
+The guided page asks the same choice on its first screen. `devos init --help` explains both.
+
+## How a task runs
 
 ```mermaid
 flowchart LR
-  A["Empty folder"] --> B["Guided setup<br/>agents, stack, modules, scope"]
-  B --> C["Blueprint<br/>written on your computer"]
-  C -->|you approve| D["GitHub repository<br/>keys stored as secrets"]
-  D --> E["The cycle<br/>builder, then reviewer"]
-  E -->|you merge| E
+  F["Fence<br/>the task, written"] --> B["Builder<br/>on its own branch"]
+  B --> C["Checks and guards<br/>tests, lint, captures"]
+  C --> R["Reviewer<br/>against the fence"]
+  R -->|PASS| M["You merge"]
+  R -->|FAIL| X["Fence reissued<br/>with what to fix"]
+  X --> B
+  M --> N["Next fence"]
 ```
 
-## The guided setup
+- **A fence** is the task's contract: the paths it may touch, its steps, the commands that prove it is done, and what
+  it must not do.
+- **A red check overrides a PASS.** Nothing merges while a check is red.
+- **You merge at the gates.** A migration, a new sign-in or payment import, and every gate task stop for a person.
+- **Usage limits are waited out:** on a second account, then the next model, then a builder of another tool, and only
+  then until the earliest reset, hours or days away.
 
-`Start DEV_OS` (or `devos ui`) opens the setup as a page on this computer. Every screen below is the real page, captured during a test run with stand-in agents.
+## Features at a glance
+
+| Area | What you get |
+|---|---|
+| **Guided setup** | A page (`devos ui`) or the terminal (`devos init`). A new project starts from your last choices. |
+| **Blueprint** | Brief, scope, decisions, design system, data model, phases, fence T01 and the product's `README.md`, written on your computer. Up to five rounds of changes. |
+| **Design from references** | Your reference images become a direction of the project's own, never a copy. Every UI fence has a design specification. |
+| **The cycle** | 11 workflows on GitHub Actions: build, checks, review, change requests, the next task, gates, setup, deploys, waits, a supervisor. |
+| **Agents** | Claude Code, Cursor, Codex and Gemini, each as reviewer or builder. The reviewer can pick the builder for each task. |
+| **Effort** | Set per agent: chosen by the reviewer for each task, or fixed, with Fast for Cursor. |
+| **Usage limits** | Second accounts, up to 4 next models per role, a fallback builder of another tool. |
+| **Guards** | 16 guards on every task, from scope and secrets to design, i18n and data boundaries. |
+| **UI evidence** | Captures at 1280 and 390 px, filmstrips, reduced motion, layout shift and axe checks, read against the design specification. |
+| **Lean by default** | MVP or full product; every dependency names its need; current library docs through Context7. |
+| **Expert skills** | 18 vendored skill sets, chosen for the stack and modules. |
+| **Product README** | Written by the blueprint, kept current by every feature task, never deleted. |
+| **Usage and cost** | Tokens per agent run, totalled in `docs/USAGE.md` by model, stage and task. |
+| **Adopt and upgrade** | Add DEV_OS to a project you have, and take new engine versions, each by pull request. |
+| **Project page** | A project's setup, versions, models and link, with upgrade and connect buttons. |
+| **Control Tower link** | Optional, off unless you answer yes ([details](#the-dev_os-control-tower-optional)). |
+
+## Requirements
+
+| What | Why | Check |
+|---|---|---|
+| Node.js 22 or newer | runs the engine (no dependencies) | `node --version` |
+| git | the project's commits | `git --version` |
+| One AI coding CLI, signed in on this computer | writes the blueprint | Claude Code `claude`, Cursor CLI `agent`, Codex CLI `codex` or Gemini CLI `gemini` |
+| **Automated only:** the GitHub CLI, signed in with the `repo` and `workflow` scopes | creates the repository, sets secrets and variables | `gh auth status` |
+| **Automated only:** a key for each tool that runs on GitHub | the reviewer and builders run on GitHub Actions | see below |
+| Optional: a Vercel account | deploys | `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`, which you can set later |
+
+| Tool | Key on GitHub | Where to get it |
+|---|---|---|
+| Cursor | `CURSOR_API_KEY` | cursor.com/dashboard → API keys |
+| Claude Code | `CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_API_KEY` | run `claude setup-token` |
+| Codex | `OPENAI_API_KEY` | platform.openai.com → API keys |
+| Gemini | `GEMINI_API_KEY` | aistudio.google.com → API keys |
+
+`devos doctor` checks the GitHub CLI for you, and `devos agents detect` shows which AI CLIs are installed and signed in.
+
+## Install
+
+1. **Install the requirements** above.
+2. **Get the engine.** Clone it, or download the ZIP of a release and unzip it anywhere. `CHANGELOG.md` says what each
+   release changed.
+3. **Start it.** Nothing else to install.
+
+| Where | Start the guided setup |
+|---|---|
+| Windows | double-click `Start DEV_OS.cmd` |
+| macOS | double-click `Start DEV_OS.command` (the first time: right-click it, then **Open**) |
+| macOS or Linux terminal | `./devos ui` |
+| Windows PowerShell | `.\devos ui` |
+| Windows Command Prompt | `devos ui` |
+| Any shell | `node bin/devos.mjs ui` |
+
+- **Where projects go.** Each project gets its own new folder outside the engine folder. The page suggests
+  `devos-projects` in your home folder.
+- **Update the engine** with `git pull` in its folder, or a new ZIP. Your projects change only when you run
+  `devos upgrade` in one.
+- **`devos` in any folder (optional).** Run `npm link` once in the engine folder. If `devos` is still not found, add
+  npm's global folder to your PATH: the folder `npm prefix -g` prints on Windows, its `bin` on macOS and Linux.
+
+## Create a project
 
 <table>
   <tr>
@@ -94,258 +190,181 @@ flowchart LR
   </tr>
 </table>
 
-## What you get
+The page and `devos init` ask the same questions, in this order. The page runs on `127.0.0.1` only, behind a one-time
+link the terminal prints, and follows your light or dark setting. In the terminal, type a number, several separated by
+commas, or a name; Enter takes the default.
 
-- **Guided setup, in your browser or your terminal.** It covers the contract, the agents and models for each role,
-  eight questions about the project, and optional documents for the agent to read.
-- **A blueprint written on your computer** by the agent you choose. It covers:
-  - the product brief, scope and decisions;
-  - the design system;
-  - the data model, when the project stores data;
-  - the phases, and the first task (fence T01).
-
-  You approve it or describe the changes you want.
-- **A GitHub repository with the whole method installed.** That means the workflows, runner scripts, guards, prompts,
-  rules, skills and the operating manual. Every file lives in your repository.
-- **Keys typed once.** Each key goes straight to GitHub as a secret. DEV_OS never writes one to a file, a log or a
-  model.
-- **The automated cycle on GitHub Actions.** For each task:
-  - the builder works on a branch;
-  - the reviewer checks it against the task's fence;
-  - checks run, failed attempts retry, and usage limits are waited out.
-
-  You merge the pull requests.
-- **What it costs.** Every agent run, from the blueprint to the last review, adds a line with its tool, model and
-  tokens. `docs/USAGE.md` totals them by model, by stage and by task. Claude Code reports its own cost; for the other
-  tools, set your prices per model once in `devos/prices.json`.
-
-## Requirements
-
-| What | Why | Check |
+| # | Step | What happens |
 |---|---|---|
-| Node.js 22 or newer | runs the engine (no dependencies) | `node --version` |
-| git | the first local commit | `git --version` |
-| GitHub CLI, signed in with the `repo` and `workflow` scopes | creates the repository, sets secrets and variables | `gh auth status` |
-| One AI coding CLI, signed in on this computer | writes the blueprint | Claude Code `claude`, Cursor CLI `agent`, Codex CLI `codex` or Gemini CLI `gemini` |
-| A key for each tool that runs on GitHub | the reviewer and builders run on GitHub Actions | Cursor: `CURSOR_API_KEY` (cursor.com/dashboard → API keys). Claude Code: `CLAUDE_CODE_OAUTH_TOKEN` (run `claude setup-token`) or `ANTHROPIC_API_KEY`. Codex: `OPENAI_API_KEY` (platform.openai.com → API keys). Gemini: `GEMINI_API_KEY` (aistudio.google.com → API keys) |
-| Optional: a Vercel account | deploys | `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`, which you can set later |
+| 1 | **Doctor** | Checks the tools this way of building needs, and prints the exact fix for anything missing. |
+| 2 | **Contract** | Read it and accept it. Anything else stops setup; nothing is written or sent. |
+| 3 | **Agents** | A tool and model for the reviewer, the light reviewer, the builder pool and the blueprint agent, and each one's effort ([Agents, models and effort](#agents-models-and-effort)). |
+| 4 | **Type, stack, modules, scope** | One of 16 types, a stack that fits it, a provider (or None) for each module, and **MVP** or **Full product for production** ([Types, stacks and modules](#types-stacks-and-modules)). |
+| 5 | **Five questions** | The name, a one-paragraph brief, who uses it, its languages, and the repository's visibility (`private` by default). |
+| 6 | **Documents (optional)** | The documents worth preparing for your type. Give the ones you have; the blueprint writes the rest and lists what is open in `docs/OPEN_QUESTIONS.md`. |
+| 7 | **Summary** | Check your answers, then confirm or answer again. |
+| 8 | **Install** | The method's files are written into the folder. |
+| 9 | **Blueprint** | Your agent writes the documents and fence T01. Approve them, or describe the changes (up to five rounds). |
+| 10 | **Keys** (automated) | Every key the project needs, and where to get it. Each is typed once, hidden, and handed to `gh secret set`. |
+| 11 | **GitHub** (automated) | Commits, creates the repository, pushes, sets permissions, labels, variables and secrets, runs the setup check and starts the first cycle. |
+| 10–11 | **Local** | `SETUP.md` and the first commit, then one question: a private GitHub backup, yes or no. |
 
-`devos doctor` checks the GitHub CLI for you. `devos doctor --local` checks only what local development needs: Node.js 22 and git. `devos agents detect` shows which AI CLIs are installed and signed in.
-[Before you start a project](docs/PROJECT-CHECKLIST.md) lists the rest to prepare: the agents, the project's choices,
-its documents, and the services and keys it needs.
+<details>
+<summary><b>Documents you can give, and their limits</b></summary>
 
-## Install
+- **Documents:** a product brief or PRD, brand assets, content, data and API notes, business rules. Markdown, text,
+  CSV, JSON or YAML up to 1 MB, or PDF up to 20 MB. They are copied to `devos/intake-docs/`.
+- **Design references:** images of designs you like, PNG, JPEG, WebP or GIF, up to 20 MB each, 30 files and 200 MB in
+  all. They are kept in `docs/design/references/`, and the blueprint lists each one in `docs/design/REFERENCES.md`.
+- **Names:** name each file for what it holds (`brief.md`, `brand-guide.pdf`) and each image for what it shows
+  (`ref-checkout-stripe.png`, `logo.png`). The agents cite them by name.
 
-1. **Install the requirements** above. The engine itself needs only Node.js 22 or newer.
-2. **Get the engine.** Clone it, or download the ZIP from GitHub and unzip it anywhere:
+</details>
 
-   ```
-   git clone https://github.com/Jovo-Jovi/devos-engine.git
-   ```
+<details>
+<summary><b>While the blueprint is written</b></summary>
 
-   Each release is a tag with a GitHub Release and its ZIP; `CHANGELOG.md` says what changed.
-3. **Start it.** Nothing else to install: the engine has no dependencies.
-   - **Windows:** double-click `Start DEV_OS.cmd` in the engine folder.
-   - **macOS:** double-click `Start DEV_OS.command`. The first time, right-click it and choose **Open**.
-   - **Any terminal:** open it in the engine folder and run the line for your shell.
+- With Cursor and Claude Code, the page shows each step as the agent takes it: the file it reads or writes, the
+  command it runs.
+- When a check of the documents fails, the agent fixes only what failed, in the same session.
+- A round with no progress for 15 minutes is stopped. Documents that pass the checks go to your review; otherwise the
+  agent fixes what fails.
+- Stopping keeps what was written.
 
-     | Shell | Command |
-     |---|---|
-     | macOS or Linux | `./devos ui` |
-     | Windows PowerShell | `.\devos ui` |
-     | Windows Command Prompt | `devos ui` |
-     | Any shell | `node bin/devos.mjs ui` |
+</details>
 
-   The guided setup opens in your browser. Keep the window that opened with it until the setup is done.
+## Agents, models and effort
 
-- **Where projects go.** Each project gets its own new folder, outside the engine folder. The page suggests
-  `devos-projects` in your home folder. DEV_OS refuses a folder inside the engine folder.
-- **Update the engine:** `git pull` in the engine folder, or download the ZIP again. Your projects are not touched;
-  `devos upgrade` in a project brings it to the new version.
-- **The `devos` command in any folder (optional).** Run `npm link` once in the engine folder. If `devos` is still not
-  found, npm's global folder is not on your PATH. On Windows that is the folder `npm prefix -g` prints; on macOS and
-  Linux it is that folder's `bin`. Add it to your PATH, or keep using the commands above.
+| Role | Runs | What it does |
+|---|---|---|
+| **Reviewer** | on GitHub (automated) | Reviews every task against its fence, deeply for risk 3 and gates. |
+| **Light reviewer** | on GitHub (automated) | Reviews low-risk tasks. |
+| **Builder pool** | on GitHub (automated) | Builds each task. Each builder has strengths (UI, motion, accessibility, i18n, backend, data, security, devops, tests, docs, fast and cheap, deep reasoning) and one is the default; you choose who picks the builder for each task. |
+| **Blueprint agent** | on this computer | Writes the blueprint. Any signed-in tool. |
 
-## Create a project
+| Setting | How |
+|---|---|
+| **Models** | Only the models a tool lists for your account are offered. |
+| **Effort** | The blueprint agent runs at high by default. A builder's effort is chosen by the reviewer in each fence, or fixed, with Fast for Cursor. |
+| **A model for the next run** | `devos models set <role> <model>` or the page's **Models** button; same tool, no commit. |
+| **Next models at a limit** | Up to 4 per role, of its own tool (`devos models fallback`, by pull request). A model the account cannot use is skipped. |
+| **Second accounts** | `CURSOR_API_KEY_2`, `CLAUDE_CODE_OAUTH_TOKEN_2`, `OPENAI_API_KEY_2`, `GEMINI_API_KEY_2`: at a limit the run continues on the other account. |
+| **Fallback builder** | `agents.fallback_builder` in `devos/project.json`: a builder of another tool finishes the task when the default's tool is out for longer than a run waits. |
 
-**Before you start,** read [Before you start a project](docs/PROJECT-CHECKLIST.md). It lists every decision, piece of
-information, file and key the setup asks for, in the order it asks, with a worksheet to fill in.
+## Types, stacks and modules
 
-**In the browser.** Start DEV_OS as in *Install*. The first screen checks this computer: the engine, the GitHub CLI
-and the AI tools signed in. The page then asks where to create the project and walks you through the steps below.
+- **16 project types:** SaaS, web app, marketing site, dashboard, marketplace, store, API, mobile, AI product,
+  realtime app, documentation site, CLI, library, worker, browser extension and full product.
+- **20 stacks, each with its own checks:** Next.js, Nuxt, SvelteKit, Remix, Astro, Astro Starlight, Vite + React,
+  Vite + Vue, SolidStart, Hono, Fastify, NestJS, Expo, a Node TypeScript bin or package, FastAPI, Django, a Python
+  package, Go with chi, and Flutter.
+- **Scope:** **MVP** ships the core flow first and keeps the rest on a "Later" list in `docs/SCOPE.md`; **Full product
+  for production** plans every feature in phases, then a production-readiness phase.
 
-- It runs on this computer only, at `127.0.0.1`, behind a one-time link that the terminal prints.
-- Every answer goes to the same steps as `devos init`, and keys typed on the page reach GitHub the same way.
-- It follows your system's light or dark setting; the button at the top right switches it.
-- **Close DEV_OS** on the last screen, or Ctrl-C in its terminal, stops the page.
+| Module | Providers (each menu also offers None) |
+|---|---|
+| Database | Postgres on Supabase, Firestore on Firebase |
+| Storage | Supabase Storage, Cloudflare R2, Firebase Storage, S3, Vercel Blob |
+| Auth | Email and password, OAuth, both |
+| Payments | Stripe, Paddle, Lemon Squeezy, PayPal, RevenueCat |
+| Email | Resend, Postmark, Amazon SES |
+| Jobs | Upstash Redis, BullMQ |
+| Search | Postgres full text, Meilisearch |
+| Product AI | Chat, tools and agents, retrieval |
+| Hosting | Vercel |
+| Observability | Structured logs, Sentry |
 
-**In a terminal.** From the engine folder, with the form of `devos` that works in your shell (see *Install*):
-
-```
-./devos doctor
-./devos init ~/devos-projects/my-app
-```
-
-On Windows PowerShell: `.\devos init $HOME\devos-projects\my-app`. `devos ui <folder>` opens the page for that
-folder instead.
-
-The folder must be new or empty. In every menu, type a number (or several, separated by commas) or a name. Enter
-takes the default shown.
-
-1. **Doctor.** It checks that the GitHub CLI is installed and signed in, and that the token has the scopes it needs.
-   When something is missing, it prints the exact command to fix it.
-2. **Contract.** Read it, then accept it. Anything else stops setup, and nothing is written or sent.
-3. **Agents.** Pick a tool and a model for each role:
-   - the reviewer, which reviews every task on GitHub;
-   - the light reviewer, for low-risk tasks;
-   - the builder pool, with each builder's strengths and the default builder;
-   - who picks the builder for each task;
-   - the blueprint agent, which works on this computer. It can be any signed-in tool.
-
-   The GitHub roles offer Claude Code, Cursor, Codex and Gemini. When a tool lists its models for your account, only
-   those are offered.
-4. **Project type, stack and modules.**
-   - The project type: SaaS, web app, marketing site, dashboard, marketplace, store, API, mobile, AI product,
-     realtime app, documentation site, CLI, library, worker, browser extension or full product.
-   - A stack that fits the type: 15 JavaScript and TypeScript stacks, FastAPI, Django, a Python package, Go with chi,
-     or Flutter.
-   - A provider for each module the type uses: database, storage, auth, payments, email, jobs, search, product AI,
-     hosting and observability. Each menu starts on the type's usual choice, and `None` is always offered.
-   - The scope: **MVP** (the core flow first; every other feature waits on a "Later" list until you ask for it) or
-     **Full product for production** (every feature in your brief, in phases, then a production-readiness phase).
-5. **Five questions.** The project name, a one-paragraph brief, who uses it, its languages, and the repository
-   visibility (`private` by default). Whether it stores data, the sign-in and the deploy target follow from the
-   modules.
-6. **Documents (optional).** DEV_OS first lists the documents worth preparing for your type: a product brief or PRD,
-   design references, brand assets, content, data and API notes, business rules. Give the ones you have. They are
-   copied to `devos/intake-docs/`. The blueprint reads them, writes every document that is still missing, and lists
-   what is left open in `docs/OPEN_QUESTIONS.md`. Documents can be Markdown, text, CSV, JSON or YAML (up to 1 MB) or
-   PDF (up to 20 MB). Images of designs you like, at full quality (PNG, JPEG, WebP or GIF, up to 20 MB each; up to 30
-   files, 200 MB in all), are kept in `docs/design/references/`, in the repository: the blueprint draws a direction
-   of the project's own from them, never a copy, and lists each one in `docs/design/REFERENCES.md`. Name each file
-   for what it holds (`brief.md`, `brand-guide.pdf`) and each image for the reference it shows
-   (`ref-checkout-stripe.png`, `logo.png`, `flow-sign-up.png`): the agents cite them by name.
-7. **Summary.** Check your answers. Confirm, or answer again.
-8. **Install.** The method files are written into the folder.
-9. **Blueprint.** Your blueprint agent writes the project documents and fence T01 in the folder.
-   - With Cursor and Claude Code, the page shows each step as the agent takes it: the file it reads or writes, the
-     command it runs. The terminal's heartbeat line shows the latest one.
-   - When a check of the documents fails, the agent fixes only what failed, in the same session.
-   - If the agent makes no progress for 15 minutes (no step, no output, no file written), the round is stopped.
-     Documents that pass the checks then go to your review; otherwise the agent fixes what fails.
-   - Stopping keeps what was written.
-   - When it finishes, approve, or describe the changes you want. You get up to five rounds.
-10. **Keys.** DEV_OS lists every key this project needs, for the agents and for the modules you picked, and where to
-    get each one. Type each one once. The input is hidden, and you can skip a key you will set later. For a key that
-    is a JSON file, such as a service account, give the file's path instead. The values stay in memory until they are
-    handed to GitHub (`gh secret set`, over standard input). Each agent tool also offers an optional second account's
-    key (`CURSOR_API_KEY_2`, `CLAUDE_CODE_OAUTH_TOKEN_2`, `OPENAI_API_KEY_2`, `GEMINI_API_KEY_2`): when one account
-    reaches its usage limit, the run continues on the other, and when both have, it waits for the earliest reset.
-11. **GitHub.** DEV_OS shows the plan: the repository, its visibility, the variables, and the keys to upload or set
-    later. When you confirm, DEV_OS:
-    - commits the folder;
-    - creates the repository;
-    - pushes it;
-    - sets the workflow permissions, the labels of the issue forms (`devos:request`, `devos:method`), variables and secrets, and turns off the Wiki and Projects tabs DEV_OS does not use;
-    - runs the setup check;
-    - starts the first cycle.
-
-## Lean by default
-
-DEV_OS builds what your brief asks for, nothing cut and nothing added, with the simplest architecture that carries
-it.
-
-- **Scope is your choice.** With **MVP**, the first phases ship the core flow end to end and the rest waits on a
-  "Later" list in `docs/SCOPE.md`; ask for it with a change request when you are ready. With **Full product for
-  production**, every feature is planned in phases, core flow first, and a last phase makes it ready for production:
-  a security review, error tracking and logging, backups when data is stored, and the speed of the main pages.
-- **The plan cites a need** for every layer, service and dependency it includes.
-- **`docs/STACK.md`.** The blueprint writes your stack's current conventions in one page, and every builder follows
-  it.
-- **Builders** make the simplest change that meets each task, and name every new dependency with the reason for it.
-- **Reviewers** fail a task that adds a dependency, abstraction or layer it does not need.
-- **Current documentation.** Every agent on GitHub can look up library documentation through Context7, so the code
-  follows today's APIs rather than the model's memory.
+Each menu starts on the type's usual choice. A migration always waits for your merge.
 
 ## After setup
 
-- **The cycle builds T01 on GitHub.** T01 is always the project skeleton from your stack's recipe: the official
-  generator, the check commands, one structured logger, error handling, a health route for web and API projects, and
-  one architecture test. Every check passes before the first feature. Follow it in the repository's **Actions** and
-  **Pull requests** tabs, or from a terminal with `devos watch <folder>`.
-- **When a run fails,** `devos verify <folder>` quotes what the run said, names the likely cause and the fix, and says
-  who applies it: you, `devos continue`, or nobody, when the cycle resumes by itself after a usage limit.
-- **Change a model without a commit.** In the project folder, `devos models` shows the model of the reviewer, the
-  light reviewer and the default builder. `devos models set builder <model>` changes one from the next cycle run, with
-  the same tool, and `devos models reset builder` goes back to the configured model. They set the repository variables
-  `DEVOS_REVIEWER_MODEL`, `DEVOS_REVIEWER_LIGHT_MODEL` and `DEVOS_BUILDER_MODEL`, which you can also set in GitHub
-  (Settings → Secrets and variables → Actions → Variables). In the guided page (`devos ui`), the **Models** button on
-  a project's page does the same, with each tool's model list.
-- **Several models per role.** The reviewer, the light reviewer and the default builder can each list up to 4 next
-  models of their own tool (`fallback_models`). When a role's model reaches a usage limit on every account, the run
-  moves on to the next one; a model the account cannot use is skipped. The run waits only when no model can run.
-  Change them with `devos models fallback <reviewer|light|builder> <model>,<model>` (or `none`), or with **Next
-  models** in a project's Models panel: either opens a pull request with `devos/project.json` and the
-  `devos.config.json` made from it, and they apply once you merge it. Another builder of the pool lists them in
-  `devos/project.json` by hand; then run `node scripts/devos/config.mjs --write`. A builder of another tool can take over when the default's tool is out for longer than a run waits: name it as `agents.fallback_builder` in `devos/project.json` (PR-76).
-- **A project's page.** Start DEV_OS, then choose **Current project** after the computer check. Pick a project from
-  your projects folder, press **Choose a folder…** to pick its folder in this computer's folder dialog (or paste its
-  path), or paste its GitHub address: your GitHub account (the gh sign-in) must own or administer that repository, and
-  DEV_OS checks that it is a DEV_OS project before it clones it into your projects folder. The page shows the
-  project's setup, its version next to this engine's and the latest release, its models and its Control Tower link.
-  Opening a project changes nothing in it.
-- **Upgrade and connect from a project's page.** When the project on GitHub is older than this engine, **Upgrade to
-  1.5.1 by pull request** (this engine's version) runs `devos upgrade` for you. Merge the pull request on GitHub, then
-  press **Bring this folder up to date**. **Read the contract** shows the Control Tower contract. Once this engine,
-  the project and the latest release are the same version, tick the box and press **Connect by pull request**: a pull
-  request records your answer, and `DEVOS_REPORTING` turns on. To stop reporting, set `DEVOS_REPORTING` to `off`.
-  - **When the link is asked.** A `devos-cycle` run asks the Control Tower to link the repository, and its operator
-    approves it once. Merging the link's pull request starts a link run, which builds nothing and only asks; with the
-    link on, **Ask the Control Tower now** on the project's page does the same. While a `devos-cycle` run is queued or
-    going, that run asks instead. Once the Control Tower has approved the link, ask once more: that link run sends the
-    project's tasks, done and still to do.
-  - **A new contract version.** A project linked under an older version of the contract shows it on its page: read it
-    and press **Accept by pull request**. The plan is sent only to a project that accepted version 2 or later.
-- **You merge at the gates.** Each pull request carries a comment from the gate doctor that says what still blocks
-  the merge. Comment `/devos doctor` to check again.
-- **`SETUP.md`** in the repository lists every setting the project uses. If the setup check reports a missing one,
-  add it on GitHub, then run `devos continue <folder>`.
-- **More work later.** Open a "Dev OS change request" issue in the repository.
-- **Engine updates.** A new engine version brings its workflow, script and prompt changes to a project when you ask
-  for them. Run `git pull` in the engine folder, then `devos upgrade` in the project folder, on `main` with nothing
-  uncommitted. DEV_OS opens a pull request with every engine file that changed; merge it, and the next cycle runs
-  with the update. An engine file you edited yourself is listed as a conflict and never overwritten. Your code, your
-  project's documents, `devos/project.json` and `devos/prices.json` are never touched.
-- **The operating manual** is `docs/method/AUTOMATION.md` in your project. It covers every workflow, setting,
-  comment command and what to do when something goes wrong.
+- **T01 is the skeleton.** It comes from your stack's recipe: the official generator, the check commands, one
+  structured logger, error handling, a health route for web and API projects, and one architecture test. Every check
+  passes before the first feature.
+- **Follow the cycle** in the repository's **Actions** and **Pull requests** tabs, or with `devos watch <folder>`.
+- **When a run fails,** `devos verify <folder>` quotes it, names the likely cause and the fix, and says who applies it.
+- **Each pull request** carries the gate doctor's comment: what still blocks the merge. Comment `/devos doctor` to
+  check again.
+- **More work later:** open a "Dev OS change request" issue in the repository.
+- **`SETUP.md`** lists every setting the project uses. After adding a missing one on GitHub, run
+  `devos continue <folder>`.
+- **The operating manual** is the project's `docs/method/AUTOMATION.md`: every workflow, setting, comment command, and
+  what to do when something goes wrong.
+
+<details>
+<summary><b>A project's page: upgrade and connect</b></summary>
+
+- **Open it.** Start DEV_OS and choose **Current project**: pick a project from your projects folder, choose its
+  folder, or paste its GitHub address (your gh account must own or administer it). Opening a project changes nothing.
+- **It shows** the project's setup, its version next to this engine's and the latest release, its models and its
+  Control Tower link.
+- **Upgrade by pull request** when the project is older than this engine. Merge it on GitHub, then press **Bring this
+  folder up to date**.
+- **Connect by pull request** once the engine, the project and the latest release are the same version: a pull request
+  records your answer, and `DEVOS_REPORTING` turns on. A link run then asks the Control Tower, and its operator approves
+  once. **Ask the Control Tower now** asks again.
+- **A new contract version** shows on the page: read it and press **Accept by pull request**.
+
+</details>
+
+<details>
+<summary><b>Engine updates</b></summary>
+
+Run `git pull` in the engine folder, then `devos upgrade` in the project folder, on `main` with nothing uncommitted.
+DEV_OS opens a pull request with every engine file that changed; merge it, and the next cycle runs with the update. A
+file you edited yourself is listed as a conflict and never overwritten. Your code, your documents,
+`devos/project.json` and `devos/prices.json` are never touched.
+
+</details>
+
+## Add DEV_OS to a project you have
+
+From the project's own clone on GitHub, in development or in production:
+
+| Step | Command | What happens |
+|---|---|---|
+| 1. Survey | `devos adopt --check` | Reads tracked files only and reports the stage, stack, services, workflows, deploys, an older DEV_OS copy, the files DEV_OS would overlap, and what stops it. Changes nothing. |
+| 2. Brief | `devos adopt` | Your own AI tool writes a brief of the project, working on a copy in `~/.devos/adopt/`, never in the project. Type `yes` to keep it, or say what to change. |
+| 3. Install | `devos adopt --install` | Adds DEV_OS on a new branch `devos/adopt`, in one commit, in a separate worktree. Your code, CI and files stay; the guards' findings on your code as it is become the baseline. |
+| 4. Publish | `devos adopt --publish` | Pushes the branch and opens its pull request once you type `yes`, and sets the keys, variables and labels. No cycle starts until you merge. |
+
+An older hand-copied DEV_OS keeps its documents and settings; its method files become the engine's. It is adopted only
+while no task branch is open and no cycle runs.
 
 ## Stop and resume
 
-- **Stop.** **Stop run** on the page, or Ctrl-C in the terminal, stops the run. The folder keeps what was written.
-- **Right after a stop or an error,** the page offers:
-  - **Continue** (or **Try again**), which picks up at the first open step;
-  - **Or change the blueprint agent**, when the run ended while the blueprint was being written. Pick another tool or
-    model, then **Try again with this model**. The documents written so far stay;
-  - **Start a new project** and **Close DEV_OS**.
-- **Later.** Start DEV_OS again and choose **Current project**. The list shows your projects in `devos-projects`, each
-  with the step it picks up at. For a project in another folder, paste its full path under **A project in another
-  folder**, then **Find it**. **Open** shows the project's page, and **Continue this project** finishes its setup.
-  While a project continues, the page shows that project's own choices.
-- **A blueprint already written** is not drafted again. When its documents pass the checks, Continue goes straight to
-  your review; otherwise the agent fixes only what fails, in its earlier session.
-- **Your choices are kept.** A new project starts from the choices of your last one: the agents and models, the type,
-  stack, modules and scope, the languages, the visibility and the projects folder.
-- **In a terminal.** `devos continue <folder>` prints a checklist: answers, engine files, blueprint approved, local
-  commit, repository, keys, first cycle. Each line is marked done (`✓`) or open (`·`), and the first open step is
-  finished for you. `devos init --continue <folder>` does the same.
-- **A repository with the same name already on GitHub.**
-  - If it is empty, DEV_OS adopts it and pushes.
-  - If it has commits, DEV_OS stops. Delete that repository, or change `"name"` in `devos/answers.json`, then
-    continue.
+- **Stop** with **Stop run** on the page, or Ctrl-C. The folder keeps what was written.
+- **Right after a stop or an error,** the page offers **Continue**, another blueprint agent, a new project, or
+  **Close DEV_OS**.
+- **Later,** start DEV_OS and choose **Current project**: each project shows the step it picks up at. Or run
+  `devos continue <folder>`, which prints the checklist (`✓` done, `·` open) and finishes the first open step.
+- **A blueprint already written** is not drafted again.
+- **A repository with the same name on GitHub:** an empty one is adopted and pushed; one with commits stops setup.
+  Delete it, or change `"name"` in `devos/answers.json`, then continue. DEV_OS never force-pushes or rewrites history.
 
-  DEV_OS never force-pushes and never rewrites history on GitHub.
-- **When the blueprint or a setup step fails,** the message names the cause: for example a usage limit, a trust
-  prompt, a model the tool or your plan does not offer, or a GitHub step. Fix it, then continue.
+## Commands
+
+| Command | What it does |
+|---|---|
+| `devos ui [folder] [--no-open]` | The guided setup as a page in your browser, on this computer only. |
+| `devos init [--local] [folder]` | The guided setup in the terminal. `--local`: local development. `--help` explains both ways. |
+| `devos init --plan <file> [folder]` | Setup from a plan file, as the page does. |
+| `devos continue [folder]` | Shows what is done and finishes what is missing (also `devos init --continue`). |
+| `devos doctor [--local]` | Checks the GitHub CLI, its sign-in and scopes; `--local`, Node.js 22 and git. Changes nothing. |
+| `devos verify [folder]` | Checks everything between this computer and a green cycle run, and quotes a failed run. Changes nothing. |
+| `devos watch [folder] [--interval <s>] [--once]` | Runs `devos verify` every 30 seconds until all is green. |
+| `devos adopt [folder] [--install \| --publish] [--agent <tool>[:<model>]]` | Adds DEV_OS to a project you have ([steps](#add-dev_os-to-a-project-you-have)). |
+| `devos adopt --check [folder] [--json]` | The read-only survey of a project you have. |
+| `devos upgrade [--local]` | Updates the project's engine files on a new branch and opens a pull request; `--local` commits without pushing. |
+| `devos models [folder]` | The reviewer's, the light reviewer's and the default builder's model. |
+| `devos models set <role> <model>` · `reset <role>` | Sets or clears the role's model variable for the next run. Roles: `reviewer`, `light`, `builder`. |
+| `devos models fallback <role> <model,…\|none>` | Opens a pull request with the role's next models (up to 4). |
+| `devos agents detect` | Lists the AI CLIs here, their versions, and whether each is signed in. |
+| `devos agents show` · `import <file>` | Shows or saves your default roster (`~/.devos/roster.json`). |
+| `devos profile show` · `set <key> <value>` | Your defaults (`~/.devos/profile.json`). It refuses anything that looks like a key. |
+| `devos status` | In a project: the project and your roster. |
+| `devos install [folder] --key <KEY>` | Installs the method's files only, without the guided setup. |
+| `devos help` · `devos --version` | The commands, and the engine's version. |
 
 ## Settings you can change on GitHub
 
@@ -356,7 +375,7 @@ change applies from the next run. The project's `docs/method/AUTOMATION.md` list
 
 | Variable | Default | What it does |
 |---|---|---|
-| `DEVOS_PAUSED` | `false` | `true` stops every `devos-*` workflow, schedules included; `ci` still checks each push to `main`. Use it for a project you are not working on. |
+| `DEVOS_PAUSED` | `false` | `true` stops every `devos-*` workflow, schedules included; `ci` still checks each push to `main`. |
 | `DEVOS_SUPERVISOR` | `on` | `off` stops the supervisor only; the cycle keeps running. |
 | `DEVOS_HEAVY` | `notify` | `hold`: a heavy run waits until you comment `/devos go`. |
 | `DEVOS_CURSOR_ACCOUNT`, `DEVOS_CLAUDE_ACCOUNT`, `DEVOS_CODEX_ACCOUNT`, `DEVOS_GEMINI_ACCOUNT` | `1` | The account, 1 or 2, each tool starts with. Account 2 needs its `_2` key. |
@@ -364,54 +383,30 @@ change applies from the next run. The project's `docs/method/AUTOMATION.md` list
 | `DEVOS_REVIEWER_MODEL`, `DEVOS_REVIEWER_LIGHT_MODEL`, `DEVOS_BUILDER_MODEL` | not set | A role's model, with the same tool (`devos models`). Not set: the configured model. |
 | `DEVOS_SCREENS_RETENTION_DAYS` | `3` | How many days GitHub keeps a cycle run's screenshots. |
 | `DEVOS_REPORTING` | not set (off) | `on` links the project to the Control Tower: your answer at setup. |
+| `DEVOS_STATE` | `on` | With the link on, the project's state is sent twice a day; `off` stops it. |
 | `DEVOS_VERCEL`, `DEVOS_SUPABASE`, `DEVOS_R2`, `DEVOS_FIREBASE` | not set | `true` turns on the deploy and that module's steps. Setup sets the ones you chose. |
 | `DEVOS_PREVIEW_DB` | not set | `true`: with the database module, each preview gets its own database. |
 
 ## GitHub minutes and storage
 
-- **Public or private.** GitHub Actions runs public repositories at no cost. A private repository uses your GitHub
-  plan's monthly minutes and its artifact storage: on GitHub Free, 2,000 minutes and 0.5 GB a month. When they run
-  out, GitHub stops the private repository's workflows until the month resets, or bills the extra if your account has
-  a payment method. See [How use of GitHub Actions is
-  measured](https://docs.github.com/en/billing/concepts/product-billing/github-actions) for your plan.
-- **What uses them.**
-  - Minutes: each task's builder and reviewer runs, often 30 minutes or more each; `ci` on every push; and the
-    supervisor and resume schedules.
-  - Storage: the evidence each run uploads. A cycle run's screenshots are most of it.
-- **Keep them low.**
-  - Pause a project you are not working on: `gh variable set DEVOS_PAUSED --body true --repo <owner>/<repo>`, and
-    `false` to go on.
-  - Screenshots are kept 3 days (`DEVOS_SCREENS_RETENTION_DAYS`). The rest of a run's evidence follows the
-    repository's **Artifact and log retention** (Settings → Actions → General), 90 days unless you change it.
-  - Old artifacts can be deleted from a run's page in the **Actions** tab, or with
-    `gh api -X DELETE repos/<owner>/<repo>/actions/artifacts/<id>`.
-  - Your usage is on GitHub's Settings → Billing → Usage. Storage is counted by the hour over the month, so deleting
-    artifacts stops more usage but does not lower what the month has already used.
+- **Public or private.** GitHub Actions runs public repositories at no cost. A private repository uses your plan's
+  monthly minutes and artifact storage: on GitHub Free, 2,000 minutes and 0.5 GB a month. When they run out, GitHub
+  stops its workflows until the month resets, or bills the extra if your account has a payment method. See [How use of
+  GitHub Actions is measured](https://docs.github.com/en/billing/concepts/product-billing/github-actions).
+- **What uses them.** Minutes: each task's builder and reviewer, often 30 minutes or more each; `ci` on every push; the
+  supervisor and resume schedules. Storage: each run's evidence, mostly screenshots.
 
-## Commands
+<details>
+<summary><b>Keep them low</b></summary>
 
-| Command | What it does |
-|---|---|
-| `devos doctor [--local]` | Checks the GitHub CLI, its sign-in and its token scopes, and prints the exact fix. It changes nothing. With `--local`, it checks only Node.js 22 and git. |
-| `devos init [folder]` | Guided setup of a new project in a new or empty folder outside the engine folder. With `--local`, the project is built on this computer from its fences, with no automated cycle on GitHub. `devos init --help` explains both ways. |
-| `devos ui [folder] [--no-open]` | The same setup as a guided page in your browser, on this computer only. Without a folder, the page asks where to create the project, and it can also add DEV_OS to an existing project. `--no-open` prints the link without opening it. Its first screen asks for automated development (GitHub) or local development (this computer). |
-| `devos continue [folder]` | Shows what is done and finishes what is missing. |
-| `devos adopt [folder] [--agent <tool>[:<model>]]` | After the survey, your own AI tool (Claude Code, Cursor, Codex or Gemini, signed in on this computer) writes a brief of the project: what it is, its stage and why, how it is built, what is done and open, its risks, its personal data, what DEV_OS will add, and its questions for you. It works in `~/.devos/adopt/` on a copy of the tracked files, never in the project. The copy leaves out environment files other than an example one, and private keys. DEV_OS checks the project is unchanged after every round. Type `yes` to keep the brief, or write what to change. It then asks whether to add DEV_OS now, as `devos adopt --install` does. |
-| `devos adopt --install [folder] [--agent <tool>[:<model>]]` | From the brief you confirmed for this commit, and after the contract, the Control Tower link and the cycle's agents (asked as `devos init` asks them), adds DEV_OS on a new branch `devos/adopt`, in one commit, made in a separate worktree: your checkout stays on `main`, unchanged. Your AI tool writes DEV_OS's documents from the brief (your scope as the baseline, the open work as the phases, `T01` to run DEV_OS's checks on your code) and never your code or DEV_OS's engine files: DEV_OS stops and removes the branch if it does, or if it commits. Your own CI and files stay, with DEV_OS's beside them. A file of yours with one of DEV_OS's names stops it before the brief. An older copy of DEV_OS (its cycle workflow and scripts tracked, no engine lock) keeps its documents, `CLAUDE.md` and settings: its method files become the engine's, those the engine no longer ships are removed, its `devos.config.json` becomes `devos/project.json` (the role surfaces stay DEV_OS's), DEV_OS's precedents bind with its own PR-01, and no AI tool writes documents. It is adopted only while no task branch is open and no cycle runs. The guards' findings on your code as it is become the baseline, and every guard must pass. Your git hooks do not run on DEV_OS's commit, and DEV_OS's files are committed even where your `.gitignore` leaves them out (it names them). Ctrl-C removes the branch. Then it asks whether to push the branch and open its pull request, as `--publish` does. |
-| `devos adopt --publish [folder]` | Pushes `devos/adopt` to your repository on GitHub and opens its pull request into `main`, once you type `yes`: nothing goes to GitHub before. The description summarises the brief (what it is, its stage, the open work, what DEV_OS adds) and names the settings; the brief's risks, personal data and questions stay on your computer. It also sets the repository up for the cycle: the keys (typed hidden, or by name to set later), the variables, two labels, and GitHub Actions allowed to create and approve pull requests (for every workflow of the repository, yours too). Keys already on the repository are named and used. Your own workflows' default permissions, Wiki, Projects and variables stay as they are. No cycle starts until you merge. Run again, it does only what is missing. |
-| `devos adopt --check [folder] [--json]` | Surveys a project you already have, in its own clone on GitHub: its stage, stack, services, workflows and deploys, an older copy of DEV_OS, the files DEV_OS would overlap, and what stops adding DEV_OS to it. It reads tracked files only, and of environment files only an example file's names; a tracked environment file or private key is named as a warning, never read. It changes nothing. `--json` prints the survey as JSON. |
-| `devos verify [folder]` | Checks everything between this computer and a green cycle run: Node.js and git, the GitHub CLI, the project's setup steps, the keys GitHub is missing (names only), and the newest `devos-cycle` run. A failed run is quoted in its own words, with the likely cause, the fix and who applies it. It changes nothing. |
-| `devos watch [folder] [--interval <seconds>] [--once]` | Runs `devos verify` again every 30 seconds (or `--interval`, 5 or more), marks with `*` what changed since the last pass, and stops at ALL GREEN. `--once` runs one pass. |
-| `devos status` | In a project folder: shows the project and your saved roster. |
-| `devos models [folder]` | In a project: shows the reviewer's, the light reviewer's and the default builder's model, and the repository variable that changes each one. |
-| `devos models set <reviewer\|light\|builder> <model> [folder]` · `devos models reset <role> [folder]` | Sets or removes that variable: the next cycle run uses the model, with the same tool. Nothing is committed. |
-| `devos models fallback <reviewer\|light\|builder> <model,model…\|none> [folder]` | Opens a pull request that sets the role's next models at a usage limit (up to 4, its own tool). They apply once you merge it. |
-| `devos agents detect` | Lists the AI CLIs on this computer, their versions, and whether each one is signed in. |
-| `devos agents show` · `devos agents import <file>` | Shows or saves your default roster of agents (`~/.devos/roster.json`). |
-| `devos profile show` · `devos profile set <key> <value>` | Shows or sets your defaults (`~/.devos/profile.json`): `github_owner`, `visibility`, `default_stack`, `cursor_accounts`, `claude_accounts`. It refuses anything that looks like a key. |
-| `devos install [folder] --key <KEY>` | Installs the method files only, without the guided setup. |
-| `devos upgrade [--local]` | In a project: updates its engine files to this engine's version on a new branch and opens a pull request. Files you changed are listed as conflicts, never overwritten. `--local` commits the branch without pushing. |
-| `devos --version` | Prints the engine version. |
+- Pause a project you are not working on: `gh variable set DEVOS_PAUSED --body true --repo <owner>/<repo>`.
+- Screenshots are kept 3 days (`DEVOS_SCREENS_RETENTION_DAYS`); the rest follows the repository's **Artifact and log
+  retention** (Settings → Actions → General), 90 days unless you change it.
+- Delete old artifacts from a run's page, or with `gh api -X DELETE repos/<owner>/<repo>/actions/artifacts/<id>`.
+- Your usage is on Settings → Billing → Usage. Storage counts by the hour, so deleting artifacts stops more usage but
+  does not lower what the month has used.
+
+</details>
 
 ## Your keys and data
 
@@ -419,10 +414,9 @@ change applies from the next run. The project's `docs/method/AUTOMATION.md` list
   handed to GitHub over standard input. No model, file, log or answer receives one.
 - **Your computer.** The files under `~/.devos/` hold names and choices only, such as `choices.json`, the choices of
   your last project (never a key, a name or a brief).
-- **The project.** Your answers are in `devos/answers.json` and your agents are in `devos/project.json`. The method's
+- **The project.** Your answers are in `devos/answers.json` and your agents in `devos/project.json`. The method's
   settings are generated into `devos.config.json`; do not edit that file by hand.
-- **The Control Tower.** Nothing is sent anywhere unless you answer yes to the link question at setup. See
-  [The DEV_OS Control Tower (optional)](#the-dev_os-control-tower-optional).
+- **The Control Tower.** Nothing is sent anywhere unless you answer yes to the link question at setup.
 
 ## The DEV_OS Control Tower (optional)
 
@@ -432,6 +426,10 @@ change applies from the next run. The project's `docs/method/AUTOMATION.md` list
   for you.
   - **No:** nothing is ever sent, and every feature works the same.
   - **Yes:** the project's cycle asks the Control Tower to link the repository, and its operator approves or declines.
+
+<details>
+<summary><b>What a link sends, what is kept, where, and your rights</b></summary>
+
 - **What a link sends.**
   - The request: its format version, the proposed project key, the engine version and the contract version, with
     GitHub's signed identity token for the workflow run. The Control Tower keeps only the repository and its owner's
@@ -459,25 +457,31 @@ change applies from the next run. The project's `docs/method/AUTOMATION.md` list
 - **Your rights.** To know what is kept about you, to get a copy, or to have it corrected or deleted, write to
   jiovanny.adel@gmail.com.
 
+</details>
+
 ## Current limits
 
-- **GitHub roles.** The reviewer and builders run on Claude Code, Cursor, Codex or Gemini. Codex and Gemini have not yet
-  finished a real run on GitHub; the end-to-end test proves them. Muse and GLM can write the blueprint only.
-- **Stack.** Every stack runs its own checks: pnpm scripts for JavaScript and TypeScript, uv for Python, go for Go
-  and flutter for Dart. Supabase, R2, Firebase and Vercel deploys work with JavaScript and TypeScript stacks for now,
-  so a Python, Go or Dart project offers none of them.
+- **GitHub roles.** Codex and Gemini have not yet finished a real run on GitHub; Muse and GLM can write the blueprint
+  only.
+- **Stacks.** Supabase, R2, Firebase and Vercel deploys work with JavaScript and TypeScript stacks for now, so a
+  Python, Go or Dart project offers none of them.
 - **App keys.** The keys your app reads (payments, email, error tracking, …) are stored as GitHub secrets. Until the
   deploy copies them to your host, also set them in Vercel → Settings → Environment Variables (Production).
-- **Testing.** Continuous integration tests the engine on Linux on every change, and on Windows before each
-  release. The full run on GitHub, from `devos init` to a merged first task, has no end-to-end test yet;
-  `devos verify` and `devos watch` say what stops a first run.
+- **Local mode** sets the project up and leaves building and reviewing to your IDE and your reviewer; the engine has no
+  local runner yet.
+- **Testing.** Continuous integration tests the engine on Linux on every change, and on Windows before each release.
+  The full run on GitHub, from `devos init` to a merged first task, has no end-to-end test yet.
 
 ## Roadmap
 
-1. Expert skills for every layer of a project, chosen for its stack and modules from one catalogue that any agent
-   reads.
-2. Database, storage and deploys for Python, Go and Dart stacks.
-3. The first real run and the end-to-end test, including copying app keys to the host.
+| Next | What it adds |
+|---|---|
+| Generated media | Images, video and voice made for a project from a manifest the blueprint plans, with a cost cap per run. |
+| Media inside products | Image, voice and video features for a product's own users, as Product AI providers. |
+| Local commands | `devos next` and `devos review` for IDE builds, then an automatic local runner, `devos run`. |
+| From local to GitHub | `devos cycle github` moves a local project onto the automated cycle. |
+| More stacks with modules | Database, storage and deploys for Python, Go and Dart stacks. |
+| End-to-end test | The first full run on GitHub, tested, including copying app keys to the host. |
 
 ## Licence
 
