@@ -177,6 +177,7 @@
         "docs/requests/**",
         "docs/DESIGN_SYSTEM.md",
         "docs/design/REFERENCES.md",
+        "docs/design/media.json",
         "docs/CONTENT_MODEL.md",
         "docs/I18N_MODEL.md",
         "docs/SECURITY_MODEL.md",

@@ -324,6 +324,9 @@ Rules for every fence:
   a step that updates `README.md` (`## Features`, and for a screen `## Screenshots` from
   `docs/screenshots/`), and names it in its Paths. No fence deletes or empties `README.md`, and no
   Done-when checks that it is absent.
+- **Media is planned (PR-79).** With generated media chosen, `docs/design/media.json` plans every image,
+  video and voice item (`DESIGN_METHOD.md` §8). A fence whose screen shows one names the item's `id` in its
+  Design specification; the screen uses its `file` path and draws its fallback until the file exists.
 - **Preconditions first.** The previous task merged (`git merge-base --is-ancestor`), a clean
   tree, the live counts it builds on.
 - **Byte-exact payloads** are staged outside the working tree and verified by

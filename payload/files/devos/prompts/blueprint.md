@@ -75,6 +75,12 @@ Work in this order.
    `## Built with` (the stack and each chosen provider) and `## Status`
    (`In development: <n> tasks in <m> phases; see docs/PHASES.md.`). Write nothing after them: setup adds
    `## How this project is built`. Never a secret, a price or personal data.
+   When `devos/answers.json` has `visual_ambition`, the Direction of `DESIGN_SYSTEM.md` states it on one line,
+   `Visual ambition: <calm|expressive|showcase>`, and the direction follows it (`docs/method/DESIGN_METHOD.md` §8).
+   When `modules.media` is not `none`, also write `docs/design/media.json`, the media plan of §8 (PR-79): every
+   image, video and voice item of `media_kinds` the phases' screens need for that ambition, each with its use, its
+   file in the stack's static folder, its prompt (or, for voice, its text, language and voice) written from the
+   direction, and `status` `planned`; `DESIGN_SYSTEM.md` gives each a fallback. Nothing is generated in this run.
    Two formats are read by guards and must be exact:
    - `docs/PHASES.md`: the header `| Task | Phase | Station | Name | Risk | Gate | Done | Verdict |`, a separator
      row, then one row per task — `T01` first, ids ascending, Risk 1, 2 or 3, Done `[ ]`, Verdict `—`.

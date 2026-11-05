@@ -112,11 +112,12 @@ flowchart LR
 | **Guided setup** | A page (`devos ui`) or the terminal (`devos init`). A new project starts from your last choices. |
 | **Blueprint** | Brief, scope, decisions, design system, data model, phases, fence T01 and the product's `README.md`, written on your computer. Up to five rounds of changes. |
 | **Design from references** | Your reference images become a direction of the project's own, never a copy. Every UI fence has a design specification. |
+| **Visual ambition and media** | Calm, Expressive or Showcase sets the direction. With generated media, the blueprint plans every image, video and voice item before a screen shows it. |
 | **The cycle** | 11 workflows on GitHub Actions: build, checks, review, change requests, the next task, gates, setup, deploys, waits, a supervisor. |
 | **Agents** | Claude Code, Cursor, Codex and Gemini, each as reviewer or builder. The reviewer can pick the builder for each task. |
 | **Effort** | Set per agent: chosen by the reviewer for each task, or fixed, with Fast for Cursor. |
 | **Usage limits** | Second accounts, up to 4 next models per role, a fallback builder of another tool. |
-| **Guards** | 16 guards on every task, from scope and secrets to design, i18n and data boundaries. |
+| **Guards** | 17 guards on every task, from scope and secrets to design, i18n, data boundaries and the media plan. |
 | **UI evidence** | Captures at 1280 and 390 px, filmstrips, reduced motion, layout shift and axe checks, read against the design specification. |
 | **Lean by default** | MVP or full product; every dependency names its need; current library docs through Context7. |
 | **Expert skills** | 18 vendored skill sets, chosen for the stack and modules. |
@@ -273,7 +274,7 @@ commas, or a name; Enter takes the default.
 | Product AI | Chat, tools and agents, retrieval |
 | Hosting | Vercel |
 | Observability | Structured logs, Sentry |
-| Generated media | xAI (Grok Imagine and text to speech): images, video or voice. Chosen at setup; nothing is generated yet |
+| Generated media | xAI (Grok Imagine and text to speech): images, video or voice. The blueprint plans each item in `docs/design/media.json`; nothing is generated yet |
 
 Each menu starts on the type's usual choice. A migration always waits for your merge. A product with screens also
 chooses its **visual ambition**: Calm (content first), Expressive (imagery and motion where they serve, the default) or
@@ -479,7 +480,7 @@ change applies from the next run. The project's `docs/method/AUTOMATION.md` list
 
 | Next | What it adds |
 |---|---|
-| Generated media | The blueprint plans each image, video and voice item; then a runner step makes them, with a cost cap per run. |
+| Generated media | A runner step makes the planned images, video and voice, with a cost cap per run. |
 | Media inside products | Image, voice and video features for a product's own users, as Product AI providers. |
 | Local commands | `devos next` and `devos review` for IDE builds, then an automatic local runner, `devos run`. |
 | From local to GitHub | `devos cycle github` moves a local project onto the automated cycle. |

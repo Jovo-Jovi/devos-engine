@@ -104,6 +104,9 @@ part: a red required check fails the verdict whatever you write (PR-08), and the
    **README (PR-77):** a deleted or emptied `README.md`, or a removed section, is a FAIL (`guard:scope`
    fails a deletion). When the task built a feature of `## Features` or changed a screen, confirm the
    README was updated as its fence asks.
+   **Media (PR-79):** a screen that shows an item of `docs/design/media.json` uses its `file` path and
+   shows its fallback until the file exists; a broken image, a remote or placeholder URL, or a changed
+   planned file is a FAIL. Judge planned and generated media in the captures against the visual ambition.
 4. Write `docs/reviews/{{TASK}}-a{{ATTEMPT}}.md`. **First line exactly** `VERDICT: PASS` or
    `VERDICT: FAIL`, then the Dev OS verdict format from `CLAUDE.md`. Keep it short: ledger lines cite
    evidence ("pack §Checks: test pass, 57 tests"), they do not repeat it. `Next prompt:` gives the

@@ -47,5 +47,7 @@ test("config-equivalence.test.mjs regenerates the Tower config", () => {
   }
   // PR-59 (E23b3): the intake may add design references.
   merged.surfaces.intake.allow = merged.surfaces.intake.allow.filter((p) => p !== "docs/design/REFERENCES.md");
+  // PR-79 (E53b): the intake may add to the media plan.
+  merged.surfaces.intake.allow = merged.surfaces.intake.allow.filter((p) => p !== "docs/design/media.json");
   assert.deepEqual(stripDollar(merged), stripDollar(tower));
 });

@@ -96,7 +96,20 @@ process.stdin.on("end", () => {
   writeFileSync(path.join(docs, "GLOSSARY.md"), readFileSync(path.join(fixtureDir, "GLOSSARY.md")));
   writeFileSync(path.join(docs, "fences", "T01.md"), readFileSync(path.join(fixtureDir, "..", "fences", "T01.md")));
   mkdirSync(path.join(docs, "design"), { recursive: true });
-  writeFileSync(path.join(docs, "DESIGN_SYSTEM.md"), "# Design system\\n");
+  // E53b: the stub follows the visual ambition and plans one item of each media kind (PR-79).
+  const stubAnswersFile = path.join(process.cwd(), "devos", "answers.json");
+  const stubAnswers = existsSync(stubAnswersFile) ? JSON.parse(readFileSync(stubAnswersFile, "utf8")) : {};
+  writeFileSync(path.join(docs, "DESIGN_SYSTEM.md"), "# Design system\\n" + (stubAnswers.visual_ambition ? "\\nVisual ambition: " + stubAnswers.visual_ambition + "\\n" : ""));
+  if (stubAnswers.modules && stubAnswers.modules.media && stubAnswers.modules.media !== "none") {
+    const alt = Object.fromEntries((stubAnswers.languages || ["en"]).map((language) => [language, "A harbour at dawn"]));
+    const stubPlan = {
+      image: { id: "hero", kind: "image", use: "Home: hero", file: "public/media/hero.webp", prompt: "A harbour at dawn, soft light", aspect_ratio: "16:9", resolution: "1k", alt, status: "planned" },
+      video: { id: "intro", kind: "video", use: "Home: intro", file: "public/media/intro.mp4", prompt: "Boats leaving a harbour at dawn", aspect_ratio: "16:9", resolution: "480p", duration: 6, audio: false, alt, status: "planned" },
+      voice: { id: "welcome", kind: "voice", use: "Home: welcome", file: "public/media/welcome.mp3", text: "Welcome.", language: "en", voice: "eve", status: "planned" },
+    };
+    const items = (stubAnswers.media_kinds || ["image"]).map((kind) => stubPlan[kind]);
+    writeFileSync(path.join(docs, "design", "media.json"), JSON.stringify({ version: 1, provider: stubAnswers.modules.media, items }, null, 2) + "\\n");
+  }
   if (existsSync(path.join(process.cwd(), ".devos", "adopt", "brief.json"))) {
     // E36b: the documents of an adopted project. DEV_OS's CLAUDE.md goes to .devos/adopt/. As a tool that ignored
     // the adoption rules would: touch-code edits a product file and stages it, touch-docs edits a document of the
@@ -192,7 +205,20 @@ process.stdin.on("end", () => {
   writeFileSync(path.join(docs, "GLOSSARY.md"), readFileSync(path.join(fixtureDir, "GLOSSARY.md")));
   writeFileSync(path.join(docs, "fences", "T01.md"), readFileSync(path.join(fixtureDir, "..", "fences", "T01.md")));
   mkdirSync(path.join(docs, "design"), { recursive: true });
-  writeFileSync(path.join(docs, "DESIGN_SYSTEM.md"), "# Design system\\n");
+  // E53b: the stub follows the visual ambition and plans one item of each media kind (PR-79).
+  const stubAnswersFile = path.join(process.cwd(), "devos", "answers.json");
+  const stubAnswers = existsSync(stubAnswersFile) ? JSON.parse(readFileSync(stubAnswersFile, "utf8")) : {};
+  writeFileSync(path.join(docs, "DESIGN_SYSTEM.md"), "# Design system\\n" + (stubAnswers.visual_ambition ? "\\nVisual ambition: " + stubAnswers.visual_ambition + "\\n" : ""));
+  if (stubAnswers.modules && stubAnswers.modules.media && stubAnswers.modules.media !== "none") {
+    const alt = Object.fromEntries((stubAnswers.languages || ["en"]).map((language) => [language, "A harbour at dawn"]));
+    const stubPlan = {
+      image: { id: "hero", kind: "image", use: "Home: hero", file: "public/media/hero.webp", prompt: "A harbour at dawn, soft light", aspect_ratio: "16:9", resolution: "1k", alt, status: "planned" },
+      video: { id: "intro", kind: "video", use: "Home: intro", file: "public/media/intro.mp4", prompt: "Boats leaving a harbour at dawn", aspect_ratio: "16:9", resolution: "480p", duration: 6, audio: false, alt, status: "planned" },
+      voice: { id: "welcome", kind: "voice", use: "Home: welcome", file: "public/media/welcome.mp3", text: "Welcome.", language: "en", voice: "eve", status: "planned" },
+    };
+    const items = (stubAnswers.media_kinds || ["image"]).map((kind) => stubPlan[kind]);
+    writeFileSync(path.join(docs, "design", "media.json"), JSON.stringify({ version: 1, provider: stubAnswers.modules.media, items }, null, 2) + "\\n");
+  }
   // E36b: an adopted project's DEV_OS CLAUDE.md goes to .devos/adopt/.
   if (existsSync(path.join(process.cwd(), ".devos", "adopt", "brief.json"))) writeFileSync(path.join(process.cwd(), ".devos", "adopt", "CLAUDE.md"), "# CLAUDE.md\\n\\nStub reviewer rules.\\n");
   writeFileSync(path.join(docs, "design", "UI_ACCEPTANCE.md"), "| Id | Criterion | Checked by |\\n|---|---|---|\\n| UA-01 | Text contrast meets WCAG 2.2 AA | automated |\\n");

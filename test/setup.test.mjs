@@ -54,7 +54,10 @@ process.stdin.on("end", () => {
   writeFileSync(path.join(docs, "GLOSSARY.md"), readFileSync(path.join(fixtureDir, "GLOSSARY.md")));
   writeFileSync(path.join(docs, "fences", "T01.md"), readFileSync(path.join(fixtureDir, "..", "fences", "T01.md")));
   mkdirSync(path.join(docs, "design"), { recursive: true });
-  writeFileSync(path.join(docs, "DESIGN_SYSTEM.md"), "# Design system\\n");
+  // E53b: the stub names the visual ambition the answers hold (PR-79).
+  const stubAnswersFile = path.join(process.cwd(), "devos", "answers.json");
+  const stubAmbition = existsSync(stubAnswersFile) ? JSON.parse(readFileSync(stubAnswersFile, "utf8")).visual_ambition : undefined;
+  writeFileSync(path.join(docs, "DESIGN_SYSTEM.md"), "# Design system\\n" + (stubAmbition ? "\\nVisual ambition: " + stubAmbition + "\\n" : ""));
   writeFileSync(path.join(docs, "design", "UI_ACCEPTANCE.md"), "| Id | Criterion | Checked by |\\n|---|---|---|\\n| UA-01 | Text contrast meets WCAG 2.2 AA | automated |\\n");
   // PR-59: every screenshot the developer gave is a row of REFERENCES.md.
   const refsDir = path.join(docs, "design", "references");

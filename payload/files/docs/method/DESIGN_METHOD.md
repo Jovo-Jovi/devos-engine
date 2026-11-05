@@ -233,3 +233,40 @@ time, and the cycle runs no code that a skill ships.
 
 **Adaptable.** A new skill, tool or framework joins with a manifest entry and its files: for every project through an
 engine task, for one project through `devos/skills/local.json` and its own folder. Neither needs a change to the engine.
+
+## 8. Visual ambition and the media plan
+
+**The visual ambition** (PR-79) is the developer's answer at setup, kept in `devos/answers.json` as
+`visual_ambition`. `DESIGN_SYSTEM.md`'s Direction states it on one line, `Visual ambition: <calm|expressive|showcase>`,
+and the whole direction follows it:
+
+| Ambition | Imagery | Motion | Depth |
+|---|---|---|---|
+| Calm | only where it informs: the product, the people or the places the content is about | state changes only | flat |
+| Expressive (the default) | a hero or section imagery, illustrated empty states | entrances and state changes that serve the content | light layering |
+| Showcase | hero media (an image or a video) and imagery in most sections | rich, scroll-linked where it helps | layered, 3D when the stack fits |
+
+Every level keeps the acceptance gate (§4): reduced motion, contrast, layout shift and the speed of the main pages.
+
+**The media plan.** When the developer chose generated media (`modules.media` is not `none`), the blueprint writes
+`docs/design/media.json`, and a change request adds to it. It holds `version` `1`, the `provider` and `items`, one
+per image, video or voice item of `media_kinds` the screens show:
+
+| Field | For | Rule |
+|---|---|---|
+| `id` | every item | lower-case words joined by `-`, unique |
+| `kind` | every item | `image`, `video` or `voice`, one of `media_kinds` |
+| `use` | every item | where it appears: the screen and the section |
+| `file` | every item | the path it is served from, in the stack's static folder (`public/media/hero.webp`), with `/`; an image ends `.png`, `.jpg`, `.jpeg` or `.webp`, a video `.mp4`, a voice `.mp3` or `.wav` |
+| `prompt` | image, video | what to make, from the direction: subject, composition, light, palette, style |
+| `aspect_ratio`, `resolution` | image, video | xAI: an image `1k` or `2k`; a video `480p`, `720p` or `1080p` |
+| `alt` | image, video | one text per language of the project; `"decorative": true` instead for a purely decorative item |
+| `duration`, `audio` | video | 1 to 15 seconds; a sound track or not |
+| `text`, `language`, `voice` | voice | the words, their language and the provider's voice |
+| `status` | every item | `planned`, or `generated` once its file exists |
+| `model`, `generated_on`, `terms_url`, `cost_usd` | generated | the provenance of the file |
+
+Plan what the screens need for the ambition, no more. A screen uses an item by its `file` path and draws a designed
+fallback while the file does not exist (the colour, shape or illustration `DESIGN_SYSTEM.md` gives it), never a
+remote URL, a placeholder service or a broken image. The builder never adds, replaces or deletes a planned file and
+never edits the plan. `guard:media` checks the plan and the ambition line.
