@@ -1,0 +1,20 @@
+{
+  "CHANGELOG.md": "48d739cff8829510340c2980e30e927a78105611a4c8d0c9fd2ce1c9bc018da6",
+  "README.md": "8f0ace5bdcbdef9c86d337f916d1108f2f44dfc6794718792382fe12a2f12701",
+  "bin/devos.mjs": "6457d3f6abd9fafcb684e4995942b86ec63b4fb84190936f5cd78f05640c04aa",
+  "lib/setup.mjs": "7633498d7634fd387b43489cf9e6e61e8bddb4fdfeff34d9f1909b297dbef8f4",
+  "package.json": "4b0966f391121a60016d1ad9fc7d84cf5cb3558140a497cda544230487868736",
+  "payload/files/docs/method/AUTOMATION.md": "aac71a2e4f62e0d73d88db71c6dd661e3f0ef43c26203b1a9fd07b41a098e5ba",
+  "payload/files/docs/method/DESIGN_METHOD.md": "f6f8cba3c7f974d0852054a02fcd2ff964d8d79dcc768a7de9682f3155ff5d16",
+  "payload/files/docs/method/PRECEDENTS.md": "aeb44ef3d44573c960707503b5084b70a2211a4f54f9e2c798a7b8c35931df18",
+  "payload/files/scripts/devos/usage.mjs": "781ff3e475e7755b94eaf6d8ddbba9c10a6f0895cb58a289755a015144d73053",
+  "payload/manifest.json": "9cad872c4b5058e707b069f3b4ff787bc8cc168c046aec585963712e381ea4af",
+  "test/adopt-files.test.mjs": "3d5737903182ecb3f65f26e6445438c53241b9d568e892f011c8c38d01c09571",
+  "test/adopt-install.test.mjs": "d89ff5f836142a5fdf4906c1ff76b19390319081f286057d0413322ec39b8422",
+  "test/install.test.mjs": "aa4c54dd4c96cd287b92516adb8e84b789378e49f8b9eb66b87af29352354af6",
+  "test/media-plan.test.mjs": "ea2382cd979c78b014978df95abd1233dddeccc616836cfcf0c6afc7772d7a95",
+  "test/upgrade.test.mjs": "24b4e64b1f26693a2a390a8c2914c66be96e33cb722e707da0b87fef294ee31b",
+  "test/usage.test.mjs": "0ac72a77a3e81ca9dab0f0dc16e76240ee1e798b7420b6984a1828d826cf499b",
+  "test/version.test.mjs": "d9383655527f86c173544e5e50cb7ed2cf461c95017219fcc496bb99f1aee3b5",
+  "tools/sources.mjs": "46848dc712425113f44fd05c24220985f0828f227a92073703729ca4acae3f04"
+}
