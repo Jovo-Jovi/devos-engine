@@ -13,6 +13,7 @@ import { MODEL_ID, MODEL_VARIABLES, P, config, emit, fail, readJson, withModelOv
 
 const TOOLS = new Set(["cursor", "claude", "codex", "gemini"]);
 const POLICIES = new Set(["reviewer-picks", "always-default"]);
+const EFFORTS = ["low", "medium", "high", "xhigh"];
 // PR-64: at most this many models after an agent's own.
 export const MAX_FALLBACKS = 4;
 
@@ -32,8 +33,8 @@ function fallbackError(value, label) {
   return "";
 }
 
-function hasKeys(value, names) {
-  const keys = Object.keys(value).filter((key) => key !== "fallback_models");
+function hasKeys(value, names, optional = ["fallback_models"]) {
+  const keys = Object.keys(value).filter((key) => !optional.includes(key));
   return keys.length === names.length && names.every((key) => keys.includes(key));
 }
 
@@ -70,7 +71,7 @@ export function validate(agents) {
   let defaults = 0;
   for (const item of agents.pool) {
     if (!item || typeof item !== "object" || Array.isArray(item)) bad("pool item must be an object");
-    if (!hasKeys(item, ["id", "tool", "model", "default", "note"])) {
+    if (!hasKeys(item, ["id", "tool", "model", "default", "note"], ["fallback_models", "effort", "fast"])) {
       bad("pool item must have id, tool, model, default and note, and may have fallback_models");
     }
     if (typeof item.id !== "string" || typeof item.model !== "string" || typeof item.note !== "string") {
@@ -78,6 +79,10 @@ export function validate(agents) {
     }
     if (!TOOLS.has(item.tool)) bad("pool item tool must be cursor, claude, codex or gemini");
     if (typeof item.default !== "boolean") bad("pool item default must be boolean");
+    if (Object.hasOwn(item, "effort") && !EFFORTS.includes(item.effort)) bad("pool item effort must be low, medium, high or xhigh");
+    if (Object.hasOwn(item, "fast") && (item.fast !== true || !Object.hasOwn(item, "effort") || item.tool !== "cursor")) {
+      bad("pool item fast is true, only with an effort, and only for cursor");
+    }
     const listError = fallbackError(item, `pool item ${item.id}`);
     if (listError) bad(listError);
     if (item.default) defaults += 1;
@@ -117,6 +122,10 @@ export function poolText(agents = config().agents) {
   return pool(agents).map((item) => {
     let line = `- ${item.id} — ${item.tool} · ${item.model}`;
     if (fallbacks(item).length) line += ` (then ${fallbacks(item).join(", ")})`;
+    if (item.effort) {
+      line += ` · fixed effort ${item.effort}`;
+      if (item.fast === true) line += ", fast";
+    }
     if (item.default) line += " · default";
     if (item.note) line += ` — ${item.note}`;
     return line;

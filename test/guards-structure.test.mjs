@@ -272,7 +272,7 @@ test("guards-structure.test.mjs (h) guard:scope reads the branch's paths as they
   }
 });
 
-test("guards-structure.test.mjs (i) guard:scope: a task never deletes the README its base has, even when its Paths allow it (PR-77)", () => {
+test("guards-structure.test.mjs (j) guard:scope: a task never deletes the README its base has, even when its Paths allow it (PR-77)", () => {
   const dir = project();
   try {
     put(dir, { "README.md": "# Shop\n\n## Features\n\n- [ ] Invoices\n" });

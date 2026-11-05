@@ -317,6 +317,9 @@ Rules for every fence:
 - **Self-contained.** Everything it refers to is inside it, or attached with a verifiable hash.
 - **Checked by machine.** `scripts/devos/fence-check.mjs` passes before the fence is issued, and
   `guard:scope` holds the task to its Paths (PR-58).
+- **A fixed effort is kept (PR-78).** When `devos.config.json` gives a pool builder a fixed `effort` (and,
+  for Cursor, `fast`), every fence for it says exactly that `Effort:` and `Fast:`; `fence-check.mjs`
+  refuses another. Otherwise the reviewer picks the effort for each task.
 - **The README is kept (PR-77).** A fence that builds a feature or changes what a user sees ends with
   a step that updates `README.md` (`## Features`, and for a screen `## Screenshots` from
   `docs/screenshots/`), and names it in its Paths. No fence deletes or empties `README.md`, and no

@@ -298,6 +298,13 @@ A UI fence carries a header line `- Screens: \`<name> <path>[ click|hover|focus 
   three roles and sets or removes the variables (`devos models set <reviewer|light|builder> <model>`,
   `devos models reset <role>`). The id is checked as a model id only; the tool reports a model it cannot
   run when the run starts.
+
+  Effort (PR-78): a builder's effort is the reviewer's choice for each task, written in the fence's builder line,
+  unless its `agents.pool` item has a fixed `effort` (`low`, `medium`, `high` or `xhigh`) and, for Cursor,
+  `fast: true`. Then every fence for that builder says exactly that, and `fence-check.mjs` refuses another. A
+  Cursor model id that names its effort (`grok-4.7-xhigh-fast`) runs as it is, and `builder-model.mjs` reports
+  the effort from the id. The blueprint agent of `devos init` runs at `high` effort (Claude Code `--effort`, Codex
+  `model_reasoning_effort`) unless the guided page chose another; Cursor's model id carries its own.
 - **`devos.config.json`:** generated — edit `devos/project.json`; engine defaults in `devos/engine.defaults.json`. `max_attempts`; `builder` (model family, effort by risk); `reviewer`
   (models and efforts by risk and gate, `modes.light/deep`, `deep_paths`, `human_gate_paths` (PR-72: a project in production, filled by `devos adopt`), `human_gate_imports` (PR-73: packages whose import in a changed file stops at the gate, filled the same way), intake and method efforts; its Claude model ids apply only to a project without `agents`, PR-53); `agents` (reviewer, reviewer_light, pool, policy; without reviewer_light the reviewer reviews every task, PR-53; any of Cursor, Claude Code, Codex and Gemini may take either role (PR-45); a usage limit switches to the same tool's other account, then to the agent's next model in its `fallback_models` (up to 4 model ids of its own tool, PR-64), and with none left the attempt waits for the earliest reset: no other agent takes over, PR-53; `devos init` writes them from the developer's choices, and the setup items `cursor`, `claude`, `codex` and `gemini` apply only when an agent uses that tool, PR-44);
   `required_checks` / `optional_checks`; `stack` (the toolchain, its manifest and the commands of its checks, written by `devos init`, PR-48, and `scaffold`, the recipe fence T01 follows, PR-49, with `scaffold.modules`, the stack's module convention, PR-58); `structure` (the product's feature modules: `modules`, each with its `dir` and `public` entries, `aliases` and `exempt`, written by the blueprint, PR-58); `screens` (`pages`, `filmstrip_ms`, `settle_max_ms`; a fence `- Screens:` line overrides `pages`); `surfaces` (builder, builder_method, reviewer, intake,

@@ -118,7 +118,8 @@ part: a red required check fails the verdict whatever you write (PR-08), and the
      {{BUILDER_POOL}}
      **low** for copy and one-line fixes, **medium** for small contained code, **high** (default) for
      features and tests, **xhigh** for risk 3, cross-cutting work, and a reissue after high failed.
-     **Fast: yes** only for low/medium mechanical work.
+     **Fast: yes** only for low/medium mechanical work. A builder the list shows with a fixed effort gets exactly
+     that `Effort:` and `Fast:` in every fence (PR-78); `fence-check.mjs` refuses another.
    - Every fence you write carries `- Layers: <layer> · <layer>` in its header: the layers of `devos/skills/INDEX.md` the task touches (`design`, `motion`, `frontend`, `accessibility`, `architecture`, `backend`, `api`, `database`, `security`, `reliability`, `testing`, `ops`). The runner gives the builder and the reviewer the skills of those layers, and a server-side or deep task always the security layer and a code task the testing layer (PR-55, PR-56, PR-57).
    - Every fence you write carries `- Paths: \`<glob>\` · …` in its header: every file and folder the task may change, each in backticks, with module folders from `devos.config.json` `structure.modules`. `guard:scope` fails the run on a change outside them; the report, `docs/SESSION_CONTEXT.md`, `docs/DEVELOPMENT_JOURNAL.md` and a lockfile beside a listed manifest are always allowed (PR-58).
    - A fence that builds a feature or changes what a user sees ends with a step that updates `README.md` (PR-77): it ticks the feature in `## Features`, and for a UI fence copies the settled desktop capture of its first `- Screens:` state, `.devos/screens/<state>-1280.png`, to `docs/screenshots/<state>.png` and links it under `## Screenshots`. Its `- Paths:` then name `README.md` and `docs/screenshots/**`. No fence deletes or empties `README.md`, and no Done-when checks that it is absent.

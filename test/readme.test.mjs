@@ -74,7 +74,6 @@ test("readme.test.mjs (b) the blueprint, builders and reviewers keep the README 
     "payload/files/dot-cursor/rules/00-project.mdc",
     "Never delete `README.md` or remove one of its sections (PR-77). Update it only as the fence says.",
   );
-  has("payload/files/docs/method/PRECEDENTS.md", "**Live maximum: PR-77.**");
   has("payload/files/docs/method/PRECEDENTS.md", "| PR-77 | **The product README is kept.**");
   has("payload/files/docs/method/AUTOMATION.md", "A task never deletes the product's `README.md`:");
 });
@@ -89,6 +88,18 @@ test("readme.test.mjs (c) the blueprint's files list the README first when it wr
     assert.deepEqual(blueprintFiles(dir), ["docs/SCOPE.md", "docs/fences/T01.md"]);
     writeFileSync(path.join(dir, "README.md"), "# Shop\n");
     assert.deepEqual(blueprintFiles(dir), ["README.md", "docs/SCOPE.md", "docs/fences/T01.md"]);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("readme.test.mjs (d) a README with no final newline gets a blank line before how the project is built", () => {
+  const dir = mkdtempSync(path.join(tmpdir(), "devos-readme-"));
+  try {
+    const readme = path.join(dir, "README.md");
+    writeFileSync(readme, "# Shop\n\n## Status\n\nIn development.");
+    writeProjectReadme(dir, answers);
+    assert.equal(readFileSync(readme, "utf8").startsWith("# Shop\n\n## Status\n\nIn development.\n\n## How this project is built\n"), true);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
