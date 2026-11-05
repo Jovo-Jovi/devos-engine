@@ -1,0 +1,13 @@
+# dependencies (the engine has none; this is a safety net)
+node_modules/
+
+# scratch output of local runs
+.scratch/
+*.log
+
+# local environment — never committed
+.env
+.env.*
+
+# PowerShell's module cache, when a Windows shell writes it into the working folder (E53c2 a1)
+/Microsoft/
