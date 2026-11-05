@@ -4,11 +4,12 @@
 // DEVOS_SCOPE_BASE) plus the working tree, so every attempt and stage counts. Paths no builder may
 // change are the surface guard's (guard-surfaces.mjs), and the runner's own files (docs/PHASES.md,
 // reviews, fences, usage) are not the task's. N/A outside a task run (no TASK) and for a fence
-// written before PR-58 (no Paths line). PR-77: a task never deletes the README.md its base has.
+// written before PR-58 (no Paths line). PR-77: a task never deletes the README.md its base has. PR-81: the files of
+// the media its `- Media:` line names are the runner's.
 import { execFileSync } from "node:child_process";
 import { exists, read, result, ROOT } from "./lib.mjs";
 import { changedPaths, config, matchesAny } from "../devos/lib.mjs";
-import { fencePaths, inScope } from "../devos/fence-check.mjs";
+import { fenceMedia, fencePaths, inScope, mediaItems } from "../devos/fence-check.mjs";
 import { isMethodFence } from "../devos/skills.mjs";
 
 function baseHas(base, file) {
@@ -42,7 +43,10 @@ export default function scope() {
   const deny = (isMethodFence(text) ? surfaces.builder_method?.deny : surfaces.builder?.deny) ?? [];
   const skip = [...(surfaces.ignore ?? []), ...deny, "docs/PHASES.md"];
   const changed = [...new Set([...committed, ...changedPaths()])].filter((file) => !matchesAny(file, skip)).sort();
-  const outside = changed.filter((file) => !inScope(file, paths, task));
+  // PR-81: the files of the media the fence names are made by the runner before the builder.
+  const named = fenceMedia(text) ?? [];
+  const made = (mediaItems() ?? []).filter((item) => named.includes(item.id)).map((item) => item.file);
+  const outside = changed.filter((file) => !inScope(file, paths, task) && !made.includes(file));
   const findings = outside.map((file) => `${file} — outside the Paths of ${rel}`);
   if (!exists("README.md") && baseHas(base, "README.md")) findings.push("README.md — deleted; the product README is never deleted (PR-77)");
   const note = `${changed.length} changed path(s), ${paths.length} Paths entr${paths.length === 1 ? "y" : "ies"} in ${rel}`;

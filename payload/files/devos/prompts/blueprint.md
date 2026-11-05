@@ -117,7 +117,7 @@ Work in this order.
    allowed. Before you finish, run `node scripts/devos/fence-check.mjs docs/fences/T01.md` and fix every finding
    (PR-58).
    Every later fence that builds a screen carries a `- Screens:` line and a `### Design specification`
-   (`docs/method/DESIGN_METHOD.md` §3).
+   (`docs/method/DESIGN_METHOD.md` §3), and, when the screen shows planned media, `- Media: \`<id>\` · …` (PR-81).
 7. **End with a summary** as your final message: the profile, the ODs the developer signs by approving, your
    assumptions, and the setup steps that change for this project.
 

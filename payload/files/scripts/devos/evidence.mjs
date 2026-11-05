@@ -135,5 +135,11 @@ if (existsSync(P(".devos/screens"))) {
   }
 }
 
+// Generated media (PR-81): what the step before the builder made, skipped or could not make.
+if (existsSync(P(".devos/media-report.md"))) {
+  const report = readFileSync(P(".devos/media-report.md"), "utf8").split("\n").filter((line) => !line.startsWith("# ") && line.trim() !== "");
+  if (report.length > 0) out.push("## Generated media (PR-81)", "", ...report, "");
+}
+
 writeFileSync(P(".devos/evidence.md"), out.join("\n") + "\n");
 console.log(`evidence: wrote .devos/evidence.md (${out.length} lines)`);

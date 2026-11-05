@@ -13,6 +13,7 @@
 // Usage: node scripts/devos/guard-surfaces.mjs builder|reviewer|intake|revise [--strict]
 import { rmSync, mkdirSync, appendFileSync } from "node:fs";
 import { changedPaths, config, matchesAny, fail, git, P, parsePhases, isMethodRow } from "./lib.mjs";
+import { mediaItems } from "./fence-check.mjs";
 
 const role = process.argv[2];
 const strict = process.argv.includes("--strict");
@@ -26,9 +27,11 @@ const changed = changedPaths().filter((p) => !matchesAny(p, ignore));
 let method = false;
 try { method = isMethodRow(parsePhases().rows.find((r) => r.task === process.env.TASK)); } catch { /* no ledger */ }
 const builderDeny = method ? (cfg.surfaces.builder_method?.deny ?? cfg.surfaces.builder.deny) : cfg.surfaces.builder.deny;
+// PR-81: a planned media file (docs/design/media.json) is the runner's or the developer's, never the builder's.
+const planned = role === "builder" ? (mediaItems() ?? []).map((item) => item.file).filter((file) => typeof file === "string") : [];
 const offenders =
   role === "builder"
-    ? changed.filter((p) => matchesAny(p, builderDeny))
+    ? changed.filter((p) => matchesAny(p, builderDeny) || planned.includes(p))
     : changed.filter((p) => !matchesAny(p, cfg.surfaces[role].allow));
 if (role === "builder" && method) console.log("guard:surfaces(builder): method fix (Phase PM): method files allowed, product paths denied");
 

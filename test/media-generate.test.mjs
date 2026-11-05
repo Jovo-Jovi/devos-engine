@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -228,11 +228,8 @@ test("media-generate.test.mjs (h) a paid run without the key, an unknown item or
 test("media-generate.test.mjs (i) devos media estimates without a budget, asks before it pays, and needs the key from the shell", () => {
   const dir = project([IMAGE]);
   try {
-    const script = path.join(dir, "scripts", "devos");
-    mkdirSync(script, { recursive: true });
-    for (const file of ["media.mjs", "usage.mjs"]) writeFileSync(path.join(script, file), readFileSync(path.join(root, "payload/files/scripts/devos", file)));
-    mkdirSync(path.join(script, "media-providers"), { recursive: true });
-    for (const file of ["index.mjs", "xai.mjs"]) writeFileSync(path.join(script, "media-providers", file), readFileSync(path.join(root, "payload/files/scripts/devos/media-providers", file)));
+    // The project's runner scripts, as an install leaves them (media.mjs reads the fence's line through fence-check.mjs, PR-81).
+    cpSync(path.join(root, "payload/files/scripts/devos"), path.join(dir, "scripts", "devos"), { recursive: true });
     const env = { ...process.env };
     delete env.DEVOS_MEDIA_XAI_KEY;
     delete env.DEVOS_MEDIA_BUDGET;
@@ -261,7 +258,6 @@ test("media-generate.test.mjs (i) devos media estimates without a budget, asks b
 
 test("media-generate.test.mjs (j) the method generates media only within a budget, and only once (PR-80)", () => {
   const has = (file, sentence) => assert.equal(readFileSync(path.join(root, file), "utf8").includes(sentence), true, `${file}: ${sentence}`);
-  has("payload/files/docs/method/PRECEDENTS.md", "**Live maximum: PR-80.**");
   has("payload/files/docs/method/PRECEDENTS.md", "| PR-80 | **Media is generated only within a budget the developer sets, and only once.**");
   has("payload/files/docs/method/AUTOMATION.md", "| `media.mjs` · `media-providers/` | generated media (PR-80):");
   has("payload/files/docs/method/DESIGN_METHOD.md", "**Generation** (PR-80) is `scripts/devos/media.mjs`, or `devos media` on the developer's computer.");

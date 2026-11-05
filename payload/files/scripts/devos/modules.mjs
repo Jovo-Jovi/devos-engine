@@ -32,6 +32,16 @@ export function chosenModules() {
   }
 }
 
+/** The provider of generated media chosen at setup (PR-81), or "" for none. */
+export function mediaProvider() {
+  try {
+    const media = JSON.parse(readFileSync(P("devos/answers.json"), "utf8"))?.modules?.media;
+    return typeof media === "string" && media !== "none" ? media : "";
+  } catch {
+    return "";
+  }
+}
+
 /** Modules active in this tree, plus those the task's fence names. */
 export function neededModules(task = "") {
   const mods = config().modules ?? {};

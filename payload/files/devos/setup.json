@@ -223,6 +223,20 @@
       "steps": [
         "Vercel → Environment Variables → Production: DEVOS_PRODUCTION_URL = https://<the production hostname> with no trailing slash."
       ]
+    },
+    {
+      "id": "media-xai",
+      "title": "xAI key for generated media (optional)",
+      "kind": "secret",
+      "names": ["DEVOS_MEDIA_XAI_KEY"],
+      "when": ["media:xai"],
+      "blocks": "none",
+      "level": "optional",
+      "steps": [
+        "console.x.ai → API Keys → Create: only the Image, Video and Text to speech endpoints, and the models grok-imagine-image-2.0 and grok-imagine-video-1.5-lite.",
+        "Billing: keep the invoiced billing limit at $0 and auto top-up off, so requests stop when prepaid credits run out.",
+        "Add it as the repository secret `DEVOS_MEDIA_XAI_KEY`. Nothing is generated until the variable `DEVOS_MEDIA_BUDGET` is above 0 (PR-81)."
+      ]
     }
   ]
 }
