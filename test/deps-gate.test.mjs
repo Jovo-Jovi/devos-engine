@@ -193,7 +193,6 @@ test("deps-gate.test.mjs (d) a copyleft licence is a warning in the note, never 
 test("deps-gate.test.mjs (e) the method, the manual, the handbook, the prompts and the changelog say so (PR-85)", () => {
   const read = (rel) => readFileSync(path.join(root, rel), "utf8");
   const precedents = read("payload/files/docs/method/PRECEDENTS.md");
-  assert.equal(precedents.includes("**Live maximum: PR-85.**"), true);
   assert.equal(precedents.includes("| PR-85 | **New dependencies are named, audited and their licences read.**"), true);
   assert.equal(read("payload/files/docs/method/AUTOMATION.md").includes("· `deps` (the dependency gate, Node first, PR-85:"), true);
   assert.equal(read("payload/files/docs/method/DEV_OS_V2_REVIEWER.md").includes("- Dependencies: `<package>` · `<package>`, or none   (every package the task may add)\n"), true);

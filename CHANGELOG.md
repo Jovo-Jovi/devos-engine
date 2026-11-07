@@ -5,6 +5,10 @@ The notable changes of each DEV_OS Engine release. Versions follow [Semantic Ver
 ## 1.10.0 — Unreleased
 
 - **The dependency gate (PR-85), Node first.** Every fence names the packages its task may add to a manifest on a `- Dependencies:` line (or `none`), and `fence-check` checks the names. A new guard, `guard:deps`, fails a task whose `package.json` gains a package its fence does not name, and, whenever the dependencies change, any high or critical advisory `pnpm audit` reports; a waiver lives in `package.json` `pnpm.auditConfig`, with your recorded decision. A new package under a copyleft licence (GPL, AGPL, LGPL, MPL and the like) is a warning for the reviewer, not a failure. A manifest the task creates, the scaffold, holds the stack's own packages. The prompts, the fence-writing skill, the fence auditor and the handbook say so.
+- **A role can move to another tool (PR-86).** `devos models tool <role> <tool> <model>`, or "Another tool" in the guided page's Models panel, moves the reviewer, the light reviewer or the default builder to another tool and model, for example the reviewer from Claude Code to Cursor's Grok. It opens a pull request, as next models do, once the repository has the new tool's key; the role's next models, which were the old tool's, are cleared. A model variable for that role must be removed first.
+- **Max effort for Claude Code.** The guided page offers Max for a Claude Code blueprint agent, and a Claude Code reviewer's efforts in `devos/project.json` may be `max`. A retry still raises the review effort only up to extra high.
+- **The builder's effort is never lowered quietly.** When your Cursor account lists no model at the fence's effort, the builder runs the Fast model at that same effort; with neither, it runs the configured model, and the run says the effort changed (a warning, and a line in the evidence).
+- **Cursor's `cursor-grok-*` models are listed under Grok,** not "Other families".
 
 ## 1.9.0 — 2026-11-06
 

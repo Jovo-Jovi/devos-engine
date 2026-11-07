@@ -18,7 +18,7 @@ const signedIn = [
   { toolId: "claude", status: "installed", signedIn: true },
   { toolId: "cursor", status: "installed", signedIn: true },
 ];
-const EFFORT_MESSAGE = "The blueprint effort is low, medium, high or xhigh, and only for Claude Code or Codex.";
+const EFFORT_MESSAGE = "The blueprint effort is low, medium, high or xhigh, or max for Claude Code, and only for Claude Code or Codex.";
 const POOL_ITEM = { id: "cursor-grok", tool: "cursor", model: "grok-4.7", default: true, note: "default builder" };
 
 function roster(pool) {
@@ -87,7 +87,10 @@ test("effort.test.mjs (a) the blueprint agent runs at its effort: high by defaul
     ["exec", "--model", "gpt-5.1-codex", "--sandbox", "workspace-write", "-c", 'model_reasoning_effort="medium"', "--json"],
   );
   assert.equal(blueprintArgs("cursor", "grok-4.7", 1, "", false, "xhigh").includes("--effort"), false);
-  assert.equal(blueprintArgs("claude", "claude-opus-5-5", 1, "", false, "max").includes("--effort"), false);
+  // PR-86: Claude Code's --effort also takes max; Codex stops at xhigh.
+  assert.deepEqual(blueprintArgs("claude", "claude-opus-5-5", 1, "", false, "max").slice(0, 5), ["-p", "--model", "claude-opus-5-5", "--effort", "max"]);
+  assert.equal(blueprintArgs("codex", "gpt-5.1-codex", 1, "", false, "max").some((arg) => arg.startsWith("model_reasoning_effort")), false);
+  assert.equal(blueprintArgs("claude", "claude-opus-5-5", 1, "", false, "huge").includes("--effort"), false);
   assert.equal(blueprintEffort({ tool: "claude", model: "claude-opus-5-5" }), "high");
   assert.equal(blueprintEffort({ tool: "codex", model: "gpt-5.1-codex", effort: "low" }), "low");
   assert.equal(blueprintEffort({ tool: "cursor", model: "grok-4.7", effort: "xhigh" }), "");
@@ -104,7 +107,12 @@ test("effort.test.mjs (b) a plan carries the blueprint's effort, and refuses one
   assert.deepEqual(plain.answers.blueprint_agent, { tool: "claude", model: "claude-opus-5-5" });
   const max = validPlan();
   max.blueprint.effort = "max";
-  assert.equal(validatePlan(max, signedIn).errors.includes(EFFORT_MESSAGE), true);
+  const maxKept = validatePlan(max, signedIn);
+  assert.equal(maxKept.ok, true, maxKept.errors?.join(" | "));
+  assert.deepEqual(maxKept.answers.blueprint_agent, { tool: "claude", model: "claude-opus-5-5", effort: "max" });
+  const codexMax = validPlan();
+  codexMax.blueprint = { tool: "codex", model: "gpt-5.1-codex", effort: "max" };
+  assert.equal(validatePlan(codexMax, [...signedIn, { toolId: "codex", status: "installed", signedIn: true }]).errors.includes(EFFORT_MESSAGE), true);
   const cursor = validPlan();
   cursor.blueprint = { tool: "cursor", model: "grok-4.7", effort: "high" };
   assert.equal(validatePlan(cursor, signedIn).errors.includes(EFFORT_MESSAGE), true);

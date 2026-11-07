@@ -1,0 +1,21 @@
+{
+  "CHANGELOG.md": "a9ab9a9d071462bd5c70bec2586a5defbbb505a8a3e20e914101e60a1199bb9c",
+  "README.md": "db27ad4f4561bb255fdb151c93a1e23bdd42b2d39f874ffd4d823103da480d02",
+  "lib/fallbacks.mjs": "df75397b18b5a17908e91ce3bc544e0e0c807dc2ce09d4d5c7a0d1318f67185f",
+  "lib/init.mjs": "23b0c399f58f898360e787d448a9169d798c54ebbc4c0b474f664448db2553a6",
+  "lib/models.mjs": "f1829353364bd380e8d24cfbf95c92c10aecde32ec788b3b146dfe0ddd861137",
+  "lib/plan.mjs": "de7828ada50627446e06555a0c71ecc941d1a406f278857bcbbc5543ce9ea876",
+  "lib/probes.mjs": "c367b1c14ef36300dc3bb18809035f9d8cf8455261785b3b7b143956770999c8",
+  "lib/ui-server.mjs": "c66ee8941961d87d765f5f701ba660748929f56ddf77d7cdfc4b977cbd0a2124",
+  "lib/ui/app.js": "44b20822d0c33d71bce326e6bf31a37ce0cadc1dfaf9b4aea5d4cb3edd26c5d3",
+  "payload/files/docs/method/AUTOMATION.md": "1f8dc96b9493a6e496b86a560f62455db8fa13f9236e8c6398879b28405c44b0",
+  "payload/files/docs/method/PRECEDENTS.md": "8d8ada2593df97795307c31eef1ba45624f4c4884f15005616159b538a92fa68",
+  "payload/files/scripts/devos/builder-model.mjs": "5f783aa0c7872278f1e963a3f5726fce9f12ab7a0449a31c3a40e9b1aac70b3e",
+  "payload/files/scripts/devos/heavy.mjs": "feb35fa8a55e355927d859af72e15027d65e66c7fc00df00737208324aaaa55c",
+  "payload/files/scripts/devos/review-mode.mjs": "de2e3cf4ded19885abe68169322904f30f70dfff79925c4310978e7c0459d211",
+  "payload/manifest.json": "39045011caf5cd0a1c78f5779c8b1c64750424f74a55367d2f1ab38e387a722a",
+  "test/deps-gate.test.mjs": "5f745ff1f927737b88e8f8c9d5f28bc5f80267043fe52f8241113204a48ef4a8",
+  "test/effort.test.mjs": "b88339f11b26edb858deb5385f2a1386d5278f6bd05c462cc1d23054175b1ee9",
+  "test/init.test.mjs": "b9dfd45c8b073df15877ae5ef9b42a824b118a0fc5cd63beee4fc99af44929f5",
+  "test/models.test.mjs": "7a997d4897a190a8c0c127d4d0d82e64de9a4ce7d5db903a06772d812e4b8a3a"
+}

@@ -131,7 +131,7 @@ workflow may start late.
 | `role-env.mjs` | installs a role kit for a tool in the other role and restores the tool's own config (PR-42); `devos/roles/cursor-blueprint/` is the kit `devos init` gives Cursor while it writes the blueprint (PR-44); `cursor-planner` is Cursor's kit for a planning run (PR-53); the kits `codex-builder`, `codex-reviewer`, `gemini-builder` and `gemini-reviewer` give Codex its `AGENTS.md` and Gemini its `GEMINI.md` for the run (PR-45) |
 | `next-task.mjs` | which task and attempt; refuses out-of-order product tasks |
 | `heavy.mjs` | heavy-run notice or hold (`DEVOS_HEAVY`) |
-| `builder-model.mjs` | the builder model id from the pool item's family, checked against `agent models` |
+| `builder-model.mjs` | the builder model id from the pool item's family, checked against `agent models`: the Fast id at the same effort before the configured model, and a changed effort said (PR-86) |
 | `modules.mjs` | starts every needed module (`supabase.mjs`, `r2.mjs`, `firebase.mjs`); `plannedModules()` |
 | `supabase.mjs` · `r2.mjs` · `firebase.mjs` | each module's local service, env file and checks (PR-17, PR-26) |
 | `accounts.sh` · `limit-check.mjs` | account order, credential export, limit detection, for Cursor, Claude Code, Codex and Gemini (PR-29, PR-45); the order of model and account slots (`devos_slots`), a model the account cannot use (`devos_unavailable`, `limit-check.mjs --unavailable`), and a run that ends limited after an unusable model (`devos_settle`) (PR-64); an agent's last argument, which never holds its prompt (`devos_prompt`: Claude Code, Codex and Gemini read it on standard input, Cursor gets one line that names the file), and which builder exits restart once in place (`devos_restart`: 125, 126, and 137 or 143 for a signal from inside the run) (PR-71) |
@@ -302,14 +302,23 @@ A UI fence carries a header line `- Screens: \`<name> <path>[ click|hover|focus 
   replaces the first model, and the configured model becomes its next one (PR-76). `devos models` shows the
   three roles and sets or removes the variables (`devos models set <reviewer|light|builder> <model>`,
   `devos models reset <role>`). The id is checked as a model id only; the tool reports a model it cannot
-  run when the run starts.
+  run when the run starts. Another tool (PR-86): `devos models tool <role> <tool> <model>`, or the guided page's
+  Another tool, opens a pull request on `devos/models-<role>` that moves the role in `devos/project.json` `agents`
+  and the generated config, once the repository has the new tool's key by name and the role's model variable is
+  unset. Its next models go with the old tool, a builder's `fast` stays only on Cursor, and the agent keeps its
+  id. A run never changes a tool on its own (PR-64).
 
   Effort (PR-78): a builder's effort is the reviewer's choice for each task, written in the fence's builder line,
   unless its `agents.pool` item has a fixed `effort` (`low`, `medium`, `high` or `xhigh`) and, for Cursor,
   `fast: true`. Then every fence for that builder says exactly that, and `fence-check.mjs` refuses another. A
   Cursor model id that names its effort (`grok-4.7-xhigh-fast`) runs as it is, and `builder-model.mjs` reports
-  the effort from the id. The blueprint agent of `devos init` runs at `high` effort (Claude Code `--effort`, Codex
-  `model_reasoning_effort`) unless the guided page chose another; Cursor's model id carries its own.
+  the effort from the id. When the account lists no id at the fence's effort and speed, it runs the Fast id at the
+  same effort, then the configured `builder.model`; the effort that model runs at is the one reported, and a
+  different one is a warning in the run and a line in the evidence (PR-86). The blueprint agent of `devos init`
+  runs at `high` effort (Claude Code `--effort`, Codex `model_reasoning_effort`) unless the guided page chose
+  another, `max` for Claude Code too; Cursor's model id carries its own. A Claude Code reviewer's
+  `reviewer.modes.*.effort` and `gate_effort` may be `max`; a retry raises the effort one step up to `xhigh`, and
+  `max` stays `max` (PR-86).
 - **`devos.config.json`:** generated — edit `devos/project.json`; engine defaults in `devos/engine.defaults.json`. `max_attempts`; `builder` (model family, effort by risk); `reviewer`
   (models and efforts by risk and gate, `modes.light/deep`, `deep_paths`, `human_gate_paths` (PR-72: a project in production, filled by `devos adopt`), `human_gate_imports` (PR-73: packages whose import in a changed file stops at the gate, filled the same way), intake and method efforts; its Claude model ids apply only to a project without `agents`, PR-53); `agents` (reviewer, reviewer_light, pool, policy; without reviewer_light the reviewer reviews every task, PR-53; any of Cursor, Claude Code, Codex and Gemini may take either role (PR-45); a usage limit switches to the same tool's other account, then to the agent's next model in its `fallback_models` (up to 4 model ids of its own tool, PR-64), and with none left the attempt waits for the earliest reset: no other agent takes over, PR-53; `devos init` writes them from the developer's choices, and the setup items `cursor`, `claude`, `codex` and `gemini` apply only when an agent uses that tool, PR-44);
   `required_checks` / `optional_checks`; `stack` (the toolchain, its manifest and the commands of its checks, written by `devos init`, PR-48, and `scaffold`, the recipe fence T01 follows, PR-49, with `scaffold.modules`, the stack's module convention, PR-58); `structure` (the product's feature modules: `modules`, each with its `dir` and `public` entries, `aliases` and `exempt`, written by the blueprint, PR-58); `screens` (`pages`, `filmstrip_ms`, `settle_max_ms`; a fence `- Screens:` line overrides `pages`); `surfaces` (builder, builder_method, reviewer, intake,

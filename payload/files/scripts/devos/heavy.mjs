@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Heavy runs are announced, and can be held (PR-20).
 //
-// A run is heavy when its review uses the gate model (Opus) or extra-high effort, or when its fence
+// A run is heavy when its review uses the gate model (Opus) or extra-high or max effort, or when its fence
 // asks the builder for extra-high effort. Those runs take the longest and use the most of the
 // human's Claude and Cursor plans, so before one starts the runner comments in the "Dev OS: run
 // notices" issue (subscribe to it to get the notification). The first task of a new phase also gets
@@ -31,6 +31,7 @@ export function heavyReasons(row, cfg = config()) {
   const effort = reviewerEffort(row, cfg);
   if (model === cfg.reviewer.gate_model) reasons.push(`review by ${model}`);
   if (effort === "xhigh") reasons.push("review at extra-high effort");
+  if (effort === "max") reasons.push("review at max effort");
   const fence = P(`docs/fences/${row.task}.md`);
   if (existsSync(fence)) {
     const e = /Builder:[^\n]*Effort:\s*(low|medium|high|xhigh)/i.exec(readFileSync(fence, "utf8"))?.[1];

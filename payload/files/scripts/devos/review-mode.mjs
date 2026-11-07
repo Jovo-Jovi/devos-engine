@@ -10,7 +10,8 @@
 // The agents and models are the ones the developer chose (agents in devos.config.json, PR-53). The model here is the
 // reviewer's first; the cycle tries its fallback_models after it (agents.mjs, accounts.sh devos_slots, PR-64).
 //
-// A retry (attempt 2+) raises the effort one step: the cheap review missed something or the task is hard.
+// A retry (attempt 2+) raises the effort one step: the cheap review missed something or the task is hard. It stops at
+// xhigh: max is Claude Code's alone (PR-86), so only a reviewer set to max reviews at max.
 // Usage: node scripts/devos/review-mode.mjs --task T12 --attempt 1
 // Emits: mode, model, effort, max_turns, fallback, reasons, critical (comma-separated paths)
 import { P, config, parsePhases, globToRegExp, diffPaths, emit, fail, isMethodRow, importsGated } from "./lib.mjs";
@@ -41,7 +42,7 @@ export function reviewPlan(row, changed = [], attempt = 1, cfg = config()) {
   const mode = reasons.length ? "deep" : "light";
   const m = r.modes?.[mode] ?? {};
   let effort = hasGate(row) ? (r.gate_effort ?? m.effort) : m.effort;
-  if (attempt > 1 && r.escalate_on_retry !== false) {
+  if (attempt > 1 && r.escalate_on_retry !== false && effort !== "max") {
     const i = Math.min(EFFORTS.indexOf(effort) + 1, EFFORTS.length - 1);
     if (EFFORTS[i] !== effort) reasons.push(`retry: effort raised to ${EFFORTS[i]}`);
     effort = EFFORTS[i];

@@ -251,9 +251,10 @@ commas, or a name; Enter takes the default.
 | Setting | How |
 |---|---|
 | **Models** | Only the models a tool lists for your account are offered. |
-| **Effort** | The blueprint agent runs at high by default. A builder's effort is chosen by the reviewer in each fence, or fixed, with Fast for Cursor. |
+| **Effort** | The blueprint agent runs at high by default; Claude Code also takes Max. A builder's effort is chosen by the reviewer in each fence, or fixed, with Fast for Cursor. |
 | **A model for the next run** | `devos models set <role> <model>` or the page's **Models** button; same tool, no commit. |
 | **Next models at a limit** | Up to 4 per role, of its own tool (`devos models fallback`, by pull request). A model the account cannot use is skipped. |
+| **Another tool for a role** | `devos models tool` or the page's **Another tool**, by pull request, once the repository has that tool's key. |
 | **Second accounts** | `CURSOR_API_KEY_2`, `CLAUDE_CODE_OAUTH_TOKEN_2`, `OPENAI_API_KEY_2`, `GEMINI_API_KEY_2`: at a limit the run continues on the other account. |
 | **Fallback builder** | `agents.fallback_builder` in `devos/project.json`: a builder of another tool finishes the task when the default's tool is out for longer than a run waits. |
 
@@ -374,6 +375,7 @@ must be committed.
 | `devos models [folder]` | The reviewer's, the light reviewer's and the default builder's model. |
 | `devos models set <role> <model>` · `reset <role>` | Sets or clears the role's model variable for the next run. Roles: `reviewer`, `light`, `builder`. |
 | `devos models fallback <role> <model,…\|none>` | Opens a pull request with the role's next models (up to 4). |
+| `devos models tool <role> <tool> <model>` | Opens a pull request that moves the role to another tool (`cursor`, `claude`, `codex`, `gemini`) and model, once the repository has its key. |
 | `devos agents detect` | Lists the AI CLIs here, their versions, and whether each is signed in. |
 | `devos agents show` · `import <file>` | Shows or saves your default roster (`~/.devos/roster.json`). |
 | `devos profile show` · `set <key> <value>` | Your defaults (`~/.devos/profile.json`). It refuses anything that looks like a key. |

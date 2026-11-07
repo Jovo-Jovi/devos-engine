@@ -117,6 +117,7 @@ test("models.test.mjs (c) devos models shows each role, the variable that change
       "builder   cursor · grok-5 — DEVOS_BUILDER_MODEL (configured: grok-4.7)",
       "Change one: devos models set <reviewer|light|builder> <model> · back to the configured model: devos models reset <role>",
       "Next models at a usage limit (by pull request): devos models fallback <role> <model,model…|none>",
+      "Another tool (by pull request, once the repository has its key): devos models tool <role> <tool> <model>",
       "",
     ].join("\n"));
     assert.deepEqual(ghCalls(staged), ["variable list --repo devtest/demo-shop --json name,value"]);
