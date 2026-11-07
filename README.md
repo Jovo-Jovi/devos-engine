@@ -39,7 +39,7 @@ DEV_OS sets a project up from an empty folder and runs it as small, reviewed tas
 writes the blueprint: the brief, the scope, the design system, the phases and the first task. You approve it. Each
 task is then built from a written fence, checked, reviewed, and merged by you.
 
-Version `1.9.0`. The engine is under PolyForm Shield 1.0.0 and the files it installs into your project under MIT
+Version `1.10.0`. The engine is under PolyForm Shield 1.0.0 and the files it installs into your project under MIT
 (see [Licence](#licence)).
 
 ## Contents
@@ -117,7 +117,7 @@ flowchart LR
 | **Agents** | Claude Code, Cursor, Codex and Gemini, each as reviewer or builder. The reviewer can pick the builder for each task. |
 | **Effort** | Set per agent: chosen by the reviewer for each task, or fixed, with Fast for Cursor. |
 | **Usage limits** | Second accounts, up to 4 next models per role, a fallback builder of another tool. |
-| **Guards** | 17 guards on every task, from scope and secrets to design, i18n, data boundaries and the media plan. |
+| **Guards** | 18 guards on every task, from scope and secrets to design, i18n, data boundaries, the media plan and new dependencies. |
 | **UI evidence** | Captures at 1280 and 390 px, filmstrips, reduced motion, layout shift and axe checks, read against the design specification. |
 | **Lean by default** | MVP or full product; every dependency names its need; current library docs through Context7. |
 | **Expert skills** | 18 vendored skill sets, chosen for the stack and modules. |

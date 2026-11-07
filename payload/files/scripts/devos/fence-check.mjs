@@ -47,6 +47,21 @@ export function fenceMedia(text) {
   return line ? backticked(line[1]) : null;
 }
 
+/** The `- Dependencies:` line's text (PR-85), or null when the fence has none. */
+function dependencyLine(text) {
+  const line = /^- Dependencies:[ \t]*(.*)$/m.exec(headOf(text));
+  return line ? line[1].trim() : null;
+}
+
+/** The packages the fence's `- Dependencies:` line names (PR-85): [] for `none` and for no line at all. */
+export function fenceDependencies(text) {
+  const line = dependencyLine(text);
+  return line === null || /^none$/i.test(line) ? [] : backticked(line);
+}
+
+// An npm package name: lower case, an optional @scope/, no leading dot or underscore.
+export const PACKAGE_NAME = /^(?:@[a-z0-9][a-z0-9._~-]*\/)?[a-z0-9][a-z0-9._~-]*$/;
+
 /** The items of docs/design/media.json (PR-79), or null when there is no readable plan. */
 export function mediaItems() {
   try {
@@ -159,6 +174,15 @@ export function checkFence(text, file) {
     if (media.length === 0) findings.push("the `- Media:` line names no item");
     else if (items === null) findings.push("a `- Media:` line needs docs/design/media.json, the media plan (PR-79)");
     else for (const id of media) if (!items.some((item) => item.id === id)) findings.push(`media item \`${id}\` is not in docs/design/media.json`);
+  }
+
+  // PR-85: the packages the task may add to a manifest, or `none`.
+  const dependencies = dependencyLine(text);
+  if (dependencies !== null) {
+    const names = fenceDependencies(text);
+    if (names.length === 0 && !/^none$/i.test(dependencies)) findings.push("the `- Dependencies:` line names no package: name each in backticks, or write `none` (PR-85)");
+    for (const name of names) if (name.length > 214 || !PACKAGE_NAME.test(name)) findings.push(`dependency \`${name}\` is not a package name (such as \`zod\` or \`@scope/name\`)`);
+    for (const name of new Set(names.filter((name, i) => names.indexOf(name) !== i))) findings.push(`dependency \`${name}\` is named twice`);
   }
 
   if (!hasPart(text, "Done when")) findings.push("no Done when section");

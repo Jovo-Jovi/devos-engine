@@ -46,6 +46,10 @@ backticks (a module's folder from `devos.config.json` `structure.modules`, a tes
 `docs/DEVELOPMENT_JOURNAL.md` and a lockfile beside a listed manifest are always allowed (PR-58).
 More than 12 entries is more than one run: split into stages or tasks.
 
+It also carries `- Dependencies: \`<package>\` · …`: every package the task may add to a manifest, each in
+backticks, or `- Dependencies: none`. `guard:deps` fails a package a manifest gains that the line does not name,
+and a high or critical advisory of the stack's audit (PR-85).
+
 ## 4. Check it before it is final
 
 1. Write the fence.

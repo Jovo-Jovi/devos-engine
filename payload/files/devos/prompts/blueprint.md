@@ -126,6 +126,9 @@ Work in this order.
    `docs/SESSION_CONTEXT.md`, `docs/DEVELOPMENT_JOURNAL.md` and a lockfile beside a listed manifest are always
    allowed. Before you finish, run `node scripts/devos/fence-check.mjs docs/fences/T01.md` and fix every finding
    (PR-58).
+   Every fence also carries `- Dependencies: \`<package>\` · …`, or `- Dependencies: none`: every package the task may
+   add to a manifest (`guard:deps`, PR-85). T01 creates the manifest, so its line names the packages it adds beyond
+   the stack's `create` commands, such as the logger.
    Every later fence that builds a screen carries a `- Screens:` line and a `### Design specification`
    (`docs/method/DESIGN_METHOD.md` §3), and, when the screen shows planned media, `- Media: \`<id>\` · …` (PR-81).
 7. **End with a summary** as your final message: the profile, the ODs the developer signs by approving, your

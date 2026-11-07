@@ -19,7 +19,8 @@ description: Execute a Dev OS fence (docs/fences/Tnn.md) as the builder — prec
 5. **Stay inside the fence.** Change only what its `- Paths:` line names, plus the report, the two
    ledgers and a lockfile beside a listed manifest (`guard:scope`). Reach another feature module only
    through its public entry (`guard:imports`). If a step needs something the fence does not allow (a
-   path outside Paths, a protected path, a new dependency it does not name, a tool it does not name),
+   path outside Paths, a protected path, a new dependency its `- Dependencies:` line does not name, a tool it
+   does not name),
    HALT. Do not improvise.
 6. **Done when**: run every command yourself, in order, and keep the real output for the report.
    Fix what fails if the fix is inside the fence; otherwise HALT.

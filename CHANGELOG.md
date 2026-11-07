@@ -2,6 +2,10 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
+## 1.10.0 — Unreleased
+
+- **The dependency gate (PR-85), Node first.** Every fence names the packages its task may add to a manifest on a `- Dependencies:` line (or `none`), and `fence-check` checks the names. A new guard, `guard:deps`, fails a task whose `package.json` gains a package its fence does not name, and, whenever the dependencies change, any high or critical advisory `pnpm audit` reports; a waiver lives in `package.json` `pnpm.auditConfig`, with your recorded decision. A new package under a copyleft licence (GPL, AGPL, LGPL, MPL and the like) is a warning for the reviewer, not a failure. A manifest the task creates, the scaffold, holds the stack's own packages. The prompts, the fence-writing skill, the fence auditor and the handbook say so.
+
 ## 1.9.0 — 2026-11-06
 
 - **Local development is a handover (PR-83).** `devos init --local` (and the guided page's "Local development") writes the plan with you, then hands the project over: once you approve the blueprint, DEV_OS's scripts, guards, workflows, agent settings and engine lock leave the folder before the first commit. The plan in `docs/` (with `docs/method/`, which the fences cite), `README.md`, `SETUP.md` and `devos/answers.json` stay, and you build the rest your own way, ticking each task in `docs/PHASES.md`. A local project's fences name only the stack's own commands. No agent tool needs to be signed in, and the optional GitHub backup is a plain private repository where nothing runs. `devos continue` and `devos verify` know a handed-over project, and `devos adopt` brings DEV_OS back later.

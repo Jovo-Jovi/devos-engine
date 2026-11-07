@@ -1,5 +1,5 @@
 {
-  "engine_version": "1.9.0",
+  "engine_version": "1.10.0",
   "source": {
     "repo": "Jovo-Jovi/devos-control-tower",
     "commit": "a49ca6db268b98d6558077bf3e95b8ae759d91b3"
@@ -14,7 +14,7 @@
     {
       "path": ".claude/agents/fence-auditor.md",
       "stored": "dot-claude/agents/fence-auditor.md",
-      "sha256": "033eee3864b7143b652c018aad52e3b0d797fb9bf1c0d2d3fa71476e2a9bc701",
+      "sha256": "0c429504347bfa774d3edecd325ea7deee52969cd956fbccdc83c0bf3f993cad",
       "owner": "engine"
     },
     {
@@ -50,7 +50,7 @@
     {
       "path": ".claude/skills/devos-fence-writing/SKILL.md",
       "stored": "dot-claude/skills/devos-fence-writing/SKILL.md",
-      "sha256": "853223f985880915a27103435d1edc9bbd4f79d3a0724e2013819473bdfae6d2",
+      "sha256": "d006b400072491de9910cc2dfce929d8217b312936716f1f7e26e8eecc62964b",
       "owner": "engine"
     },
     {
@@ -140,7 +140,7 @@
     {
       "path": ".cursor/skills/devos-execute-fence/SKILL.md",
       "stored": "dot-cursor/skills/devos-execute-fence/SKILL.md",
-      "sha256": "b7bd0c9dfa0d085de1227b206911950a95addceedc1cfef83ebae06af2550f87",
+      "sha256": "8582e57e883bab14ac868c986868ef5ea2c90c5a1108ff1472df4e427841586a",
       "owner": "engine"
     },
     {
@@ -272,13 +272,13 @@
     {
       "path": "devos/prompts/blueprint.md",
       "stored": "devos/prompts/blueprint.md",
-      "sha256": "a6c55e84fdce0155e0a013bc5a3d4a40b3e131d0c6fd5f2bb3b17dd362f4b594",
+      "sha256": "dc09e089b3dda7d2f69ff465a63eb607eadf1c73bb6481557b86c6f33ce5b5a1",
       "owner": "engine"
     },
     {
       "path": "devos/prompts/builder.md",
       "stored": "devos/prompts/builder.md",
-      "sha256": "1ecd273070487e66ea552c1d7bb7812e9c90d394ae4cb1c9b733fdc844e823cb",
+      "sha256": "f9967edabcf564863509b2193490faef16092fde0cbd2d90bf0628d71a663a9b",
       "owner": "engine"
     },
     {
@@ -290,7 +290,7 @@
     {
       "path": "devos/prompts/intake.md",
       "stored": "devos/prompts/intake.md",
-      "sha256": "63b072867072595dd3a07b98c2526ac23f77c0c4026b73eb173d9c5f83d1ccee",
+      "sha256": "9d8e2c7f8bb8c324c7baaf0af520ad66a4ae4f3993a6caad452476dcfc140761",
       "owner": "engine"
     },
     {
@@ -302,13 +302,13 @@
     {
       "path": "devos/prompts/reviewer.md",
       "stored": "devos/prompts/reviewer.md",
-      "sha256": "d03b54b19f4f6c04dd2a6b769a942b7070f885bdd2cf3767bbe0a84a0be254b3",
+      "sha256": "a06c1f5abaa4f8fef8c1a9692ffc982761f7d6168a5bac52f8a657940aada3f0",
       "owner": "engine"
     },
     {
       "path": "devos/prompts/revise.md",
       "stored": "devos/prompts/revise.md",
-      "sha256": "5262ceeda946ff06d84b5e7ad8b8890f14b9dc02dec304d2613691dbaae54a06",
+      "sha256": "a23c7622f6bdf3d5ed0e1a4133ea5ed67c0d718faf60021be95aca8217f35b91",
       "owner": "engine"
     },
     {
@@ -1472,7 +1472,7 @@
     {
       "path": "docs/method/AUTOMATION.md",
       "stored": "docs/method/AUTOMATION.md",
-      "sha256": "11e63bcead175de957049cc3427044912265a19fe50fa6bb8c5db2ab7590bdc7",
+      "sha256": "1f8dc96b9493a6e496b86a560f62455db8fa13f9236e8c6398879b28405c44b0",
       "owner": "engine"
     },
     {
@@ -1484,7 +1484,7 @@
     {
       "path": "docs/method/DEV_OS_V2_REVIEWER.md",
       "stored": "docs/method/DEV_OS_V2_REVIEWER.md",
-      "sha256": "36480f3131be513c185d5e203fce7354a5a1cc5e910e3f0a986ba9cb4eacca59",
+      "sha256": "6358fb494315c86514c6c112fb3c8aa476e4bb04b3352cc526270afdcaf6aa40",
       "owner": "engine"
     },
     {
@@ -1496,7 +1496,7 @@
     {
       "path": "docs/method/PRECEDENTS.md",
       "stored": "docs/method/PRECEDENTS.md",
-      "sha256": "84f009cd4f0e8ed79b77f6d55569ae3a50542aa324a01b41d4f8ccf988e88da0",
+      "sha256": "8d8ada2593df97795307c31eef1ba45624f4c4884f15005616159b538a92fa68",
       "owner": "engine"
     },
     {
@@ -1568,7 +1568,7 @@
     {
       "path": "scripts/devos/fence-check.mjs",
       "stored": "scripts/devos/fence-check.mjs",
-      "sha256": "f1e4c6ece0ed10e5bd2e8f129c485d4a34f57f7f0a68f5bfeefe609a5a1eab1c",
+      "sha256": "0c699389920e272e04235224f9b8be3244e0169c8136c8a11e3f0cd1ae9c7fae",
       "owner": "engine"
     },
     {
@@ -1800,6 +1800,12 @@
       "owner": "engine"
     },
     {
+      "path": "scripts/guards/deps.mjs",
+      "stored": "scripts/guards/deps.mjs",
+      "sha256": "391886ac6345a810648130bcf38361b6f933503f49319019ac292c1aafd2154f",
+      "owner": "engine"
+    },
+    {
       "path": "scripts/guards/design-spec.mjs",
       "stored": "scripts/guards/design-spec.mjs",
       "sha256": "f58f3bccf2cb0ff128496353678c20171681f83526b6f9d9a047080c5ebd659c",
@@ -1868,7 +1874,7 @@
     {
       "path": "scripts/guards/run-all.mjs",
       "stored": "scripts/guards/run-all.mjs",
-      "sha256": "6c55dbab68d5417f2d145bd1c352b07d945b5fb7ab85ea1980a4d7994ddcd22b",
+      "sha256": "9c7c6a48c94206dd24e0e052c45e604db775b3ec788a39a2bddebacca921a132",
       "owner": "engine"
     },
     {

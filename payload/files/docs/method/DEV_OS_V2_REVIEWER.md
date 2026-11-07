@@ -306,6 +306,7 @@ was fence defects (impossible checks, wrong anchors, stale counts); rehearsal re
 - Builder: <pool id> · Effort: <low|medium|high|xhigh> · Fast: <yes|no>
 - Layers: <layer> · <layer>
 - Paths: `<glob>` · `<glob>`   (every file and folder the task may change)
+- Dependencies: `<package>` · `<package>`, or none   (every package the task may add)
 - Context to read first: <docs and sections>
 - Prompt (canonical): preconditions → numbered STEPs → STOP block
 - Done when: commands that must pass and states that must hold
@@ -320,6 +321,10 @@ Rules for every fence:
 - **A fixed effort is kept (PR-78).** When `devos.config.json` gives a pool builder a fixed `effort` (and,
   for Cursor, `fast`), every fence for it says exactly that `Effort:` and `Fast:`; `fence-check.mjs`
   refuses another. Otherwise the reviewer picks the effort for each task.
+- **Dependencies are named (PR-85).** `- Dependencies:` names every package the task may add to a
+  manifest, or says `none`. `guard:deps` fails a package the line does not name and, when the
+  dependencies change, a high or critical advisory of the stack's audit; a copyleft licence is a
+  warning the reviewer judges. A manifest the task creates (the scaffold) holds the stack's packages.
 - **The README is kept (PR-77).** A fence that builds a feature or changes what a user sees ends with
   a step that updates `README.md` (`## Features`, and for a screen `## Screenshots` from
   `docs/screenshots/`), and names it in its Paths. No fence deletes or empties `README.md`, and no

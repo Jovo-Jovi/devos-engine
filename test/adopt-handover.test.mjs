@@ -318,7 +318,6 @@ test("adopt-handover.test.mjs (e) the pull request says the cycle resumes from t
 test("adopt-handover.test.mjs (f) the method, the manual, the README and the changelog say so (PR-84), and the ledger and README edits keep every other line", () => {
   const read = (rel) => readFileSync(path.join(root, rel), "utf8");
   const precedents = read("payload/files/docs/method/PRECEDENTS.md");
-  assert.equal(precedents.includes("**Live maximum: PR-84.**"), true);
   assert.equal(precedents.includes("| PR-84 | **A handed-over project comes back by pull request, from its first open task.**"), true);
   assert.equal(read("payload/files/docs/method/AUTOMATION.md").includes("- **A project DEV_OS handed over (PR-83)** keeps its plan"), true);
   assert.equal(read("README.md").includes("A project DEV_OS handed over (`devos init --local`) comes back without an AI tool"), true);

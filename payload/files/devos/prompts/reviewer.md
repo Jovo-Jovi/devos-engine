@@ -111,6 +111,11 @@ part: a red required check fails the verdict whatever you write (PR-08), and the
    against the visual ambition;
    `## Generated media` in the evidence says what the step before the builder made (PR-81). A fence you
    write whose screens show planned media names them: `- Media: \`<id>\` · …`.
+   **Dependencies (PR-85):** `guard:deps` fails a package a manifest gains that the fence's `- Dependencies:` line
+   does not name, and a high or critical advisory of `pnpm audit`. Judge each new package's need, and any copyleft
+   licence its note warns of, before a PASS; pass an audit waiver (`pnpm.auditConfig`) only with the owner's recorded
+   decision. Every fence you write names the packages its task may add: `- Dependencies: \`<package>\` · …`, or
+   `none`.
 4. Write `docs/reviews/{{TASK}}-a{{ATTEMPT}}.md`. **First line exactly** `VERDICT: PASS` or
    `VERDICT: FAIL`, then the Dev OS verdict format from `CLAUDE.md`. Keep it short: ledger lines cite
    evidence ("pack §Checks: test pass, 57 tests"), they do not repeat it. `Next prompt:` gives the
