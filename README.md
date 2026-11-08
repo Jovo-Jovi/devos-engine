@@ -39,7 +39,7 @@ DEV_OS sets a project up from an empty folder and runs it as small, reviewed tas
 writes the blueprint: the brief, the scope, the design system, the phases and the first task. You approve it. Each
 task is then built from a written fence, checked, reviewed, and merged by you.
 
-Version `1.11.0`. The engine is under PolyForm Shield 1.0.0 and the files it installs into your project under MIT
+Version `1.12.0`. The engine is under PolyForm Shield 1.0.0 and the files it installs into your project under MIT
 (see [Licence](#licence)).
 
 ## Contents
@@ -118,9 +118,10 @@ flowchart LR
 | **Effort** | Set per agent: chosen by the reviewer for each task, or fixed, with Fast for Cursor. |
 | **Usage limits** | Second accounts, up to 4 next models per role, a fallback builder of another tool. |
 | **Guards** | 18 guards on every task, from scope and secrets to design, i18n, data boundaries, the media plan and new dependencies. |
+| **Launch gate** | The last task before launch checks the main pages' security headers, accessibility and speed, and audits every dependency. The reviewer verifies the OWASP ASVS and a production checklist per layer. A failed check waits for a fix or your written waiver. |
 | **UI evidence** | Captures at 1280 and 390 px, filmstrips, reduced motion, layout shift and axe checks, read against the design specification. |
 | **Lean by default** | MVP or full product; every dependency names its need; current library docs through Context7. |
-| **Expert skills** | 18 vendored skill sets, chosen for the stack and modules. |
+| **Expert skills** | 20 vendored skill sets, chosen for the stack and modules. |
 | **Product README** | Written by the blueprint, kept current by every feature task, never deleted. |
 | **Usage and cost** | Tokens per agent run, totalled in `docs/USAGE.md` by model, stage and task. |
 | **Adopt and upgrade** | Add DEV_OS to a project you have, and take new engine versions, each by pull request. |

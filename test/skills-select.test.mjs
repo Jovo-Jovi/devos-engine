@@ -270,7 +270,8 @@ test("skills-select.test.mjs (g) every shipped skill is pinned to a commit, keep
   assert.equal(byId.supabase.source.commit, byId["supabase-postgres-best-practices"].source.commit);
   assert.deepEqual(byId.supabase.modules, ["supabase"]);
   assert.match(readFileSync(path.join(skillsDir, "supabase", "LICENSE"), "utf8"), /^MIT License\n\nCopyright \(c\) 2026 Supabase\n/);
-  for (const id of ["trailofbits-supply-chain-risk-auditor", "owasp-asvs", "wshobson-api-design-principles", "trailofbits-sharp-edges"]) {
+  // E23b4 vendored the ASVS and sharp edges (readiness.test.mjs (e)); these two stay external.
+  for (const id of ["trailofbits-supply-chain-risk-auditor", "wshobson-api-design-principles"]) {
     assert.notEqual(byId[id].delivery, "vendored", id);
     assert.ok(byId[id].reason.length > 60, id);
   }

@@ -22,14 +22,14 @@ Blueprint column. The fence, `docs/DECISIONS.md` and `docs/DESIGN_SYSTEM.md` win
 |---|---|---|
 | `design` | visual direction, type, colour, spacing and layout | 13 |
 | `motion` | animation, transitions and scroll | 4 |
-| `frontend` | components, client state, copy and interaction | 10 |
+| `frontend` | components, client state, copy and interaction | 11 |
 | `accessibility` | WCAG, keyboard paths, focus, contrast and assistive technology | 3 |
-| `architecture` | system structure, boundaries, configuration, processes and migrations between systems | 11 |
-| `backend` | server code, jobs and integrations | 3 |
-| `api` | HTTP and RPC contracts, validation and errors | 18 |
-| `database` | schema, migrations, queries and access rules | 36 |
-| `security` | sign-in, secrets, input, headers and data protection | 22 |
-| `reliability` | timeouts, retries, queues, idempotency, health checks and graceful failure | 10 |
+| `architecture` | system structure, boundaries, configuration, processes and migrations between systems | 14 |
+| `backend` | server code, jobs and integrations | 7 |
+| `api` | HTTP and RPC contracts, validation and errors | 22 |
+| `database` | schema, migrations, queries and access rules | 38 |
+| `security` | sign-in, secrets, input, headers and data protection | 44 |
+| `reliability` | timeouts, retries, queues, idempotency, health checks and graceful failure | 11 |
 | `testing` | unit, integration and end-to-end tests | 8 |
 | `ops` | build, deploy, CI, containers, dependencies, logging and observability | 19 |
 
@@ -81,6 +81,7 @@ A fence touches a topic when its `- Topics:` line names it or its text has one o
 | `distributed` | work that spans several services |
 | `legacy` | replacing or integrating an older system |
 | `config` | configuration and environment |
+| `launch` | the launch task, whose fence has a `- Launch:` line: the production-readiness gate (PR-88) |
 
 ## design
 
@@ -123,6 +124,7 @@ A fence touches a topic when its `- Topics:` line names it or its text has one o
 | `impeccable/reference/adapt.md` |  | yes |  | recommended | small screens | any |
 | `impeccable/reference/audit.md` |  |  | yes | recommended | the technical pass of the visual check | any |
 | `owasp-cheat-sheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.md` |  | yes | yes | conditional: topic html | rendering user content as HTML | any |
+| `owasp-asvs/0x12-V3-Web-Frontend-Security.md` |  |  | yes | conditional: topic launch; or topic headers and a deep task | browser security: headers, cookies, CSP, cross-origin | any |
 
 ## accessibility
 
@@ -147,6 +149,9 @@ A fence touches a topic when its `- Topics:` line names it or its text has one o
 | `twelve-factor/port-binding.md` | yes |  |  | recommended | planning a service: self-contained, exported by port | any |
 | `twelve-factor/config.md` | yes | yes | yes | conditional: topic config or secrets or deploy | configuration and secrets in the environment | any |
 | `twelve-factor/concurrency.md` | yes | yes | yes | conditional: topic concurrency | scaling out with process types; web and worker | any |
+| `owasp-asvs/0x21-V12-Secure-Communication.md` |  |  | yes | conditional: topic launch; or topic deploy and a deep task | TLS, inside and out | any |
+| `owasp-asvs/0x22-V13-Configuration.md` |  |  | yes | conditional: topic launch; or topic config and a deep task; or topic secrets and a deep task | configuration, secrets and what a deployment exposes | any |
+| `owasp-asvs/0x24-V15-Secure-Coding-and-Architecture.md` |  |  | yes | conditional: topic launch; or topic dependencies and a deep task | dependencies, dangerous functions and safe architecture | any |
 
 ## backend
 
@@ -155,6 +160,10 @@ A fence touches a topic when its `- Topics:` line names it or its text has one o
 | `owasp-cheat-sheets/Injection_Prevention_Cheat_Sheet.md` |  | yes | yes | recommended | server code that passes input to an interpreter (shell, SQL, LDAP, templates) | any |
 | `owasp-cheat-sheets/Error_Handling_Cheat_Sheet.md` |  |  | yes | recommended | no stack trace or internal detail reaches the caller | any |
 | `supabase/SKILL.md` |  | yes | yes | recommended | every task on a Supabase project's data, auth or storage | any; module supabase |
+| `owasp-asvs/0x10-V1-Encoding-and-Sanitization.md` |  |  | yes | conditional: topic launch; or topic html and a deep task | output encoding, injection and parsing | any |
+| `owasp-asvs/0x11-V2-Validation-and-Business-Logic.md` |  |  | yes | conditional: topic launch; or topic payment and a deep task; or topic idempotency and a deep task | input validation and business-logic abuse | any |
+| `owasp-asvs/0x14-V5-File-Handling.md` |  |  | yes | conditional: topic upload and a deep task | uploads and stored files | any |
+| `owasp-asvs/0x17-V8-Authorization.md` |  |  | yes | conditional: topic launch; or topic roles and a deep task; or topic tenant and a deep task; or topic rls and a deep task | who may do what, per object and per field | any |
 
 ## api
 
@@ -178,6 +187,10 @@ A fence touches a topic when its `- Topics:` line names it or its text has one o
 | `google-aips/0158.md` |  | yes | yes | conditional: topic pagination | every list endpoint | any |
 | `google-aips/0180.md` |  | yes | yes | conditional: topic compat | changing an API that has users | any |
 | `google-aips/0193.md` |  | yes | yes | conditional: topic errors | the API's error responses | any |
+| `owasp-asvs/0x10-V1-Encoding-and-Sanitization.md` |  |  | yes | conditional: topic launch; or topic html and a deep task | output encoding, injection and parsing | any |
+| `owasp-asvs/0x11-V2-Validation-and-Business-Logic.md` |  |  | yes | conditional: topic launch; or topic payment and a deep task; or topic idempotency and a deep task | input validation and business-logic abuse | any |
+| `owasp-asvs/0x13-V4-API-and-Web-Service.md` |  |  | yes | conditional: topic launch; or topic webhook and a deep task | HTTP messages, GraphQL and WebSockets | any |
+| `owasp-asvs/0x17-V8-Authorization.md` |  |  | yes | conditional: topic launch; or topic roles and a deep task; or topic tenant and a deep task; or topic rls and a deep task | who may do what, per object and per field | any |
 
 ## database
 
@@ -219,6 +232,8 @@ A fence touches a topic when its `- Topics:` line names it or its text has one o
 | `supabase-postgres-best-practices/references/advanced-full-text-search.md` |  | yes | yes | conditional: topic search | text search | any; module supabase |
 | `supabase-postgres-best-practices/references/advanced-jsonb-indexing.md` |  | yes | yes | conditional: topic jsonb | JSONB columns | any; module supabase |
 | `supabase/SKILL.md` |  | yes | yes | recommended | every task on a Supabase project's data, auth or storage | any; module supabase |
+| `owasp-asvs/0x17-V8-Authorization.md` |  |  | yes | conditional: topic launch; or topic roles and a deep task; or topic tenant and a deep task; or topic rls and a deep task | who may do what, per object and per field | any |
+| `owasp-asvs/0x23-V14-Data-Protection.md` |  |  | yes | conditional: topic launch | sensitive data in storage, caches and responses | any |
 
 ## security
 
@@ -246,6 +261,28 @@ A fence touches a topic when its `- Topics:` line names it or its text has one o
 | `owasp-api-top10-2023/0x11-t10.md` |  | yes | yes | required | every server-side task: the ten risks as a checklist | any |
 | `supabase-postgres-best-practices/references/security-rls-basics.md` |  | yes | yes | required | every table in an exposed schema has RLS | any; module supabase |
 | `supabase/SKILL.md` |  | yes | yes | recommended | every task on a Supabase project's data, auth or storage | any; module supabase |
+| `trailofbits-sharp-edges/SKILL.md` |  |  | yes | conditional: topic launch; or topic config and a deep task; or topic auth and a deep task; or topic secrets and a deep task | the method: surfaces, edge cases, threat model, validation | any |
+| `trailofbits-sharp-edges/references/config-patterns.md` |  |  | yes | conditional: topic launch; or topic config and a deep task | dangerous settings and defaults | any |
+| `trailofbits-sharp-edges/references/auth-patterns.md` |  |  | yes | conditional: topic launch; or topic auth and a deep task; or topic session and a deep task | sign-in, sessions, tokens and MFA footguns | any |
+| `trailofbits-sharp-edges/references/crypto-apis.md` |  |  | yes | conditional: topic launch; or topic secrets and a deep task | cryptography misuse | any |
+| `trailofbits-sharp-edges/references/language-specific.md` |  |  | yes | conditional: topic launch | every language's footguns, in short | any |
+| `trailofbits-sharp-edges/references/lang-javascript.md` |  |  | yes | conditional: topic launch | JavaScript and TypeScript in detail | any |
+| `owasp-asvs/0x10-V1-Encoding-and-Sanitization.md` |  |  | yes | conditional: topic launch; or topic html and a deep task | output encoding, injection and parsing | any |
+| `owasp-asvs/0x11-V2-Validation-and-Business-Logic.md` |  |  | yes | conditional: topic launch; or topic payment and a deep task; or topic idempotency and a deep task | input validation and business-logic abuse | any |
+| `owasp-asvs/0x12-V3-Web-Frontend-Security.md` |  |  | yes | conditional: topic launch; or topic headers and a deep task | browser security: headers, cookies, CSP, cross-origin | any |
+| `owasp-asvs/0x13-V4-API-and-Web-Service.md` |  |  | yes | conditional: topic launch; or topic webhook and a deep task | HTTP messages, GraphQL and WebSockets | any |
+| `owasp-asvs/0x14-V5-File-Handling.md` |  |  | yes | conditional: topic upload and a deep task | uploads and stored files | any |
+| `owasp-asvs/0x15-V6-Authentication.md` |  |  | yes | conditional: topic auth and a deep task | sign-in, passwords, MFA | any |
+| `owasp-asvs/0x16-V7-Session-Management.md` |  |  | yes | conditional: topic auth and a deep task; or topic session and a deep task | sessions and sign-out | any |
+| `owasp-asvs/0x17-V8-Authorization.md` |  |  | yes | conditional: topic launch; or topic roles and a deep task; or topic tenant and a deep task; or topic rls and a deep task | who may do what, per object and per field | any |
+| `owasp-asvs/0x18-V9-Self-contained-Tokens.md` |  |  | yes | conditional: topic auth and a deep task | JWTs and other signed tokens | any |
+| `owasp-asvs/0x19-V10-OAuth-and-OIDC.md` |  |  | yes | conditional: topic auth and a deep task | OAuth and OpenID Connect | any |
+| `owasp-asvs/0x20-V11-Cryptography.md` |  |  | yes | conditional: topic secrets and a deep task | algorithms, keys and random values | any |
+| `owasp-asvs/0x21-V12-Secure-Communication.md` |  |  | yes | conditional: topic launch; or topic deploy and a deep task | TLS, inside and out | any |
+| `owasp-asvs/0x22-V13-Configuration.md` |  |  | yes | conditional: topic launch; or topic config and a deep task; or topic secrets and a deep task | configuration, secrets and what a deployment exposes | any |
+| `owasp-asvs/0x23-V14-Data-Protection.md` |  |  | yes | conditional: topic launch | sensitive data in storage, caches and responses | any |
+| `owasp-asvs/0x24-V15-Secure-Coding-and-Architecture.md` |  |  | yes | conditional: topic launch; or topic dependencies and a deep task | dependencies, dangerous functions and safe architecture | any |
+| `owasp-asvs/0x25-V16-Security-Logging-and-Error-Handling.md` |  |  | yes | conditional: topic launch; or topic logging and a deep task; or topic errors and a deep task | security events and error handling | any |
 
 ## reliability
 
@@ -261,6 +298,7 @@ A fence touches a topic when its `- Topics:` line names it or its text has one o
 | `azure-cloud-patterns/compensating-transaction.md` |  | yes | yes | conditional: topic distributed | undoing steps of an operation that spans services | any |
 | `twelve-factor/processes.md` | yes | yes | yes | recommended | stateless processes; state in a backing service | any |
 | `twelve-factor/disposability.md` |  | yes | yes | recommended | fast start, graceful shutdown, jobs safe to rerun | any |
+| `owasp-asvs/0x25-V16-Security-Logging-and-Error-Handling.md` |  |  | yes | conditional: topic launch; or topic logging and a deep task; or topic errors and a deep task | security events and error handling | any |
 
 ## testing
 
@@ -321,6 +359,8 @@ A fence touches a topic when its `- Topics:` line names it or its text has one o
 | `twelve-factor` — The Twelve-Factor App | https://github.com/heroku/12factor @ `1385d2c` | MIT (free) | no code run, nothing fetched; read 2026-10-25; notes in `DEVOS-NOTES.md` | architecture, ops, reliability |
 | `github-actions-security` — GitHub Actions: secure use reference | https://github.com/github/docs @ `02c25d1` | CC-BY-4.0 AND MIT (conditions) | no code run, nothing fetched; read 2026-10-25; notes in `DEVOS-NOTES.md` | ops, security |
 | `opentelemetry-concepts` — OpenTelemetry concepts: primer, traces, logs, metrics | https://github.com/open-telemetry/opentelemetry.io @ `bb4e55d` | CC-BY-4.0 AND Apache-2.0 (conditions) | no code run, nothing fetched; read 2026-10-25; notes in `DEVOS-NOTES.md` | ops, reliability |
+| `trailofbits-sharp-edges` — Sharp edges (Trail of Bits) | https://github.com/trailofbits/skills @ `e4dd0bb` | CC-BY-SA-4.0 (conditions) | no code run, nothing fetched; read 2026-11-08; notes in `DEVOS-NOTES.md` | security |
+| `owasp-asvs` — OWASP Application Security Verification Standard 5.0.0 | https://github.com/OWASP/ASVS @ `5cf9b03` (v5.0.0_release) | CC-BY-SA-4.0 (conditions) | no code run, nothing fetched; read 2026-11-08; notes in `DEVOS-NOTES.md` | security, frontend, backend, api, database, architecture, reliability |
 
 ## Evaluated, not shipped
 
@@ -333,7 +373,5 @@ A fence touches a topic when its `- Topics:` line names it or its text has one o
 | `axe-core-playwright` | https://github.com/dequelabs/axe-core-npm | MPL-2.0 (conditions) | external | The accessibility check of every capture (PR-51). A UI project installs it as a dev dependency from T01; DEV_OS copies none of its files, and MPL-2.0's file-level conditions apply only to a changed copy of its files. |
 | `wshobson-api-design-principles` | https://github.com/wshobson/agents | MIT (free) | external | Evaluated on 2026-10-25 from its SKILL.md: generic REST and GraphQL advice (naming, verbs, versioning styles) that the OWASP REST sheet and the AIPs cover with more precision. It also ships a Python template. Its references were not audited, so nothing of it is shipped. |
 | `trailofbits-supply-chain-risk-auditor` | https://github.com/trailofbits/skills | CC-BY-SA-4.0 (conditions) | external | Its SKILL.md runs Python scripts with uv (scripts/collect.py, render.py) that query OSV, the npm, PyPI and Go registries and deps.dev, and the cycle runs no code from a skill and fetches nothing at run time. A developer may run it by hand. |
-| `trailofbits-sharp-edges` | https://github.com/trailofbits/skills | CC-BY-SA-4.0 (conditions) | external | A review aid for dangerous APIs and defaults, about 19,000 words of Markdown across 22 files and mostly language-specific. It is not shipped unread: as a security review aid, its full audit belongs to the production-readiness gates (E23b4). |
-| `owasp-asvs` | https://github.com/OWASP/ASVS | CC-BY-SA-4.0 (conditions) | external | A verification standard, not build guidance: its requirement levels belong to the production-readiness gates (E23b4), which will map them per layer. |
 | `wshobson-slo-implementation` | https://github.com/wshobson/agents | MIT (free) | external | Evaluated on 2026-10-25 from its SKILL.md: Prometheus recording rules and alert templates that assume monitoring infrastructure a DEV_OS project does not run; the concepts are in the OpenTelemetry primer. Its references were not audited, so nothing of it is shipped. |
 | `wshobson-github-actions-templates` | https://github.com/wshobson/agents | MIT (free) | external | Evaluated on 2026-10-25 from its SKILL.md: its workflow templates pin actions to tags such as @v4, which GitHub's secure use reference advises against (pin to a full commit SHA), and target Docker registries and Kubernetes; github-actions-security ships the rules instead. |

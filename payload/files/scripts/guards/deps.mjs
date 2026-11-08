@@ -84,7 +84,7 @@ function installedLicence(manifest, name) {
 }
 
 /** `pnpm audit` in the repository: { advisories } or { error }; asked twice when it does not answer. */
-function audit() {
+export function audit() {
   let last = { error: "" };
   for (let attempt = 1; attempt <= 2; attempt += 1) {
     const run = spawnSync("pnpm", ["audit", "--audit-level", "high", "--json"], { cwd: ROOT, encoding: "utf8", windowsHide: true, timeout: 180000, shell: process.platform === "win32", maxBuffer: 64 * 1024 * 1024 });

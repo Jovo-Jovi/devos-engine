@@ -1,5 +1,6 @@
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -459,7 +460,12 @@ test("init.test.mjs (b) a Codex reviewer in the roster falls back to the engine 
 test("init.test.mjs (c) a rejected token prints gh auth login", () => {
   const savedPath = process.env.PATH;
   const savedToken = process.env.DEVOS_GH_BAD_TOKEN;
-  process.env.PATH = `${path.join(root, "test", "fixtures", "agents")}${path.delimiter}${savedPath ?? ""}`;
+  // E23b4: the fakes run from a copy made executable there, so a test run never changes the repository's files.
+  const fakes = mkdtempSync(path.join(tmpdir(), "devos-fakes-"));
+  cpSync(path.join(root, "test", "fixtures", "agents"), fakes, { recursive: true });
+  if (process.platform !== "win32") for (const name of ["claude", "agent", "codex", "gemini", "z", "gh"]) chmodSync(path.join(fakes, name), 0o755);
+  process.on("exit", () => rmSync(fakes, { recursive: true, force: true }));
+  process.env.PATH = `${fakes}${path.delimiter}${savedPath ?? ""}`;
   process.env.DEVOS_GH_BAD_TOKEN = "1";
   const lines = [];
   const write = process.stdout.write;

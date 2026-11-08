@@ -147,17 +147,17 @@ test("remove.test.mjs (b) devos remove --local removes DEV_OS's files on a branc
     for (const line of [
       "- keeps 1 DEV_OS file you edited: devos/prompts/doctor.md",
       "- keeps .gitattributes and .gitignore: the project still uses them",
-      "- keeps docs/method/ (5 files): your fences and reviews cite it",
+      "- keeps docs/method/ (6 files): your fences and reviews cite it",
       "- keeps your documents, fences, reviews, devos/answers.json and the settings DEV_OS wrote at setup",
       "It commits this on a new branch devos/remove (--local: nothing is pushed).",
       "devos: branch devos/remove committed locally (--local). Merge it, then run devos remove again to clear what is left.",
     ]) assert.equal(result.stdout.includes(line), true, `${line}\n${result.stdout}`);
     const lock = JSON.parse(readFileSync(path.join(staged.project, "devos", "engine.lock.json"), "utf8"));
-    const owned = lock.files.length - 1 - 2 - 5;
-    assert.equal(result.stdout.includes(`devos remove: ${owned + 2} removed, 1 kept (edited), 7 kept (the project needs them)`), true, result.stdout);
+    const owned = lock.files.length - 1 - 2 - 6;
+    assert.equal(result.stdout.includes(`devos remove: ${owned + 2} removed, 1 kept (edited), 8 kept (the project needs them)`), true, result.stdout);
     assert.equal(ok(["branch", "--show-current"], staged.project).trim(), "main");
     assert.equal(ok(["status", "--porcelain"], staged.project), "");
-    assert.equal(ok(["log", "-1", "--format=%s", "devos/remove"], staged.project).trim(), "DEV_OS remove (engine 1.11.0)");
+    assert.equal(ok(["log", "-1", "--format=%s", "devos/remove"], staged.project).trim(), "DEV_OS remove (engine 1.12.0)");
     const left = ok(["ls-tree", "-r", "--name-only", "devos/remove"], staged.project).split(/\r?\n/).filter(Boolean).sort();
     assert.deepEqual(left, [
       ".cursor/rules/10-security-data.mdc",
@@ -200,7 +200,7 @@ test("remove.test.mjs (c) devos remove pushes devos/remove, opens its pull reque
     assert.equal(calls[0].startsWith("pr create --base main --head devos/remove --title Remove DEV_OS --body-file "), true, calls[0]);
     assert.equal(calls[1], `variable set DEVOS_PAUSED --body true --repo ${SLUG}`);
     const body = readFileSync(path.join(staged.project, ".git", "devos-remove-body.md"), "utf8");
-    for (const needle of ["Remove DEV_OS (engine 1.11.0)", "- scripts/devos/run-checks.mjs", "- devos/engine.lock.json", "- devos.config.json", "- docs/method/PRECEDENTS.md — your fences and reviews cite it", "run `devos remove` again"]) {
+    for (const needle of ["Remove DEV_OS (engine 1.12.0)", "- scripts/devos/run-checks.mjs", "- devos/engine.lock.json", "- devos.config.json", "- docs/method/PRECEDENTS.md — your fences and reviews cite it", "run `devos remove` again"]) {
       assert.equal(body.includes(needle), true, needle);
     }
   } finally {

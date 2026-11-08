@@ -1,4 +1,4 @@
-import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, cpSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -22,14 +22,22 @@ const fixtures = path.join(root, "test", "fixtures", "agents");
 const windows = process.platform === "win32";
 const tools = JSON.parse(readFileSync(path.join(root, "lib", "data", "tools.json"), "utf8"));
 
-function useFakes() {
-  if (!windows) {
-    for (const name of ["claude", "agent", "codex", "gemini", "z", "gh"]) {
-      chmodSync(path.join(fixtures, name), 0o755);
-    }
+// E23b4: the fakes run from a copy made executable there, so a test run never changes the repository's files.
+let fakes = "";
+function fakeDir() {
+  if (windows) return fixtures;
+  if (!fakes) {
+    fakes = mkdtempSync(path.join(tmpdir(), "devos-fakes-"));
+    cpSync(fixtures, fakes, { recursive: true });
+    for (const name of ["claude", "agent", "codex", "gemini", "z", "gh"]) chmodSync(path.join(fakes, name), 0o755);
+    process.on("exit", () => rmSync(fakes, { recursive: true, force: true }));
   }
+  return fakes;
+}
+
+function useFakes() {
   const previous = process.env.PATH;
-  process.env.PATH = `${fixtures}${path.delimiter}${previous}`;
+  process.env.PATH = `${fakeDir()}${path.delimiter}${previous}`;
   return () => {
     process.env.PATH = previous;
     delete process.env.DEVOS_GH_MISSING_SCOPES;

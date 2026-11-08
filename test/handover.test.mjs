@@ -36,7 +36,7 @@ test("handover.test.mjs (a) the handover removes DEV_OS's automation, keeps the 
     write(dir, "CLAUDE.md", "# Reviewer rules\n");
     write(dir, ".devos/blueprint-input.md", "input\n");
     const method = readdirSync(path.join(dir, "docs", "method")).map((name) => `docs/method/${name}`);
-    assert.equal(method.length, 5);
+    assert.equal(method.length, 6);
     assert.equal(handedOver(JSON.parse(readFileSync(path.join(dir, "devos", "answers.json"), "utf8"))), false);
     const removed = handOver(dir, "1.9.0", "2026-11-05");
     for (const rel of ["devos/engine.lock.json", "devos.config.json", "CLAUDE.md", ".devos/", "scripts/devos/run-checks.mjs", "scripts/guards/run-all.mjs", ".github/workflows/devos-cycle.yml", ".claude/settings.json", ".cursor/mcp.example.json"]) {

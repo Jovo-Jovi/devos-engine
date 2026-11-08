@@ -62,7 +62,7 @@ function writeLocal(dir, entry) {
 test("skills.test.mjs (a) the shipped skills pass", () => {
   const dir = project();
   try {
-    assert.deepEqual(guard(dir), { status: "PASS", findings: [], note: "29 skills checked, 18 vendored" });
+    assert.deepEqual(guard(dir), { status: "PASS", findings: [], note: "29 skills checked, 20 vendored" });
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -86,7 +86,7 @@ test("skills.test.mjs (c) a project's own skill in local.json passes", () => {
   const dir = project();
   try {
     writeLocal(dir, localEntry());
-    assert.deepEqual(guard(dir), { status: "PASS", findings: [], note: "30 skills checked, 19 vendored" });
+    assert.deepEqual(guard(dir), { status: "PASS", findings: [], note: "30 skills checked, 21 vendored" });
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

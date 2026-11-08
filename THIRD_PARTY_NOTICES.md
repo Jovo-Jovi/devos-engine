@@ -35,6 +35,8 @@ changed. The `DEVOS-NOTES.md` and `ATTRIBUTION.md` files in these folders are DE
 | `twelve-factor` | [heroku/12factor](https://github.com/heroku/12factor) @ `1385d2c80b` | `MIT` | Copyright (c) 2012 Adam Wiggins | `LICENSE` |
 | `github-actions-security` | [github/docs](https://github.com/github/docs) @ `02c25d1636` | `CC-BY-4.0 AND MIT` | GitHub and the contributors (LICENSE-CODE: Copyright 2026 GitHub) | `LICENSE`, `LICENSE-CODE`, `ATTRIBUTION.md` |
 | `opentelemetry-concepts` | [open-telemetry/opentelemetry.io](https://github.com/open-telemetry/opentelemetry.io) @ `bb4e55d88b` | `CC-BY-4.0 AND Apache-2.0` | the OpenTelemetry authors (the licence files name no holder) | `LICENSE`, `LICENSE-CODE`, `ATTRIBUTION.md` |
+| `owasp-asvs` | [OWASP/ASVS](https://github.com/OWASP/ASVS) @ `5cf9b03244` | `CC-BY-SA-4.0` | The OWASP Foundation, 2008-2025 (project leads named in 0x01-Frontispiece.md) | `LICENSE`, `0x01-Frontispiece.md`, `ATTRIBUTION.md` |
+| `trailofbits-sharp-edges` | [trailofbits/skills](https://github.com/trailofbits/skills) @ `e4dd0bb5b1` | `CC-BY-SA-4.0` | Trail of Bits (the licence file names no holder) | `LICENSE`, `ATTRIBUTION.md` |
 
 ## Referenced, not shipped
 

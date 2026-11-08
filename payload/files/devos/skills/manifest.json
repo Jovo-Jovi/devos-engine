@@ -1,7 +1,7 @@
 {
   "$comment": "The skills the agents read (devos/skills/README.md, docs/method/DESIGN_METHOD.md §7, PR-51, PR-55, PR-56, PR-57). layers: the vocabulary below; a fence names its own on a `- Layers:` line. topics: words the runner looks for in a fence (or its `- Topics:` line) to pick a conditional file; `match` is a case-insensitive regular expression. stacks: any, a stack id or a toolchain (devos.config.json stack). modules: when set, the entry applies only to a project that chose or uses one of them (devos/answers.json, an active module, or a module the fence names). reads: each file a role reads, for which layers and when, with its priority: required (every task of those layers; the security gate's files), recommended (every task of those layers) or conditional (only when one clause of `if` holds: all of a clause's keys, any of its values; keys topics, modules, deep). deep is a risk-3 task, a task with a gate, or a deep review. The gates: a task with the backend, api, database or reliability layer, or a deep task, always gets the security layer (the security gate), and a task with the frontend, architecture, backend, api, database or reliability layer always gets the testing layer (the test gate); no fence removes them. notes: a file DEV_OS wrote after the audit (origin devos); it is listed first whenever another file of the entry is selected. trust: runs_code and fetches are false for every vendored skill (the cycle runs no code from a skill and fetches nothing at run time), and reviewed is the date its files were read whole. licence.class: free (a permissive licence; ship its licence and notices), conditions (allowed with conditions beyond notices), approval (needs the author's permission or a separate licence first), unsuitable (redistribution not allowed). delivery: vendored (files here, pinned), external (not shipped; a developer may use it interactively), principles (nothing copied; the ideas are written independently). Each source file records the path it was copied from (from); excluded lists the source files deliberately not copied, with why. guard:skills checks every vendored file's sha256 (LF line endings) and that INDEX.md is generated from this file.",
   "version": 3,
-  "reviewed": "2026-10-25",
+  "reviewed": "2026-11-08",
   "layers": {
     "design": "visual direction, type, colour, spacing and layout",
     "motion": "animation, transitions and scroll",
@@ -184,6 +184,10 @@
     "config": {
       "match": "\\b(configuration|config (files?|values?|variables?)|environment variables?|env vars?|feature flags?|\\.env)\\b",
       "covers": "configuration and environment"
+    },
+    "launch": {
+      "match": "(^|\\n)- Launch:",
+      "covers": "the launch task, whose fence has a `- Launch:` line: the production-readiness gate (PR-88)"
     }
   },
   "entries": [
@@ -4663,39 +4667,860 @@
       "title": "Sharp edges (Trail of Bits)",
       "source": {
         "repo": "https://github.com/trailofbits/skills",
-        "commit": "196a9073ab10d35bacf111f945e02c00b2c6883a",
-        "path": "plugins/sharp-edges"
+        "commit": "e4dd0bb5b15535f7c5a0834187dffba6ac37e4ff",
+        "path": "plugins/sharp-edges/skills/sharp-edges",
+        "version": "plugin 1.1.3 at the repository head of 2026-11-06"
       },
       "licence": {
         "spdx": "CC-BY-SA-4.0",
-        "class": "conditions"
+        "class": "conditions",
+        "file": "LICENSE",
+        "notices": [
+          "ATTRIBUTION.md"
+        ],
+        "copyright": "Trail of Bits"
       },
-      "delivery": "external",
-      "reason": "A review aid for dangerous APIs and defaults, about 19,000 words of Markdown across 22 files and mostly language-specific. It is not shipped unread: as a security review aid, its full audit belongs to the production-readiness gates (E23b4).",
+      "delivery": "vendored",
+      "obligations": [
+        "Attribution: ATTRIBUTION.md gives the title, the author, the source at the pinned commit, the licence with its link, and that nothing was changed",
+        "The full CC BY-SA 4.0 text ships as LICENSE beside the files (the repository's LICENSE)",
+        "The files are copied unchanged; a change would be marked in the file, in ATTRIBUTION.md and in this entry, and an adapted file would be shared under CC BY-SA 4.0 (ShareAlike)",
+        "DEVOS-NOTES.md is DEV_OS's own commentary, kept apart from the files; DEV_OS's licence does not cover them and theirs does not cover DEV_OS"
+      ],
+      "changes": "none to the files; the plugin's agent, case studies and other languages' references were not copied; ATTRIBUTION.md and DEVOS-NOTES.md are DEV_OS's own",
+      "roles": [
+        "reviewer"
+      ],
+      "use": "The launch task's second look (PR-88), and a deep review's on sign-in, configuration and secrets: APIs, settings and defaults that make the insecure path the easy one.",
       "layers": [
         "security"
       ],
-      "files": []
+      "stacks": [
+        "any"
+      ],
+      "trust": {
+        "runs_code": false,
+        "fetches": false,
+        "reviewed": "2026-11-08",
+        "notes": "A skill written as a review method (front matter: allowed-tools Read Grep Glob, which has no effect here). It names an agent that is not shipped and asks for \"minimal code demonstrating the footgun\", which DEVOS-NOTES.md turns into a finding in the verdict. Code samples are illustrations, the shell sample sets placeholder secrets; no links."
+      },
+      "notes": "DEVOS-NOTES.md",
+      "excluded": [
+        {
+          "path": "../../agents/sharp-edges-analyzer.md",
+          "reason": "an agent definition: here the reviewer follows the method itself"
+        },
+        {
+          "path": "agents/openai.yaml, assets/",
+          "reason": "another tool's agent settings and a logo"
+        },
+        {
+          "path": "references/case-studies.md",
+          "reason": "native libraries (OpenSSL, GMP), outside DEV_OS stacks"
+        },
+        {
+          "path": "references/lang-*.md (all but lang-javascript.md)",
+          "reason": "C, C#, Go, Java, Kotlin, PHP, Python, Ruby, Rust and Swift in detail; language-specific.md covers each in short"
+        }
+      ],
+      "reads": [
+        {
+          "file": "SKILL.md",
+          "roles": [
+            "reviewer"
+          ],
+          "layers": [
+            "security"
+          ],
+          "when": "the method: surfaces, edge cases, threat model, validation",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "launch"
+              ]
+            },
+            {
+              "topics": [
+                "config"
+              ],
+              "deep": true
+            },
+            {
+              "topics": [
+                "auth"
+              ],
+              "deep": true
+            },
+            {
+              "topics": [
+                "secrets"
+              ],
+              "deep": true
+            }
+          ]
+        },
+        {
+          "file": "references/config-patterns.md",
+          "roles": [
+            "reviewer"
+          ],
+          "layers": [
+            "security"
+          ],
+          "when": "dangerous settings and defaults",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "launch"
+              ]
+            },
+            {
+              "topics": [
+                "config"
+              ],
+              "deep": true
+            }
+          ]
+        },
+        {
+          "file": "references/auth-patterns.md",
+          "roles": [
+            "reviewer"
+          ],
+          "layers": [
+            "security"
+          ],
+          "when": "sign-in, sessions, tokens and MFA footguns",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "launch"
+              ]
+            },
+            {
+              "topics": [
+                "auth"
+              ],
+              "deep": true
+            },
+            {
+              "topics": [
+                "session"
+              ],
+              "deep": true
+            }
+          ]
+        },
+        {
+          "file": "references/crypto-apis.md",
+          "roles": [
+            "reviewer"
+          ],
+          "layers": [
+            "security"
+          ],
+          "when": "cryptography misuse",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "launch"
+              ]
+            },
+            {
+              "topics": [
+                "secrets"
+              ],
+              "deep": true
+            }
+          ]
+        },
+        {
+          "file": "references/language-specific.md",
+          "roles": [
+            "reviewer"
+          ],
+          "layers": [
+            "security"
+          ],
+          "when": "every language's footguns, in short",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "launch"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "references/lang-javascript.md",
+          "roles": [
+            "reviewer"
+          ],
+          "layers": [
+            "security"
+          ],
+          "when": "JavaScript and TypeScript in detail",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "launch"
+              ]
+            }
+          ]
+        }
+      ],
+      "files": [
+        {
+          "path": "ATTRIBUTION.md",
+          "origin": "devos",
+          "sha256": "716f54b106b7d5059fb5d890396a0f265ee0b2c9d02ffc5f93e24c2a13f7b270"
+        },
+        {
+          "path": "DEVOS-NOTES.md",
+          "origin": "devos",
+          "sha256": "724ae983144592df659ee4a89537ea061fc2a80fa6675b309ab268f37973fe51"
+        },
+        {
+          "path": "LICENSE",
+          "origin": "source",
+          "from": "LICENSE",
+          "sha256": "7abe19ec9bb73b36141b999b861d24ad855e808bafe0f81e84cce28556f6c297"
+        },
+        {
+          "path": "SKILL.md",
+          "origin": "source",
+          "from": "plugins/sharp-edges/skills/sharp-edges/SKILL.md",
+          "sha256": "3b69a709c2f8f0cfcf57d40a3186e166f307865cc8ed924be4098e549a121e9c"
+        },
+        {
+          "path": "references/auth-patterns.md",
+          "origin": "source",
+          "from": "plugins/sharp-edges/skills/sharp-edges/references/auth-patterns.md",
+          "sha256": "1fbf526ca1db7204f9ebb1bf4eb3c48c544676623d23e5d28e01f6f63c355be2"
+        },
+        {
+          "path": "references/config-patterns.md",
+          "origin": "source",
+          "from": "plugins/sharp-edges/skills/sharp-edges/references/config-patterns.md",
+          "sha256": "1d99f2716f7bef18efe71015ce0c56e0f4961c042faa503d796d6d4d1626fdc6"
+        },
+        {
+          "path": "references/crypto-apis.md",
+          "origin": "source",
+          "from": "plugins/sharp-edges/skills/sharp-edges/references/crypto-apis.md",
+          "sha256": "8baddc83a1f964d6d8b15678d60a37c93029c18dc162bd7c00895e585ff1a825"
+        },
+        {
+          "path": "references/lang-javascript.md",
+          "origin": "source",
+          "from": "plugins/sharp-edges/skills/sharp-edges/references/lang-javascript.md",
+          "sha256": "cf72f55d31318666942a8d1d64340befc3c4e7223afc2ca196e6a776ffa4c895"
+        },
+        {
+          "path": "references/language-specific.md",
+          "origin": "source",
+          "from": "plugins/sharp-edges/skills/sharp-edges/references/language-specific.md",
+          "sha256": "4522b4a37cfd7d3aa689209dfd4569f3b39074bd1f5987a36a6e819f501141b6"
+        }
+      ]
     },
     {
       "id": "owasp-asvs",
       "kind": "reference",
-      "title": "OWASP Application Security Verification Standard",
+      "title": "OWASP Application Security Verification Standard 5.0.0",
       "source": {
         "repo": "https://github.com/OWASP/ASVS",
-        "commit": "2b47a9dd16760ee484a6672d197f1f7e25d9c632",
-        "path": ""
+        "commit": "5cf9b032440be53ce345ab3c130fda46ba1ce7a2",
+        "tag": "v5.0.0_release",
+        "path": "5.0/en",
+        "version": "5.0.0 (May 2025)"
       },
       "licence": {
         "spdx": "CC-BY-SA-4.0",
-        "class": "conditions"
+        "class": "conditions",
+        "file": "LICENSE",
+        "notices": [
+          "0x01-Frontispiece.md",
+          "ATTRIBUTION.md"
+        ],
+        "copyright": "The OWASP Foundation, 2008-2025 (project leads named in 0x01-Frontispiece.md)"
       },
-      "delivery": "external",
-      "reason": "A verification standard, not build guidance: its requirement levels belong to the production-readiness gates (E23b4), which will map them per layer.",
-      "layers": [
-        "security"
+      "delivery": "vendored",
+      "obligations": [
+        "Attribution: ATTRIBUTION.md gives the title, the authors, the source at the pinned commit, the licence with its link, and that nothing was changed; 0x01-Frontispiece.md names the project leads and the copyright",
+        "The full CC BY-SA 4.0 text ships as LICENSE beside the files (the source's LICENSE.md)",
+        "The files are copied unchanged; a change would be marked in the file, in ATTRIBUTION.md and in this entry, and an adapted file would be shared under CC BY-SA 4.0 (ShareAlike)",
+        "DEVOS-NOTES.md is DEV_OS's own commentary, kept apart from the files; DEV_OS's licence does not cover them and theirs does not cover DEV_OS"
       ],
-      "files": []
+      "changes": "none to the files; V17 (WebRTC), the appendices and the other front matter were not copied; ATTRIBUTION.md and DEVOS-NOTES.md are DEV_OS's own",
+      "roles": [
+        "reviewer"
+      ],
+      "use": "The launch task's security gate (PR-88): every requirement at the project's level (1, or 2 with personal data or payments) in the chapters of the product's layers; a deep review reads the chapter of a subject it touches.",
+      "layers": [
+        "security",
+        "frontend",
+        "backend",
+        "api",
+        "database",
+        "architecture",
+        "reliability"
+      ],
+      "stacks": [
+        "any"
+      ],
+      "trust": {
+        "runs_code": false,
+        "fetches": false,
+        "reviewed": "2026-11-08",
+        "notes": "Requirement tables (| # | Description | Level |) and prose only, no code blocks. No instruction to the agent: \"Verify that\" is audit language about the application. 188 links, all citations; two HTML comments in V10 are editors' notes; the frontispiece's image is not copied."
+      },
+      "notes": "DEVOS-NOTES.md",
+      "excluded": [
+        {
+          "path": "5.0/en/0x26-V17-WebRTC.md",
+          "reason": "WebRTC: no DEV_OS stack builds real-time media"
+        },
+        {
+          "path": "5.0/en/0x02-Preface.md, 0x03-What-is-the-ASVS.md, 0x04-Assessment_and_Certification.md, 0x05-For-Users-Of-4.0.md",
+          "reason": "front matter on the standard itself; DEVOS-NOTES.md says how the levels are used here"
+        },
+        {
+          "path": "5.0/en/0x9*-Appendix-*.md",
+          "reason": "the glossary, references, cryptography detail, recommendations and contributors; the chapters stand without them"
+        },
+        {
+          "path": "5.0/docs_en/",
+          "reason": "the same requirements as PDF, CSV and JSON exports"
+        }
+      ],
+      "reads": [
+        {
+          "file": "0x10-V1-Encoding-and-Sanitization.md",
+          "roles": [
+            "reviewer"
+          ],
+          "layers": [
+            "security",
+            "backend",
+            "api"
+          ],
+          "when": "output encoding, injection and parsing",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "launch"
+              ]
+            },
+            {
+              "topics": [
+                "html"
+              ],
+              "deep": true
+            }
+          ]
+        },
+        {
+          "file": "0x11-V2-Validation-and-Business-Logic.md",
+          "roles": [
+            "reviewer"
+          ],
+          "layers": [
+            "security",
+            "backend",
+            "api"
+          ],
+          "when": "input validation and business-logic abuse",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "launch"
+              ]
+            },
+            {
+              "topics": [
+                "payment"
+              ],
+              "deep": true
+            },
+            {
+              "topics": [
+                "idempotency"
+              ],
+              "deep": true
+            }
+          ]
+        },
+        {
+          "file": "0x12-V3-Web-Frontend-Security.md",
+          "roles": [
+            "reviewer"
+          ],
+          "layers": [
+            "security",
+            "frontend"
+          ],
+          "when": "browser security: headers, cookies, CSP, cross-origin",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "launch"
+              ]
+            },
+            {
+              "topics": [
+                "headers"
+              ],
+              "deep": true
+            }
+          ]
+        },
+        {
+          "file": "0x13-V4-API-and-Web-Service.md",
+          "roles": [
+            "reviewer"
+          ],
+          "layers": [
+            "api",
+            "security"
+          ],
+          "when": "HTTP messages, GraphQL and WebSockets",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "launch"
+              ]
+            },
+            {
+              "topics": [
+                "webhook"
+              ],
+              "deep": true
+            }
+          ]
+        },
+        {
+          "file": "0x14-V5-File-Handling.md",
+          "roles": [
+            "reviewer"
+          ],
+          "layers": [
+            "security",
+            "backend"
+          ],
+          "when": "uploads and stored files",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "upload"
+              ],
+              "deep": true
+            }
+          ]
+        },
+        {
+          "file": "0x15-V6-Authentication.md",
+          "roles": [
+            "reviewer"
+          ],
+          "layers": [
+            "security"
+          ],
+          "when": "sign-in, passwords, MFA",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "auth"
+              ],
+              "deep": true
+            }
+          ]
+        },
+        {
+          "file": "0x16-V7-Session-Management.md",
+          "roles": [
+            "reviewer"
+          ],
+          "layers": [
+            "security"
+          ],
+          "when": "sessions and sign-out",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "auth"
+              ],
+              "deep": true
+            },
+            {
+              "topics": [
+                "session"
+              ],
+              "deep": true
+            }
+          ]
+        },
+        {
+          "file": "0x17-V8-Authorization.md",
+          "roles": [
+            "reviewer"
+          ],
+          "layers": [
+            "security",
+            "backend",
+            "api",
+            "database"
+          ],
+          "when": "who may do what, per object and per field",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "launch"
+              ]
+            },
+            {
+              "topics": [
+                "roles"
+              ],
+              "deep": true
+            },
+            {
+              "topics": [
+                "tenant"
+              ],
+              "deep": true
+            },
+            {
+              "topics": [
+                "rls"
+              ],
+              "deep": true
+            }
+          ]
+        },
+        {
+          "file": "0x18-V9-Self-contained-Tokens.md",
+          "roles": [
+            "reviewer"
+          ],
+          "layers": [
+            "security"
+          ],
+          "when": "JWTs and other signed tokens",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "auth"
+              ],
+              "deep": true
+            }
+          ]
+        },
+        {
+          "file": "0x19-V10-OAuth-and-OIDC.md",
+          "roles": [
+            "reviewer"
+          ],
+          "layers": [
+            "security"
+          ],
+          "when": "OAuth and OpenID Connect",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "auth"
+              ],
+              "deep": true
+            }
+          ]
+        },
+        {
+          "file": "0x20-V11-Cryptography.md",
+          "roles": [
+            "reviewer"
+          ],
+          "layers": [
+            "security"
+          ],
+          "when": "algorithms, keys and random values",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "secrets"
+              ],
+              "deep": true
+            }
+          ]
+        },
+        {
+          "file": "0x21-V12-Secure-Communication.md",
+          "roles": [
+            "reviewer"
+          ],
+          "layers": [
+            "security",
+            "architecture"
+          ],
+          "when": "TLS, inside and out",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "launch"
+              ]
+            },
+            {
+              "topics": [
+                "deploy"
+              ],
+              "deep": true
+            }
+          ]
+        },
+        {
+          "file": "0x22-V13-Configuration.md",
+          "roles": [
+            "reviewer"
+          ],
+          "layers": [
+            "security",
+            "architecture"
+          ],
+          "when": "configuration, secrets and what a deployment exposes",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "launch"
+              ]
+            },
+            {
+              "topics": [
+                "config"
+              ],
+              "deep": true
+            },
+            {
+              "topics": [
+                "secrets"
+              ],
+              "deep": true
+            }
+          ]
+        },
+        {
+          "file": "0x23-V14-Data-Protection.md",
+          "roles": [
+            "reviewer"
+          ],
+          "layers": [
+            "security",
+            "database"
+          ],
+          "when": "sensitive data in storage, caches and responses",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "launch"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "0x24-V15-Secure-Coding-and-Architecture.md",
+          "roles": [
+            "reviewer"
+          ],
+          "layers": [
+            "security",
+            "architecture"
+          ],
+          "when": "dependencies, dangerous functions and safe architecture",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "launch"
+              ]
+            },
+            {
+              "topics": [
+                "dependencies"
+              ],
+              "deep": true
+            }
+          ]
+        },
+        {
+          "file": "0x25-V16-Security-Logging-and-Error-Handling.md",
+          "roles": [
+            "reviewer"
+          ],
+          "layers": [
+            "security",
+            "reliability"
+          ],
+          "when": "security events and error handling",
+          "priority": "conditional",
+          "if": [
+            {
+              "topics": [
+                "launch"
+              ]
+            },
+            {
+              "topics": [
+                "logging"
+              ],
+              "deep": true
+            },
+            {
+              "topics": [
+                "errors"
+              ],
+              "deep": true
+            }
+          ]
+        }
+      ],
+      "files": [
+        {
+          "path": "0x01-Frontispiece.md",
+          "origin": "source",
+          "from": "5.0/en/0x01-Frontispiece.md",
+          "sha256": "5ae28d95996f7d8c793f8a6dc55f2683ea3da97ca05e966ae4c584b47e75f41e"
+        },
+        {
+          "path": "0x10-V1-Encoding-and-Sanitization.md",
+          "origin": "source",
+          "from": "5.0/en/0x10-V1-Encoding-and-Sanitization.md",
+          "sha256": "8c0e36a42c3cbf711e2579eb68e1fea8090f52301cac7c400d7c392207b24ee7"
+        },
+        {
+          "path": "0x11-V2-Validation-and-Business-Logic.md",
+          "origin": "source",
+          "from": "5.0/en/0x11-V2-Validation-and-Business-Logic.md",
+          "sha256": "70ad0f68df22ddd825c2837e74999fa026851e75a3128372307685e2bb526969"
+        },
+        {
+          "path": "0x12-V3-Web-Frontend-Security.md",
+          "origin": "source",
+          "from": "5.0/en/0x12-V3-Web-Frontend-Security.md",
+          "sha256": "02de197d5aa55592cfa524e66d4aa15bd3e8955e23e76438ac413c94172488fc"
+        },
+        {
+          "path": "0x13-V4-API-and-Web-Service.md",
+          "origin": "source",
+          "from": "5.0/en/0x13-V4-API-and-Web-Service.md",
+          "sha256": "efcadbf5ad78fb977c96d3d30e9a1d02aaafd4d787112a529ac82788a990406b"
+        },
+        {
+          "path": "0x14-V5-File-Handling.md",
+          "origin": "source",
+          "from": "5.0/en/0x14-V5-File-Handling.md",
+          "sha256": "079a51123e5156a5ffc6329f266d49752cb60f6b780899484c3f1cfde3734ebb"
+        },
+        {
+          "path": "0x15-V6-Authentication.md",
+          "origin": "source",
+          "from": "5.0/en/0x15-V6-Authentication.md",
+          "sha256": "e1e0aaa15e48f7941560176d28eeb11ad3b9b4f9d323437c0e950b3a16cd2b23"
+        },
+        {
+          "path": "0x16-V7-Session-Management.md",
+          "origin": "source",
+          "from": "5.0/en/0x16-V7-Session-Management.md",
+          "sha256": "4aec329f2642ae750fbe1abac5da7e8a7bcfec6fc331bb0a46916970f9c88236"
+        },
+        {
+          "path": "0x17-V8-Authorization.md",
+          "origin": "source",
+          "from": "5.0/en/0x17-V8-Authorization.md",
+          "sha256": "60c188b1703cab2086841d8f1b4adc0ededf66ed38c676a11bb92347646b5330"
+        },
+        {
+          "path": "0x18-V9-Self-contained-Tokens.md",
+          "origin": "source",
+          "from": "5.0/en/0x18-V9-Self-contained-Tokens.md",
+          "sha256": "5f14e09fb67892e805ad386959eb3a8bafca03271dbb502ccf7323e82b3f812c"
+        },
+        {
+          "path": "0x19-V10-OAuth-and-OIDC.md",
+          "origin": "source",
+          "from": "5.0/en/0x19-V10-OAuth-and-OIDC.md",
+          "sha256": "2da443986ba40987bd0908bbd7da2372ab0d777701cc590f4eb0fdad6ae804ed"
+        },
+        {
+          "path": "0x20-V11-Cryptography.md",
+          "origin": "source",
+          "from": "5.0/en/0x20-V11-Cryptography.md",
+          "sha256": "a64f3f2dc6f53565dfba66e40fd336b50eab6cdb530c2791f62db8b58202bacf"
+        },
+        {
+          "path": "0x21-V12-Secure-Communication.md",
+          "origin": "source",
+          "from": "5.0/en/0x21-V12-Secure-Communication.md",
+          "sha256": "62f7737e74172d3d2177bd838c1bc44461d0a70c37cfd09d9e4669252b480775"
+        },
+        {
+          "path": "0x22-V13-Configuration.md",
+          "origin": "source",
+          "from": "5.0/en/0x22-V13-Configuration.md",
+          "sha256": "f66ef1306eba07e04fcd0f23b52d082747f1b4fba0a19934167fb35507afba6d"
+        },
+        {
+          "path": "0x23-V14-Data-Protection.md",
+          "origin": "source",
+          "from": "5.0/en/0x23-V14-Data-Protection.md",
+          "sha256": "a9ba33b7c77379fed0f27fd019945e10fa143c63b8c4e4783b7cf587c9f56039"
+        },
+        {
+          "path": "0x24-V15-Secure-Coding-and-Architecture.md",
+          "origin": "source",
+          "from": "5.0/en/0x24-V15-Secure-Coding-and-Architecture.md",
+          "sha256": "4c068e82b157159e9ab7099daecb40af4c2642ad791751f791a26785dead6b22"
+        },
+        {
+          "path": "0x25-V16-Security-Logging-and-Error-Handling.md",
+          "origin": "source",
+          "from": "5.0/en/0x25-V16-Security-Logging-and-Error-Handling.md",
+          "sha256": "23b0c0d4a54cc62a53e8669cbd15bb97f323249e9d837d3055f95873b2ef1652"
+        },
+        {
+          "path": "ATTRIBUTION.md",
+          "origin": "devos",
+          "sha256": "e5a8ed276565afb6f45158e7067ce1b097dcb937e6f98185bb90a2a45b176400"
+        },
+        {
+          "path": "DEVOS-NOTES.md",
+          "origin": "devos",
+          "sha256": "9eec8ca666417c36363d10a7d933135eb159f4d1bc0930acb15ad6061c1c4236"
+        },
+        {
+          "path": "LICENSE",
+          "origin": "source",
+          "from": "LICENSE.md",
+          "sha256": "28a9529c7d0bb4dc51f4bf5c116a3d16ef247a052f7591466768ddf563fd1cf5"
+        }
+      ]
     },
     {
       "id": "wshobson-slo-implementation",

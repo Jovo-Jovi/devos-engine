@@ -38,7 +38,7 @@ test("licences.test.mjs (b) the files DEV_OS installs carry the MIT licence, ins
 });
 
 test("licences.test.mjs (c) every vendored skill keeps its licence and notices, and is listed in THIRD_PARTY_NOTICES.md", () => {
-  assert.equal(vendored.length, 18);
+  assert.equal(vendored.length, 20);
   const notices = read("THIRD_PARTY_NOTICES.md");
   const rows = notices.split("\n").filter((line) => /^\| `[a-z0-9-]+` \|/.test(line));
   assert.equal(rows.length, vendored.length);
@@ -78,7 +78,7 @@ test("licences.test.mjs (e) LICENSES.md maps every file to one licence, first ru
   const spdx = new Set(vendored.flatMap((item) => item.licence.spdx.split(" AND ")));
   assert.deepEqual([...spdx].sort(), ["Apache-2.0", "CC-BY-4.0", "CC-BY-SA-4.0", "MIT"]);
   const sources = vendored.flatMap((item) => item.files.filter((file) => file.origin === "source").map((file) => path.join(item.id, file.path)));
-  assert.equal(sources.length, 157);
+  assert.equal(sources.length, 182);
   for (const file of sources) assert.equal(existsSync(path.join(root, "payload", "files", "devos", "skills", file)), true, file);
 });
 

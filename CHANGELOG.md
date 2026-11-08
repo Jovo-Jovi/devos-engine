@@ -2,6 +2,13 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
+## 1.12.0 — Unreleased
+
+- **The launch task (PR-88).** With a full-scope plan, the last task before launch proves the product is ready for production. Its fence names the main pages on a `- Launch:` line, and the runner checks them before the review: security headers, the full dependency audit, accessibility, and page speed (largest contentful paint up to 2.5 s, layout shift up to 0.1). A failed check stops the launch until it is fixed or you waive it in writing in `docs/DECISIONS.md` (`Readiness waiver: speed — <your reason>`).
+- **A production-readiness checklist.** The reviewer goes through `docs/method/READINESS.md`, per layer, on the launch task: security, frontend, speed, backend and API, database, architecture and operations, and testing.
+- **OWASP ASVS 5.0.0 and Trail of Bits' sharp edges.** Both now ship with DEV_OS, read whole and pinned. The launch review verifies the ASVS at level 1, or level 2 when the project stores personal data or takes payments. A deep review reads the chapters of the subject it touches.
+- **Test runs leave the repository's files as they were.** The tests that use the fake agent tools now make a copy executable, so they no longer change six files' permissions in `test/fixtures/agents/`.
+
 ## 1.11.0 — Unreleased
 
 - **`/devos accept` (PR-87).** Comment `/devos accept`, with a note if you like, on the pull request of a task that stopped without a PASS to accept it as it is. DEV_OS records your decision as the task's next attempt (`docs/reviews/Tnn-aN.md`) and ticks its row in `docs/PHASES.md` on that branch; merging the pull request starts the next task. On a task you already merged by hand, a pull request of its own carries the record. A task you merge by hand without it is no longer built again from scratch: its pull request tells you to use `/devos accept`.

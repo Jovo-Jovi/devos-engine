@@ -141,5 +141,11 @@ if (existsSync(P(".devos/media-report.md"))) {
   if (report.length > 0) out.push("## Generated media (PR-81)", "", ...report, "");
 }
 
+// Production readiness (PR-88): the launch task's mechanical checks and its ASVS level.
+if (existsSync(P(".devos/readiness.md"))) {
+  const report = readFileSync(P(".devos/readiness.md"), "utf8").split("\n").filter((line) => !line.startsWith("# ") && line.trim() !== "");
+  if (report.length > 0) out.push("## Production readiness (PR-88)", "", ...report, "");
+}
+
 writeFileSync(P(".devos/evidence.md"), out.join("\n") + "\n");
 console.log(`evidence: wrote .devos/evidence.md (${out.length} lines)`);

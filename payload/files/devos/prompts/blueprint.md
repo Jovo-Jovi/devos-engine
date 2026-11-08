@@ -129,6 +129,11 @@ Work in this order.
    Every fence also carries `- Dependencies: \`<package>\` · …`, or `- Dependencies: none`: every package the task may
    add to a manifest (`guard:deps`, PR-85). T01 creates the manifest, so its line names the packages it adds beyond
    the stack's `create` commands, such as the logger.
+   With `scope` `full`, the last task before launch is **the launch task** (`docs/method/READINESS.md`, PR-88):
+   risk 3, with the owner's gate. Its fence carries `- Launch: / · /<page> · …`, naming the main pages (10 at most),
+   or `- Launch: none` for a product without pages. Its `- Layers:` line names every layer the product has. Its steps
+   fix what the readiness checklist needs: security headers, error tracking, backups and rate limits. It adds no
+   feature.
    Every later fence that builds a screen carries a `- Screens:` line and a `### Design specification`
    (`docs/method/DESIGN_METHOD.md` §3), and, when the screen shows planned media, `- Media: \`<id>\` · …` (PR-81).
 7. **End with a summary** as your final message: the profile, the ODs the developer signs by approving, your

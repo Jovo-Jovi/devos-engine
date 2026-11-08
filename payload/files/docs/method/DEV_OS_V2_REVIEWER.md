@@ -484,7 +484,14 @@ sensitive data and every change is audited; secrets and backups are encrypted; r
 deletion are scheduled and tested; exports work; no personal record exists outside production;
 the client's legal obligations (Egypt: Law 151 of 2020) are written into the handover.
 
-### 10.4 Gate exit
+### 10.4 Production readiness (PR-88)
+The launch task's fence has a `- Launch:` line naming the main pages. The runner checks them: headers, the full
+audit, accessibility and speed, as the required check `readiness`. The reviewer goes through
+`docs/method/READINESS.md` per layer, with the OWASP ASVS at level 1, or level 2 with personal data or payments, and
+Trail of Bits' sharp edges. A failed item blocks the launch unless the owner waives it in writing in
+`docs/DECISIONS.md`.
+
+### 10.5 Gate exit
 A dedicated heavyweight task attacks the build against live systems and the production artefact,
 not assumptions (NEL learned that a sign-off file reached the production bundle and opened the
 gate there). One hard failure blocks; FIX; re-run in full.

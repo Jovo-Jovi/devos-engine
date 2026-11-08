@@ -50,6 +50,11 @@ It also carries `- Dependencies: \`<package>\` · …`: every package the task m
 backticks, or `- Dependencies: none`. `guard:deps` fails a package a manifest gains that the line does not name,
 and a high or critical advisory of the stack's audit (PR-85).
 
+The launch task's fence (`scope` `full`, the last task before launch) also carries `- Launch: / · /<page> · …`.
+That line names the main pages, 10 at most, each a path; write `- Launch: none` for a product without pages. The
+runner then checks those pages for headers, accessibility and speed, and runs the full audit. The reviewer goes
+through `docs/method/READINESS.md` with the ASVS at the project's level (PR-88).
+
 ## 4. Check it before it is final
 
 1. Write the fence.

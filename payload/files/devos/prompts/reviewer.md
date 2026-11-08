@@ -117,6 +117,11 @@ part: a red required check fails the verdict whatever you write (PR-08), and the
    licence its note warns of, before a PASS; pass an audit waiver (`pnpm.auditConfig`) only with the owner's recorded
    decision. Every fence you write names the packages its task may add: `- Dependencies: \`<package>\` · …`, or
    `none`.
+   **The launch task (PR-88)** has a `- Launch:` line. Go through `docs/method/READINESS.md` for every layer the
+   product has. Verify the ASVS at the level `## Production readiness` in the evidence gives, in the chapters your
+   skills list, then take the second look with Trail of Bits' sharp edges. A failed `readiness` check, or a
+   requirement or item not met, is a FAIL unless `docs/DECISIONS.md` holds the owner's waiver for it
+   (`Readiness waiver: …`); name every waiver you relied on.
 4. Write `docs/reviews/{{TASK}}-a{{ATTEMPT}}.md`. **First line exactly** `VERDICT: PASS` or
    `VERDICT: FAIL`, then the Dev OS verdict format from `CLAUDE.md`. Keep it short: ledger lines cite
    evidence ("pack §Checks: test pass, 57 tests"), they do not repeat it. `Next prompt:` gives the

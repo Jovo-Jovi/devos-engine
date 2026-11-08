@@ -781,6 +781,24 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.DEVOS_PAT || github.token }}
 
+      - name: Production readiness (PR-88)
+        # The launch task (a `- Launch:` line) gets the mechanical checks: headers, the audit, accessibility and
+        # page speed become the required check readiness, so a red check overrides PASS. Another task: N/A.
+        if: steps.bs.outputs.state == 'ok' && hashFiles(format('docs/fences/{0}.md', env.TASK)) != ''
+        env:
+          GH_TOKEN: ${{ secrets.DEVOS_PAT || github.token }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: |
+          if grep -q '^- Launch:' "docs/fences/$TASK.md"; then
+            if [ -f package.json ] && grep -q '"@playwright/test"' package.json && [ ! -f .devos/logs/playwright-install.log ]; then
+              pnpm exec playwright install --with-deps chromium > .devos/logs/playwright-install.log 2>&1 || true
+            fi
+            node scripts/devos/readiness.mjs --task "$TASK"
+            bash scripts/devos/checks-status.sh "$(git rev-parse HEAD)"
+          else
+            echo "readiness: N/A ($TASK has no - Launch: line)"
+          fi
+
       - name: Review plan and evidence pack (PR-22)
         id: rp
         if: steps.bs.outputs.state == 'ok'

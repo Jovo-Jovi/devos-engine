@@ -9,7 +9,7 @@ Check, and cite `file:line` for each finding:
 1. **Format** matches `docs/fences/T01.md`: header bullets (Phase · Station · Risk · Gate · Builder line
    `- Builder: grok-4.7 · Effort: … · Fast: …` · `- Layers:` · `- Paths:` · `- Dependencies:` · Model · Review gate ·
    Fence version · Branch · Environment · Tools allowed · Context to read first, plus `- Stages: N`
-   when split and `- Screens:` for UI), Prompt (canonical) with Preconditions (HALT), numbered Steps,
+   when split, `- Screens:` for UI and `- Launch:` for the launch task, PR-88), Prompt (canonical) with Preconditions (HALT), numbered Steps,
    a STOP block, Done when, Tests, Do NOT (protected paths and "no git/gh in automated runs").
    Run `node scripts/devos/fence-check.mjs <the fence>` and report each finding as a BLOCKER.
 2. **Every path, script, package script, test file and name** it cites exists (`ls`, `git ls-files`,

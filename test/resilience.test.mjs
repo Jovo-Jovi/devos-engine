@@ -243,7 +243,6 @@ test("resilience.test.mjs (f) the screenshots are at 2×, and the prompts, the m
   assert.equal(read(`${PAYLOAD}/devos/prompts/reviewer.md`).includes("The two screenshots are at 2× (PR-87): halve a length you read off one for CSS pixels."), true);
   assert.equal(read(`${PAYLOAD}/dot-cursor/skills/devos-compose-ui/SKILL.md`).includes("the settled and reduced-motion screenshots at\n   2× (PR-87)"), true);
   const precedents = read(`${PAYLOAD}/docs/method/PRECEDENTS.md`);
-  assert.equal(precedents.includes("**Live maximum: PR-87.**"), true);
   assert.equal(precedents.includes("| PR-87 | **A stopped task is accepted by the owner's word, a screenshot is read at 2×, and a server's hiccup is not a failure.**"), true);
   const manual = read(`${PAYLOAD}/docs/method/AUTOMATION.md`);
   for (const text of ["| `accept.mjs` |", "`/devos accept [note]`", "devos_server_wait"]) assert.equal(manual.includes(text), true, text);
