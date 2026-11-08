@@ -99,6 +99,17 @@ devos_limited() { node scripts/devos/limit-check.mjs --json "$1" --err "$2" ${3:
 # devos_unavailable <json> <err> [exit] → true when that run stopped because the account cannot use its model (PR-64).
 devos_unavailable() { node scripts/devos/limit-check.mjs --unavailable --json "$1" --err "$2" ${3:+--exit "$3"}; }
 
+# PR-87: devos_server_error <json> <err> [exit] → true when a failed run stopped on a temporary server error: an HTTP
+# 5xx, a dropped connection, or an error the CLI marks retriable (limits.mjs serverError: the CLI's own error only).
+devos_server_error() { node scripts/devos/limit-check.mjs --server --json "$1" --err "$2" ${3:+--exit "$3"}; }
+
+# PR-87: devos_server_wait <retries so far> → the seconds to wait before the same run is tried again (30, then 60,
+# then 120), or nothing and false once a run's three retries are spent. DEVOS_SERVER_WAIT sets the first wait.
+devos_server_wait() {
+  [ "${1:-0}" -lt 3 ] || return 1
+  echo $(( ${DEVOS_SERVER_WAIT:-30} << ${1:-0} ))
+}
+
 # devos_note "text" → one line for the PR comment (appended to the verdict or builder summary).
 devos_note() { echo "- $1" >> .devos/accounts.md; echo "::notice title=Dev OS::$1"; }
 

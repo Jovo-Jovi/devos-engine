@@ -64,6 +64,41 @@ export function modelUnavailable(out, err, exit = "") {
   return looksUnavailable(String(err ?? ""), final);
 }
 
+// PR-87: a run that stopped on a temporary server error: an HTTP 5xx, a dropped connection, or an error the CLI marks
+// retriable. The same run is tried again in place, a few times with a growing wait (accounts.sh devos_server_wait),
+// before the attempt stops. "Not retriable", "non-retriable" and `retriable: false` do not count.
+const SERVER_RE = new RegExp(
+  [
+    "\\b(?:http|status|error|code|response)\\b[^\\n]{0,24}\\b50[0-4]\\b",
+    "\\b50[0-4]\\b[^\\n]{0,40}(?:bad gateway|service unavailable|gateway time-?out|internal server error|server error)",
+    "bad gateway", "gateway time-?out", "service (?:is )?(?:temporarily )?unavailable", "internal server error", "upstream connect error",
+    "(?<![\\w-])(?<!not )retr[iy]able\\b(?![\"']?\\s*[:=]\\s*false)",
+    "\\bECONNRESET\\b", "\\bETIMEDOUT\\b", "\\bEAI_AGAIN\\b", "socket hang up",
+  ].join("|"),
+  "i",
+);
+
+/** PR-87: only the end of each text is read, as for a limit (PR-54). */
+export function looksLikeServerError(...texts) {
+  return SERVER_RE.test(texts.filter(Boolean).map((text) => String(text).slice(-LIMIT_TAIL)).join("\n"));
+}
+
+/**
+ * PR-87: did a failed run stop on a temporary server error? As for an unusable model (PR-64), only the CLI's own error
+ * is read: its error output and a final result or error object, never the transcript, where a page's "502" or a test's
+ * "ECONNRESET" is the agent's work. A finished run and a watchdog stop (124, 125, 126) never count.
+ */
+export function serverError(out, err, exit = "") {
+  if (["124", "125", "126"].includes(String(exit))) return false;
+  const json = parseJsonLoose(String(out ?? ""));
+  if (json?.structured_output) return false;
+  if (String(exit) === "0" && (!json || json.is_error !== true)) return false;
+  const final = json && (json.type === "result" || json.type === "error" || json.is_error === true || json.error !== undefined)
+    ? [json.result, json.message, json.error === undefined ? "" : JSON.stringify(json.error)].filter(Boolean).join("\n")
+    : "";
+  return looksLikeServerError(String(err ?? ""), final);
+}
+
 /** True when a run's final result says it finished: a result object with no error flag and no error subtype. */
 export function finishedRun(json) {
   if (!json || typeof json !== "object") return false;

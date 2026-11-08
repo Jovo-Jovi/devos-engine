@@ -349,7 +349,6 @@ test("models-tool.test.mjs (f) Max is Claude Code's: the page offers it, a max r
 
   const read = (rel) => readFileSync(path.join(root, rel), "utf8");
   const precedents = read("payload/files/docs/method/PRECEDENTS.md");
-  assert.equal(precedents.includes("**Live maximum: PR-86.**"), true);
   assert.equal(precedents.includes("| PR-86 | **A role moves to another tool only by the developer's pull request; effort is never changed quietly.**"), true);
   const manual = read("payload/files/docs/method/AUTOMATION.md");
   assert.equal(manual.includes("Another tool (PR-86): `devos models tool <role> <tool> <model>`, or the guided page's"), true);

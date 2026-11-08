@@ -67,6 +67,7 @@ args_for() {
 }
 
 first=1
+tries=0
 ran_model="$model"
 for slot in $(devos_slots "$tool" $models); do
   run_model="${slot%@*}"
@@ -81,30 +82,40 @@ for slot in $(devos_slots "$tool" $models); do
     { cat "$p"; printf '\n\n## Your answer\n\nWhen you have finished, write your answer to `%s` as one JSON object that matches this schema, and nothing else in that file:\n\n```json\n' "$answer"; cat "$schema"; printf '\n```\n'; } > "$base-prompt.md"
     p="$base-prompt.md"
   fi
-  case "$tool" in
-    claude)
-      devos_use_claude "$acc"
-      # PR-71: the prompt on standard input, never on the command line.
-      claude -p --model "$run_model" --effort "$effort" --output-format json \
-        --json-schema "$(cat "$schema")" --permission-mode dontAsk --max-turns "$turns" \
-        --allowedTools "Read,Glob,Grep,Write,Edit,Bash,Task,Agent,Skill" \
-        --disallowedTools "Bash(git push *),Bash(git commit *),Bash(git checkout *),Bash(git reset *),Bash(gh *),Bash(curl *),Bash(wget *),Bash(pkill *),Bash(killall *)" \
-        < "$p" > "$raw" 2> "$err"
-      code=$?; cmd=claude ;;
-    cursor)
-      devos_use_cursor "$acc"
-      agent -p --force --trust --model "$run_model" --output-format stream-json "$(devos_prompt cursor "$p")" > "$raw" 2> "$err"
-      code=$?; cmd=agent ;;
-    codex)
-      devos_use_codex "$acc"
-      "${ARGS[@]}" "$(devos_prompt codex "$p")" < "$p" > "$raw" 2> "$err"
-      code=$?; cmd=codex ;;
-    gemini)
-      devos_use_gemini "$acc"
-      "${ARGS[@]}" "$(devos_prompt gemini "$p")" < "$p" > "$raw" 2> "$err"
-      code=$?; cmd=gemini ;;
-  esac
-  node scripts/devos/usage.mjs record --stage "$stage" --command "$cmd" --model "$run_model" --out "$raw" --code "$code" || true
+  # PR-87: a temporary server error (a 5xx, a dropped connection, "retriable") runs again in place, three times at most.
+  while :; do
+    case "$tool" in
+      claude)
+        devos_use_claude "$acc"
+        # PR-71: the prompt on standard input, never on the command line.
+        claude -p --model "$run_model" --effort "$effort" --output-format json \
+          --json-schema "$(cat "$schema")" --permission-mode dontAsk --max-turns "$turns" \
+          --allowedTools "Read,Glob,Grep,Write,Edit,Bash,Task,Agent,Skill" \
+          --disallowedTools "Bash(git push *),Bash(git commit *),Bash(git checkout *),Bash(git reset *),Bash(gh *),Bash(curl *),Bash(wget *),Bash(pkill *),Bash(killall *)" \
+          < "$p" > "$raw" 2> "$err"
+        code=$?; cmd=claude ;;
+      cursor)
+        devos_use_cursor "$acc"
+        agent -p --force --trust --model "$run_model" --output-format stream-json "$(devos_prompt cursor "$p")" > "$raw" 2> "$err"
+        code=$?; cmd=agent ;;
+      codex)
+        devos_use_codex "$acc"
+        "${ARGS[@]}" "$(devos_prompt codex "$p")" < "$p" > "$raw" 2> "$err"
+        code=$?; cmd=codex ;;
+      gemini)
+        devos_use_gemini "$acc"
+        "${ARGS[@]}" "$(devos_prompt gemini "$p")" < "$p" > "$raw" 2> "$err"
+        code=$?; cmd=gemini ;;
+    esac
+    node scripts/devos/usage.mjs record --stage "$stage" --command "$cmd" --model "$run_model" --out "$raw" --code "$code" || true
+    if [ "$code" != "0" ] && pause=$(devos_server_wait "$tries") && devos_server_error "$raw" "$err" "$code"; then
+      tries=$(( tries + 1 ))
+      devos_note "$stage: the $tool CLI stopped on a temporary server error; trying again in $pause s ($tries of 3)."
+      sleep "$pause"
+      continue
+    fi
+    break
+  done
   echo "$stage exit code: $code ($tool $run_model, account $acc)"
   if devos_limited "$raw" "$err" "$code"; then
     mkdir -p .devos/limits

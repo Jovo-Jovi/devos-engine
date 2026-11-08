@@ -2,6 +2,12 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
+## 1.11.0 — Unreleased
+
+- **`/devos accept` (PR-87).** Comment `/devos accept`, with a note if you like, on the pull request of a task that stopped without a PASS to accept it as it is. DEV_OS records your decision as the task's next attempt (`docs/reviews/Tnn-aN.md`) and ticks its row in `docs/PHASES.md` on that branch; merging the pull request starts the next task. On a task you already merged by hand, a pull request of its own carries the record. A task you merge by hand without it is no longer built again from scratch: its pull request tells you to use `/devos accept`.
+- **Screenshots at 2×.** The settled and reduced-motion screenshots the builder and the reviewer read are taken at twice the pixel density, so an overlap of a few pixels is plain to see. The filmstrip frames stay at 1×.
+- **A temporary server error is tried again.** When a builder, review or planning run stops on a server error (an HTTP 5xx such as Cursor's 502, a dropped connection, or an error the tool marks retriable), the same run starts again in place, up to three times, after 30, 60 and 120 seconds, before the task stops.
+
 ## 1.10.0 — 2026-11-08
 
 - **The dependency gate (PR-85), Node first.** Every fence names the packages its task may add to a manifest on a `- Dependencies:` line (or `none`), and `fence-check` checks the names. A new guard, `guard:deps`, fails a task whose `package.json` gains a package its fence does not name, and, whenever the dependencies change, any high or critical advisory `pnpm audit` reports; a waiver lives in `package.json` `pnpm.auditConfig`, with your recorded decision. A new package under a copyleft licence (GPL, AGPL, LGPL, MPL and the like) is a warning for the reviewer, not a failure. A manifest the task creates, the scaffold, holds the stack's own packages. The prompts, the fence-writing skill, the fence auditor and the handbook say so.

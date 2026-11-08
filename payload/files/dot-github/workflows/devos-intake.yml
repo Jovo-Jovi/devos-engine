@@ -19,6 +19,10 @@
 #   Go:        comment "/devos go" in the "Dev OS: run notices" issue to start a heavy task that
 #              DEVOS_HEAVY=hold is holding (PR-20).
 #
+#   Accept:    comment "/devos accept [note]" on a task PR (task/Tnn) that stopped without a PASS to accept it as it
+#              is (PR-87): its row is ticked with a record of your decision, on the PR's branch, or, after you merged
+#              it by hand, on a pull request of its own. Merging that PR starts the next task.
+#
 # Every planning run uses the project's reviewer agent, the one the developer chose (PR-53).
 # A planning run that hits a usage limit keeps its partial plan on intake/issue-N and resumes
 # by itself after the reset (PR-20); "/devos intake resume" continues it by hand.
@@ -474,3 +478,97 @@ jobs:
           gh pr edit "$BR" --repo "$REPO" --remove-label "devos:halted" >/dev/null 2>&1 || true
           gh workflow run devos-cycle.yml --repo "$REPO" --ref main -f task="$TASK" -f attempt="$ATTEMPT" -f revision=true
           gh pr comment "$PR" --repo "$REPO" --body "Dev OS: fence reissued for attempt $ATTEMPT and the build is queued. $S"
+
+  # PR-87: "/devos accept [note]" on a task PR records the owner's acceptance of a task that stopped without a PASS and
+  # ticks its row (scripts/devos/accept.mjs). On an open PR it is committed to the task branch, and merging the PR
+  # starts the next task. On a PR merged by hand, a pull request from devos/accept-Tnn carries it. No agent runs.
+  accept:
+    if: >-
+      github.event_name == 'issue_comment' && github.event.issue.pull_request &&
+      startsWith(github.event.comment.body, '/devos accept') &&
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: devos-cycle
+      cancel-in-progress: false
+    env:
+      PR: ${{ github.event.issue.number }}
+      REPO: ${{ github.repository }}
+    steps:
+      - name: Find the task, and where its acceptance goes
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          read -r ref state < <(gh pr view "$PR" --repo "$REPO" --json headRefName,state --jq '"\(.headRefName) \(.state)"')
+          case "$ref" in task/T[0-9][0-9]) ;; *) gh pr comment "$PR" --repo "$REPO" --body "Dev OS: \`/devos accept\` works on task PRs (task/Tnn) only."; exit 1 ;; esac
+          task="${ref#task/}"
+          case "$state" in
+            OPEN) branch="$ref"; base="$ref" ;;
+            MERGED) branch="devos/accept-$task"; base=main ;;
+            *) gh pr comment "$PR" --repo "$REPO" --body "Dev OS: this PR was closed without a merge. Reopen it, then comment \`/devos accept\` again."; exit 1 ;;
+          esac
+          { echo "task=$task"; echo "state=$state"; echo "branch=$branch"; echo "base=$base"; } >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ steps.pr.outputs.base }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Record the acceptance and tick the row
+        id: a
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TASK: ${{ steps.pr.outputs.task }}
+          NOTE: ${{ github.event.comment.body }}
+          BY: ${{ github.event.comment.user.login }}
+        run: |
+          mkdir -p .devos
+          printf '%s\n' "${NOTE#/devos accept}" > .devos/accept-note.md
+          if ! node scripts/devos/accept.mjs --task "$TASK" --by "$BY" --pr "$PR" --note-file .devos/accept-note.md 2> .devos/accept.err; then
+            why=$(sed 's/^DEVOS: //' .devos/accept.err | head -5)
+            gh pr comment "$PR" --repo "$REPO" --body "Dev OS: $TASK was not accepted: $why"
+            exit 1
+          fi
+      - name: Commit and push the acceptance
+        env:
+          GH_TOKEN: ${{ secrets.DEVOS_PAT || github.token }}
+          TASK: ${{ steps.pr.outputs.task }}
+          STATE: ${{ steps.pr.outputs.state }}
+          BR: ${{ steps.pr.outputs.branch }}
+          ATTEMPT: ${{ steps.a.outputs.attempt }}
+          BY: ${{ github.event.comment.user.login }}
+        run: |
+          git config user.name "devos-runner"
+          git config user.email "devos-runner@users.noreply.github.com"
+          git add "docs/reviews/$TASK-a$ATTEMPT.md" docs/PHASES.md
+          git commit -q -m "$TASK a$ATTEMPT: accepted by @$BY (/devos accept, PR-87)"
+          remote="https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git"
+          if [ "$STATE" = "OPEN" ]; then
+            bash scripts/devos/sync-main.sh "$remote" || exit 1
+          elif git ls-remote --exit-code --heads "$remote" "$BR" >/dev/null 2>&1; then
+            gh pr comment "$PR" --repo "$REPO" --body "Dev OS: the branch $BR already exists, from an earlier \`/devos accept\`. Merge or close its pull request and delete the branch, then comment again."
+            exit 1
+          fi
+          git push "$remote" "HEAD:refs/heads/$BR"
+      - name: Say what happens next
+        env:
+          GH_TOKEN: ${{ secrets.DEVOS_PAT || github.token }}
+          TASK: ${{ steps.pr.outputs.task }}
+          STATE: ${{ steps.pr.outputs.state }}
+          BR: ${{ steps.pr.outputs.branch }}
+          ATTEMPT: ${{ steps.a.outputs.attempt }}
+          BY: ${{ github.event.comment.user.login }}
+        run: |
+          record="docs/reviews/$TASK-a$ATTEMPT.md"
+          if [ "$STATE" = "OPEN" ]; then
+            gh pr edit "$PR" --repo "$REPO" --remove-label "devos:halted" >/dev/null 2>&1 || true
+            gh pr comment "$PR" --repo "$REPO" --body "Dev OS: $TASK is accepted as attempt $ATTEMPT (\`$record\`), and its row in docs/PHASES.md is ticked on this branch. Merge this PR: the cycle then starts the next task."
+          else
+            printf 'The owner accepted %s with `/devos accept` on #%s (PR-87). This pull request adds `%s` and ticks the row in `docs/PHASES.md`; no attempt was built or reviewed.\n\nMerge it: the cycle then starts the next task.\n' "$TASK" "$PR" "$record" > .devos/accept-body.md
+            url=$(gh pr create --repo "$REPO" --base main --head "$BR" --title "Dev OS: $TASK accepted by @$BY" --body-file .devos/accept-body.md --label devos)
+            gh pr comment "$PR" --repo "$REPO" --body "Dev OS: $TASK is accepted as attempt $ATTEMPT on $url. Merge it: the cycle then starts the next task."
+          fi

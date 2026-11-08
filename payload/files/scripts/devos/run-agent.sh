@@ -64,6 +64,7 @@ code=1
 used=""
 used_model="$model"
 restarted=""
+tries=0
 lim=""
 outcome=""
 if [ "$role" = "builder" ]; then
@@ -84,6 +85,14 @@ if [ "$role" = "builder" ]; then
         restarted=1
         devos_note "Builder: the ${name} CLI $why; restarted once."
         printf '\n\n**An earlier run of this attempt %s.** Its partial changes are already in the working tree (`git status`). Verify them against the fence and continue from them; do not redo or duplicate them.\n' "$why" >> "$prompt"
+        continue
+      fi
+      # PR-87: a temporary server error (a 5xx, a dropped connection, "retriable") runs again in place, three times at most.
+      if [ "$code" != "0" ] && pause=$(devos_server_wait "$tries") && [ $(( budget - ($(date +%s) - T0) / 60 )) -ge 10 ] && devos_server_error "$out" "$err" "$code"; then
+        tries=$(( tries + 1 ))
+        devos_note "Builder: the ${name} CLI stopped on a temporary server error; trying again in $pause s ($tries of 3)."
+        sleep "$pause"
+        printf '\n\n**An earlier run of this attempt stopped on a temporary server error.** Its partial changes are already in the working tree (`git status`). Verify them against the fence and continue from them; do not redo or duplicate them.\n' >> "$prompt"
         continue
       fi
       break
@@ -113,10 +122,20 @@ else
     if [ "$tool" = "codex" ]; then devos_use_codex "$acc"; else devos_use_gemini "$acc"; fi
     used="$acc"
     used_model="$run_model"
-    rm -f "$out" "$out.stream.jsonl" "$last"
-    "${ARGS[@]}" "$(devos_prompt "$tool" "$prompt")" < "$prompt" > "$out" 2> "$err"
-    code=$?
-    node scripts/devos/usage.mjs record --stage reviewer --command "$tool" --model "$run_model" --out "$out" --code "$code" || true
+    while :; do
+      rm -f "$out" "$out.stream.jsonl" "$last"
+      "${ARGS[@]}" "$(devos_prompt "$tool" "$prompt")" < "$prompt" > "$out" 2> "$err"
+      code=$?
+      node scripts/devos/usage.mjs record --stage reviewer --command "$tool" --model "$run_model" --out "$out" --code "$code" || true
+      # PR-87: a temporary server error runs the review again, three times at most.
+      if [ "$code" != "0" ] && pause=$(devos_server_wait "$tries") && devos_server_error "$out" "$err" "$code"; then
+        tries=$(( tries + 1 ))
+        devos_note "Reviewer: the ${name} CLI stopped on a temporary server error; trying again in $pause s ($tries of 3)."
+        sleep "$pause"
+        continue
+      fi
+      break
+    done
     if [ "$code" != "0" ] && devos_limited "$out" "$err" "$code"; then
       mkdir -p .devos/limits
       lim=$(devos_limit_file "$tool" "$acc" "$(devos_model_index "$run_model" $models)")

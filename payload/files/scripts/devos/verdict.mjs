@@ -228,6 +228,8 @@ if (attempt < cfg.max_attempts) {
   if (!fenceChanged.includes(`docs/fences/${task}.md`)) notes.push(`no reissued fence for ${task}; the builder retries the same fence with the verdict as guidance`);
   finish("FAIL", "retry", { summary: structured.summary, fence: fenceChanged.join(", ") || null, human: structured.human_attention });
 }
+// PR-87: the owner's two ways on from a stopped task.
+notes.push(`${task} stopped at its last attempt: comment \`/devos revise <what to change>\` on this PR for another attempt, or \`/devos accept [note]\` to accept it as it is (PR-87)`);
 finish("FAIL", "halt", {
   summary: structured.summary,
   human: structured.human_attention ?? `Attempt ${attempt} of ${cfg.max_attempts} failed. Decide: fix the fence or the code by hand, then run the workflow with task=${task} attempt=1 on a fresh branch, or close the PR.`,

@@ -4,6 +4,9 @@
 // layout-shift value. Written to .devos/screens/ and summarised in motion.json. PR-51: each capture
 // also records the console errors and failed requests seen while it ran, and the axe result of the
 // settled state (@axe-core/playwright, WCAG 2.2 AA tags); ui-evidence.mjs turns them into checks.
+// PR-87: the settled and reduced-motion screenshots are taken at 2× (deviceScaleFactor 2): a 1280 px wide page is a
+// 2560 px image, so an overlap of a few CSS pixels is plain to see. motion.json says so (`screenshot_scale`), and a
+// length read off a screenshot is halved for CSS px. The filmstrip frames are the screencast's, at 1×.
 // Importing this module launches nothing. The run starts only when the file is executed.
 // Usage: node scripts/devos/screens.mjs [--base https://preview.vercel.app] [--port 3200] [--task Tnn] [/path ...]
 // States, in order: page arguments → the fence's `- Screens:` line → devos.config.json screens.pages.
@@ -21,6 +24,8 @@ import { readEnvFile } from "./supabase.mjs";
 const NAME_RE = /^[a-z0-9][a-z0-9-]*$/;
 const ACTIONS = new Set(["click", "hover", "focus"]);
 const WIDTHS = [{ width: 1280, height: 900 }, { width: 390, height: 844 }];
+// PR-87: device pixels per CSS pixel in the settled and reduced-motion screenshots.
+export const SCALE = 2;
 export const AXE_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -225,6 +230,7 @@ async function checkA11y(page, AxeBuilder) {
 async function openPage(browser, { width, height, headers, reducedMotion }) {
   const ctx = await browser.newContext({
     viewport: { width, height },
+    deviceScaleFactor: SCALE,
     extraHTTPHeaders: headers,
     reducedMotion,
   });
@@ -368,6 +374,9 @@ export function motionSummary(manifest) {
     if (c.a11y?.ran && c.a11y.violations.length) sentences.push(`Accessibility violations for ${c.state} at ${c.width}: ${c.a11y.violations.map((v) => v.id).join(", ")}.`);
   }
   for (const err of manifest.errors ?? []) sentences.push(`Screens line: ${err}.`);
+  // PR-87: the screenshots are in device pixels; the filmstrip frames are not.
+  const scale = Number(manifest.screenshot_scale);
+  if (scale > 1) sentences.push(`The settled and reduced-motion screenshots are at ${scale}×: a length read off one is ${scale} times its CSS pixels. The filmstrip frames are at 1×.`);
   if (sentences.length) lines.push("", ...sentences);
   return lines;
 }
@@ -483,7 +492,7 @@ async function main() {
     const captures = await captureStates({
       browser, url, states, widths: WIDTHS, outDir: P(".devos/screens"), filmstripMs, settleMaxMs, headers, AxeBuilder,
     });
-    const manifest = { source, task, states_from: statesFrom, filmstrip_ms: filmstripMs, errors, captures };
+    const manifest = { source, task, states_from: statesFrom, filmstrip_ms: filmstripMs, screenshot_scale: SCALE, errors, captures };
     writeFileSync(P(".devos/screens/motion.json"), JSON.stringify(manifest, null, 2) + "\n");
     for (const err of errors) console.log(`screens: ${err}`);
     for (const c of captures) {

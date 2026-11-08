@@ -4,10 +4,12 @@
 //   node scripts/devos/limit-check.mjs --json .devos/reviewer.json --err .devos/reviewer.err [--exit 1]
 // PR-64: with --unavailable, exit 0 = the account cannot use the model (move on to the next model), 1 = it can
 // (limits.mjs modelUnavailable: the CLI's own error only, never a watchdog stop).
+// PR-87: with --server, exit 0 = the run stopped on a temporary server error (an HTTP 5xx, a dropped connection, an
+// error marked retriable) and may run again in place, 1 = it did not (limits.mjs serverError).
 // A run that produced its structured answer, or exited 0 without an error flag, is never "limited":
 // the limit patterns are broad, and a finished run's own text must not trigger a switch. Only the end of
 // the output is read (PR-54).
-import { readText, looksLikeLimit, modelUnavailable, parseJsonLoose } from "./limits.mjs";
+import { readText, looksLikeLimit, modelUnavailable, parseJsonLoose, serverError } from "./limits.mjs";
 
 const arg = (n) => { const i = process.argv.indexOf(`--${n}`); return i >= 0 ? process.argv[i + 1] ?? "" : ""; };
 const out = readText(arg("json"));
@@ -16,6 +18,7 @@ const json = parseJsonLoose(out);
 const exit = arg("exit");
 
 if (process.argv.includes("--unavailable")) process.exit(modelUnavailable(out, err, exit) ? 0 : 1);
+if (process.argv.includes("--server")) process.exit(serverError(out, err, exit) ? 0 : 1);
 if (json?.structured_output) process.exit(1);
 if (exit === "0" && json && json.is_error !== true) process.exit(1);
 process.exit(looksLikeLimit(out, err) ? 0 : 1);

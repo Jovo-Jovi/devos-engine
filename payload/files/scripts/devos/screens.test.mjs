@@ -9,7 +9,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createHash } from "node:crypto";
 import { createRequire } from "node:module";
-import { parseScreensLine, pickFrames, captureStates, motionSummary, motionCounts } from "./screens.mjs";
+import { parseScreensLine, pickFrames, captureStates, motionSummary, motionCounts, SCALE } from "./screens.mjs";
 
 const PAGES = {
   "/still": `<!doctype html><meta charset="utf-8"><title>still</title><h1>Still</h1>`,
@@ -180,6 +180,19 @@ test("fade and press filmstrips span the motion", () => {
     }
     assert.notEqual(sha(c.film[0].file), sha(c.film[4].file), JSON.stringify(c.film.map((f) => f.frame_ms)));
   }
+});
+
+test("the screenshots are taken at 2× and the filmstrip at 1×, and the summary says so (PR-87)", () => {
+  // A PNG's width is the big-endian number at byte 16 of its header.
+  const width = (file) => readFileSync(join(dir, file)).readUInt32BE(16);
+  assert.equal(SCALE, 2);
+  assert.equal(width("still-1280.png"), 2560);
+  assert.equal(width("still-1280-reduced.png"), 2560);
+  assert.equal(width("still-390.png"), 780);
+  const frame = manifest.captures.find((c) => c.state === "fade" && c.width === 390).film.find((f) => f.file).file;
+  assert.equal(width(frame), 390, frame);
+  assert.equal(motionSummary({ ...manifest, screenshot_scale: SCALE }).at(-1), "The settled and reduced-motion screenshots are at 2×: a length read off one is 2 times its CSS pixels. The filmstrip frames are at 1×.");
+  assert.equal(motionSummary(manifest).some((line) => line.startsWith("The settled and reduced-motion screenshots are at")), false);
 });
 
 test("layout shift is zero on a still page and above zero when content is inserted", () => {

@@ -28,7 +28,8 @@ improve it. A gap or a contradiction is reported, never improvised.
    tap targets ≥ 44px, `aria-hidden` on purely visual marks with a text equivalent beside them.
 8. **Check yourself before you report.** Build, start the app, and compare every page the fence names at 1280px
    and 390px with docs/DESIGN_SYSTEM.md. In the IDE use the Playwright MCP to take screenshots; in automated runs
-   `node scripts/devos/screens.mjs` writes them to `.devos/screens/`. List every visible difference
+   `node scripts/devos/screens.mjs` writes them to `.devos/screens/`, the settled and reduced-motion screenshots at
+   2× (PR-87): halve a length you read off one for CSS pixels. List every visible difference
    you could not remove in the report under "Notes for the reviewer".
 9. **The runner's checks fail missing evidence (PR-51).** Every state on the `- Screens:` line needs an
    error-free capture at 1280 and 390 with no layout shift, no console error, no failed request and no
