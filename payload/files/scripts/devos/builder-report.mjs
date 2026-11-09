@@ -6,6 +6,8 @@
 //     searches and commands it ran, files it edited, and the commands themselves.
 // The timeline is kept in .devos/builder-timeline.json between calls, so each line covers the
 // minutes since the previous one. Prints markdown; prints nothing when there is no stream yet.
+// E62 (PR-89): Claude Code's stream (`--verbose`) names its tools in `tool_use` blocks and has no timestamps: its plan
+// comes from TodoWrite, and in place of the timeline it gets the totals so far.
 // Usage: node scripts/devos/builder-report.mjs <stream-file> [state-file]
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 
@@ -42,7 +44,47 @@ for (const { e } of events) {
     if (!a.merge) todos.clear();
     for (const t of a.todos || []) todos.set(t.id, { ...(todos.get(t.id) || {}), ...t });
   }
-  if (e.type === "assistant") note = (e.message?.content || []).map((c) => c.text || "").join(" ");
+  if (e.type === "assistant") {
+    const parts = e.message?.content || [];
+    const said = parts.map((c) => c?.text || "").join(" ").trim();
+    if (said) note = said;
+    for (const c of parts) {
+      if (c?.type !== "tool_use" || c.name !== "TodoWrite") continue;
+      todos.clear();
+      (c.input?.todos || []).forEach((t, i) => todos.set(i, { content: t.content, status: String(t.status || "").toUpperCase() }));
+    }
+  }
+}
+
+// Claude Code: every tool call, as the timeline counts them.
+const uses = [];
+for (const { e } of events) {
+  if (e.type !== "assistant") continue;
+  for (const c of e.message?.content || []) if (c?.type === "tool_use") uses.push({ kind: c.name === "TodoWrite" ? "plan" : kindOf(c.name || ""), input: c.input || {} });
+}
+if (!ts && events.some(({ e }) => e.type === "assistant")) {
+  const n = { read: 0, search: 0, command: 0, edit: 0 };
+  const edited = new Set(); const ran = [];
+  for (const u of uses) {
+    if (u.kind in n) n[u.kind]++;
+    if (u.kind === "edit" && (u.input.file_path || u.input.path)) edited.add(rel(u.input.file_path || u.input.path));
+    if (u.kind === "command" && u.input.command) ran.push(cmd(u.input.command));
+  }
+  const out = [];
+  if (todos.size) {
+    const list = [...todos.values()];
+    const done = list.filter((t) => /COMPLETED/.test(t.status)).length;
+    const icon = (s) => (/COMPLETED/.test(s) ? "✅" : /IN_PROGRESS/.test(s) ? "🔄" : "⬜");
+    out.push(`**Plan (the builder's own to-do list): ${done} of ${list.length} done**`);
+    for (const t of list) out.push(`${icon(t.status)} ${short(t.content, 110)}`);
+    out.push("");
+  }
+  if (note) out.push(`**Latest note:** ${short(note, 300)}`, "");
+  const ed = edited.size ? ` — edited ${[...edited].slice(0, 4).map((f) => `\`${f}\``).join(", ")}${edited.size > 4 ? ` +${edited.size - 4}` : ""}` : "";
+  const r = ran.length ? ` — ran ${ran.slice(-2).map((c) => `\`${c}\``).join(", ")}` : "";
+  out.push(`**So far:** ${n.read} read · ${n.search} searches · ${n.command} commands · ${n.edit} edits${ed}${r}`);
+  process.stdout.write(out.join("\n") + "\n");
+  process.exit(0);
 }
 
 // Timeline: one line per window.

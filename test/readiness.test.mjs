@@ -220,7 +220,6 @@ test("readiness.test.mjs (f) the cycle runs it, and the checklist, the prompts, 
   assert.equal(read(`${PAYLOAD}/docs/method/DEV_OS_V2_REVIEWER.md`).includes("### 10.4 Production readiness (PR-88)"), true);
   assert.equal(read(`${PAYLOAD}/docs/method/AUTOMATION.md`).includes("| `readiness.mjs` | for the launch task"), true);
   const precedents = read(`${PAYLOAD}/docs/method/PRECEDENTS.md`);
-  assert.equal(precedents.includes("**Live maximum: PR-88.**"), true);
   assert.equal(precedents.includes("| PR-88 | **The launch task proves production readiness, by tool and by checklist, and only the owner waives a gate.**"), true);
   const changes = read("CHANGELOG.md");
   for (const line of ["- **The launch task (PR-88).**", "- **A production-readiness checklist.**", "- **OWASP ASVS 5.0.0 and Trail of Bits' sharp edges.**", "- **Test runs leave the repository's files as they were.**"]) assert.equal(changes.includes(line), true, line);

@@ -167,9 +167,13 @@ test("project-settings.test.mjs smoke target, login preview, deploy workflow and
     assert.equal(ids.includes(id), false, id);
   }
 
+  // E62: the steps are the engine's own (no SETUP.md section of the source); everything else is the source's.
   const pilot = readJson("dev/sources/pilot/devos/setup.json");
   for (const id of ["vercel-bypass", "r2-secrets", "r2-var", "r2-vercel", "firebase-secrets", "firebase-var", "firebase-vercel"]) {
-    assert.deepEqual(setup.items.find((item) => item.id === id), pilot.items.find((item) => item.id === id));
+    const { steps: shippedSteps, ...shipped } = setup.items.find((item) => item.id === id);
+    const { steps: pilotSteps, ...fromPilot } = pilot.items.find((item) => item.id === id);
+    assert.deepEqual(shipped, fromPilot, id);
+    assert.equal(Array.isArray(shippedSteps) && shippedSteps.length > 0 && Array.isArray(pilotSteps), true, id);
   }
 });
 
@@ -209,8 +213,14 @@ test("project-settings.test.mjs shipped text stays actionable", () => {
       assert.deepEqual(shippedRest, pilotRest);
       assert.deepEqual(shipped.when, [`tool:${id}`]);
     } else {
-      assert.deepEqual(shipped, fromPilot);
+      const { steps: shippedSteps, ...shippedRest } = shipped;
+      const { steps: pilotSteps, ...pilotRest } = fromPilot;
+      assert.deepEqual(shippedRest, pilotRest, id);
+      assert.equal(Array.isArray(shippedSteps) && shippedSteps.length > 0 && Array.isArray(pilotSteps), true, id);
     }
+  }
+  for (const item of setup.items) {
+    for (const step of item.steps) assert.equal(/SETUP\.md §|\(§\d/.test(step), false, `${item.id}: ${step}`);
   }
 });
 

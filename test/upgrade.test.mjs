@@ -434,3 +434,98 @@ test("upgrade.test.mjs --local stages an engine file the project's .gitignore le
     cleanup(staged.parent);
   }
 });
+
+function upgradeLocal(staged) {
+  return spawnSync(process.execPath, [path.join(staged.next, "bin", "devos.mjs"), "upgrade", "--local"], {
+    cwd: staged.project,
+    encoding: "utf8",
+    windowsHide: true,
+    timeout: 180000,
+    env: staged.env,
+  });
+}
+
+function failingHook(project) {
+  const hooks = path.join(project, "hooks");
+  mkdirSync(hooks);
+  const hook = path.join(hooks, "pre-commit");
+  writeFileSync(hook, "#!/bin/sh\nexit 1\n");
+  chmodSync(hook, 0o755);
+  assert.equal(git(["add", "--", "hooks/pre-commit"], project).status, 0);
+  const hookCommit = git(["commit", "-m", "hook"], project);
+  assert.equal(hookCommit.status, 0, hookCommit.stderr);
+  assert.equal(git(["config", "core.hooksPath", "hooks"], project).status, 0);
+}
+
+function untrack(project, rel) {
+  const ignore = path.join(project, ".gitignore");
+  writeFileSync(ignore, `${readFileSync(ignore, "utf8").replaceAll("\r\n", "\n")}${rel}\n`);
+  assert.equal(git(["rm", "-q", "--cached", "--", rel], project).status, 0);
+  commitAll(project, `ignore ${rel}`);
+}
+
+test("upgrade.test.mjs rolls back an engine file HEAD does not track (E62)", { skip: windows }, () => {
+  const staged = stage({});
+  try {
+    const rel = "devos/prompts/doctor.md";
+    untrack(staged.project, rel);
+    const before = readFileSync(path.join(staged.project, ...rel.split("/")));
+    failingHook(staged.project);
+    const result = upgradeLocal(staged);
+    assert.equal(result.status, 1, result.stdout + result.stderr);
+    assert.equal(result.stdout.includes("devos: upgrade failed; rolled back, nothing changed"), true, result.stdout);
+    assert.equal(readFileSync(path.join(staged.project, ...rel.split("/"))).equals(before), true);
+    assert.equal(git(["status", "--porcelain"], staged.project).stdout, "");
+    assert.equal(git(["branch", "--show-current"], staged.project).stdout.trim(), "main");
+    assert.equal(git(["branch", "--list", "devos/*"], staged.project).stdout.trim(), "");
+    const lock = JSON.parse(readFileSync(path.join(staged.project, "devos", "engine.lock.json"), "utf8"));
+    assert.equal(lock.engine_version, "1.12.0");
+  } finally {
+    cleanup(staged.parent);
+  }
+});
+
+test("upgrade.test.mjs removes an engine file HEAD does not track (E62)", () => {
+  const rel = "devos/prompts/doctor.md";
+  const staged = stage({
+    mutate(dir) {
+      rmSync(path.join(dir, "payload", "files", ...rel.split("/")));
+    },
+  });
+  try {
+    untrack(staged.project, rel);
+    const result = upgradeLocal(staged);
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    assert.equal(result.stdout.includes(", 1 removed, 0 conflicts"), true, result.stdout);
+    assert.equal(existsSync(path.join(staged.project, ...rel.split("/"))), false);
+    assert.deepEqual(names(staged.project, "main..devos/upgrade-1.12.1"), ["devos/engine.lock.json"]);
+  } finally {
+    cleanup(staged.parent);
+  }
+});
+
+test("upgrade.test.mjs names a version that is not a release (E62)", () => {
+  const staged = stage({
+    mutate(dir) {
+      const pkgPath = path.join(dir, "package.json");
+      writeFileSync(pkgPath, readFileSync(pkgPath, "utf8").replace("\"version\": \"1.12.1\"", "\"version\": \"1.12.1-beta.1\""));
+    },
+  });
+  try {
+    const result = upgradeLocal(staged);
+    assert.equal(result.status, 1, result.stdout + result.stderr);
+    assert.equal(result.stdout.trim(), "devos: this engine's package.json names engine \"1.12.1-beta.1\", which is not a release version (X.Y.Z); devos upgrade runs between released engines");
+    assert.equal(result.stderr, "");
+    const lockPath = path.join(staged.project, "devos", "engine.lock.json");
+    const lock = JSON.parse(readFileSync(lockPath, "utf8"));
+    lock.engine_version = "1.12.0-rc.2";
+    writeFileSync(lockPath, `${JSON.stringify(lock, null, 2)}\n`);
+    commitAll(staged.project, "a pre-release lock");
+    const fromLock = devos(["upgrade", "--local"], staged.project, staged.env);
+    assert.equal(fromLock.status, 1, fromLock.stdout + fromLock.stderr);
+    assert.equal(fromLock.stdout.trim(), "devos: devos/engine.lock.json in this project names engine \"1.12.0-rc.2\", which is not a release version (X.Y.Z); devos upgrade runs between released engines");
+    assert.equal(git(["status", "--porcelain"], staged.project).stdout, "");
+  } finally {
+    cleanup(staged.parent);
+  }
+});

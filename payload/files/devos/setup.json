@@ -80,7 +80,7 @@
       "steps": [
         "vercel.com → Account Settings → Tokens → create `devos` (scope: your team).",
         "Project → Settings → General: copy the Project ID; team Settings: copy the Team ID (`VERCEL_ORG_ID`).",
-        "Add the three as repository secrets (SETUP.md §11.2)."
+        "GitHub → Settings → Secrets and variables → Actions → New repository secret, once for each: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`."
       ]
     },
     {
@@ -116,8 +116,10 @@
       "when": ["module:supabase"],
       "blocks": "deploy",
       "steps": [
-        "Follow SETUP.md §12.1 (project, reference id, database password, access token).",
-        "Add the four repository secrets (§12.2). Keep a copy of the backup passphrase offline."
+        "supabase.com → New project for production; set a strong database password and keep it (`SUPABASE_DB_PASSWORD`).",
+        "Project Settings → General: copy the Reference ID (`SUPABASE_PROJECT_REF`); Account → Access Tokens: create `devos` (`SUPABASE_ACCESS_TOKEN`).",
+        "Choose a long backup passphrase (`DEVOS_BACKUP_PASSPHRASE`): the deploy encrypts every backup with it. Keep a copy offline.",
+        "GitHub → Settings → Secrets and variables → Actions: add the four as repository secrets."
       ]
     },
     {
@@ -140,7 +142,8 @@
       "when": ["module:supabase", "var:DEVOS_VERCEL"],
       "blocks": "deploy",
       "steps": [
-        "Vercel → project → Settings → Environment Variables → environment **Production**: add both (SETUP.md §12.3)."
+        "Supabase → Project Settings: copy the project URL (Data API) and the publishable key (API Keys).",
+        "Vercel → project → Settings → Environment Variables → environment **Production**: add both under the names above."
       ]
     },
     {
@@ -151,8 +154,9 @@
       "when": ["module:r2"],
       "blocks": "deploy",
       "steps": [
-        "Follow SETUP.md §13.1: bucket, public access (r2.dev or a custom domain), an API token for that bucket only.",
-        "Add the five repository secrets (§13.3)."
+        "Cloudflare → R2 → Create bucket (`R2_BUCKET`); its Settings → Public access: turn on the r2.dev URL or connect a custom domain (`R2_PUBLIC_BASE_URL`).",
+        "R2 → Manage API tokens → Create API token: Object Read & Write, for this bucket only. Copy the Access Key ID, the Secret Access Key and the S3 endpoint `https://<account id>.r2.cloudflarestorage.com` (`R2_ENDPOINT`).",
+        "GitHub → Settings → Secrets and variables → Actions: add the five as repository secrets."
       ]
     },
     {
@@ -175,7 +179,7 @@
       "when": ["module:r2", "var:DEVOS_VERCEL"],
       "blocks": "deploy",
       "steps": [
-        "Vercel → Environment Variables → **Production**: the same five names; mark the two keys Sensitive (SETUP.md §13.4)."
+        "Vercel → project → Settings → Environment Variables → environment **Production**: the same five names and values; mark `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` Sensitive."
       ]
     },
     {
@@ -186,8 +190,9 @@
       "when": ["module:firebase"],
       "blocks": "deploy",
       "steps": [
-        "Follow SETUP.md §13.2: project with Analytics off, Firestore database, the `devos-deploy` service account (Firebase Admin) and its JSON key.",
-        "Add both repository secrets (§13.3); paste the whole JSON, then delete the downloaded file."
+        "console.firebase.google.com → Add project, with Google Analytics off; Build → Firestore Database → Create database. Its project ID is `FIREBASE_PROJECT_ID`.",
+        "Google Cloud console → IAM & Admin → Service accounts: create `devos-deploy` with the role Firebase Admin; Keys → Add key → JSON.",
+        "GitHub → Settings → Secrets and variables → Actions: add `FIREBASE_PROJECT_ID`, and `FIREBASE_DEPLOY_SERVICE_ACCOUNT` = the key's whole JSON; then delete the downloaded file."
       ]
     },
     {
@@ -210,7 +215,8 @@
       "when": ["module:firebase", "var:DEVOS_VERCEL"],
       "blocks": "deploy",
       "steps": [
-        "Vercel → Environment Variables → **Production**: `FIREBASE_PROJECT_ID`, and `FIREBASE_SERVICE_ACCOUNT` = the read-only `devos-runtime` key's whole JSON, Sensitive (SETUP.md §13.4)."
+        "Google Cloud console → IAM & Admin → Service accounts: create `devos-runtime` with the read-only role Cloud Datastore Viewer; Keys → Add key → JSON.",
+        "Vercel → project → Settings → Environment Variables → environment **Production**: `FIREBASE_PROJECT_ID`, and `FIREBASE_SERVICE_ACCOUNT` = that key's whole JSON, marked Sensitive; then delete the downloaded file."
       ]
     },
     {

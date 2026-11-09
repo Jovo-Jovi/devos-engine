@@ -8,6 +8,9 @@ The notable changes of each DEV_OS Engine release. Versions follow [Semantic Ver
 - **A production-readiness checklist.** The reviewer goes through `docs/method/READINESS.md`, per layer, on the launch task: security, frontend, speed, backend and API, database, architecture and operations, and testing.
 - **OWASP ASVS 5.0.0 and Trail of Bits' sharp edges.** Both now ship with DEV_OS, read whole and pinned. The launch review verifies the ASVS at level 1, or level 2 when the project stores personal data or takes payments. A deep review reads the chapters of the subject it touches.
 - **Test runs leave the repository's files as they were.** The tests that use the fake agent tools now make a copy executable, so they no longer change six files' permissions in `test/fixtures/agents/`.
+- **A Claude Code builder shows its progress (PR-89).** It now streams its work like Cursor's, so the progress comment shows its plan, its latest note, what it has read, run and edited so far, and its last action, and the usage record counts a run stopped before its end.
+- **`devos upgrade` is safer.** A rollback puts back an engine file your `.gitignore` leaves out, an upgrade that removes such a file no longer fails, and a version that is not a release (`1.13.0-beta.1`) is named in one line instead of a stack trace.
+- **The handbook names no client.** The project the method was distilled from is called the reference project throughout, Dev OS v1 is no longer named after a project, and the setup steps for Vercel, Supabase, R2 and Firebase are complete on their own.
 
 ## 1.11.0 — Unreleased
 

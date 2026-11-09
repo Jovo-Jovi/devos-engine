@@ -17,7 +17,9 @@
 # With `--output-format stream-json` the CLI prints one line per message and tool call: the last
 # action is kept in <stdout-dir>/builder-last-action (shown in the progress comment and named when
 # the run is stopped), and at the end the stream is saved as <stdout>.stream.jsonl and <stdout> is
-# rewritten to the final result object, the same shape `--output-format json` prints.
+# rewritten to the final result object, the same shape `--output-format json` prints. Both streams are read:
+# Cursor's (`tool_call` started and completed) and Claude Code's (`tool_use` in an assistant message, its
+# `tool_result` in the next user message; `--verbose`), so a Claude Code builder's progress shows too (E62).
 # The agent never sees DEVOS_PROGRESS_TOKEN: it is removed from the child's environment.
 # Usage (PR-52): with DEVOS_USAGE_STAGE set, every run ends with one line in the usage record
 # (scripts/devos/usage.mjs record), its tool and model read from the command line.
@@ -67,7 +69,14 @@ action() {
     for (const l of t.split("\n").slice(-2000)) { let e; try { e=JSON.parse(l); } catch { continue; }
       if (e.type==="tool_call"&&e.subtype==="started") { open.set(e.call_id,say(e)); last="running "+say(e); }
       else if (e.type==="tool_call"&&e.subtype==="completed") { open.delete(e.call_id); last="finished "+say(e); }
-      else if (e.type==="assistant") { last="wrote a message"; } }
+      else if (e.type==="assistant") {
+        const parts=Array.isArray(e.message&&e.message.content)?e.message.content:[]; let used=false;
+        for (const c of parts) if (c&&c.type==="tool_use") { const i=c.input||{};
+          const o=typeof i==="string"?i:(i.command||i.file_path||i.path||i.pattern||i.query||i.url||i.description||JSON.stringify(i));
+          const s=((c.name||"tool")+": "+String(o)).replace(/[\r\n`]+/g," ").slice(0,160); open.set(c.id,s); last="running "+s; used=true; }
+        if (!used) last="wrote a message"; }
+      else if (e.type==="user"&&Array.isArray(e.message&&e.message.content)) {
+        for (const c of e.message.content) if (c&&c.type==="tool_result"&&open.has(c.tool_use_id)) { last="finished "+open.get(c.tool_use_id); open.delete(c.tool_use_id); } } }
     const p=[...open.values()].pop(); process.stdout.write(p?"running "+p:last);
   ' "$out" 2>/dev/null
 }

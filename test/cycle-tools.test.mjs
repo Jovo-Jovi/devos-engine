@@ -374,7 +374,7 @@ test("cycle-tools.test.mjs (m) the cycle workflow keeps the proven commands and 
   // PR-71: an agent gets only where its prompt is, never the prompt itself, on its command line.
   assert.equal(countOf(text, "agent -p --force --trust --approve-mcps --model \"$MODEL\" --output-format stream-json \"$(devos_prompt cursor .devos/builder-prompt.md)\""), 1);
   assert.equal(countOf(text, "agent -p --force --trust --approve-mcps --model \"$MODEL\" --output-format stream-json \"$(devos_prompt cursor .devos/reviewer-prompt.md)\""), 1);
-  assert.equal(countOf(text, "DEVOS_STDIN=.devos/builder-prompt.md bash scripts/devos/agent-watchdog.sh \"$left\" 10 .devos/builder.json .devos/builder.err -- \\\n                  claude -p --model \"$MODEL\" --effort \"$EFFORT\" --output-format json --permission-mode dontAsk"), 1);
+  assert.equal(countOf(text, "DEVOS_STDIN=.devos/builder-prompt.md bash scripts/devos/agent-watchdog.sh \"$left\" 10 .devos/builder.json .devos/builder.err -- \\\n                  claude -p --model \"$MODEL\" --effort \"$EFFORT\" --output-format stream-json --verbose --permission-mode dontAsk"), 1);
   assert.equal(countOf(text, "--max-turns \"$TURNS\" < .devos/reviewer-prompt.md > .devos/reviewer.json"), 1);
   // No agent that can run a command gets its prompt as an argument anywhere in the payload. The doctor and the
   // supervisor read only (Read, Glob, Grep) and their prompts are fixed files, so they keep theirs.

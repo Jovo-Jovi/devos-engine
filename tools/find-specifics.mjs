@@ -3,7 +3,7 @@ import path from "node:path";
 import { toInstalled } from "../lib/paths.mjs";
 import { engineRoot, normalizeLf } from "./sources.mjs";
 
-const PATTERNS = [/tower/i, /\bpilot\b/i, /\bADR-0\d\d\b/, /Jovo-Jovi/];
+const PATTERNS = [/tower/i, /\bpilot\b/i, /\bADR-0\d\d\b/, /Jovo-Jovi/, /\bNEL\b/, /Nile Egypt/i, /\bBETK\b/i];
 
 function loadAllow() {
   const file = path.join(engineRoot(), "tools", "specifics-allow.json");

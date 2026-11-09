@@ -1,8 +1,8 @@
 # Dev OS — the backend module (Supabase)
 
 Method document, not product scope. It adds a real data layer to the automated cycle without
-weakening any gate, and it is what a new project copies when it needs a backend
-(`/devos-new-project`, step 5). Precedents PR-17, PR-18 and PR-19 make it binding here.
+weakening any gate, and it is what a new project adopts when it stores data (the fit research of the
+blueprint, `devos/prompts/blueprint.md`). Precedents PR-17, PR-18 and PR-19 make it binding here.
 
 ## 1. When it applies
 

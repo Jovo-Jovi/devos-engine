@@ -68,7 +68,7 @@ jobs:
         )
       )
     runs-on: ubuntu-latest
-    # A planning run reads the whole document set at high effort; the reference project's first took
+    # A planning run reads the whole document set at high effort; the method's first one took
     # 26 minutes. 90 leaves room for bigger requests (PR-20).
     timeout-minutes: 90
     concurrency:

@@ -35,11 +35,13 @@ the **DEV_OS registry, operated by Jovo-Jovi**, and what each event contains.
 | 2 | Doctor | DEV_OS | Checks every prerequisite and prints what is missing with the exact fix. Changes nothing. |
 | 3 | **Contract** | developer | Shown in full: what DEV_OS is, what is reported (§8), what never leaves the machine, how to disconnect. Typed `accept` continues; anything else stops setup. |
 | 4 | Questions | developer | Only what cannot be inferred: name, one-paragraph brief, users, data stored or not, sign-in, languages, deploy target, repository visibility (private by default). Defaults come from the developer profile (§6). |
-| 5 | Blueprint | DEV_OS (Claude, reviewer role) | The `/devos-new-project` flow, headless: fit research, product brief, scope, decisions to sign, design system, data model when data is stored, `PHASES.md`, fence T01. Shown for approval; the developer can ask for changes. |
-| 6 | Engine files | DEV_OS | Installs the engine (workflows, scripts, guards, rules, skills, prompts, manual), writes `devos/project.json`, generates `devos.config.json` and `SETUP.md`, commits locally. |
+| 5 | Engine files | DEV_OS | Installs the engine (workflows, scripts, guards, rules, skills, prompts, manual), writes `devos/project.json` and generates `devos.config.json`, so the blueprint reads the installed prompt and handbook. |
+| 6 | Blueprint | DEV_OS (Claude, reviewer role) | The `/devos-new-project` flow, headless: fit research, product brief, scope, decisions to sign, design system, data model when data is stored, `PHASES.md`, fence T01. Shown for approval; the developer can ask for changes. Once approved, `SETUP.md` is written and the project gets its first local commit. |
 | 7 | GitHub | DEV_OS + developer | Creates the repository (private by default) and pushes. Then the setup checklist: for each secret, DEV_OS runs `gh secret set <NAME>` and the developer pastes the value into GitHub's own prompt — DEV_OS never reads or stores a value. Variables are set the same way. `setup-check` confirms the names. |
 | 8 | Registration | developer | DEV_OS opens the GitHub App install page for this one repository. Installing it completes the contract; DEV_OS receives the receipt and commits `devos/contract.json`. |
 | 9 | First cycle | DEV_OS | Dispatches `devos-cycle`. From here the automated workflow builds T01, reviews, retries, waits for usage limits, resumes, deploys after merges. The developer merges at gates and answers the supervisor. `devos status` shows where things stand. |
+
+Steps 5 and 6 are in the order `devos init` runs them (amended 2026-11-09, owner, D-E15).
 
 After step 9 the project runs exactly like the Tower runs today.
 
@@ -68,7 +70,7 @@ lib/                     command internals (E04–E07, E09)
 payload/files/           engine-owned files, installed and upgraded (dot-directories stored as dot-*)
 payload/templates/       project-owned starting points, written once at install, never upgraded
 payload/manifest.json    every engine-owned path with its sha256 (generated)
-tools/                   build-manifest, verify-source, stage (install into a scratch folder for tests)
+tools/                   build-manifest, stage (install into a scratch folder for tests)
 test/                    node:test suites, no dependencies
 dev/                     building the engine itself: LEDGER, DECISIONS, fences, reports, reviews, sources
 ```
