@@ -1,0 +1,20 @@
+{
+  "CHANGELOG.md": "614dfe2f79e3a1ec50d1d493246f3d3cfa344f03799e7ae03c9070d1fedbbfcf",
+  "payload/files/devos/prompts/revise.md": "a23c7622f6bdf3d5ed0e1a4133ea5ed67c0d718faf60021be95aca8217f35b91",
+  "payload/files/docs/method/AUTOMATION.md": "f241772de526cea36451a7885412a4c84d62f7c6f41da06f3eebe73d8c2cc0fd",
+  "payload/files/docs/method/PRECEDENTS.md": "a36de9f6c82510256d5253512ac9b156eeb40718a3772afcff2d7805e77f0e5b",
+  "payload/files/dot-github/workflows/devos-cycle.yml": "b97e63a350c23524c0c2d1a3f9986dabc525715eb8da22bc08d819eedb78c780",
+  "payload/files/dot-github/workflows/devos-intake.yml": "e3c01bbaafa69182ed6a7b176c4fdaceb900f8aced3b43564a6673df712f5279",
+  "payload/files/scripts/devos/accept.mjs": "04b47df9c5082cf01d7f97156e91a0fdf8d052f0b6c6b8957ae50cbd18338ab4",
+  "payload/files/scripts/devos/next-task.mjs": "1d21328015682b155a6c37ac4fc2bee741bbfd38179ed818952beffe81149c2b",
+  "payload/files/scripts/devos/publish-verify.mjs": "f8f8daf14fb32556ab0340c11eb9bcfb77bbc0f5b60eec3fe4ef901751898106",
+  "payload/files/scripts/devos/render-prompt.mjs": "2d5c21037925757839bb01e6d6d39b914678e704204836a59679bb5f3800a73d",
+  "payload/files/scripts/devos/review-mode.mjs": "6452c1f53be9f0f560d14255aaf5f443411745c2fafa0c363ac8764320166e04",
+  "payload/files/scripts/devos/unit.mjs": "00a9afd5c6fb5501036187f7428408ea6cf7afde08eb9bc073971239ce9d7d94",
+  "payload/manifest.json": "124227f3c10cb9b4597bd42cd637ed26978a99091c5fb4366796e5fa6fb20603",
+  "test/adopt-files.test.mjs": "3e43cc7a98b926b45cff4c99dd095421d38094815752f240b5dc7452f962d73f",
+  "test/followups.test.mjs": "0c26929eb49866ba85a12dfeb18aec8634fb555b64a9e12fea4422400da21a8b",
+  "test/resilience.test.mjs": "89e2385294df0da70538eaecc0bc2d2b2565a4e1aecc498507100e2165c7a8ec",
+  "test/units.test.mjs": "95b21a596cf6a031109f305cff821c740281ed01f0eec762ffbdad60a1c7f7c3",
+  "tools/sources.mjs": "ecc09a411126b95a5a531959e632dda5b686ac6c2f90ee300dc46581cc4963cb"
+}

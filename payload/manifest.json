@@ -188,7 +188,7 @@
     {
       "path": ".github/workflows/devos-cycle.yml",
       "stored": "dot-github/workflows/devos-cycle.yml",
-      "sha256": "b97e63a350c23524c0c2d1a3f9986dabc525715eb8da22bc08d819eedb78c780",
+      "sha256": "4c0892b7a54c04ebc1e1a343aa4502afbf280c36fe7a550925b9c41bf3015fbb",
       "owner": "engine"
     },
     {
@@ -206,7 +206,7 @@
     {
       "path": ".github/workflows/devos-intake.yml",
       "stored": "dot-github/workflows/devos-intake.yml",
-      "sha256": "e3c01bbaafa69182ed6a7b176c4fdaceb900f8aced3b43564a6673df712f5279",
+      "sha256": "1b64c633e2112fc9241d488c7fdaa964b65744c2ef9c84ae58b7daa2eb2d2449",
       "owner": "engine"
     },
     {
@@ -314,7 +314,7 @@
     {
       "path": "devos/prompts/revise.md",
       "stored": "devos/prompts/revise.md",
-      "sha256": "a23c7622f6bdf3d5ed0e1a4133ea5ed67c0d718faf60021be95aca8217f35b91",
+      "sha256": "7fd0b81de5a586abc559108cde15c3adf807cef2b9bb1bbc53fd3858fd8e7151",
       "owner": "engine"
     },
     {
@@ -1652,7 +1652,7 @@
     {
       "path": "docs/method/AUTOMATION.md",
       "stored": "docs/method/AUTOMATION.md",
-      "sha256": "f241772de526cea36451a7885412a4c84d62f7c6f41da06f3eebe73d8c2cc0fd",
+      "sha256": "f15f53b7aeff8431245d2ab0f12639b5dab2784b28d704564d7102b43cf39feb",
       "owner": "engine"
     },
     {
@@ -1676,7 +1676,7 @@
     {
       "path": "docs/method/PRECEDENTS.md",
       "stored": "docs/method/PRECEDENTS.md",
-      "sha256": "a36de9f6c82510256d5253512ac9b156eeb40718a3772afcff2d7805e77f0e5b",
+      "sha256": "dd48b0b7a0aa49a1656bb16787361d8ca50a42e73a23ed0fb6d87409dd41d257",
       "owner": "engine"
     },
     {
@@ -1688,7 +1688,7 @@
     {
       "path": "scripts/devos/accept.mjs",
       "stored": "scripts/devos/accept.mjs",
-      "sha256": "04b47df9c5082cf01d7f97156e91a0fdf8d052f0b6c6b8957ae50cbd18338ab4",
+      "sha256": "935005849eb9a2a38bd7a874c104cdfbf92f57f7041c3412f4c1837372716be5",
       "owner": "engine"
     },
     {
@@ -1782,6 +1782,12 @@
       "owner": "engine"
     },
     {
+      "path": "scripts/devos/intake-request.mjs",
+      "stored": "scripts/devos/intake-request.mjs",
+      "sha256": "6b7a92429570e943501339e9ede3a7a6b6daa1cd85b5e24968735ef265d89e26",
+      "owner": "engine"
+    },
+    {
       "path": "scripts/devos/lib.mjs",
       "stored": "scripts/devos/lib.mjs",
       "sha256": "15f80c0aebbbd6bbb8d4e522350e75f74abaefa60464f8e3b769ebe16a6f735f",
@@ -1838,7 +1844,7 @@
     {
       "path": "scripts/devos/next-task.mjs",
       "stored": "scripts/devos/next-task.mjs",
-      "sha256": "1d21328015682b155a6c37ac4fc2bee741bbfd38179ed818952beffe81149c2b",
+      "sha256": "931d51764ab3ee784c3ae27e9303b1d9652d81bad55a44b6961bd28d5d4da08b",
       "owner": "engine"
     },
     {
@@ -1862,7 +1868,7 @@
     {
       "path": "scripts/devos/publish-verify.mjs",
       "stored": "scripts/devos/publish-verify.mjs",
-      "sha256": "f8f8daf14fb32556ab0340c11eb9bcfb77bbc0f5b60eec3fe4ef901751898106",
+      "sha256": "2f829f89fc9d5844874072befc23a55843a2c9d0825a53cf62f4988f4a634488",
       "owner": "engine"
     },
     {
@@ -1880,7 +1886,7 @@
     {
       "path": "scripts/devos/render-prompt.mjs",
       "stored": "scripts/devos/render-prompt.mjs",
-      "sha256": "2d5c21037925757839bb01e6d6d39b914678e704204836a59679bb5f3800a73d",
+      "sha256": "a56dcf92c0cfb51784aa46bbdb08f0f79d05c8c75bcd0387ed93ce79b0fa1aba",
       "owner": "engine"
     },
     {
@@ -1898,7 +1904,7 @@
     {
       "path": "scripts/devos/review-mode.mjs",
       "stored": "scripts/devos/review-mode.mjs",
-      "sha256": "6452c1f53be9f0f560d14255aaf5f443411745c2fafa0c363ac8764320166e04",
+      "sha256": "c1805f8fb6b896b89e6372f649a00677637046082b069aaa8d49f744b847c64a",
       "owner": "engine"
     },
     {
@@ -1988,7 +1994,7 @@
     {
       "path": "scripts/devos/unit.mjs",
       "stored": "scripts/devos/unit.mjs",
-      "sha256": "00a9afd5c6fb5501036187f7428408ea6cf7afde08eb9bc073971239ce9d7d94",
+      "sha256": "460db3ebbe2532ebb2a76a7d4f242960712556917a4b52ee0e9730891ee51938",
       "owner": "engine"
     },
     {

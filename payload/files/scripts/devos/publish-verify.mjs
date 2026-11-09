@@ -23,6 +23,15 @@
 //   commit  --out <dir> --message <text> [--amend]               commits the runner's files (reviews, fences, PHASES, usage)
 //   sync    --out <dir> [--remote <url>]                         merges a base (main or the unit) that moved meanwhile
 //   push    --out <dir> [--remote <url>] [--to refs/heads/rescue/…]
+//   plan    --kind intake|revise --branch <intake/issue-N | task/Tnn | devos/unit-Tnn> --base main --base-sha <sha>
+//           --out <dir> --message <one line> [--bundle <file>] [--remote <url>] [--task Tnn] [--fresh true]
+//           [--method true]
+//           PR-92: a planning run's bundle (`/devos intake`, a method fix, `/devos revise`), checked like verify's (a)–(c),
+//           then against main's surface for it: an intake plan only within surfaces.intake.allow, adding rows to
+//           docs/PHASES.md without changing one or repeating a number (Phase PM only for a method fix); a revision only
+//           docs/fences/<task>.md, on the task's branch or, for the last task of a unit (/devos revise on its acceptance
+//           PR), on the unit's branch, where publish opens the task's row again. Accepted: the head, committed with
+//           --message on what the planner started from, in <out>/decide, and <out>/verify.json for commit and push.
 //
 // Every git command runs with no system or global configuration, hooks off and no fsmonitor, in a repository this
 // script created. DEVOS_GIT_TOKEN, when set, authenticates https://github.com through an environment header, never in
@@ -368,6 +377,200 @@ export function verify(a) {
   return result;
 }
 
+// ---------- a planning run's bundle (PR-92) --------------------------------------------------------------------------
+
+export function plan(a) {
+  const kind = String(a.kind ?? "");
+  const branch = String(a.branch ?? "");
+  const baseName = String(a.base ?? "main");
+  const baseSha = String(a["base-sha"] ?? "");
+  const task = String(a.task ?? "");
+  const message = String(a.message ?? "").trim();
+  const fresh = a.fresh === "true";
+  const method = a.method === "true";
+  // PR-92: /devos revise on a unit's acceptance PR revises the unit's last task on the unit's branch, and reopens its row.
+  const reopen = kind === "revise" && branch === `devos/unit-${task}`;
+  if (!["intake", "revise"].includes(kind)) die("--kind must be intake or revise", 2);
+  if (kind === "intake" && !/^intake\/issue-\d{1,7}$/.test(branch)) die("an intake plan's branch is intake/issue-N", 2);
+  if (kind === "revise" && (!/^T\d{2}$/.test(task) || (branch !== `task/${task}` && !reopen))) die("a revision's branch is task/<--task>, or devos/unit-<--task> for its unit", 2);
+  if (baseName !== "main") die("--base is main: a plan is made on main", 2);
+  if (kind === "intake" && !/^[0-9a-f]{40}$/.test(baseSha)) die("--base-sha must be a full commit id", 2);
+  if (kind === "intake" && (!message || message.length > 300 || /[\r\n]/.test(message))) die("--message must be one line of at most 300 characters", 2);
+  const out = path.resolve(String(a.out ?? ""));
+  const repo = path.join(out, "decide");
+  if (existsSync(repo)) die(`${repo} exists: plan needs a fresh workspace`, 2);
+  mkdirSync(out, { recursive: true });
+  const remote = remoteOf(a);
+  const reasons = [];
+  const reject = (why) => reasons.push(why);
+  const finish = (extra = {}) => {
+    const result = { ok: reasons.length === 0, reasons, kind, branch, base: baseName, main_sha: baseSha, task: task || null, ...extra };
+    writeState(out, result);
+    if (reasons.length) {
+      for (const r of reasons) console.log(`REJECTED: ${r}`);
+      console.log(`plan: rejected (${reasons.length} reason${reasons.length > 1 ? "s" : ""}); nothing is pushed`);
+      if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, `ok=false\nreasons=${reasons.join(" · ").replace(/\r?\n/g, " ").slice(0, 3000)}\n`);
+      process.exit(1);
+    }
+    return result;
+  };
+
+  g(["init", "-q", repo]);
+  for (const [k, v] of [["core.hooksPath", "/dev/null"], ["core.fsmonitor", "false"], ["gc.auto", "0"], ["user.name", "devos-runner"], ["user.email", "devos-runner@users.noreply.github.com"]]) {
+    g(["config", k, v], { cwd: repo });
+  }
+  if (kind === "intake") {
+    // The planner's job says which commit of the base it started from; it must be one of the base's own.
+    if (!g(["ls-remote", remote, `refs/heads/${baseName}`], { cwd: repo, auth: true }).stdout.trim()) die(`${baseName} is not on ${remote}`);
+    g(["fetch", "-q", "--no-tags", remote, `+refs/heads/${baseName}:refs/devos/base-latest`], { cwd: repo, auth: true });
+    if (!sha(repo, `${baseSha}^{commit}`) || !isAncestor(repo, baseSha, "refs/devos/base-latest")) die(`${baseSha} is not a commit of ${baseName}`);
+  }
+  let remoteHead = "";
+  if (g(["ls-remote", remote, `refs/heads/${branch}`], { cwd: repo, auth: true }).stdout.trim()) {
+    g(["fetch", "-q", "--no-tags", remote, `+refs/heads/${branch}:refs/devos/remote-branch`], { cwd: repo, auth: true });
+    remoteHead = sha(repo, "refs/devos/remote-branch");
+  }
+  if (kind === "revise" && !remoteHead) die(`${branch} is not on ${remote}`);
+
+  // (a) one ref, the branch.
+  const bundle = a.bundle ? path.resolve(String(a.bundle)) : "";
+  let head = "";
+  let bundleSha256 = "";
+  if (!bundle || !existsSync(bundle) || !lstatSync(bundle).isFile() || lstatSync(bundle).size > MAX_BUNDLE) reject("(a) the planning job handed over no bundle");
+  else {
+    bundleSha256 = createHash("sha256").update(readFileSync(bundle)).digest("hex");
+    const heads = g(["bundle", "list-heads", bundle], { cwd: repo, allowFail: true });
+    const refs = heads.stdout.split(/\r?\n/).filter(Boolean).map((l) => l.split(" "));
+    if (heads.status !== 0) reject("(a) the bundle cannot be read");
+    else if (refs.length !== 1 || refs[0][1] !== `refs/heads/${branch}`) reject(`(a) the bundle carries ${refs.map((r) => r[1]).join(", ") || "no ref"}; only refs/heads/${branch} is allowed`);
+    else if (g(["bundle", "verify", "-q", bundle], { cwd: repo, allowFail: true }).status !== 0) reject(`(a) the bundle needs commits that are on neither ${baseName} nor ${branch}`);
+    else {
+      const f = g(["-c", "fetch.fsckObjects=true", "fetch", "-q", "--no-tags", bundle, `refs/heads/${branch}:refs/devos/bundle`], { cwd: repo, allowFail: true });
+      if (f.status !== 0) reject(`(a) the bundle's objects fail git's checks: ${f.stderr.trim().split(/\r?\n/).pop()}`);
+      else head = sha(repo, "refs/devos/bundle");
+    }
+  }
+  if (reasons.length) return finish({ remote_head: remoteHead || null, bundle_sha256: bundleSha256 });
+
+  // (b) what the planner started from: the task branch (a revision), the base (a fresh plan), or the plan on GitHub with
+  // the base merged in (a resumed plan).
+  let from = baseSha;
+  if (kind === "revise") from = remoteHead;
+  else if (!fresh && remoteHead) {
+    if (isAncestor(repo, baseSha, remoteHead)) from = remoteHead;
+    else {
+      const m = g(["merge-tree", "--write-tree", "--no-messages", "--name-only", remoteHead, baseSha], { cwd: repo, allowFail: true });
+      if (m.status !== 0) { reject(`${branch} and ${baseName} conflict: plan afresh with \`/devos intake\``); return finish({ remote_head: remoteHead, bundle_sha256: bundleSha256 }); }
+      from = commitTree(repo, m.stdout.split(/\r?\n/)[0].trim(), [remoteHead, baseSha], `Merge ${baseName} into ${branch}`);
+    }
+  }
+  const anchor = kind === "revise" || (!fresh && remoteHead) ? remoteHead : baseSha;
+  if (!isAncestor(repo, anchor, head)) {
+    reject(`(b) the bundle's head ${head.slice(0, 12)} does not descend from ${anchor === remoteHead ? `${branch} on GitHub` : `${baseName} at the run's start`}`);
+    return finish({ remote_head: remoteHead || null, bundle_sha256: bundleSha256 });
+  }
+  const fromTree = sha(repo, `${from}^{tree}`);
+  const headTree = sha(repo, `${head}^{tree}`);
+  const entries = rawDiff(repo, fromTree, headTree);
+
+  // (c)–(e), against main's surfaces.
+  let cfg = {};
+  try { cfg = JSON.parse(trustedText("devos.config.json")); } catch { die("main's devos.config.json cannot be read"); }
+  const allow = cfg.surfaces?.intake?.allow ?? [];
+  const blobs = entries.filter((e) => e.status !== "D" && e.newMode !== "120000" && e.newMode !== "160000");
+  const sizes = new Map();
+  if (blobs.length) {
+    const lines = g(["cat-file", "--batch-check=%(objectname) %(objectsize)"], { cwd: repo, input: `${blobs.map((e) => e.newSha).join("\n")}\n` }).stdout.split(/\r?\n/);
+    for (const line of lines) { const [oid, size] = line.split(" "); if (oid) sizes.set(oid, Number(size)); }
+  }
+  const changed = [];
+  for (const e of entries) {
+    const p = e.path;
+    const n = q(p);
+    changed.push(p);
+    if (/[\x00-\x1f\x7f]/.test(p)) { reject(`(c) ${n}: a control character in the path`); continue; }
+    if (p.split("/").pop() === ".gitmodules") reject(`(c) ${n}: a .gitmodules file`);
+    if (e.status !== "D") {
+      if (e.newMode === "120000") reject(`(c) ${n}: a symbolic link`);
+      else if (e.newMode === "160000") reject(`(c) ${n}: a submodule`);
+      else if ((sizes.get(e.newSha) ?? 0) > MAX_FILE) reject(`(c) ${n}: ${sizes.get(e.newSha)} bytes, over the ${MAX_FILE}-byte cap`);
+    }
+    if (kind === "revise") { if (p !== `docs/fences/${task}.md`) reject(`(e) ${n}: a revision changes only docs/fences/${task}.md`); continue; }
+    if (!matchesAny(p, allow)) reject(`(e) ${n}: outside the intake surface (devos.config.json surfaces.intake.allow)`);
+  }
+  if (kind === "revise" && !changed.includes(`docs/fences/${task}.md`)) reject(`(e) the revision did not change docs/fences/${task}.md`);
+  // A plan adds rows to docs/PHASES.md; it never changes one, so no task is ticked, re-scoped or un-gated by planning.
+  if (kind === "intake" && changed.includes("docs/PHASES.md")) {
+    try {
+      const before = parsePhases(g(["show", `${from}:docs/PHASES.md`], { cwd: repo }).stdout).rows;
+      const after = parsePhases(g(["show", `${head}:docs/PHASES.md`], { cwd: repo }).stdout).rows;
+      const cells = (r) => [r.task, r.phase, r.station, r.name, r.risk, r.gate, r.doneRaw, r.verdict].join("|");
+      for (const r of before) {
+        const now = after.find((x) => x.task === r.task);
+        if (!now) reject(`(d) docs/PHASES.md: ${r.task}'s row is removed (a plan only adds rows)`);
+        else if (cells(now) !== cells(r)) reject(`(d) docs/PHASES.md: ${r.task}'s row is changed (a plan only adds rows)`);
+      }
+      const dup = [...new Set(after.map((r) => r.task).filter((t, i, all) => all.indexOf(t) !== i))];
+      if (dup.length) reject(`(d) docs/PHASES.md: ${dup.join(", ")} has more than one row`);
+      const added = after.filter((x) => !before.some((r) => r.task === x.task));
+      for (const r of added) {
+        if (r.done || !/^[—-]$/.test(r.verdict)) reject(`(d) docs/PHASES.md: the new row ${r.task} is ticked or has a verdict`);
+        if (method && !isMethodRow(r)) reject(`(d) docs/PHASES.md: a method fix adds Phase PM rows only, not ${r.task} (Phase ${r.phase})`);
+      }
+    } catch (e) { reject(`(d) docs/PHASES.md cannot be read: ${String(e.message).slice(0, 200)}`); }
+  }
+  if (reasons.length) return finish({ remote_head: remoteHead || null, bundle_sha256: bundleSha256, changed });
+
+  // Accepted: the planner's tree, committed by publish on what the planner started from. A revision's message names the
+  // next attempt, counted here from the branch (next-task.mjs reads that line to allow a human revision past the cap).
+  let attempt = null;
+  let text = message;
+  if (kind === "revise") {
+    const reviews = g(["ls-tree", "--name-only", `${remoteHead}:docs/reviews`], { cwd: repo, allowFail: true }).stdout.split(/\r?\n/);
+    const subjects = g(["log", "-300", "--format=%s", remoteHead], { cwd: repo }).stdout.split(/\r?\n/);
+    let last = 0;
+    for (const n of reviews) last = Math.max(last, Number(new RegExp(`^${task}-a(\\d+)\\.md$`).exec(n)?.[1] ?? 0));
+    for (const l of subjects) last = Math.max(last, Number(new RegExp(`^${task} a(\\d+):`).exec(l)?.[1] ?? 0));
+    attempt = last + 1;
+    text = `${task}: fence reissued for human revision (attempt ${attempt})`;
+  }
+  const commit = headTree === fromTree ? from : commitTree(repo, headTree, [from], text);
+  if (baseSha) g(["update-ref", `refs/remotes/origin/${baseName}`, baseSha], { cwd: repo });
+  g(["checkout", "-q", "-f", "-B", branch, commit], { cwd: repo });
+  for (const rel of OVERLAY) {
+    rmSync(path.join(repo, rel), { recursive: true, force: true });
+    if (existsSync(path.join(TRUSTED, rel))) cpSync(path.join(TRUSTED, rel), path.join(repo, rel), { recursive: true, verbatimSymlinks: true });
+  }
+  rmSync(path.join(repo, ".devos"), { recursive: true, force: true });
+  mkdirSync(path.join(repo, ".devos"), { recursive: true });
+  // PR-92: on a unit, the revised task's row is opened again (Done [ ], Verdict "REVISE aN — …"), so the cycle builds
+  // attempt N inside the unit; `commit --amend` takes it into publish's commit. Its earlier review stays as the record of
+  // what passed.
+  if (reopen) {
+    const file = path.join(repo, "docs", "PHASES.md");
+    const text = existsSync(file) ? readFileSync(file, "utf8") : "";
+    const parsed = (() => { try { return parsePhases(text); } catch { return null; } })();
+    const row = parsed?.rows.find((r) => r.task === task);
+    if (!row) die(`${task} is not in ${branch}'s docs/PHASES.md`);
+    // One revision at a time: an open row is being built again already (its task PR takes a further /devos revise).
+    if (!row.done) die(`${task} is already being revised on ${branch}: comment /devos revise on its task PR instead`);
+    // The row carries its attempt ("REVISE aN — …"), so any run of it builds that attempt, as a revision, reviewed deep.
+    const cells = parsed.lines[row.line].trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((c) => c.trim());
+    cells[6] = "[ ]";
+    cells[7] = `REVISE a${attempt} — your revision on the acceptance PR (PR-92)`;
+    parsed.lines[row.line] = `| ${cells.join(" | ")} |`;
+    writeFileSync(file, parsed.lines.join(text.includes("\r\n") ? "\r\n" : "\n"));
+  }
+  const lease = kind === "intake" && fresh && remoteHead ? remoteHead : null;
+  const result = finish({ remote_head: remoteHead || null, bundle_sha256: bundleSha256, head: commit, changed, lease, fresh, attempt, own: commit !== from });
+  console.log(`plan: OK · head ${commit} · ${changed.length} path(s) changed`);
+  for (const p of changed) console.log(`  ${q(p)}`);
+  // What the plan holds against its base: nothing means the planner accepted without writing a plan.
+  const planned = kind === "intake" ? rawDiff(repo, sha(repo, `${baseSha}^{tree}`), headTree).length : changed.length;
+  emit({ ok: "true", head: commit, bundle_sha256: bundleSha256, changed: String(changed.length), planned: String(planned), attempt: attempt ?? "", own: commit !== from ? "true" : "false" });
+  return result;
+}
+
 // ---------- the builder's outcome, bounded ------------------------------------------------------------------------
 
 /**
@@ -659,7 +862,9 @@ function push(a) {
   const to = a.to ? String(a.to) : `refs/heads/${s.branch}`;
   if (a.to && !/^refs\/heads\/rescue\/[A-Za-z0-9._/-]{1,200}$/.test(to)) die("--to must be refs/heads/rescue/…", 2);
   const remote = remoteOf(a);
-  const r = g(["push", "--porcelain", remote, `${s.head}:${to}`], { cwd: repo, auth: true, allowFail: true });
+  // PR-92: a fresh intake plan replaces the old plan on its branch, and only the one this run saw there.
+  const lease = !a.to && s.lease && /^[0-9a-f]{40}$/.test(String(s.lease)) && /^intake\/issue-\d+$/.test(String(s.branch)) ? [`--force-with-lease=${to}:${s.lease}`] : [];
+  const r = g(["push", "--porcelain", ...lease, remote, `${s.head}:${to}`], { cwd: repo, auth: true, allowFail: true });
   if (r.status !== 0) {
     const text = `${r.stdout}\n${r.stderr}`;
     console.log(text.trim().split(/\r?\n/).slice(-8).join("\n"));
@@ -687,7 +892,8 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     else if (command === "commit") commit(a);
     else if (command === "sync") sync(a);
     else if (command === "push") push(a);
-    else die("usage: publish-verify.mjs verify|state|checks|usage|review-tree|take-review|commit|sync|push …", 2);
+    else if (command === "plan") plan(a);
+    else die("usage: publish-verify.mjs verify|state|checks|usage|review-tree|take-review|commit|sync|push|plan …", 2);
   } catch (e) {
     die(e.message);
   }

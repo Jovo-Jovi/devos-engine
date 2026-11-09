@@ -1,0 +1,967 @@
+# Change requests and revisions from GitHub.
+#
+#   New work:  open an issue with the "Dev OS change request" form (label devos:request). The
+#              reviewer reads it with the repository and either opens an intake PR (draft OD, scope
+#              amendment, new task rows, first fence), asks up to three questions, or explains why it
+#              cannot be done. Comment "/devos intake" on the issue to run it again after answering.
+#              Merging the intake PR signs the OD, and devos-advance starts the new tasks.
+#
+#   Method fix (PR-28): open an issue with the "Dev OS method fix" form (label devos:method) when the
+#              automation itself misbehaves. The runner fetches the logs of the runs it links; the
+#              reviewer diagnoses the root cause and either opens an intake PR with the fix planned as a
+#              method task (Phase PM: the builder agent builds it, deep review, always your merge), asks for what is
+#              missing, or explains that the cause is a setting (devos-setup) or a product defect.
+#
+#   Revision:  comment "/devos revise <what to change>" on an open task PR (task/Tnn). The reviewer
+#              reissues that task's fence with your change as the next attempt's focus, and the
+#              cycle rebuilds and re-reviews it. On a unit's acceptance PR (devos:acceptance, PR-92) it
+#              revises the unit's last task the same way, on the unit's branch.
+#
+#   Go:        comment "/devos go" in the "Dev OS: run notices" issue to start a heavy task that
+#              DEVOS_HEAVY=hold is holding (PR-20).
+#
+#   Accept:    comment "/devos accept [note]" on a task PR (task/Tnn) that stopped without a PASS to accept it as it
+#              is (PR-87): its row is ticked with a record of your decision, on the PR's branch, or, after you merged
+#              it by hand, on a pull request of its own. Merging that PR starts the next task.
+#
+# Every planning run uses the project's reviewer agent, the one the developer chose (PR-53).
+# A planning run that hits a usage limit keeps its partial plan on intake/issue-N and resumes
+# by itself after the reset (PR-20); "/devos intake resume" continues it by hand.
+#
+# Only repository owners, members and collaborators can trigger any of these, and only an issue one of them opened is
+# planned (PR-92, audit M1).
+#
+# PR-92: the AI never shares a job with a write token. Each planning run is two jobs: the planner (the reviewer agent,
+# Claude Code, with only its own keys and a read-only token) writes the plan and hands it over as a git bundle; a
+# trusted job checks it out of main's code (publish-verify.mjs plan), against main's surfaces, and only then pushes it,
+# opens the pull request and posts devos/verdict. `/devos accept` runs main's accept.mjs over the task branch as data.
+name: devos-intake
+
+on:
+  issues:
+    types: [labeled]
+  issue_comment:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      issue:
+        description: "Change-request issue number to plan (used by the automatic resume)"
+        required: true
+      resume:
+        description: "Continue the partial plan already on intake/issue-N"
+        type: boolean
+        default: true
+
+# PR-92: each job says what it may do; the planners read only.
+permissions:
+  contents: read
+
+jobs:
+  # PR-92: the acknowledgement, from a job with no checkout and no AI (the planner's own job writes nothing to GitHub).
+  intake-ack:
+    if: >-
+      github.event_name != 'workflow_dispatch' && vars.DEVOS_PAUSED != 'true' &&
+      !github.event.issue.pull_request &&
+      (contains(github.event.issue.labels.*.name, 'devos:request') || contains(github.event.issue.labels.*.name, 'devos:method')) &&
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association) &&
+      (
+        (github.event_name == 'issues' && (github.event.label.name == 'devos:request' || github.event.label.name == 'devos:method')) ||
+        (github.event_name == 'issue_comment' && startsWith(github.event.comment.body, '/devos intake') &&
+          contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association))
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write
+    steps:
+      - name: Acknowledge
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          ISSUE: ${{ github.event.issue.number }}
+          RESUME: ${{ startsWith(github.event.comment.body, '/devos intake resume') }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          what="is reading this request"; [ "$RESUME" = "true" ] && what="is continuing the partial plan"
+          gh issue comment "$ISSUE" --repo "$REPO" --body "Dev OS: the reviewer $what. This is a heavy run (the reviewer agent at high effort): expect 20 to 40 minutes and a large part of a usage window. If a limit stops it, the partial plan is kept when it passes the checks, and it resumes by itself after the reset. Run: $RUN_URL"
+
+  # PR-92 (audit M1): your `/devos intake` on an issue someone outside the repository opened plans nothing.
+  intake-refuse:
+    if: >-
+      vars.DEVOS_PAUSED != 'true' && github.event_name == 'issue_comment' && !github.event.issue.pull_request &&
+      startsWith(github.event.comment.body, '/devos intake') &&
+      (contains(github.event.issue.labels.*.name, 'devos:request') || contains(github.event.issue.labels.*.name, 'devos:method')) &&
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association) &&
+      !contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write
+    steps:
+      - name: Say why nothing is planned
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          ISSUE: ${{ github.event.issue.number }}
+        run: |
+          gh issue comment "$ISSUE" --repo "$REPO" --body "Dev OS: plans are made only for issues opened by the repository's owners, members or collaborators; open the request from the form yourself."
+
+  # The planner (untrusted, PR-92): the reviewer agent with its shell, only its own keys and a token that reads. It
+  # writes the plan on intake/issue-N and hands it over as a git bundle with its decision; it pushes nothing.
+  intake:
+    if: >-
+      vars.DEVOS_PAUSED != 'true' && (
+        github.event_name == 'workflow_dispatch' || (
+          !github.event.issue.pull_request &&
+          (contains(github.event.issue.labels.*.name, 'devos:request') || contains(github.event.issue.labels.*.name, 'devos:method')) &&
+          contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association) &&
+          (
+            (github.event_name == 'issues' && (github.event.label.name == 'devos:request' || github.event.label.name == 'devos:method')) ||
+            (github.event_name == 'issue_comment' && startsWith(github.event.comment.body, '/devos intake') &&
+              contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association))
+          )
+        )
+      )
+    runs-on: ubuntu-latest
+    # A planning run reads the whole document set at high effort; the method's first one took
+    # 26 minutes. 90 leaves room for bigger requests (PR-20).
+    timeout-minutes: 90
+    concurrency:
+      group: devos-intake-${{ inputs.issue || github.event.issue.number }}
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
+      actions: read
+    outputs:
+      base_sha: ${{ steps.req.outputs.base_sha }}
+      resume: ${{ steps.req.outputs.resume }}
+      not_before: ${{ steps.pack.outputs.not_before }}
+    env:
+      ISSUE: ${{ inputs.issue || github.event.issue.number }}
+      REPO: ${{ github.repository }}
+      BR: intake/issue-${{ inputs.issue || github.event.issue.number }}
+      RESUME: ${{ (github.event_name == 'workflow_dispatch' && inputs.resume) || (github.event_name == 'issue_comment' && startsWith(github.event.comment.body, '/devos intake resume')) }}
+      # PR-63: a role's model from a repository variable (same tool); unset = the configured model.
+      DEVOS_REVIEWER_MODEL: ${{ vars.DEVOS_REVIEWER_MODEL }}
+      DEVOS_REVIEWER_LIGHT_MODEL: ${{ vars.DEVOS_REVIEWER_LIGHT_MODEL }}
+      DEVOS_BUILDER_MODEL: ${{ vars.DEVOS_BUILDER_MODEL }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      # D11: the planner is the reviewer agent, Claude Code, and this job is handed only its keys.
+      - name: The planner is Claude Code
+        run: |
+          tool=$(node scripts/devos/agents.mjs reviewer --mode deep | sed -n 's/^reviewer_tool=//p')
+          if [ "$tool" != "claude" ]; then
+            echo "::error title=Dev OS::The reviewer is $tool. Since PR-92 the planning runs, like the review, use Claude Code and only its keys: move the reviewer to Claude Code (devos models tool reviewer claude <model>), then run this again."
+            exit 1
+          fi
+          npm install -g @anthropic-ai/claude-code
+      - name: The request, as it stood at the event, and the plan's branch
+        id: req
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          EV_TITLE: ${{ github.event.issue.title }}
+          EV_BODY: ${{ github.event.issue.body }}
+          EV_AUTHOR_ASSOC: ${{ github.event.issue.author_association }}
+          EV_LABELS: ${{ toJSON(github.event.issue.labels.*.name) }}
+          EV_COMMENT: ${{ github.event.comment.body }}
+          EV_COMMENT_AT: ${{ github.event.comment.created_at }}
+          EV_COMMENT_ID: ${{ github.event.comment.id }}
+        run: |
+          node scripts/devos/intake-request.mjs --out .devos
+          MODE=$(node -e 'console.log(require("./.devos/request.json").mode)')
+          BASE=$(node -e 'console.log(require("./.devos/request.json").base)')
+          git config user.name "devos-runner"
+          git config user.email "devos-runner@users.noreply.github.com"
+          base_sha=$(git rev-parse "origin/$BASE")
+          if [ "$RESUME" = "true" ] && git rev-parse --verify --quiet "origin/$BR" >/dev/null; then
+            git checkout -B "$BR" "origin/$BR"
+            git merge --no-edit "$base_sha" || { git merge --abort; echo "::error::$BR conflicts with $BASE; comment /devos intake to plan afresh"; exit 1; }
+            echo "Continuing the partial plan on $BR."
+          else
+            git checkout -B "$BR" "$base_sha"
+            RESUME=false
+          fi
+          # PR-92: what runs in this job is main's. Its method files are laid over the plan branch's in the working tree
+          # (never staged or committed).
+          for p in .github scripts/devos scripts/guards devos devos.config.json CLAUDE.md CLAUDE.local.md .claude .cursor .mcp.json; do
+            rm -rf -- "$p"
+            if git cat-file -e "origin/main:$p" 2>/dev/null; then git archive origin/main -- "$p" | tar -x; fi
+          done
+          { echo "MODE=$MODE"; echo "BASE=$BASE"; echo "BASE_SHA=$base_sha"; echo "RESUME=$RESUME"; } >> "$GITHUB_ENV"
+          { echo "base_sha=$base_sha"; echo "resume=$RESUME"; } >> "$GITHUB_OUTPUT"
+          wc -l .devos/request.md
+          if [ "$MODE" = "method" ]; then
+            # PR-28: a method fix is diagnosed from the logs of the runs it links (read with this job's read token).
+            mkdir -p .devos/runlogs
+            for id in $(grep -oE 'actions/runs/[0-9]+' .devos/request.md | sed 's#.*/##' | sort -u | head -n 5); do
+              gh run view "$id" --repo "$REPO" --log-failed 2>/dev/null | tail -n 400 > ".devos/runlogs/$id.log" || true
+              gh run view "$id" --repo "$REPO" --json name,displayTitle,conclusion,event,headBranch,createdAt,url,jobs \
+                --jq '{name,displayTitle,conclusion,event,headBranch,createdAt,url,failed:[.jobs[]|select(.conclusion=="failure")|{name,steps:[.steps[]|select(.conclusion=="failure")|.name]}]}' \
+                > ".devos/runlogs/$id.json" 2>/dev/null || true
+              echo "run $id: $(wc -l < ".devos/runlogs/$id.log") log lines"
+            done
+            gh run list --repo "$REPO" --status failure --limit 10 \
+              --json databaseId,workflowName,displayTitle,headBranch,createdAt,url > .devos/runlogs/recent-failures.json || true
+          fi
+      - name: Reviewer — plan the request
+        env:
+          CLAUDE_OAUTH_1: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          CLAUDE_APIKEY_1: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_OAUTH_2: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 }}
+          CLAUDE_APIKEY_2: ${{ secrets.ANTHROPIC_API_KEY_2 }}
+          DEVOS_CLAUDE_ACCOUNT: ${{ vars.DEVOS_CLAUDE_ACCOUNT || '1' }}
+          DEVOS_ACCOUNT_SWITCH: ${{ vars.DEVOS_ACCOUNT_SWITCH || 'auto' }}
+          DEVOS_ISSUE: ${{ inputs.issue || github.event.issue.number }}
+        run: |
+          # A request marked "Small change" is planned at high effort, anything else at intake_effort (PR-20).
+          EFFORT=$(node -e '
+            const r = require("./devos.config.json").reviewer;
+            const small = /How big is it\?\s*\n+\s*Small change/i.test(require("fs").readFileSync(".devos/request.md", "utf8"));
+            console.log(small ? (r.intake_effort_small || "high") : (r.intake_effort || "xhigh"));')
+          if [ "$MODE" = "method" ]; then EFFORT=$(node -e 'console.log(require("./devos.config.json").reviewer.method_effort || "high")'); fi
+          echo "$MODE at effort $EFFORT (resume: $RESUME)"
+          DEVOS_INTAKE_RESUME="$RESUME" node scripts/devos/render-prompt.mjs "$MODE" - - --out .devos/intake-prompt.md
+          DEVOS_INTAKE_RESUME=true node scripts/devos/render-prompt.mjs "$MODE" - - --out .devos/intake-resume-prompt.md
+          # PR-29, PR-53: on a usage limit the planning continues at once on the other Claude account, from the partial
+          # plan the first run left in the tree (rendered as a resume).
+          TASK="intake-$ISSUE" bash scripts/devos/plan-agent.sh intake .devos/intake-prompt.md devos/schemas/intake.schema.json \
+            .devos/intake.json "$EFFORT" 120 .devos/intake-resume-prompt.md
+      - name: Guards — intake surface and ledger structure (advisory; publish decides)
+        continue-on-error: true
+        run: |
+          node scripts/devos/guard-surfaces.mjs intake
+          node scripts/guards/run-all.mjs --only phases,secrets
+      # The plan as a bundle of intake/issue-N (one ref), the planner's decision (its claim) and its usage lines; no raw
+      # agent stream (D9).
+      - name: Pack the plan
+        id: pack
+        if: always() && steps.req.outcome == 'success'
+        run: |
+          mkdir -p "$RUNNER_TEMP/planned"
+          git add -A -- docs
+          # Always one commit, empty when the planner wrote nothing: publish decides from what the plan holds (PR-92).
+          git commit -q --allow-empty -m "Intake #$ISSUE: the planner's work"
+          excl=("^$BASE_SHA"); git rev-parse --verify --quiet "origin/$BR" >/dev/null && excl+=("^origin/$BR")
+          git bundle create "$RUNNER_TEMP/planned/plan.bundle" "refs/heads/$BR" "${excl[@]}" || echo "no plan to hand over"
+          node -e '
+            const fs = require("fs"); let r = {};
+            const read = (f) => { try { return fs.readFileSync(f, "utf8"); } catch { return ""; } };
+            try { r = JSON.parse(read(".devos/intake.json")); } catch {}
+            const s = r.structured_output || {};
+            const limited = Boolean(r.limited) || (!s.decision && /usage limit|limit reached|hit your|rate.?limit|overloaded/i.test(read(".devos/intake.raw").slice(-4000) + read(".devos/intake.err").slice(-4000)));
+            fs.writeFileSync(process.env.RUNNER_TEMP + "/planned/decision.json", JSON.stringify({ decision: s.decision || (limited ? "limit" : "error"), summary: s.summary || "", questions: s.questions || [], tasks: s.tasks || [], od: s.od || "", tool: r.tool || "claude", duration_ms: r.duration_ms ?? null, num_turns: r.num_turns ?? null, usage: r.usage || {} }));'
+          if [ "$(node -e 'console.log(require(process.env.RUNNER_TEMP + "/planned/decision.json").decision)')" = "limit" ]; then
+            # Only a reset time the limit states is handed over; with none, publish backs off (PR-31).
+            NB=$(node --input-type=module -e '
+              import { earliestNotBefore, parseResetTime, readText } from "./scripts/devos/limits.mjs";
+              const text = readText(".devos/intake.raw") + "\n" + readText(".devos/intake.err");
+              console.log(parseResetTime(text, new Date()) ? earliestNotBefore("claude", text, 60) : "");')
+            echo "not_before=$NB" >> "$GITHUB_OUTPUT"
+          fi
+          if [ -f .devos/usage/pending.jsonl ]; then cp .devos/usage/pending.jsonl "$RUNNER_TEMP/planned/usage.jsonl"; fi
+      - name: Hand the plan over
+        if: always() && steps.pack.outcome == 'success'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: devos-intake-${{ inputs.issue || github.event.issue.number }}-plan
+          path: ${{ runner.temp }}/planned/
+          retention-days: 7
+          if-no-files-found: warn
+
+  # The trusted half (PR-92): main's code only (trusted/), GitHub's own actions pinned by commit, no AI and no branch code.
+  # It decides where the plan goes from its own reading of the event, checks the bundle against main's surfaces, and only
+  # then pushes it, opens the pull request (it always waits for your merge) and posts devos/verdict.
+  intake-publish:
+    needs: intake
+    if: always() && needs.intake.result != 'skipped' && needs.intake.result != 'cancelled'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      statuses: write
+      actions: read
+    outputs:
+      not_before: ${{ steps.act.outputs.not_before }}
+      issue: ${{ inputs.issue || github.event.issue.number }}
+    env:
+      ISSUE: ${{ inputs.issue || github.event.issue.number }}
+      REPO: ${{ github.repository }}
+      BR: intake/issue-${{ inputs.issue || github.event.issue.number }}
+      T: ${{ github.workspace }}/trusted/scripts/devos
+      OUT: ${{ github.workspace }}/publish
+      D: ${{ github.workspace }}/publish/decide
+      W: ${{ github.workspace }}/plan-out
+    steps:
+      - name: Check out main (the publish job's only checkout)
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ github.sha }}
+          path: trusted
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: The request and where its plan goes, from main's code
+        id: req
+        working-directory: ${{ github.workspace }}/trusted
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          EV_TITLE: ${{ github.event.issue.title }}
+          EV_BODY: ${{ github.event.issue.body }}
+          EV_AUTHOR_ASSOC: ${{ github.event.issue.author_association }}
+          EV_LABELS: ${{ toJSON(github.event.issue.labels.*.name) }}
+          EV_COMMENT: ${{ github.event.comment.body }}
+          EV_COMMENT_AT: ${{ github.event.comment.created_at }}
+          EV_COMMENT_ID: ${{ github.event.comment.id }}
+        run: node "$T/intake-request.mjs" --out "$RUNNER_TEMP/req"
+      # A request main's code refuses (no plan for it) is answered here, in one sentence of main's own words.
+      - name: Say why nothing is planned
+        if: always() && steps.req.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WHY: ${{ steps.req.outputs.refused }}
+        run: |
+          gh api "repos/$REPO/issues/$ISSUE/comments" -f body="Dev OS: nothing is planned: ${WHY:-the request could not be read}." >/dev/null
+      - name: The planner's bundle and decision
+        continue-on-error: true
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: devos-intake-${{ inputs.issue || github.event.issue.number }}-plan
+          path: ${{ github.workspace }}/plan-out
+      - name: Verify the plan (main's surfaces, publish's own diff)
+        id: vp
+        if: steps.req.outcome == 'success'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEVOS_GIT_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.run_id }}
+          BASE_SHA: ${{ needs.intake.outputs.base_sha }}
+          RESUMED: ${{ needs.intake.outputs.resume }}
+          MODE: ${{ steps.req.outputs.mode }}
+          BASE: ${{ steps.req.outputs.base }}
+          TITLE: ${{ steps.req.outputs.title }}
+        run: |
+          name="devos-intake-$ISSUE-plan"
+          count=$(gh api "repos/$REPO/actions/runs/$RUN_ID/artifacts?name=$name" --jq '.total_count' 2>/dev/null || echo "unknown")
+          if [ "$count" != "1" ]; then
+            echo "why=$count artifacts named $name in this run" >> "$GITHUB_OUTPUT"
+            echo "::error title=Dev OS::$count artifacts named $name in this run; nothing is pushed"; exit 1
+          fi
+          if [ ! -f "$W/plan.bundle" ]; then echo "has_plan=false" >> "$GITHUB_OUTPUT"; echo "The planner handed over no plan."; exit 0; fi
+          echo "has_plan=true" >> "$GITHUB_OUTPUT"
+          case "$MODE" in
+            method) msg="Method fix #$ISSUE: plan the fix ($TITLE)"; extra=(--method true) ;;
+            *) msg="Intake #$ISSUE: plan the request ($TITLE)"; extra=() ;;
+          esac
+          fresh=true; [ "$RESUMED" = "true" ] && fresh=false
+          set +e
+          node "$T/publish-verify.mjs" plan --kind intake --branch "$BR" --base "$BASE" --base-sha "$BASE_SHA" --out "$OUT" \
+            --bundle "$W/plan.bundle" --message "$msg" --fresh "$fresh" "${extra[@]}" > "$RUNNER_TEMP/plan.log" 2>&1
+          rc=$?
+          set -e
+          cat "$RUNNER_TEMP/plan.log"
+          if [ "$rc" != "0" ]; then
+            why=$(sed -n 's/^REJECTED: //p' "$RUNNER_TEMP/plan.log" | head -8 | paste -sd ';' -)
+            [ -n "$why" ] || why=$(grep -v '^[[:space:]]*$' "$RUNNER_TEMP/plan.log" | tail -2 | paste -sd ' ' -)
+            printf 'why=%s\n' "${why:0:1500}" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+          # Main's guards over the plan (their copies in the workspace are main's, laid over it by publish-verify).
+          set +e
+          node "$D/scripts/guards/run-all.mjs" --only phases,secrets > "$RUNNER_TEMP/guards.log" 2>&1
+          rc=$?
+          set -e
+          cat "$RUNNER_TEMP/guards.log"
+          if [ "$rc" != "0" ]; then
+            why=$(grep -E 'FAIL' "$RUNNER_TEMP/guards.log" | head -5 | paste -sd ';' -)
+            printf 'why=%s\n' "main's guards fail over the plan: ${why:0:1500}" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+      - name: Act on the decision
+        id: act
+        if: always() && steps.req.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ secrets.DEVOS_PAT || github.token }}
+          DEVOS_GIT_TOKEN: ${{ secrets.DEVOS_PAT || github.token }}
+          DEVOS_ROOT: ${{ github.workspace }}/publish/decide
+          VERIFIED: ${{ steps.vp.outcome }}
+          HAS_PLAN: ${{ steps.vp.outputs.has_plan }}
+          PLANNED: ${{ steps.vp.outputs.planned }}
+          REASONS: ${{ steps.vp.outputs.why }}
+          NB_CLAIM: ${{ needs.intake.outputs.not_before }}
+          MODE: ${{ steps.req.outputs.mode }}
+          BASE: ${{ steps.req.outputs.base }}
+          TITLE: ${{ steps.req.outputs.title }}
+          SCRUB_PAT: ${{ secrets.DEVOS_PAT }}
+          SCRUB_TOKEN: ${{ github.token }}
+          SCRUB_C1: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          SCRUB_C2: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 }}
+          SCRUB_A1: ${{ secrets.ANTHROPIC_API_KEY }}
+          SCRUB_A2: ${{ secrets.ANTHROPIC_API_KEY_2 }}
+        run: |
+          [ -f "$W/decision.json" ] || echo '{"decision":"error"}' > "$W/decision.json"
+          node "$T/scrub.mjs" --names SCRUB_PAT,SCRUB_TOKEN,SCRUB_C1,SCRUB_C2,SCRUB_A1,SCRUB_A2 "$W/decision.json"
+          say() { node "$T/scrub.mjs" --names SCRUB_PAT,SCRUB_TOKEN,SCRUB_C1,SCRUB_C2,SCRUB_A1,SCRUB_A2 "$RUNNER_TEMP/comment.md"; }
+          write() {
+            node -e '
+              const fs = require("fs");
+              let s = {}; try { s = JSON.parse(fs.readFileSync(process.env.W + "/decision.json", "utf8")); } catch {}
+              const one = (t) => String(t ?? "").slice(0, 4000);
+              let d = process.argv[1] || String(s.decision || "error");
+              if (!["accept", "needs-info", "reject", "limit", "error", "rejected", "empty", "unpushed"].includes(d)) d = "error";
+              const verified = process.env.VERIFIED === "success" && process.env.HAS_PLAN === "true";
+              // The planner says what it decided; only a plan publish verified, and that changes something, is pushed (PR-92).
+              if (d === "accept" && !verified) d = process.env.HAS_PLAN === "true" ? "rejected" : "error";
+              if (d === "accept" && process.env.PLANNED === "0") d = "empty";
+              const mins = s.duration_ms ? Math.round(s.duration_ms / 60000) : null;
+              const u = s.usage || {};
+              const k = (n) => n ? `${Math.round(n / 1000)}k` : "0";
+              const stats = mins !== null ? `\n\n<sub>Planning run: ${mins} min, ${s.num_turns ?? "?"} turns, ${k((u.input_tokens || 0) + (u.cache_read_input_tokens || 0) + (u.cache_creation_input_tokens || 0))} tokens read, ${k(u.output_tokens)} written.</sub>` : "";
+              const tasks = (Array.isArray(s.tasks) ? s.tasks : []).map((t) => String(t).replace(/[^A-Za-z0-9-]/g, "")).join(", ");
+              const q = (Array.isArray(s.questions) ? s.questions : []).map((x, i) => `${i + 1}. ${one(x)}`).join("\n");
+              const why = process.env.REASONS ? ` (${one(process.env.REASONS)})` : "";
+              fs.writeFileSync(process.env.RUNNER_TEMP + "/decision", d);
+              fs.writeFileSync(process.env.RUNNER_TEMP + "/comment.md", "<!-- devos-comment -->\n" + (
+                d === "accept" && process.env.MODE === "method" ? `**Diagnosed; the fix is planned.** ${one(s.summary)}\n\nThe diagnosis (\`docs/requests/issue-${process.env.ISSUE}.md\`) and method task ${tasks} are in the intake PR. Merging it starts the fix: the builder agent builds it, the reviewer checks every changed line, and the fix waits for your merge before anything changes in the automation.`
+                : d === "accept" ? `**Accepted.** ${one(s.summary)}\n\nDraft ${one(s.od) || "OD"} and tasks ${tasks} are in the intake PR. Merging it signs the decision and starts the work.`
+                : d === "needs-info" ? `**Needs your answers before planning.** ${one(s.summary)}\n\n${q}\n\nAnswer in a comment, then comment \`/devos intake\` to run it again.`
+                : d === "reject" ? `**Cannot be done as asked.** ${one(s.summary)}`
+                : d === "limit" ? `The reviewer agent hit a usage limit while planning this. ${process.env.KEPT === "true" ? "The partial plan is kept on the intake branch" : `No partial plan is kept${why}`}, and the planning resumes by itself after the reset (time below). Remove the \`devos:quota-wait\` label to cancel that.`
+                : d === "rejected" ? `**The plan was not pushed:** ${one(process.env.REASONS) || "it did not pass the checks of publish"} (PR-92). Comment \`/devos intake\` to plan it afresh.`
+                : d === "empty" ? `**The planner accepted the request but wrote no plan,** so there is nothing to merge. ${one(s.summary)} Comment \`/devos intake\` to plan it afresh.`
+                : d === "unpushed" ? "**The plan passed the checks but could not be pushed** to its branch (it moved meanwhile, or the token cannot push: see the run). Comment `/devos intake` to plan it afresh."
+                : `The reviewer run stopped without a decision. ${process.env.KEPT === "true" ? "Its partial plan is kept on the intake branch: comment `/devos intake resume` to continue it, or `/devos intake` to plan afresh." : `No partial plan is kept${why}: comment \`/devos intake\` to plan it afresh.`}`) + stats);' "$1"
+          }
+          export KEPT=false
+          write ""
+          DEC=$(cat "$RUNNER_TEMP/decision")
+          verified=false; [ "$VERIFIED" = "success" ] && [ "$HAS_PLAN" = "true" ] && verified=true
+          mine='[.[] | select(.isCrossRepository | not)][0]'
+          open_pr=$(gh pr list --repo "$REPO" --head "$BR" --state open --json number,isCrossRepository --jq "$mine.number // empty")
+          # A verified plan goes on intake/issue-N: the whole plan when accepted, a partial one (kept for a resume) when the
+          # planner stopped and it holds something; with its usage lines (PR-52).
+          pushed=false
+          if [ "$verified" = "true" ] && { [ "$DEC" = "accept" ] || { { [ "$DEC" = "limit" ] || [ "$DEC" = "error" ]; } && [ -z "$open_pr" ] && [ "$PLANNED" != "0" ]; }; }; then
+            if [ "$(node -e 'console.log(require(process.argv[1]).own)' "$OUT/verify.json")" = "true" ]; then
+              if [ -f "$W/usage.jsonl" ]; then node "$T/publish-verify.mjs" usage --in "$W/usage.jsonl" --dest "$D/.devos/usage/pending.jsonl"; fi
+              node "$T/usage.mjs" flush --task "intake-$ISSUE"
+              node "$T/publish-verify.mjs" commit --out "$OUT" --amend
+            fi
+            if node "$T/publish-verify.mjs" push --out "$OUT"; then
+              pushed=true
+              if [ "$DEC" != "accept" ]; then KEPT=true; write "$DEC"; fi
+            elif [ "$DEC" = "accept" ]; then write unpushed; DEC=unpushed
+            fi
+          fi
+          if [ "$DEC" = "limit" ]; then
+            # PR-31: the earlier wait comment is updated, not repeated, and a limit that states no reset time is retried
+            # later each time (60, 120, 240 … minutes, capped). The planner's reset time is a claim, held to seven days.
+            prev=$(gh api "repos/$REPO/issues/$ISSUE/comments?per_page=100" \
+              --jq '[.[] | select(.body | contains("<!-- devos-intake-resume issue='"$ISSUE"' "))] | last | "\(.id) \(.body)"' 2>/dev/null || echo "")
+            CHECKS=$( { echo "$prev" | grep -oE 'checks=[0-9]+' || true; } | tail -1 | cut -d= -f2); CHECKS=$(( ${CHECKS:-0} + 1 ))
+            NB=$(NB_CLAIM="$NB_CLAIM" CHECKS="$CHECKS" node -e '
+              const r = JSON.parse(require("fs").readFileSync(process.env.T + "/../../devos.config.json", "utf8")).resume ?? {};
+              const base = r.default_wait_minutes ?? 60, cap = r.max_backoff_minutes ?? 360;
+              const backoff = Math.min(base * 2 ** (Number(process.env.CHECKS) - 1), cap);
+              const now = Date.now(), t = Date.parse(process.env.NB_CLAIM || "");
+              // The planner hands over only a reset time the limit stated; held between now and seven days.
+              const stated = Number.isFinite(t) && t > now - 60e3 && t <= now + 7 * 864e5;
+              console.log(new Date(stated ? t : now + backoff * 60e3).toISOString().replace(/\.\d{3}Z$/, "Z"));')
+            echo "not_before=$NB" >> "$GITHUB_OUTPUT"
+            gh label create "devos:quota-wait" --color fbca04 --force --repo "$REPO" >/dev/null
+            gh issue edit "$ISSUE" --repo "$REPO" --add-label "devos:quota-wait"
+            printf '\n\nResumes after %s (UTC). Checked %s time(s) so far; last check %s (UTC).\n<!-- devos-intake-resume issue=%s not_before=%s checks=%s -->\n' \
+              "$NB" "$CHECKS" "$(date -u +%Y-%m-%dT%H:%MZ)" "$ISSUE" "$NB" "$CHECKS" >> "$RUNNER_TEMP/comment.md"
+          fi
+          if [ "$DEC" = "accept" ] && [ "$pushed" = "true" ]; then
+            head=$(node -e 'console.log(require(process.argv[1]).head)' "$OUT/verify.json")
+            gh label create "devos:intake" --color 1d76db --force --repo "$REPO" >/dev/null
+            gh label create "devos" --color 0e8a16 --force --repo "$REPO" >/dev/null
+            if [ -z "$open_pr" ]; then
+              # A PR GitHub refuses to open is said in the comment below ("not opened"), never a silent end.
+              if [ "$MODE" = "method" ]; then
+                gh label create "devos:method" --color 5319e7 --force --repo "$REPO" >/dev/null
+                gh pr create --repo "$REPO" --base main --head "$BR" --title "Method fix #$ISSUE: $TITLE" \
+                  --body-file "$RUNNER_TEMP/comment.md" --label devos --label "devos:intake" --label "devos:method" || true
+              else
+                gh pr create --repo "$REPO" --base main --head "$BR" --title "Intake #$ISSUE: $TITLE" \
+                  --body-file "$RUNNER_TEMP/comment.md" --label devos --label "devos:intake" || true
+              fi
+            fi
+            gh api "repos/$REPO/statuses/$head" -f state=success -f context=devos/verdict \
+              -f description="Intake plan: merging it is your decision" >/dev/null || true
+            url=$(gh pr list --repo "$REPO" --head "$BR" --state open --json url,isCrossRepository --jq "$mine.url // empty")
+            printf '\nPull request: %s\n' "${url:-not opened: see the run}" >> "$RUNNER_TEMP/comment.md"
+          fi
+          say
+          prev_id=$(gh api "repos/$REPO/issues/$ISSUE/comments?per_page=100" \
+            --jq '[.[] | select(.body | contains("<!-- devos-intake-resume issue='"$ISSUE"' "))] | last | .id // empty' 2>/dev/null || true)
+          if [ "$DEC" = "limit" ] && [ -n "$prev_id" ]; then
+            gh api -X PATCH "repos/$REPO/issues/comments/$prev_id" -F body=@"$RUNNER_TEMP/comment.md" > /dev/null
+          else
+            gh api "repos/$REPO/issues/$ISSUE/comments" -F body=@"$RUNNER_TEMP/comment.md" > /dev/null
+          fi
+
+  # PR-20: a planning run stopped by a usage limit resumes by itself after the reset (up to
+  # resume.inline_wait_max_minutes; longer waits are picked up by devos-resume). Remove the
+  # devos:quota-wait label from the issue to cancel.
+  intake-wait:
+    needs: [intake, intake-publish]
+    if: always() && needs.intake-publish.outputs.not_before != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 345
+    permissions:
+      actions: write
+      issues: write
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+          sparse-checkout: devos.config.json
+      - name: Sleep until the limit resets, then resume the planning
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          ISSUE: ${{ needs.intake-publish.outputs.issue }}
+          NOT_BEFORE: ${{ needs.intake-publish.outputs.not_before }}
+          IS_PRIVATE: ${{ github.event.repository.private }}
+        run: |
+          max_min=$(node -e 'console.log(require("./devos.config.json").resume?.inline_wait_max_minutes ?? 330)')
+          now=$(date -u +%s)
+          target=$(date -u -d "$NOT_BEFORE" +%s 2>/dev/null || echo $((now + 3600)))
+          wait=$(( target - now ))
+          if [ "$wait" -gt $(( max_min * 60 )) ]; then
+            # PR-31: a long wait is relayed by devos-wait (GitHub's schedule is best effort). On a private
+            # repository sleeping costs runner minutes, so resume.relay decides.
+            relay=$(node -e 'console.log(require("./devos.config.json").resume?.relay ?? "public")')
+            if [ "$relay" = "always" ] || { [ "$relay" = "public" ] && [ "$IS_PRIVATE" != "true" ]; }; then
+              gh workflow run devos-wait.yml --repo "$REPO" --ref main -f kind=intake -f not_before="$NOT_BEFORE" -f issue="$ISSUE"
+              echo "::notice title=Dev OS::Issue #$ISSUE resets at $NOT_BEFORE; devos-wait keeps waiting and resumes it then."
+            else
+              echo "::notice title=Dev OS::Issue #$ISSUE resets at $NOT_BEFORE; devos-resume (scheduled, best effort) picks it up, or run devos-resume by hand after that time."
+            fi
+            exit 0
+          fi
+          if [ "$wait" -gt 0 ]; then echo "Waiting $(( wait / 60 )) minutes, until $NOT_BEFORE (UTC)."; sleep "$wait"; fi
+          labels=$(gh issue view "$ISSUE" --repo "$REPO" --json labels --jq '[.labels[].name] | join(",")')
+          case ",$labels," in *",devos:quota-wait,"*) ;; *) echo "Label removed; not resuming."; exit 0 ;; esac
+          gh issue edit "$ISSUE" --repo "$REPO" --remove-label "devos:quota-wait" || echo "::warning title=Dev OS::GitHub did not remove the devos:quota-wait label; the run starts anyway (PR-76)."
+          gh workflow run devos-intake.yml --repo "$REPO" --ref main -f issue="$ISSUE" -f resume=true
+          echo "::notice title=Dev OS::Resumed the planning of issue #$ISSUE."
+
+  # PR-20: "/devos go" in the run-notices issue starts the heavy task DEVOS_HEAVY=hold is holding.
+  go:
+    if: >-
+      vars.DEVOS_PAUSED != 'true' && github.event_name == 'issue_comment' && !github.event.issue.pull_request &&
+      startsWith(github.event.comment.body, '/devos go') &&
+      contains(github.event.issue.labels.*.name, 'devos:notices') &&
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      issues: write
+    steps:
+      - name: Start the held task
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          ISSUE: ${{ github.event.issue.number }}
+        run: |
+          last=$(gh issue view "$ISSUE" --repo "$REPO" --json comments \
+            --jq '[.comments[].body | select(test("<!-- devos-held(-done)? "))] | last // ""')
+          marker=$(printf '%s' "$last" | grep -o 'devos-held task=T[0-9]* attempt=[0-9]*' | tail -1 || true)
+          if [ -z "$marker" ]; then
+            gh issue comment "$ISSUE" --repo "$REPO" --body "Dev OS: nothing is held right now."
+            exit 0
+          fi
+          task=$(echo "$marker" | sed 's/.*task=\(T[0-9]*\).*/\1/')
+          attempt=$(echo "$marker" | sed 's/.*attempt=\([0-9]*\).*/\1/')
+          gh workflow run devos-cycle.yml --repo "$REPO" --ref main -f task="$task" -f attempt="$attempt" -f go=true
+          gh issue comment "$ISSUE" --repo "$REPO" --body "Dev OS: starting $task attempt $attempt now.
+          <!-- devos-held-done task=$task -->"
+
+  # `/devos revise` on a task PR (PR-92): a trusted job finds the task and says it started; the planner reissues the
+  # fence with a token that reads and only Claude's keys; a trusted job checks that only that fence changed, commits it
+  # under its own message, pushes it and starts the build.
+  revise-prep:
+    if: >-
+      vars.DEVOS_PAUSED != 'true' && github.event_name == 'issue_comment' && github.event.issue.pull_request &&
+      startsWith(github.event.comment.body, '/devos revise') &&
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pull-requests: write
+      contents: read
+    outputs:
+      branch: ${{ steps.pr.outputs.branch }}
+      task: ${{ steps.pr.outputs.task }}
+      unit: ${{ steps.pr.outputs.unit }}
+    env:
+      PR: ${{ github.event.issue.number }}
+      REPO: ${{ github.repository }}
+    steps:
+      - name: Find the task and its branch
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ACCEPTANCE: ${{ contains(github.event.issue.labels.*.name, 'devos:acceptance') }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          read -r ref state into same < <(gh pr view "$PR" --repo "$REPO" --json headRefName,state,baseRefName,isCrossRepository --jq '"\(.headRefName) \(.state) \(.baseRefName) \(.isCrossRepository | not)"')
+          unit=""
+          case "$ref" in
+            task/T[0-9][0-9]) task="${ref#task/}" ;;
+            # PR-92: a unit's acceptance PR: the revision is of the unit's last task, built again on the unit's branch.
+            devos/unit-T[0-9][0-9])
+              if [ "$ACCEPTANCE" != "true" ] || [ "$into" != "main" ]; then
+                gh pr comment "$PR" --repo "$REPO" --body "Dev OS: \`/devos revise\` works on a unit's acceptance PR (devos:acceptance, into main) only."; exit 1
+              fi
+              task="${ref#devos/unit-}"; unit="$ref"
+              # One revision at a time: a last task whose row is open on the unit is being built again already.
+              if ! gh api "repos/$REPO/contents/docs/PHASES.md?ref=$ref" -H "Accept: application/vnd.github.raw" | grep -qE "^\| $task \|.*\| \[x\] \|"; then
+                gh pr comment "$PR" --repo "$REPO" --body "Dev OS: $task is already being revised on $ref: comment \`/devos revise\` on its task PR instead, or wait until it passes."; exit 1
+              fi ;;
+            *) gh pr comment "$PR" --repo "$REPO" --body "Dev OS: \`/devos revise\` works on task PRs (task/Tnn) and on a unit's acceptance PR only."; exit 1 ;;
+          esac
+          [ "$same" = "true" ] || { gh pr comment "$PR" --repo "$REPO" --body "Dev OS: \`/devos revise\` works on this repository's own branches only."; exit 1; }
+          [ "$state" = "OPEN" ] || { gh pr comment "$PR" --repo "$REPO" --body "Dev OS: this PR is $state; file a change request issue instead."; exit 1; }
+          { echo "branch=$ref"; echo "task=$task"; echo "unit=$unit"; } >> "$GITHUB_OUTPUT"
+          if [ -n "$unit" ]; then
+            gh pr comment "$PR" --repo "$REPO" --body "Dev OS: revising $task, the last task of $unit, with your note: its fence is reissued with your change and it is built again inside the unit. Run: $RUN_URL"
+          else
+            gh pr comment "$PR" --repo "$REPO" --body "Dev OS: revising $task with your note. Run: $RUN_URL"
+          fi
+
+  revise:
+    needs: revise-prep
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    # PR-92: not in the cycle's concurrency group (a job waiting there is cancelled by the next cycle run, silently). A
+    # cycle run that moves the branch meanwhile makes publish reject the fence, and the PR is told.
+    permissions:
+      contents: read
+    env:
+      PR: ${{ github.event.issue.number }}
+      REPO: ${{ github.repository }}
+      TASK: ${{ needs.revise-prep.outputs.task }}
+      BR: ${{ needs.revise-prep.outputs.branch }}
+      DEVOS_REVISE_UNIT: ${{ needs.revise-prep.outputs.unit }}
+      # PR-63: a role's model from a repository variable (same tool); unset = the configured model.
+      DEVOS_REVIEWER_MODEL: ${{ vars.DEVOS_REVIEWER_MODEL }}
+      DEVOS_REVIEWER_LIGHT_MODEL: ${{ vars.DEVOS_REVIEWER_LIGHT_MODEL }}
+      DEVOS_BUILDER_MODEL: ${{ vars.DEVOS_BUILDER_MODEL }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ needs.revise-prep.outputs.branch }}
+          fetch-depth: 0
+          persist-credentials: false
+      # PR-92: what runs in this job is main's, never the branch's (a method fix's branch holds the builder's scripts):
+      # main's method files are laid over the branch in the working tree before anything runs, never staged or committed.
+      - name: Main's method files over the branch
+        run: |
+          echo "REMOTE_HEAD=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          for p in .github scripts/devos scripts/guards devos devos.config.json CLAUDE.md CLAUDE.local.md .claude .cursor .mcp.json; do
+            rm -rf -- "$p"
+            if git cat-file -e "origin/main:$p" 2>/dev/null; then git archive origin/main -- "$p" | tar -x; fi
+          done
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      # D11: the planner is the reviewer agent, Claude Code, and this job is handed only its keys.
+      - name: The planner is Claude Code
+        run: |
+          tool=$(node scripts/devos/agents.mjs reviewer --mode deep | sed -n 's/^reviewer_tool=//p')
+          if [ "$tool" != "claude" ]; then
+            echo "::error title=Dev OS::The reviewer is $tool. Since PR-92 the planning runs, like the review, use Claude Code and only its keys: move the reviewer to Claude Code (devos models tool reviewer claude <model>), then run this again."
+            exit 1
+          fi
+          npm install -g @anthropic-ai/claude-code
+      - name: Work out the next attempt and save the note
+        id: n
+        env:
+          NOTE: ${{ github.event.comment.body }}
+        run: |
+          git config user.name "devos-runner"
+          git config user.email "devos-runner@users.noreply.github.com"
+          last=$( { ls docs/reviews/ 2>/dev/null | sed -n "s/^${TASK}-a\([0-9]*\)\.md$/\1/p"; git log --format=%s | sed -n "s/^${TASK} a\([0-9]*\):.*/\1/p"; echo 0; } | sort -n | tail -1)
+          echo "attempt=$(( last + 1 ))" >> "$GITHUB_OUTPUT"
+          mkdir -p .devos
+          printf '%s\n' "${NOTE#/devos revise}" > .devos/revision.md
+      - name: Reviewer — reissue the fence with the revision
+        env:
+          CLAUDE_OAUTH_1: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          CLAUDE_APIKEY_1: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_OAUTH_2: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 }}
+          CLAUDE_APIKEY_2: ${{ secrets.ANTHROPIC_API_KEY_2 }}
+          DEVOS_CLAUDE_ACCOUNT: ${{ vars.DEVOS_CLAUDE_ACCOUNT || '1' }}
+          DEVOS_ACCOUNT_SWITCH: ${{ vars.DEVOS_ACCOUNT_SWITCH || 'auto' }}
+          ATTEMPT: ${{ steps.n.outputs.attempt }}
+        run: |
+          EFFORT=$(node -e 'import("./scripts/devos/lib.mjs").then(({parsePhases,reviewerEffort})=>{const r=parsePhases().rows.find(x=>x.task===process.env.TASK);console.log(reviewerEffort(r))})')
+          node scripts/devos/render-prompt.mjs revise "$TASK" "$ATTEMPT" --out .devos/revise-prompt.md
+          # PR-53: the project's reviewer agent reissues the fence; a usage limit switches only to the other Claude account.
+          bash scripts/devos/plan-agent.sh revise .devos/revise-prompt.md devos/schemas/intake.schema.json .devos/revise.json "$EFFORT" 60
+      - name: Guard — revise surface (advisory; publish decides)
+        continue-on-error: true
+        run: node scripts/devos/guard-surfaces.mjs revise
+      - name: Pack the fence
+        id: pack
+        if: always() && steps.n.outcome == 'success'
+        run: |
+          mkdir -p "$RUNNER_TEMP/planned"
+          git add -A -- "docs/fences/$TASK.md"
+          git commit -q -m "$TASK: the planner's fence" || true
+          git bundle create "$RUNNER_TEMP/planned/plan.bundle" "refs/heads/$BR" "^$REMOTE_HEAD" || echo "no fence to hand over"
+          node -e '
+            const fs = require("fs"); let r = {};
+            try { r = JSON.parse(fs.readFileSync(".devos/revise.json", "utf8")); } catch {}
+            const s = r.structured_output || {};
+            fs.writeFileSync(process.env.RUNNER_TEMP + "/planned/decision.json", JSON.stringify({ decision: s.decision || "error", summary: s.summary || "" }));'
+          if [ -f .devos/usage/pending.jsonl ]; then cp .devos/usage/pending.jsonl "$RUNNER_TEMP/planned/usage.jsonl"; fi
+      - name: Hand the fence over
+        if: always() && steps.pack.outcome == 'success'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: devos-revise-${{ github.event.issue.number }}-${{ github.run_attempt }}-plan
+          path: ${{ runner.temp }}/planned/
+          retention-days: 7
+          if-no-files-found: warn
+
+  revise-publish:
+    needs: [revise-prep, revise]
+    if: always() && needs.revise-prep.result == 'success' && needs.revise.result != 'skipped' && needs.revise.result != 'cancelled'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Not in the cycle's concurrency group: a job waiting there is cancelled by the next cycle run queued, silently. A
+    # cycle run that moves the task branch first makes the push fail, and the PR is told (PR-92).
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write
+      # PR-92: a unit's revision marks its acceptance PR's new head devos/verdict pending until the task passes again.
+      statuses: write
+    env:
+      PR: ${{ github.event.issue.number }}
+      REPO: ${{ github.repository }}
+      TASK: ${{ needs.revise-prep.outputs.task }}
+      BR: ${{ needs.revise-prep.outputs.branch }}
+      UNIT: ${{ needs.revise-prep.outputs.unit }}
+      T: ${{ github.workspace }}/trusted/scripts/devos
+      OUT: ${{ github.workspace }}/publish
+      D: ${{ github.workspace }}/publish/decide
+      W: ${{ github.workspace }}/plan-out
+    steps:
+      - name: Check out main (the publish job's only checkout)
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ github.sha }}
+          path: trusted
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: The planner's fence and decision
+        continue-on-error: true
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: devos-revise-${{ github.event.issue.number }}-${{ github.run_attempt }}-plan
+          path: ${{ github.workspace }}/plan-out
+      - name: Verify, push and rebuild (only docs/fences/<task>.md may change)
+        env:
+          GH_TOKEN: ${{ secrets.DEVOS_PAT || github.token }}
+          DEVOS_GIT_TOKEN: ${{ secrets.DEVOS_PAT || github.token }}
+          DEVOS_ROOT: ${{ github.workspace }}/publish/decide
+          RUN_ID: ${{ github.run_id }}
+          ATTEMPT_N: ${{ github.run_attempt }}
+          SCRUB_PAT: ${{ secrets.DEVOS_PAT }}
+          SCRUB_TOKEN: ${{ github.token }}
+          SCRUB_C1: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          SCRUB_C2: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 }}
+          SCRUB_A1: ${{ secrets.ANTHROPIC_API_KEY }}
+          SCRUB_A2: ${{ secrets.ANTHROPIC_API_KEY_2 }}
+        run: |
+          [ -f "$W/decision.json" ] || echo '{"decision":"error"}' > "$W/decision.json"
+          node "$T/scrub.mjs" --names SCRUB_PAT,SCRUB_TOKEN,SCRUB_C1,SCRUB_C2,SCRUB_A1,SCRUB_A2 "$W/decision.json"
+          say() { printf '%s\n' "$1" > "$RUNNER_TEMP/comment.md"; node "$T/scrub.mjs" --names SCRUB_PAT,SCRUB_TOKEN,SCRUB_C1,SCRUB_C2,SCRUB_A1,SCRUB_A2 "$RUNNER_TEMP/comment.md"; gh pr comment "$PR" --repo "$REPO" --body-file "$RUNNER_TEMP/comment.md"; }
+          S=$(node -e 'try{console.log(String(require(process.argv[1]).summary||"").slice(0,2000).replace(/\n/g," "))}catch{console.log("")}' "$W/decision.json")
+          DEC=$(node -e 'try{console.log(String(require(process.argv[1]).decision||"error").replace(/[^a-z-]/g,"").slice(0,40))}catch{console.log("error")}' "$W/decision.json")
+          count=$(gh api "repos/$REPO/actions/runs/$RUN_ID/artifacts?name=devos-revise-$PR-$ATTEMPT_N-plan" --jq '.total_count' 2>/dev/null || echo "unknown")
+          if [ "$DEC" != "revised" ] || [ "$count" != "1" ] || [ ! -f "$W/plan.bundle" ]; then
+            say "Dev OS: the fence was not reissued ($DEC). $S"
+            exit 0
+          fi
+          set +e
+          node "$T/publish-verify.mjs" plan --kind revise --branch "$BR" --task "$TASK" --out "$OUT" --bundle "$W/plan.bundle" > "$RUNNER_TEMP/plan.log" 2>&1; rc=$?
+          set -e
+          cat "$RUNNER_TEMP/plan.log"
+          if [ "$rc" != "0" ]; then
+            why=$(sed -n 's/^REJECTED: //p' "$RUNNER_TEMP/plan.log" | head -5 | paste -sd ';' -)
+            [ -n "$why" ] || why=$(grep -v '^[[:space:]]*$' "$RUNNER_TEMP/plan.log" | tail -2 | paste -sd ' ' -)
+            say "Dev OS: the reissued fence was not pushed: ${why:-the check failed} (PR-92). Comment \`/devos revise <what to change>\` again."
+            exit 1
+          fi
+          ATTEMPT=$(node -e 'console.log(require(process.argv[1]).attempt)' "$OUT/verify.json")
+          if [ -f "$W/usage.jsonl" ]; then node "$T/publish-verify.mjs" usage --in "$W/usage.jsonl" --dest "$D/.devos/usage/pending.jsonl"; fi
+          node "$T/usage.mjs" flush --task "$TASK"
+          node "$T/publish-verify.mjs" commit --out "$OUT" --amend
+          if [ -n "$UNIT" ] && [ "$(gh pr view "$PR" --repo "$REPO" --json state --jq .state)" != "OPEN" ]; then
+            say "Dev OS: this acceptance PR is no longer open, so $UNIT was not revised. Nothing was pushed."
+            exit 1
+          fi
+          if ! node "$T/publish-verify.mjs" push --out "$OUT"; then
+            say "Dev OS: the reissued fence passed the checks but could not be pushed to $BR (it moved meanwhile, or the token cannot push: see the run). Comment \`/devos revise <what to change>\` again."
+            exit 1
+          fi
+          gh pr edit "$PR" --repo "$REPO" --remove-label "devos:human-gate" >/dev/null 2>&1 || true
+          gh pr edit "$PR" --repo "$REPO" --remove-label "devos:halted" >/dev/null 2>&1 || true
+          gh workflow run devos-cycle.yml --repo "$REPO" --ref main -f task="$TASK" -f attempt="$ATTEMPT" -f revision=true
+          if [ -n "$UNIT" ]; then
+            head=$(node -e 'console.log(require(process.argv[1]).head)' "$OUT/verify.json")
+            gh api "repos/$REPO/statuses/$head" -f state=pending -f context=devos/verdict \
+              -f description="Revising $TASK (attempt $ATTEMPT): wait for the renewed report" >/dev/null || true
+            # The task's old branch is done with (its PR was merged into the unit): the rebuild starts afresh from the unit.
+            if [ -z "$(gh pr list --repo "$REPO" --head "task/$TASK" --state open --json number --jq '.[0].number // empty')" ] &&
+               [ -n "$(gh pr list --repo "$REPO" --head "task/$TASK" --base "$UNIT" --state merged --json number --jq '.[0].number // empty')" ]; then
+              gh api -X DELETE "repos/$REPO/git/refs/heads/task/$TASK" >/dev/null 2>&1 || true
+            fi
+            say "Dev OS: $TASK's fence is reissued for attempt $ATTEMPT on $UNIT, its row is open again, and the build is queued. This pull request's report and status are renewed when $TASK passes: merge it only then. $S"
+          else
+            say "Dev OS: fence reissued for attempt $ATTEMPT and the build is queued. $S"
+          fi
+
+  # PR-87: "/devos accept [note]" on a task PR records the owner's acceptance of a task that stopped without a PASS and
+  # ticks its row (scripts/devos/accept.mjs). On an open PR it is committed to the task branch, and merging the PR
+  # starts the next task. On a PR merged by hand, a pull request from devos/accept-Tnn carries it, into the task's unit
+  # when the PR went into one (PR-92), else into main. No agent runs; main's accept.mjs runs over the branch as data.
+  accept:
+    if: >-
+      github.event_name == 'issue_comment' && github.event.issue.pull_request &&
+      startsWith(github.event.comment.body, '/devos accept') &&
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: devos-cycle
+      cancel-in-progress: false
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      PR: ${{ github.event.issue.number }}
+      REPO: ${{ github.repository }}
+      T: ${{ github.workspace }}/trusted/scripts/devos
+      DATA: ${{ github.workspace }}/data
+    steps:
+      - name: Find the task, and where its acceptance goes
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          read -r ref state into same < <(gh pr view "$PR" --repo "$REPO" --json headRefName,state,baseRefName,isCrossRepository --jq '"\(.headRefName) \(.state) \(.baseRefName) \(.isCrossRepository | not)"')
+          case "$ref" in task/T[0-9][0-9]) ;; *) gh pr comment "$PR" --repo "$REPO" --body "Dev OS: \`/devos accept\` works on task PRs (task/Tnn) only."; exit 1 ;; esac
+          [ "$same" = "true" ] || { gh pr comment "$PR" --repo "$REPO" --body "Dev OS: \`/devos accept\` works on this repository's own task branches only."; exit 1; }
+          task="${ref#task/}"
+          case "$state" in
+            OPEN) branch="$ref"; base="$ref" ;;
+            MERGED)
+              branch="devos/accept-$task"; base=main
+              # PR-92: a task merged into its unit is accepted on that unit while the unit is open (its branch is there and
+              # no acceptance PR of it was merged); otherwise on main.
+              if [[ "$into" =~ ^devos/unit-T[0-9]{2,3}$ ]] && gh api "repos/$REPO/git/ref/heads/$into" >/dev/null 2>&1; then
+                accepted=$(gh pr list --repo "$REPO" --head "$into" --base main --state merged --json isCrossRepository --jq '[.[] | select(.isCrossRepository | not)] | length' 2>/dev/null || echo unknown)
+                if [ "$accepted" = "0" ]; then base="$into"; fi
+              fi ;;
+            *) gh pr comment "$PR" --repo "$REPO" --body "Dev OS: this PR was closed without a merge. Reopen it, then comment \`/devos accept\` again."; exit 1 ;;
+          esac
+          { echo "task=$task"; echo "state=$state"; echo "branch=$branch"; echo "base=$base"; } >> "$GITHUB_OUTPUT"
+      - name: Check out main (the scripts)
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ github.sha }}
+          path: trusted
+          persist-credentials: false
+      - name: Check out the branch it goes on (data)
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ steps.pr.outputs.base }}
+          path: data
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: Record the acceptance and tick the row
+        id: a
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEVOS_ROOT: ${{ github.workspace }}/data
+          TASK: ${{ steps.pr.outputs.task }}
+          NOTE: ${{ github.event.comment.body }}
+          BY: ${{ github.event.comment.user.login }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/accept"
+          printf '%s\n' "${NOTE#/devos accept}" > "$RUNNER_TEMP/accept/note.md"
+          if ! node "$T/accept.mjs" --task "$TASK" --by "$BY" --pr "$PR" --note-file "$RUNNER_TEMP/accept/note.md" 2> "$RUNNER_TEMP/accept/err"; then
+            why=$(sed 's/^DEVOS: //' "$RUNNER_TEMP/accept/err" | head -5)
+            gh pr comment "$PR" --repo "$REPO" --body "Dev OS: $TASK was not accepted: $why"
+            exit 1
+          fi
+      - name: Commit and push the acceptance
+        working-directory: ${{ github.workspace }}/data
+        env:
+          GH_TOKEN: ${{ secrets.DEVOS_PAT || github.token }}
+          TASK: ${{ steps.pr.outputs.task }}
+          STATE: ${{ steps.pr.outputs.state }}
+          BR: ${{ steps.pr.outputs.branch }}
+          ATTEMPT: ${{ steps.a.outputs.attempt }}
+          BY: ${{ github.event.comment.user.login }}
+        run: |
+          # Git without the branch's or the runner's configuration and with no hook (PR-90's hardening).
+          export GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null
+          export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0="http.https://github.com/.extraheader" GIT_CONFIG_VALUE_0="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+          hg() { git -c core.hooksPath=/dev/null -c core.fsmonitor=false -c user.name=devos-runner -c user.email=devos-runner@users.noreply.github.com "$@"; }
+          hg add -- "docs/reviews/$TASK-a$ATTEMPT.md" docs/PHASES.md
+          hg commit -q -m "$TASK a$ATTEMPT: accepted by @$BY (/devos accept, PR-87)"
+          remote="https://github.com/${REPO}.git"
+          if [ "$STATE" != "OPEN" ] && hg ls-remote --exit-code --heads "$remote" "$BR" >/dev/null 2>&1; then
+            gh pr comment "$PR" --repo "$REPO" --body "Dev OS: the branch $BR already exists, from an earlier \`/devos accept\`. Merge or close its pull request and delete the branch, then comment again."
+            exit 1
+          fi
+          hg push "$remote" "HEAD:refs/heads/$BR"
+      - name: Say what happens next
+        env:
+          GH_TOKEN: ${{ secrets.DEVOS_PAT || github.token }}
+          TASK: ${{ steps.pr.outputs.task }}
+          STATE: ${{ steps.pr.outputs.state }}
+          BR: ${{ steps.pr.outputs.branch }}
+          BASE: ${{ steps.pr.outputs.base }}
+          ATTEMPT: ${{ steps.a.outputs.attempt }}
+          BY: ${{ github.event.comment.user.login }}
+        run: |
+          record="docs/reviews/$TASK-a$ATTEMPT.md"
+          if [ "$STATE" = "OPEN" ]; then
+            gh pr edit "$PR" --repo "$REPO" --remove-label "devos:halted" >/dev/null 2>&1 || true
+            gh pr comment "$PR" --repo "$REPO" --body "Dev OS: $TASK is accepted as attempt $ATTEMPT (\`$record\`), and its row in docs/PHASES.md is ticked on this branch. Merge this PR: the cycle then starts the next task."
+          else
+            printf 'The owner accepted %s with `/devos accept` on #%s (PR-87). This pull request adds `%s` and ticks the row in `docs/PHASES.md`; no attempt was built or reviewed.\n\nMerge it: the cycle then starts the next task.\n' "$TASK" "$PR" "$record" > "$RUNNER_TEMP/accept-body.md"
+            url=$(gh pr create --repo "$REPO" --base "$BASE" --head "$BR" --title "Dev OS: $TASK accepted by @$BY" --body-file "$RUNNER_TEMP/accept-body.md" --label devos)
+            gh pr comment "$PR" --repo "$REPO" --body "Dev OS: $TASK is accepted as attempt $ATTEMPT on $url. Merge it: the cycle then starts the next task."
+          fi

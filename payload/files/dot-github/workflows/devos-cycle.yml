@@ -948,6 +948,9 @@ jobs:
             gh pr create --repo "$REPO" --base main --head "$UNIT" --title "Unit $first–$last: your acceptance" \
               --body-file "$RUNNER_TEMP/unit-report.md" --label devos --label "devos:acceptance"
             PRN=$(gh pr list --repo "$REPO" --head "$UNIT" --base main --state open --json number,isCrossRepository --jq "$mine")
+          else
+            # PR-92: the unit was revised since its PR opened (/devos revise on it): the report is renewed.
+            gh pr edit "$PRN" --repo "$REPO" --title "Unit $first–$last: your acceptance" --body-file "$RUNNER_TEMP/unit-report.md" >/dev/null
           fi
           gh api "repos/$REPO/statuses/$UNIT_SHA" -f state=success -f context=devos/verdict \
             -f description="Unit $first–$last: every task PASS; your merge accepts it" >/dev/null

@@ -3,7 +3,8 @@
 // Usage: node scripts/devos/render-prompt.mjs builder|reviewer|revise Tnn attempt [--out file]
 //        node scripts/devos/render-prompt.mjs intake - - [--out file]
 // Environment it reads when set: DEVOS_BUILDER_MODEL, DEVOS_BUILDER_EFFORT, DEVOS_BUILDER_FAST,
-// DEVOS_BUILDER_TOOL, DEVOS_PREVIEW_URL, DEVOS_ISSUE, DEVOS_INTAKE_RESUME, DEVOS_REVIEW_MODE, DEVOS_REVIEW_REASONS, DEVOS_REVIEW_CRITICAL.
+// DEVOS_BUILDER_TOOL, DEVOS_PREVIEW_URL, DEVOS_ISSUE, DEVOS_INTAKE_RESUME, DEVOS_REVIEW_MODE, DEVOS_REVIEW_REASONS, DEVOS_REVIEW_CRITICAL,
+// DEVOS_REVISE_UNIT (PR-92: a revision asked for on that unit's acceptance pull request).
 import { readFileSync, writeFileSync, existsSync, readdirSync } from "node:fs";
 import { P, parsePhases, waitsOnTaskPr, isMethodRow, taskAfter, config, fail } from "./lib.mjs";
 import { poolText } from "./agents.mjs";
@@ -71,6 +72,10 @@ export function renderPrompt(role, task, attempt) {
     BRANCH: `${cfg.branch_prefix}${task}`,
     NEXT_TASK: next ? next.task : "",
     NEXT_TASK_OR_NONE: next ? next.task : "none (last task)",
+    // PR-92: /devos revise on a unit's acceptance PR revises the unit's last task, on the unit's branch.
+    REVISION_WHERE: /^devos\/unit-T\d{2,3}$/.test(process.env.DEVOS_REVISE_UNIT ?? "")
+      ? `on the acceptance pull request of the unit \`${process.env.DEVOS_REVISE_UNIT}\`, whose last task it is: every task of the unit passed, and the human asks for this change before accepting it. Their change may touch any work of the unit (within its signed scope): put all of it in this task's fence`
+      : "on its open pull request",
     // PR-91: a product PASS merges into its unit's branch; main takes only the human's merge of the unit.
     HUMAN_GATE: waitsOnTaskPr(row) ? "yes — the PR waits for the human's merge" : isMethodRow(row) ? "no — the runner merges a PASS" : "no — the runner merges a PASS into the unit's branch; the unit reaches main only by the human's merge of its acceptance PR",
     REISSUE_BLOCK: hasPrev

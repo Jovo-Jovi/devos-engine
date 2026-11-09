@@ -6,7 +6,8 @@
 //
 //   open   --repo <owner/name> [--out .devos/unit]
 //          The open unit: a devos/unit-* branch whose rows are not all ticked on main. Writes <out>/PHASES.md (the
-//          unit's) and <out>/open.json, and prints unit, unit_sha, waiting_pr and closed_pr. Two open units stop the run.
+//          unit's) and <out>/open.json, and prints unit, unit_sha, waiting_pr, closed_pr and refresh (PR-92: the acceptance
+//          PR's report gives a verdict the unit no longer has). Two open units stop the run.
 //   place  --main-sha <sha> [--task Tnn] [--out .devos/unit]
 //          Where the task is built: base (main for a method fix, else its unit's branch), base_sha, unit_new; or, when
 //          the open unit's rows are all ticked, accept (publish opens the acceptance pull request) or waiting (it is open,
@@ -38,6 +39,20 @@ export function openUnits(mainRows, branches, mode) {
   return { open, unknown };
 }
 
+/**
+ * PR-92: the unit's tasks whose row in an acceptance PR's report (`reportText`'s task table) does not carry the verdict
+ * the unit's own docs/PHASES.md gives now.
+ */
+export function staleTasks(tasks, unitRows, body) {
+  const lines = String(body ?? "").split(/\r?\n/);
+  return tasks.filter((t) => {
+    const verdict = clean((unitRows ?? []).find((r) => r.task === t)?.verdict) || "—";
+    const line = lines.find((l) => l.startsWith(`| ${t} |`));
+    return !line || !line.split("|").map((c) => c.trim()).includes(verdict);
+  });
+}
+const unitRowsOf = (text) => { try { return parsePhases(text).rows; } catch { return []; } };
+
 /** Where the next task is built, or what the cycle does instead (see place above). */
 export function decide({ mainRows, unitRows, open, task, mode, mainSha }) {
   const row = task ? mainRows.find((r) => r.task === task) : null;
@@ -48,6 +63,8 @@ export function decide({ mainRows, unitRows, open, task, mode, mainSha }) {
     // Ticked on the unit, or on main (an accept recorded there).
     const ticked = (t) => (unitRows ?? []).find((r) => r.task === t)?.done === true || mainRows.find((r) => r.task === t)?.done === true;
     if (open.tasks.every(ticked)) {
+      // PR-92: its PR is open and its report is stale after your revision: publish renews the report and the status.
+      if (open.waiting_pr && open.refresh) return { ...base, ...unit, accept: "true", acceptance_pr: String(open.waiting_pr), note: `${open.branch} is complete again after your revision: publish renews pull request #${open.waiting_pr}'s report and status` };
       if (open.waiting_pr) return { ...base, ...unit, waiting: "true", acceptance_pr: String(open.waiting_pr), note: `${open.branch} is complete and waits for your acceptance: pull request #${open.waiting_pr}. No product task is built until you merge it.` };
       if (open.closed_pr) return { ...base, ...unit, waiting: "true", acceptance_pr: String(open.closed_pr), note: `${open.branch} is complete and you closed its acceptance pull request #${open.closed_pr}. Reopen it to accept the unit; no product task is built meanwhile.` };
       return { ...base, ...unit, accept: "true", note: `${open.branch} is complete: publish opens its acceptance pull request` };
@@ -94,7 +111,7 @@ export function reportText({ unit, rows, unitRows, prs, paths, total, capped = f
     "", "### What you can do", "",
     "- **Merge** this pull request: the only way this unit reaches main. Production deploys from your merge, and the next unit starts.",
     "- **Close** it: the unit stays on its branch and nothing else is built until you reopen it.",
-    "- **Ask for changes** on the unit's branch (from E64, `/devos revise <what to change>` here).",
+    `- **Ask for changes:** comment \`/devos revise <what to change>\` here. The reviewer reissues the fence of the unit's last task, ${unit.last}, with your change, the cycle builds it again inside the unit, and this report is renewed when it passes. New scope belongs in a change request.`,
     "");
   return out.join("\n");
 }
@@ -144,11 +161,15 @@ function cmdOpen() {
   writeFileSync(path.join(out, "PHASES.md"), texts.get(unit.name));
   delete unit.rows;
   // This repository's pull requests only (a fork can use the same branch name), and a closed one only for this head.
-  const prs = (JSON.parse(gh(["pr", "list", "--repo", repo, "--head", unit.branch, "--base", "main", "--state", "all", "--json", "number,state,isCrossRepository,headRefOid", "--limit", "20"]) || "[]")).filter((p) => p.isCrossRepository === false);
-  unit.waiting_pr = prs.find((p) => p.state === "OPEN")?.number ?? "";
+  const prs = (JSON.parse(gh(["pr", "list", "--repo", repo, "--head", unit.branch, "--base", "main", "--state", "all", "--json", "number,state,isCrossRepository,headRefOid,body", "--limit", "20"]) || "[]")).filter((p) => p.isCrossRepository === false);
+  const waiting = prs.find((p) => p.state === "OPEN");
+  unit.waiting_pr = waiting?.number ?? "";
   unit.closed_pr = unit.waiting_pr ? "" : (prs.find((p) => p.state === "CLOSED" && p.headRefOid === unit.sha)?.number ?? "");
+  // PR-92: its open acceptance PR's report gives a verdict that is no longer the unit's (you revised it with /devos revise
+  // and the task was built again): publish renews the report and the status. A push that changes no verdict is not.
+  unit.refresh = waiting ? staleTasks(unit.tasks, unitRowsOf(texts.get(unit.name)), waiting.body).length > 0 : false;
   writeFileSync(path.join(out, "open.json"), `${JSON.stringify(unit, null, 2)}\n`);
-  emit({ unit: unit.branch, unit_sha: unit.sha, unit_phases: path.join(out, "PHASES.md"), waiting_pr: unit.waiting_pr, closed_pr: unit.closed_pr });
+  emit({ unit: unit.branch, unit_sha: unit.sha, unit_phases: path.join(out, "PHASES.md"), waiting_pr: unit.waiting_pr, closed_pr: unit.closed_pr, refresh: unit.refresh ? "true" : "false" });
 }
 
 function cmdPlace() {

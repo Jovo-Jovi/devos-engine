@@ -352,6 +352,19 @@ esac
     stub([{ ref: "refs/heads/devos/unit-T06", object: { sha: USHA } }], [{ number: 9, state: "CLOSED", isCrossRepository: false, headRefOid: USHA }]);
     assert.equal(out(run(["open", "--repo", "o/r"]), "closed_pr"), "9");
     assert.deepEqual([out(run(["place", "--main-sha", SHA, "--task", "T07"]), "waiting")], ["true"]);
+    // PR-92: its acceptance PR open, its report giving the unit's verdicts: waiting. After /devos revise, T06 passed
+    // again (PASS a2): the report is stale and publish renews it. A push that changes no verdict is not judged again.
+    const report = "### Tasks\n\n| Task | Name | Risk | Gate | Verdict | Review | Pull request |\n|---|---|---|---|---|---|---|\n" +
+      "| T05 | Name T05 | 3 | — | PASS a1 — docs/reviews/T05-a1.md | `docs/reviews/T05-a1.md` | #5 |\n| T06 | Name T06 | 2 | G-Feature | PASS a1 — docs/reviews/T06-a1.md | `docs/reviews/T06-a1.md` | #6 |\n";
+    stub([{ ref: "refs/heads/devos/unit-T06", object: { sha: USHA } }], [{ number: 10, state: "OPEN", isCrossRepository: false, headRefOid: USHA, body: report }]);
+    const current = run(["open", "--repo", "o/r"]);
+    assert.deepEqual([out(current, "waiting_pr"), out(current, "refresh")], ["10", "false"]);
+    assert.deepEqual([out(run(["place", "--main-sha", SHA, "--task", "T07"]), "waiting")], ["true"]);
+    writeFileSync(path.join(dir, "unit-T06.md"), TABLE({ T01: true, T02: true, T05: true, T06: true }).replace("PASS a1 — docs/reviews/T06-a1.md", "PASS a2 — docs/reviews/T06-a2.md"));
+    assert.equal(out(run(["open", "--repo", "o/r"]), "refresh"), "true");
+    const renew = run(["place", "--main-sha", SHA, "--task", "T07"]);
+    assert.deepEqual([out(renew, "accept"), out(renew, "waiting"), out(renew, "acceptance_pr")], ["true", "false", "10"]);
+    writeFileSync(path.join(dir, "unit-T06.md"), TABLE({ T01: true, T02: true, T05: true, T06: true }));
     // A branch with work that is no unit under the setting stops the run instead of being rebuilt beside.
     stub([{ ref: "refs/heads/devos/unit-T05", object: { sha: USHA } }], []);
     const orphan = run(["open", "--repo", "o/r"]);
@@ -365,7 +378,7 @@ esac
 test("units.test.mjs the manual, the precedent, the changelog and the defaults name the units", () => {
   const has = (file, text) => assert.ok(read(path.join(root, file)).includes(text), `${file}: ${text}`);
   has("payload/files/docs/method/PRECEDENTS.md", "| PR-91 | **Only your merge reaches main: work lands in units, and a unit is accepted by your merge.**");
-  has("payload/files/docs/method/PRECEDENTS.md", "**Live maximum: PR-91.**");
+  assert.ok(Number(/\*\*Live maximum: PR-(\d+)\.\*\*/.exec(read(path.join(root, "payload/files/docs/method/PRECEDENTS.md")))?.[1]) >= 91);
   has("payload/files/docs/method/AUTOMATION.md", "**Units of acceptance (PR-91).**");
   has("payload/files/docs/method/AUTOMATION.md", "| `unit.mjs` | units of acceptance (PR-91)");
   has("CHANGELOG.md", "- **Only your merge reaches main (PR-91).**");

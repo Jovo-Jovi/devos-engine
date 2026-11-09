@@ -8,6 +8,7 @@
 // Usage: node scripts/devos/accept.mjs --task Tnn --by <login> [--pr <n>] [--note-file <file>] [--date YYYY-MM-DD]
 // Emits: attempt, review
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { isAbsolute } from "node:path";
 import { P, emit, fail, git, isMethodRow, parsePhases, updatePhasesRow } from "./lib.mjs";
 
 const arg = (n, d = "") => { const i = process.argv.indexOf(`--${n}`); return i >= 0 ? (process.argv[i + 1] ?? d) : d; };
@@ -80,8 +81,9 @@ if (process.argv[1]?.endsWith("accept.mjs")) {
   const previous = attempt > 1 && existsSync(P(prevFile))
     ? { file: prevFile, verdict: (readFileSync(P(prevFile), "utf8").split(/\r?\n/).find((line) => line.trim()) ?? "").trim() }
     : null;
-  const noteFile = arg("note-file");
-  const note = noteFile && existsSync(P(noteFile)) ? readFileSync(P(noteFile), "utf8") : "";
+  // An absolute path is the runner's (PR-92: the publish job keeps the note outside the branch it writes on).
+  const noteFile = arg("note-file") ? (isAbsolute(arg("note-file")) ? arg("note-file") : P(arg("note-file"))) : "";
+  const note = noteFile && existsSync(noteFile) ? readFileSync(noteFile, "utf8") : "";
   mkdirSync(P("docs/reviews"), { recursive: true });
   writeFileSync(P(review), acceptanceText({ task, attempt, by, pr, date, previous, note }));
   updatePhasesRow(task, { done: true, verdict: `PASS a${attempt} — ${review}` });

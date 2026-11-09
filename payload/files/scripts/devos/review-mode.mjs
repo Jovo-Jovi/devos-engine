@@ -38,6 +38,8 @@ export function reviewPlan(row, changed = [], attempt = 1, cfg = config()) {
   const reasons = [];
   if (hasGate(row)) reasons.push(`closes gate ${row.gate}`);
   if (row.risk >= 3) reasons.push("risk 3");
+  // PR-92: your revision of a unit (its last task built again, with changes that may touch the whole unit).
+  if (/^REVISE a\d+\b/.test(String(row.verdict ?? ""))) reasons.push("your revision of its unit");
   if (critical.length) reasons.push(`touches critical paths (${critical.slice(0, 6).join(", ")}${critical.length > 6 ? ", …" : ""})`);
   const mode = reasons.length ? "deep" : "light";
   const m = r.modes?.[mode] ?? {};

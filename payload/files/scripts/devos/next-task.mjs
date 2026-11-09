@@ -20,21 +20,26 @@ if (arg("task").toLowerCase() === "link") {
 
 const cfg = config();
 const { rows } = parsePhases();
+const REVISE = /^REVISE a(\d+)\b/;
 if (arg("unit-phases")) {
   const unit = parsePhases(readFileSync(arg("unit-phases"), "utf8")).rows;
   for (const r of rows) {
     const u = isMethodRow(r) ? null : unit.find((x) => x.task === r.task);
     // Ticked on the unit, or on main (an accept recorded there): done either way.
     if (u && u.done && !r.done) Object.assign(r, { done: true, doneRaw: u.doneRaw, verdict: u.verdict });
+    // PR-92: opened again on the unit by /devos revise on its acceptance PR ("REVISE aN — …").
+    else if (u && !u.done && !r.done && REVISE.test(u.verdict)) r.verdict = u.verdict;
   }
 }
 // Accept "T01", "t1" or "1" from the workflow form.
 const rawTask = arg("task");
 const wanted = /^t?\d{1,2}$/i.test(rawTask) ? `T${rawTask.replace(/^t/i, "").padStart(2, "0")}` : rawTask.toUpperCase();
-const attempt = Number(arg("attempt") || "1");
+const row = wanted ? rows.find((r) => r.task === wanted) : nextOpenTask(rows);
+// PR-92: a unit's task you revised carries its attempt; any run of it builds that attempt, as the revision it is.
+const reopened = REVISE.exec(row?.verdict ?? "");
+const attempt = Number(arg("attempt") || reopened?.[1] || "1");
 
 if (!Number.isInteger(attempt) || attempt < 1) fail(`invalid attempt "${arg("attempt")}"`);
-const row = wanted ? rows.find((r) => r.task === wanted) : nextOpenTask(rows);
 
 // A human revision (/devos revise) may go past max_attempts; automatic retries may not.
 // The revision is a fact of the task branch (devos-intake commits "Tnn: fence reissued for human
@@ -48,7 +53,7 @@ function revisedOnBranch(task, n) {
     return log.split("\n").some((s) => s === `${task}: fence reissued for human revision (attempt ${n})`);
   } catch { return false; }
 }
-if (attempt > cfg.max_attempts && arg("revision") !== "true" && !revisedOnBranch(row?.task, attempt)) fail(`attempt ${attempt} exceeds max_attempts ${cfg.max_attempts}`);
+if (attempt > cfg.max_attempts && arg("revision") !== "true" && Number(reopened?.[1]) !== attempt && !revisedOnBranch(row?.task, attempt)) fail(`attempt ${attempt} exceeds max_attempts ${cfg.max_attempts}`);
 if (wanted && !row) fail(`task ${wanted} is not in docs/PHASES.md`);
 if (!row) {
   emit({ done: "true", task: "", reason: "every task in docs/PHASES.md is ticked" });

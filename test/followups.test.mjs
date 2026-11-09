@@ -128,8 +128,8 @@ test("followups.test.mjs (e) the retired source check is gone, and the plan foll
 
 test("followups.test.mjs (f) PR-89, the live maximum and the changelog", () => {
   const precedents = read(`${PAYLOAD}/docs/method/PRECEDENTS.md`);
-  // E67 (PR-91) moved the live maximum on; PR-89's row stays.
-  assert.equal(precedents.includes("**Live maximum: PR-91.**"), true);
+  // Later precedents move the live maximum on; PR-89's row stays.
+  assert.ok(Number(/\*\*Live maximum: PR-(\d+)\.\*\*/.exec(precedents)?.[1]) >= 89);
   assert.equal(precedents.includes("| PR-89 | **A shipped method names no client, and every builder shows its progress.**"), true);
   const changelog = read("CHANGELOG.md");
   const section = changelog.slice(changelog.indexOf("## 1.12.0"), changelog.indexOf("## 1.11.0"));

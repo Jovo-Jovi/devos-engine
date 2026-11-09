@@ -45,7 +45,17 @@ authorize it (PR-91) · secrets never enter a file · fetch, never paste (PR-02)
 **New work.** Issue form "Dev OS change request" (label `devos:request`) → `devos-intake` (the reviewer
 agent, `plan-agent.sh`, PR-53) plans it on `intake/issue-N`: draft OD, scope row, PHASES rows, first fence,
 `docs/requests/issue-N.md`, settings in `docs/setup-items.json` → intake PR (`devos:intake`) → your
-merge signs the OD → `devos-advance` dispatches `devos-cycle`.
+merge signs the OD → `devos-advance` dispatches `devos-cycle`. PR-92: only an issue the repository's owners, members
+or collaborators opened is planned (your `/devos intake` on anyone else's is refused, `intake-refuse`), from the issue
+as it stood at the event (`intake-request.mjs`: its title, body and your comment from the event, the earlier answers of
+trusted people from the thread). The planner never shares a job with a write token: `intake` runs Claude Code (D11, its
+keys only) with a token that reads and hands the plan over as a git bundle with its decision; `intake-publish`, main's
+code only, checks it (`publish-verify.mjs plan`: one ref, no link or submodule, only `surfaces.intake.allow`, rows added
+to `docs/PHASES.md`, none changed and no number twice, Phase PM rows only for a method fix) and main's guards over it,
+then pushes, opens the PR and posts `devos/verdict`; a plan that fails is not pushed and the issue says why (every
+comment publish posts is scrubbed of the keys it holds and carries `<!-- devos-comment -->`, so it is never read back as
+your answer). What the planner runs is main's: its method files are laid over the branch's in the working tree.
+`intake-ack` says the run started.
 
 **Staged fences (PR-38).** Before writing a fence the reviewer (or intake) judges its size with the
 `devos-fence-writing` skill; a fence that does not fit one builder run gets `- Stages: N` and
@@ -66,7 +76,14 @@ the doctor (its deployment checks), and stops: no product task is built while it
 (method fixes still are). Before a unit's next task is built, `resolve` merges main into the unit (GitHub's merge API:
 main's commits, already yours; a conflict stops the run), so the task runs main's scripts and rules. Your merge of it is
 the acceptance: `devos-deploy` deploys it, and `devos-advance` starts the next unit. Method fixes are in no unit:
-they target main and wait for your merge (PR-28). For now `/devos revise` and `/devos accept` still target main.
+they target main and wait for your merge (PR-28). PR-92: `/devos revise <what>` on the acceptance PR revises the unit's
+last task: its fence is reissued with your change (which may touch any work of the unit, within its signed scope; new
+scope is a change request), its row on the unit is opened again as `REVISE aN — …` (any run of it builds attempt N, past
+`max_attempts`, reviewed deep), the PR's new head gets `devos/verdict` pending, the task's old branch is deleted when
+its PR was merged into the unit, and the cycle builds it inside the unit. One revision at a time: while it is built, a
+further `/devos revise` goes on its task PR. When it passes, the acceptance PR's report, whose verdict for it is stale,
+and its status are renewed (`unit.mjs open`: `refresh`). Merge the acceptance PR only then.
+`/devos accept` on a task merged into an open unit records it on that unit.
 
 **One task attempt** (`devos-cycle`, one run = one attempt of one task):
 1. `resolve`: `next-task.mjs` picks the task (method fixes first, PR-28); `setup-check.mjs --for
@@ -153,11 +170,18 @@ on its issue, updated at each check (PR-31). PR-76: a reset stated in days with 
 **Accepting a stopped task (PR-87).** `/devos accept [note]` on a task PR that stopped without a PASS records your
 acceptance: `accept.mjs` writes `docs/reviews/Tnn-aN.md` (N: the next attempt; it starts `VERDICT: PASS` and says no
 attempt N was built or reviewed) and ticks the row, on the PR's branch. Merging the PR starts the next task. On a PR you
-already merged by hand, a pull request from `devos/accept-Tnn` carries the record, and its merge starts the next task.
+already merged by hand, a pull request from `devos/accept-Tnn` carries the record (into the task's unit when it went
+into one, PR-92), and its merge starts the next task. Main's `accept.mjs` runs over the branch as data (PR-92).
 `devos-advance` never builds a task again that you merged with its row open: it tells you to use `/devos accept`.
 
 **Revisions.** `/devos revise <what>` on a task PR → reissued fence → next attempt (may pass
-`max_attempts`). The revision is read from the task branch as well (the commit "Tnn: fence reissued
+`max_attempts`). PR-92: `revise-prep` (trusted) finds the task, or, on a unit's acceptance PR, the unit's last task and
+the unit's branch; `revise` (the planner, Claude Code, a token that reads, main's method files laid over the branch
+before anything runs, outside the cycle's concurrency group) reissues the fence and hands it over as a bundle;
+`revise-publish` (main's code) accepts only a change to that task's fence, commits it under "Tnn: fence reissued for
+human revision (attempt N)" with N counted from the branch (on a unit, with the task's row opened again, after checking
+the acceptance PR is still open), pushes and starts the build; a push that fails, because the branch moved meanwhile,
+is said on the PR. Main's method files laid over the branch include `CLAUDE.local.md` and `.mcp.json` (removed). The revision is read from the task branch as well (the commit "Tnn: fence reissued
 for human revision (attempt N)"), and every resume path passes `revision` on, so an attempt parked
 by a usage limit resumes as the revision it is.
 
@@ -167,7 +191,7 @@ by a usage limit resumes as the revision it is.
 |---|---|---|---|
 | `devos-cycle.yml` | dispatch only (form: task, attempt, review_only, effort, fast, revision, reuse_review, go, cursor_account, claude_account) | `resolve`, `work`, `publish`, `report`, `wait-and-resume` | one task attempt, end to end (§2), in two jobs (PR-90); `report` links the repository to the DEV_OS registry and sends the events `publish` noted (PR-61); a run with every task PASS, or a link run (`task=link`, which starts no task), runs `report` only, to ask for the link (PR-65); once the link is approved, a link run's `report` also sends the project's plan (PR-66) |
 | `devos-work.yml` | called by `devos-cycle` only (`workflow_call`) | `work` | the untrusted half of an attempt (PR-90): the builder and the project's checks, with a read-only token and only the secrets the caller passes (the builder tool's `KEY_1`, `KEY_2`, `ALT_1`, `ALT_2` and `MEDIA_KEY`); its output is one artifact for `publish` |
-| `devos-intake.yml` | issue labelled `devos:request` / `devos:method`; comments `/devos intake`, `/devos go`, `/devos revise`, `/devos accept`; dispatch (resume) | `intake`, `intake-wait`, `go`, `revise`, `accept` | plans requests and method fixes on the reviewer agent (`plan-agent.sh`, PR-53); holds and resumes plans across limits; releases held runs; revisions; the owner's acceptance of a stopped task (PR-87) |
+| `devos-intake.yml` | issue labelled `devos:request` / `devos:method`; comments `/devos intake`, `/devos go`, `/devos revise`, `/devos accept`; dispatch (resume) | `intake-ack`, `intake-refuse`, `intake` (the planner, read-only), `intake-publish`, `intake-wait`, `go`, `revise-prep`, `revise` (the planner, read-only), `revise-publish`, `accept` (PR-92) | plans requests and method fixes on the reviewer agent (`plan-agent.sh`, PR-53); holds and resumes plans across limits; releases held runs; revisions; the owner's acceptance of a stopped task (PR-87) |
 | `devos-advance.yml` | PR closed (merged, `task/`, `intake/`, `devos/accept-` or `devos/unit-`, not auto-merged; or `devos/connect`, the link answer) | `advance`, `link` | `advance` dispatches the next task, or restarts the task a method fix unblocked, and never a task merged with its row open (PR-87); after your merge of a unit's acceptance PR it starts the next unit, and a task PR merged into a unit reads that unit's progress (PR-91); `link` (with `DEVOS_REPORTING` on, not paused) dispatches a `devos-cycle` link run (`task=link`) when no `devos-cycle` run is queued or going, so its `report` job asks for the link (PR-65) ; `link` then starts `devos-state` with `wait_minutes=15`, which waits for the approval (PR-75) |
 | `devos-doctor.yml` | ci finished; `/devos doctor`; push to main; dispatch (PR) | `gates`, `doctor` | the gate doctor (§2) |
 | `devos-state.yml` | twice a day (03:41 and 15:41 UTC); dispatch (`wait_minutes`, 0 to 30) | `state` | with `DEVOS_REPORTING` on, `DEVOS_STATE` not `off` and not paused: asks the DEV_OS registry for the link (`report.mjs link --wait`, waiting for a pending link's approval when started with minutes), then sends the task history (`history`, PR-66); its own concurrency group, so it never holds a task (PR-75) |
@@ -191,8 +215,8 @@ workflow may start late.
 | `config.mjs` | builds `devos.config.json` from `devos/engine.defaults.json` and `devos/project.json`; `--write`, `--check`, `--print`; PR-39 |
 | `agents.mjs` | resolves the builder pool id, the reviewer model, each agent's `fallback_models` (`builder_fallbacks`, `reviewer_fallbacks`, PR-64) and `next --after` (not used by the cycle since PR-53), `agents.fallback_builder` under the `devos:fallback-builder` label (PR-76) from `devos.config.json` `agents`; `tools` lists the tools the agents use, so the cycle installs only those CLIs (PR-41, PR-42, PR-45) |
 | `role-env.mjs` | installs a role kit for a tool in the other role and restores the tool's own config (PR-42); `devos/roles/cursor-blueprint/` is the kit `devos init` gives Cursor while it writes the blueprint (PR-44); `cursor-planner` is Cursor's kit for a planning run (PR-53); the kits `codex-builder`, `codex-reviewer`, `gemini-builder` and `gemini-reviewer` give Codex its `AGENTS.md` and Gemini its `GEMINI.md` for the run (PR-45) |
-| `next-task.mjs` | which task and attempt; refuses out-of-order product tasks; `--unit-phases` reads the product rows' progress from the open unit's branch (PR-91) |
-| `unit.mjs` | units of acceptance (PR-91): `open` (the open unit, its PHASES and acceptance PR, through `gh`), `place` (main or the unit's branch for this task, or `accept`, or `waiting`), `report` (the acceptance PR's completion report, no AI call) |
+| `next-task.mjs` | which task and attempt; refuses out-of-order product tasks; `--unit-phases` reads the product rows' progress from the open unit's branch (PR-91), and a row you revised there (`REVISE aN`) as attempt N of a revision (PR-92) |
+| `unit.mjs` | units of acceptance (PR-91): `open` (the open unit, its PHASES and acceptance PR, through `gh`; `refresh` when the PR's report gives a verdict the unit no longer has, after a revision, PR-92), `place` (main or the unit's branch for this task, or `accept`, or `waiting`), `report` (the acceptance PR's completion report, no AI call) |
 | `accept.mjs` | `/devos accept`: the owner's acceptance of a stopped task as the next attempt's record, and its row ticked; refuses a ticked task or one after an open task (PR-87) |
 | `heavy.mjs` | heavy-run notice or hold (`DEVOS_HEAVY`) |
 | `builder-model.mjs` | the builder model id from the pool item's family, checked against `agent models`: the Fast id at the same effort before the configured model, and a changed effort said (PR-86) |
@@ -203,8 +227,9 @@ workflow may start late.
 | `run-agent.sh` | runs Codex or Gemini as the builder or the reviewer: its role kit, its accounts with the usage-limit switch, then the models given after the prompt file (PR-64), the watchdog for the builder, and `.devos/<role>-run.env` (`code`, `used`, `accounts`, `model`) for the step (PR-45); the agent reads its prompt on standard input (`devos_prompt`), and a builder run stopped by a signal restarts once (PR-71) |
 | `agent-cli.mjs` | the Codex and Gemini command lines (`args`) and their output in the runner's result shape (`normalize`) (PR-45) |
 | `guard-surfaces.mjs` | who may change what, per role |
-| `sync-main.sh` | merges main into a branch before a push (PR-14): today `/devos revise`'s push in `devos-intake`, as the cycle's publish job merges a main that moved with `publish-verify.mjs sync` (PR-90); `.gitattributes` merges the append-only journal and the usage records (`docs/usage/*.jsonl`) by union, a conflict in `docs/USAGE.md` alone is resolved by counting it again (PR-52), and any other conflict first pushes the run's work to `rescue/<branch>-<run id>` so it is never lost |
-| `publish-verify.mjs` | the publish job's git (PR-90), in a repository it creates, with no system or global git configuration, hooks off and no fsmonitor; `DEVOS_GIT_TOKEN` authenticates through an environment header. `verify` checks the work job's bundle against main's rules (one ref; descent from the branch on GitHub; no link, submodule or file over 50 MiB; no method file in a product task; nothing in `docs/fences/`, `docs/reviews/` or `docs/PHASES.md`; the builder's surface, with the fence's media allowed) and lays main's method files over the verified tree; `state` holds the builder's outcome to main's limits; `checks` reads the work job's results against main's required checks; `usage` keeps well-formed usage records; `review-tree`, `take-review`, `commit`, `sync` (a main that moved, PR-25; `docs/USAGE.md` counted again, PR-52) and `push` |
+| `sync-main.sh` | merges main into a branch before a push (PR-14); no workflow calls it since PR-92 (the cycle's publish job merges with `publish-verify.mjs sync`, PR-90, and `/devos accept` pushes only its two files); `.gitattributes` merges the append-only journal and the usage records (`docs/usage/*.jsonl`) by union, a conflict in `docs/USAGE.md` alone is resolved by counting it again (PR-52), and any other conflict first pushes the run's work to `rescue/<branch>-<run id>` so it is never lost |
+| `intake-request.mjs` | the request a planning run works from (PR-92): the issue as it stood at the event, the trusted answers before it (every page of the thread; the runner's own comments never count), your triggering comment; refuses an issue no owner, member or collaborator opened, and a resume of a pull request or of an issue without `devos:request` or `devos:method`; and where the plan goes (`mode`, `base`), read again by `intake-publish` |
+| `publish-verify.mjs` | the publish job's git (PR-90), in a repository it creates, with no system or global git configuration, hooks off and no fsmonitor; `DEVOS_GIT_TOKEN` authenticates through an environment header. `verify` checks the work job's bundle against main's rules (one ref; descent from the branch on GitHub; no link, submodule or file over 50 MiB; no method file in a product task; nothing in `docs/fences/`, `docs/reviews/` or `docs/PHASES.md`; the builder's surface, with the fence's media allowed) and lays main's method files over the verified tree; `state` holds the builder's outcome to main's limits; `checks` reads the work job's results against main's required checks; `usage` keeps well-formed usage records; `review-tree`, `take-review`, `commit`, `sync` (a main that moved, PR-25; `docs/USAGE.md` counted again, PR-52) and `push`; `plan` checks a planning run's bundle against main's intake or revise surface (PR-92) |
 | `review-user.sh` | the review's own user, `devos-review` (PR-90): `setup` closes the runner's home, installs Claude Code for that user and writes `/opt/devos-tools` (main's scripts, settings with no Bash and no hooks, the MCP configuration); `workspace` hands it the review tree; `run` runs a command as it with only the names in `DEVOS_REVIEW_PASS` |
 | `scrub.mjs` | removes the values of the named secrets, and their base64, from an agent's text before it is published (PR-90) |
 | `mcp-devos.mjs` | the reviewer's `fence_check` tool, an MCP server over stdio: `fence-check.mjs` on a fence in the review workspace, as the review has no shell (PR-90) |
@@ -221,7 +246,7 @@ workflow may start late.
 | `screens.test.mjs` | self-test of that capture (the fence `- Screens:` line, frame pick, filmstrip, layout shift, console errors, failed requests, axe) |
 | `ui-evidence.mjs` | for a UI fence, turns the captures into the required checks `ui-evidence` and `a11y` in `.devos/ci-results.json`: missing evidence is a failed check (PR-51) |
 | `readiness.mjs` | for the launch task (a `- Launch:` line naming the main pages, or `none`), the required check `readiness`: headers, the full `pnpm audit`, axe and page speed (largest contentful paint ≤ 2.5 s, layout shift ≤ 0.1) on those pages; the owner's `Readiness waiver: <check> — <reason>` in `docs/DECISIONS.md` excepts a check; `.devos/readiness.md` gives the ASVS level (1, or 2 with personal data or payments) for the review (`docs/method/READINESS.md`, PR-88) |
-| `review-mode.mjs` | light or deep review, model (the chosen reviewer's first, PR-53; its `fallback_models` come from `agents.mjs`, PR-64), effort, turns, critical paths (`deep_paths` and `human_gate_paths`, PR-72, and a changed file that imports a package of `human_gate_imports`, PR-73) |
+| `review-mode.mjs` | light or deep review, model (the chosen reviewer's first, PR-53; its `fallback_models` come from `agents.mjs`, PR-64), effort, turns, critical paths (`deep_paths` and `human_gate_paths`, PR-72, and a changed file that imports a package of `human_gate_imports`, PR-73); a unit's task you revised is reviewed deep (PR-92) |
 | `evidence.mjs` | `.devos/evidence.md`, the reviewer's evidence pack |
 | `render-prompt.mjs` | fills `devos/prompts/*.md` |
 | `fence-check.mjs` | a fence's machine-read parts, the same for every agent (PR-58): the first heading names the task; the builder line (`Effort` low, medium, high or xhigh; `Fast` yes or no); the `- Layers:` line in the skills vocabulary (not for a method fix); the `- Paths:` line (relative globs, none that allows every file or names a path the builder may never change); a Done when and a Do NOT section; `- Stages: N` (2 to 4) with its `### Stage` blocks in order; at most 12 Done-when items and 12 Paths entries per stage. The blueprint, the reviewer, intake, the method-fix plan and revise run it on every fence they write; the builder runs it before its first edit and HALTs on a finding; `devos init` repairs T01 until it passes; `guard:fences` runs it on the task's fence. `inScope` is the rule `guard:scope` applies |

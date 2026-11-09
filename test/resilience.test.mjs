@@ -111,13 +111,16 @@ test("resilience.test.mjs (b) the comment, the job that commits it, and a merge 
     "startsWith(github.event.comment.body, '/devos accept')",
     "contains(fromJSON('[\"OWNER\",\"MEMBER\",\"COLLABORATOR\"]'), github.event.comment.author_association)",
     "OPEN) branch=\"$ref\"; base=\"$ref\" ;;",
-    "MERGED) branch=\"devos/accept-$task\"; base=main ;;",
-    "printf '%s\\n' \"${NOTE#/devos accept}\" > .devos/accept-note.md",
-    "node scripts/devos/accept.mjs --task \"$TASK\" --by \"$BY\" --pr \"$PR\" --note-file .devos/accept-note.md",
-    "git add \"docs/reviews/$TASK-a$ATTEMPT.md\" docs/PHASES.md",
-    "git commit -q -m \"$TASK a$ATTEMPT: accepted by @$BY (/devos accept, PR-87)\"",
-    "bash scripts/devos/sync-main.sh \"$remote\" || exit 1",
-    "gh pr create --repo \"$REPO\" --base main --head \"$BR\" --title \"Dev OS: $TASK accepted by @$BY\" --body-file .devos/accept-body.md --label devos",
+    "branch=\"devos/accept-$task\"; base=main",
+    // PR-92: a task merged into its open unit is accepted on the unit; main's accept.mjs runs over the branch as data.
+    "if [[ \"$into\" =~ ^devos/unit-T[0-9]{2,3}$ ]] && gh api \"repos/$REPO/git/ref/heads/$into\" >/dev/null 2>&1; then",
+    "accepted=$(gh pr list --repo \"$REPO\" --head \"$into\" --base main --state merged --json isCrossRepository --jq '[.[] | select(.isCrossRepository | not)] | length' 2>/dev/null || echo unknown)",
+    "if [ \"$accepted\" = \"0\" ]; then base=\"$into\"; fi",
+    "printf '%s\\n' \"${NOTE#/devos accept}\" > \"$RUNNER_TEMP/accept/note.md\"",
+    "node \"$T/accept.mjs\" --task \"$TASK\" --by \"$BY\" --pr \"$PR\" --note-file \"$RUNNER_TEMP/accept/note.md\"",
+    "hg add -- \"docs/reviews/$TASK-a$ATTEMPT.md\" docs/PHASES.md",
+    "hg commit -q -m \"$TASK a$ATTEMPT: accepted by @$BY (/devos accept, PR-87)\"",
+    "gh pr create --repo \"$REPO\" --base \"$BASE\" --head \"$BR\" --title \"Dev OS: $TASK accepted by @$BY\" --body-file \"$RUNNER_TEMP/accept-body.md\" --label devos",
     "Merge this PR: the cycle then starts the next task.",
   ]) {
     assert.equal(job.includes(text), true, text);
@@ -128,6 +131,7 @@ test("resilience.test.mjs (b) the comment, the job that commits it, and a merge 
     "NOTE: ${{ github.event.comment.body }}",
   ]);
   assert.equal(job.includes("git push --force"), false);
+  assert.equal(/sync-main\.sh|node scripts\/devos\//.test(job), false);
   assert.equal(intake.includes("#   Accept:    comment \"/devos accept [note]\" on a task PR (task/Tnn) that stopped without a PASS"), true);
   assert.equal(read(`${PAYLOAD}/scripts/devos/verdict.mjs`).includes("stopped at its last attempt: comment \\`/devos revise <what to change>\\` on this PR for another attempt, or \\`/devos accept [note]\\` to accept it as it is (PR-87)"), true);
 

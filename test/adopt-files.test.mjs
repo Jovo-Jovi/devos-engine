@@ -76,7 +76,7 @@ test("adopt-files.test.mjs (b) the project's CI stays, DEV_OS's goes beside it, 
     assert.equal(existsSync(path.join(folder, "devos.config.json")), true);
     const manual = guard(folder, "manual");
     assert.equal(manual.status, 0, manual.stdout);
-    assert.equal(manual.stdout.startsWith("guard:manual    PASS  (133 names checked)"), true, manual.stdout);
+    assert.equal(manual.stdout.startsWith("guard:manual    PASS  (134 names checked)"), true, manual.stdout);
   } finally {
     cleanup(folder);
   }
