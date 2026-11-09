@@ -2,7 +2,7 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
-## 1.13.0 — Unreleased
+## 1.13.0 — 2026-11-09
 
 - **The cycle runs each attempt in two jobs (PR-90).** The builder and your project's checks run in a job that holds no GitHub write token, no `DEVOS_PAT` and no deployment key, and is handed only the chosen builder tool's keys; the builder sees only the one key it is using. A second job checks the work against main's rules before anything is pushed: one branch, nothing it may not change (the method, the fences, the reviews, `docs/PHASES.md`, anything outside the builder's surface), and the risk, gates and required checks taken from main. Work that fails a rule is never pushed and never reviewed, and the pull request says why.
 - **The review runs without a shell.** Claude Code reviews as a user of its own, with read and write access to the review file and fences only, the documentation lookups, and a `fence_check` tool; every command it used to run is already in the evidence. Its text is scrubbed of secret values before it is posted. The reviewer must be Claude Code for now; set `agents.reviewer` to a Claude model if you chose another tool.
