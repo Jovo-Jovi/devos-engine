@@ -652,6 +652,6 @@ test("two-jobs.test.mjs the manual, the precedent and the changelog name the two
   const precedents = read(path.join(PAYLOAD, "docs", "method", "PRECEDENTS.md"));
   assert.ok(precedents.includes("| PR-90 | **Branch code never shares a job with a write token, and every decision is recomputed from main.**"));
   const changelog = read(path.join(root, "CHANGELOG.md"));
-  assert.ok(changelog.includes("## 1.13.0 — Unreleased\n\n- **The cycle runs each attempt in two jobs (PR-90).**"));
+  assert.ok(/## 1\.13\.0 — (?:Unreleased|\d{4}-\d{2}-\d{2})\n\n- \*\*The cycle runs each attempt in two jobs \(PR-90\)\.\*\*/.test(changelog));
   assert.ok(read(path.join(root, "dev", "DECISIONS.md")).includes("| D-E16 | **The cycle in two jobs, and its security acceptance conditions (2026-11-09):**"));
 });

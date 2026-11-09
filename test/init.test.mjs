@@ -526,9 +526,10 @@ test("init.test.mjs (f) Ctrl-C during a round exits 130", { skip: process.platfo
     }
     const modelPid = Number(readFileSync(pidFile, "utf8"));
     child.kill("SIGINT");
-    // A slow machine needs more than 5 s to stop the round and its model (E60).
+    // A slow machine needs more than 5 s to stop the round and its model (E60). The release
+    // run's two Ubuntu jobs together still had the model alive after 20 s, so the wait is 60 s.
     const code = await new Promise((resolve) => {
-      const timer = setTimeout(() => resolve("timeout"), 20000);
+      const timer = setTimeout(() => resolve("timeout"), 60000);
       child.on("exit", (status) => {
         clearTimeout(timer);
         resolve(status);
@@ -536,7 +537,7 @@ test("init.test.mjs (f) Ctrl-C during a round exits 130", { skip: process.platfo
     });
     assert.equal(code, 130, stdout);
     assert.equal(stdout.includes("devos: stopped — the folder keeps what was written"), true, stdout);
-    assert.equal(await processGone(modelPid, 20000), true);
+    assert.equal(await processGone(modelPid, 60000), true);
   } finally {
     if (child.exitCode === null && child.signalCode === null) child.kill();
     cleanup(staged.parent);
