@@ -378,6 +378,11 @@ export const LOCAL = {
     "scripts/devos/media.mjs": "E53c1",
     "scripts/devos/media-providers/index.mjs": "E53c1",
     "scripts/devos/media-providers/xai.mjs": "E53c1",
+    ".github/workflows/devos-work.yml": "E63",
+    "scripts/devos/publish-verify.mjs": "E63",
+    "scripts/devos/review-user.sh": "E63",
+    "scripts/devos/scrub.mjs": "E63",
+    "scripts/devos/mcp-devos.mjs": "E63",
   },
   removed: {
     ".cursor/rules/10-security-data.mdc": "E03",

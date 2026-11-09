@@ -124,7 +124,8 @@ test("agents.test.mjs pool choice, reviewer model, builder family and workflow l
     assert.equal(rendered.status, 0, rendered.stderr);
     assert.equal(rendered.stdout.includes("- cursor-grok — cursor · grok-4.7 · default — default builder"), true, rendered.stdout);
 
-    const workflow = readFileSync(path.join(root, "payload", "files", "dot-github", "workflows", "devos-cycle.yml"), "utf8");
+    // PR-90: the cycle runs in devos-cycle.yml and the work job it calls, devos-work.yml.
+    const workflow = ["devos-cycle.yml", "devos-work.yml"].map((f) => readFileSync(path.join(root, "payload", "files", "dot-github", "workflows", f), "utf8")).join("\n");
     assert.equal(workflow.includes('agent -p --force --trust --approve-mcps --model "$MODEL" --output-format stream-json'), true);
     assert.equal(workflow.includes("claude -p"), true);
     assert.equal(workflow.includes("arrives in E12"), false);
@@ -138,9 +139,9 @@ test("agents.test.mjs pool choice, reviewer model, builder family and workflow l
     const restoreAt = workflow.indexOf("role-env.mjs restore || exit 1; trap - EXIT");
     const changedAt = workflow.indexOf('echo "changed=$(git status --porcelain');
     assert.equal(restoreAt >= 0 && changedAt > restoreAt, true);
-    const methodAt = workflow.indexOf("a method fix is always a deep review, by the project's own reviewer agent");
-    const choiceAt = workflow.indexOf("node scripts/devos/role-env.mjs swap cursor-reviewer");
-    assert.equal(methodAt >= 0 && choiceAt > methodAt, true);
+    // PR-90 (D11): the cycle's review is Claude Code's, as its own user with no shell; no other tool's kit is swapped in.
+    assert.equal(workflow.includes("a method fix is always a deep review, by the project's own reviewer agent"), true);
+    assert.equal(workflow.includes("role-env.mjs swap cursor-reviewer"), false);
     assert.equal(workflow.includes('rev_tool=claude'), false);
     const workflows = path.join(root, "payload", "files", "dot-github", "workflows");
     for (const name of readdirSync(workflows)) {

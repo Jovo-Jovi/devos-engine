@@ -207,7 +207,8 @@ test("readiness.test.mjs (e) the ASVS and sharp edges ship read whole and pinned
 });
 
 test("readiness.test.mjs (f) the cycle runs it, and the checklist, the prompts, the method and the changelog say so (PR-88)", () => {
-  const cycle = read(`${PAYLOAD}/dot-github/workflows/devos-cycle.yml`);
+  // PR-90: the checks, readiness among them, run in the work job (devos-work.yml), on the local build.
+  const cycle = read(`${PAYLOAD}/dot-github/workflows/devos-work.yml`);
   assert.equal(cycle.includes("      - name: Production readiness (PR-88)\n"), true);
   assert.equal(cycle.includes("            node scripts/devos/readiness.mjs --task \"$TASK\"\n"), true);
   assert.ok(cycle.indexOf("node scripts/devos/ui-evidence.mjs --task") < cycle.indexOf("node scripts/devos/readiness.mjs --task") && cycle.indexOf("node scripts/devos/readiness.mjs --task") < cycle.indexOf("node scripts/devos/evidence.mjs --task"));

@@ -274,12 +274,12 @@ async function diagnoseVercel(f, add) {
   const inspector = d.inspectorUrl;
   if (d.state === "BLOCKED") {
     add({ key: "vercel", label: "Vercel preview", level: "warn", state: "Blocked by Vercel", link: inspector,
-      todo: [{ who: "auto", text: "Vercel blocked it because the commit author (`devos-runner`) is not the owner of your Hobby team. Since PR-15 the runner deploys previews without git metadata, so new attempts are not blocked. The preview is evidence only; it does not block the merge." }] });
+      todo: [{ who: "you", text: "Vercel blocked it because the commit author (`devos-runner`) is not the owner of your Hobby team. Since PR-90 the cycle makes no preview of its own (it holds no Vercel token): a preview comes only from Vercel's Git integration, which a Hobby team blocks for the runner's commits. The review and the screenshots use the local build; the preview does not block the merge." }] });
     return;
   }
   if (d.state === "ERROR" || d.state === "CANCELED") {
     add({ key: "vercel", label: "Vercel preview", level: "warn", state: d.state.toLowerCase(), link: inspector,
-      todo: [{ who: "you", text: `Open the [deployment](${inspector}) for the build log. It does not block the merge; the next attempt deploys again.` }] });
+      todo: [{ who: "you", text: `Open the [deployment](${inspector}) for the build log. It does not block the merge; Vercel builds the branch again on its next push.` }] });
     return;
   }
   if (d.state !== "READY") { add({ key: "vercel", label: "Vercel preview", level: "info", state: d.state.toLowerCase(), link: url, todo: [] }); return; }

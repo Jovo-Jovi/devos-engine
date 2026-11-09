@@ -267,13 +267,17 @@ test("report.test.mjs (f) only the report job holds the OIDC permission, and it 
   assert.equal(rest.includes("id-token"), false);
   for (const agent of ["run-agent.sh", "agent -p", "claude -p", "codex", "gemini", "secrets."]) assert.equal(job.includes(agent), false, agent);
   // PR-62: only the developer's yes at devos init turns reporting on. PR-65: a run with every task PASS asks too.
-  assert.equal(job.includes("    if: always() && (needs.cycle.result != 'skipped' || needs.resolve.outputs.done == 'true') && vars.DEVOS_REPORTING == 'on'"), true);
+  // PR-90: the events are noted by the publish job.
+  assert.equal(job.includes("    if: always() && (needs.publish.result != 'skipped' || needs.resolve.outputs.done == 'true') && vars.DEVOS_REPORTING == 'on'"), true);
   assert.equal(job.includes("    continue-on-error: true"), true);
   assert.equal(job.includes("node scripts/devos/report.mjs link\n          node scripts/devos/report.mjs flush"), true);
   assert.equal(rest.includes("report.mjs link") || rest.includes("report.mjs flush"), false);
   const notes = rest.split("\n      - name: devos-report").slice(1);
-  assert.equal(notes.length, 7);
+  assert.equal(notes.length, 5);
   for (const step of notes) assert.equal(step.split("\n      - ")[0].includes("continue-on-error: true"), true, step.slice(0, 60));
+  // The checks' note is taken inside publish's checks step, and never stops it.
+  assert.equal(rest.includes('node "$T/report.mjs" note --step checks --status'), true);
+  assert.equal(/node "\$T\/report\.mjs" note --step checks --status "\$\([^\n]*\)" \|\| true/.test(rest), true);
 });
 
 /** A token endpoint this test owns. `answer` is the status of each request, or a function of how many have arrived. */

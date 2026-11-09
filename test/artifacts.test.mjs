@@ -18,28 +18,38 @@ function uploads(text) {
 }
 
 test("artifacts.test.mjs (a) a cycle run keeps its evidence without the screenshots, and its screenshots for 3 days", () => {
+  // PR-90: the work job (devos-work.yml) keeps its output for publish and the screenshots; publish keeps the record.
   const cycle = read("dot-github/workflows/devos-cycle.yml");
-  const steps = uploads(cycle);
-  assert.equal(steps.length, 2);
-  const [evidence, screens] = steps;
-  assert.equal(evidence.startsWith("name: Keep the evidence\n        if: always()\n"), true, evidence);
-  assert.equal(evidence.includes("          name: devos-${{ needs.resolve.outputs.task }}-a${{ needs.resolve.outputs.attempt }}\n" + EXCLUDE), true, evidence);
+  const work = read("dot-github/workflows/devos-work.yml");
+  const kept = uploads(cycle);
+  assert.equal(kept.length, 1);
+  const [evidence] = kept;
+  // Its id is the report job's way to it (PR-90): an upload failure must not stop the run's end.
+  assert.equal(evidence.startsWith("name: Keep the evidence\n        id: record\n        if: always()\n        continue-on-error: true\n"), true, evidence);
+  assert.equal(evidence.includes("          name: devos-${{ needs.resolve.outputs.task }}-a${{ needs.resolve.outputs.attempt }}\n"), true, evidence);
+  for (const out of ["!${{ github.workspace }}/publish/decide/.devos/screens/**/*.png", "!${{ github.workspace }}/publish/decide/.devos/**/*.env", "!${{ github.workspace }}/publish/decide/.devos/reviewer.json"]) assert.equal(evidence.includes(out), true, out);
   assert.equal(evidence.includes("retention-days"), false);
+  const steps = uploads(work);
+  assert.equal(steps.length, 2);
+  const [output, screens] = steps;
+  assert.equal(output.includes("          name: devos-${{ inputs.task }}-a${{ inputs.attempt }}-work\n          path: ${{ runner.temp }}/devos-out/\n"), true, output);
+  const pack = work.slice(work.indexOf("      - name: Pack the bundle and the evidence"), work.indexOf("      - name: Keep the work job's output"));
+  for (const left of ["! -name '*.env'", "! -name '*.png'", "! -name 'builder.json*'", "! -path './limits/*'"]) assert.equal(pack.includes(left), true, left);
   assert.equal(screens, [
     "name: Keep the screenshots (PR-67)",
     "        if: always()",
     "        continue-on-error: true",
     "        uses: actions/upload-artifact@v4",
     "        with:",
-    "          name: devos-${{ needs.resolve.outputs.task }}-a${{ needs.resolve.outputs.attempt }}-screens",
+    "          name: devos-${{ inputs.task }}-a${{ inputs.attempt }}-screens",
     "          path: .devos/screens/**/*.png",
     "          include-hidden-files: true",
     "          retention-days: ${{ vars.DEVOS_SCREENS_RETENTION_DAYS || 3 }}",
     "          if-no-files-found: ignore",
     "",
   ].join("\n"));
-  // The report job still downloads the evidence artifact by its name, for the journal.
-  assert.equal(cycle.includes("          name: devos-${{ needs.resolve.outputs.task }}-a${{ needs.resolve.outputs.attempt }}\n          path: .devos\n"), true);
+  // The report job downloads the evidence artifact for the journal by its id, which only publish's upload has (PR-90).
+  assert.equal(cycle.includes("          artifact-ids: ${{ needs.publish.outputs.record_id }}\n          merge-multiple: true\n          path: .devos\n"), true);
 });
 
 test("artifacts.test.mjs (b) ci-evidence keeps what the gate doctor reads, without screenshots or env files", () => {

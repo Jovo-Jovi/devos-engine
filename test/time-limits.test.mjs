@@ -146,6 +146,13 @@ test("time-limits.test.mjs (d) the supervisor resumes a run GitHub stopped at it
       // A wait the owner stopped: cancelling wait-and-resume is how a wait is stopped, however long it ran.
       [`api ${R}/actions/runs/106`]: run(106, "devos T25 · attempt 1"),
       [`api ${R}/actions/runs/106/jobs`]: { jobs: [{ id: 9006, name: "wait-and-resume", conclusion: "cancelled", steps: [], started_at: "2026-11-01T00:00:00Z", completed_at: "2026-11-01T03:20:00Z" }] },
+      // PR-90: the two jobs. publish stopped after it pushed the builder's work; work stopped before it handed it over.
+      [`api ${R}/actions/runs/107`]: run(107, "devos T26 · attempt 1"),
+      [`api ${R}/actions/runs/107/jobs`]: { jobs: [{ id: 9007, name: "publish", conclusion: "cancelled", steps: [{ name: "Push the builder's work", conclusion: "success" }, { name: "Reviewer (Claude Code, its own user, no shell)", conclusion: "cancelled" }] }] },
+      [`api ${R}/check-runs/9007/annotations`]: limit,
+      [`api ${R}/actions/runs/108`]: run(108, "devos T27 · attempt 1"),
+      [`api ${R}/actions/runs/108/jobs`]: { jobs: [{ id: 9008, name: "work / work", conclusion: "cancelled", steps: [{ name: "Checks (evidence for the reviewer)", conclusion: "cancelled" }] }] },
+      [`api ${R}/check-runs/9008/annotations`]: limit,
     };
     writeFileSync(path.join(bin, "map.json"), JSON.stringify(map));
     writeFileSync(path.join(bin, "gh"), `#!/usr/bin/env node\nconst map = require(${JSON.stringify(path.join(bin, "map.json"))});\nconst key = process.argv.slice(2).join(" ");\nif (key.endsWith("/logs")) { process.stdout.write("##[error]The operation was canceled.\\n"); process.exit(0); }\nif (!(key in map)) process.exit(1);\nprocess.stdout.write(JSON.stringify(map[key]));\n`);
@@ -163,6 +170,8 @@ test("time-limits.test.mjs (d) the supervisor resumes a run GitHub stopped at it
     assert.deepEqual(classify(104).map((i) => [i.key, i.review_only]), [["T23:a1:time-limit", true]]);
     assert.deepEqual(classify(105), []);
     assert.deepEqual(classify(106), []);
+    assert.deepEqual(classify(107).map((i) => [i.key, i.review_only]), [["T26:a1:time-limit", true]]);
+    assert.deepEqual(classify(108).map((i) => [i.key, i.review_only]), [["T27:a1:time-limit", false]]);
   } finally {
     rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     rmSync(bin, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });

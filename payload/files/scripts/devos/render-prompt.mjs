@@ -83,7 +83,7 @@ export function renderPrompt(role, task, attempt) {
       : "",
     REVIEW_MODE_BLOCK: (process.env.DEVOS_REVIEW_MODE || "deep") === "light"
       ? `**This is a LIGHT review** (${process.env.DEVOS_REVIEW_REASONS || "risk 1–2, nothing critical touched"}). Work from the pack and the report; spot-check the diff where the fence is specific. Aim for about 20 tool calls.`
-      : `**This is a DEEP review** (${process.env.DEVOS_REVIEW_REASONS || "risk 3, a gate, or a critical path"}). Still evidence first, but read every changed line of the critical paths${process.env.DEVOS_REVIEW_CRITICAL ? ` (${process.env.DEVOS_REVIEW_CRITICAL.split(",").map((p) => "`" + p + "`").join(", ")})` : ""}, and use a targeted probe where the pack cannot settle a security or data question.`,
+      : `**This is a DEEP review** (${process.env.DEVOS_REVIEW_REASONS || "risk 3, a gate, or a critical path"}). Still evidence first, but read every changed line of the critical paths${process.env.DEVOS_REVIEW_CRITICAL ? ` (${process.env.DEVOS_REVIEW_CRITICAL.split(",").map((p) => "`" + p + "`").join(", ")})` : ""}. Where the pack cannot settle a security or data question, name what is missing under Owner attention: the review has no shell (PR-90).`,
   };
 
   return fill(role, vars);

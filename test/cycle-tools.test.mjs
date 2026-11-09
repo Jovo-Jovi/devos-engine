@@ -369,11 +369,13 @@ function countOf(text, needle) {
 }
 
 test("cycle-tools.test.mjs (m) the cycle workflow keeps the proven commands and adds Codex and Gemini", () => {
-  const text = readFileSync(path.join(root, "payload", "files", "dot-github", "workflows", "devos-cycle.yml"), "utf8");
+  // PR-90: the cycle is devos-cycle.yml and the work job it calls, devos-work.yml.
+  const text = ["devos-cycle.yml", "devos-work.yml"].map((f) => readFileSync(path.join(root, "payload", "files", "dot-github", "workflows", f), "utf8")).join("\n");
   // PR-53: one run per builder tool; no other agent takes over on a usage limit.
   // PR-71: an agent gets only where its prompt is, never the prompt itself, on its command line.
   assert.equal(countOf(text, "agent -p --force --trust --approve-mcps --model \"$MODEL\" --output-format stream-json \"$(devos_prompt cursor .devos/builder-prompt.md)\""), 1);
-  assert.equal(countOf(text, "agent -p --force --trust --approve-mcps --model \"$MODEL\" --output-format stream-json \"$(devos_prompt cursor .devos/reviewer-prompt.md)\""), 1);
+  // PR-90 (D11): the review is Claude Code's, in publish, as its own user with no shell.
+  assert.equal(countOf(text, "agent -p --force --trust --approve-mcps --model \"$MODEL\" --output-format stream-json \"$(devos_prompt cursor .devos/reviewer-prompt.md)\""), 0);
   assert.equal(countOf(text, "DEVOS_STDIN=.devos/builder-prompt.md bash scripts/devos/agent-watchdog.sh \"$left\" 10 .devos/builder.json .devos/builder.err -- \\\n                  claude -p --model \"$MODEL\" --effort \"$EFFORT\" --output-format stream-json --verbose --permission-mode dontAsk"), 1);
   assert.equal(countOf(text, "--max-turns \"$TURNS\" < .devos/reviewer-prompt.md > .devos/reviewer.json"), 1);
   // No agent that can run a command gets its prompt as an argument anywhere in the payload. The doctor and the
@@ -384,12 +386,14 @@ test("cycle-tools.test.mjs (m) the cycle workflow keeps the proven commands and 
   for (const file of carried) assert.match(readFileSync(file, "utf8"), /--allowedTools "Read,Glob,Grep" --disallowedTools "Bash,/, file);
   assert.equal(countOf(text, "why=$(devos_restart \"$code\")"), 2);
   assert.equal(countOf(text, "bash scripts/devos/run-agent.sh builder"), 1);
-  assert.equal(countOf(text, "bash scripts/devos/run-agent.sh reviewer"), 1);
+  assert.equal(countOf(text, "bash scripts/devos/run-agent.sh reviewer"), 0);
   assert.equal(countOf(text, "npm install -g @openai/codex"), 1);
   assert.equal(countOf(text, "npm install -g @google/gemini-cli"), 1);
-  assert.equal(countOf(text, "--mcp-config devos/ci/mcp.claude.json"), 2);
-  assert.equal(countOf(text, "Skill,mcp__context7\""), 2);
-  assert.equal(countOf(text, "cp devos/ci/mcp.ci.json .cursor/mcp.json"), 2);
+  assert.equal(countOf(text, "--mcp-config devos/ci/mcp.claude.json"), 1);
+  assert.equal(countOf(text, "--strict-mcp-config --mcp-config /opt/devos-tools/mcp.json"), 1);
+  assert.equal(countOf(text, "Skill,mcp__context7\""), 1);
+  assert.equal(countOf(text, "Skill,mcp__context7,mcp__devos,"), 1);
+  assert.equal(countOf(text, "cp devos/ci/mcp.ci.json .cursor/mcp.json"), 1);
   for (const name of ["OPENAI_API_KEY", "OPENAI_API_KEY_2", "GEMINI_API_KEY", "GEMINI_API_KEY_2"]) {
     assert.equal(text.includes(`"${name}":"\${{ secrets.${name} != '' && '1' || '' }}"`), true, name);
   }

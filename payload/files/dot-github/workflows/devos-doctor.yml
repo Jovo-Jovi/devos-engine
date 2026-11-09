@@ -11,6 +11,9 @@
 # failed for an environment reason once per commit, and asks Claude Code (read-only, only when it is the project's
 # reviewer agent, PR-53) for a second opinion
 # when a failure matches no known rule. It never merges, pushes or edits code.
+# PR-90: each token is given only to the steps that use it (audit L2), and the second opinion runs like the cycle's
+# review: as its own user (scripts/devos/review-user.sh), with no shell and no token, its text scrubbed before it is
+# posted.
 name: devos-doctor
 run-name: "doctor · ${{ inputs.pr && format('PR #{0}', inputs.pr) || github.event.issue.number && format('PR #{0}', github.event.issue.number) || github.event.workflow_run.head_branch }}"
 
@@ -73,11 +76,6 @@ jobs:
       DEVOS_REVIEWER_MODEL: ${{ vars.DEVOS_REVIEWER_MODEL }}
       DEVOS_REVIEWER_LIGHT_MODEL: ${{ vars.DEVOS_REVIEWER_LIGHT_MODEL }}
       DEVOS_BUILDER_MODEL: ${{ vars.DEVOS_BUILDER_MODEL }}
-      GH_TOKEN: ${{ github.token }}
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -90,6 +88,7 @@ jobs:
       - name: Which pull request
         id: pr
         env:
+          GH_TOKEN: ${{ github.token }}
           IN_PR: ${{ inputs.pr || github.event.issue.number || github.event.workflow_run.pull_requests[0].number }}
           HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
           COMMENT_ID: ${{ github.event.comment.id }}
@@ -105,6 +104,12 @@ jobs:
       - name: Collect the facts and apply the known-issue rules
         id: c
         if: steps.pr.outputs.pr != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
         run: node scripts/devos/doctor.mjs collect --pr "${{ steps.pr.outputs.pr }}"
 
       # Only when a failure matches no rule, and only when Claude Code is the project's reviewer agent (PR-53): it reads
@@ -116,13 +121,15 @@ jobs:
           ref: ${{ steps.c.outputs.sha }}
           path: pr
           persist-credentials: false
-      - name: Second opinion — Claude Code (read-only)
+      - name: Second opinion — Claude Code (read-only, its own user, no shell)
         if: steps.c.outputs.ask_claude == 'true'
         continue-on-error: true
         timeout-minutes: 20
         env:
           OAUTH: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN || secrets.CLAUDE_CODE_OAUTH_TOKEN_2 }}
           APIKEY: ${{ secrets.ANTHROPIC_API_KEY || secrets.ANTHROPIC_API_KEY_2 }}
+          DEVOS_SCRIPTS: ${{ github.workspace }}/scripts/devos
+          DEVOS_REVIEW_PASS: CLAUDE_CODE_OAUTH_TOKEN ANTHROPIC_API_KEY
         run: |
           # PR-53: the second opinion runs only when the project's reviewer agent is Claude Code, on the model the developer chose.
           line=$(node scripts/devos/agents.mjs reviewer --mode deep 2>/dev/null || true)
@@ -132,20 +139,38 @@ jobs:
           [ -n "$OAUTH" ] && export CLAUDE_CODE_OAUTH_TOKEN="$OAUTH"
           [ -n "$APIKEY" ] && export ANTHROPIC_API_KEY="$APIKEY"
           [ -n "$OAUTH$APIKEY" ] || { echo "No Claude credential; skipping the second opinion."; exit 0; }
-          npm install -g @anthropic-ai/claude-code > /dev/null
           MODEL=${chosen:-$(node -e 'console.log(require("./devos.config.json").reviewer.model_by_risk["2"])')}
-          mkdir -p pr/.devos && cp -r .devos/doctor pr/.devos/doctor
-          cd pr
-          claude -p "$(cat ../devos/prompts/doctor.md)" --model "$MODEL" --effort high --output-format json \
-            --json-schema "$(cat ../devos/schemas/doctor.schema.json)" --permission-mode dontAsk --max-turns 30 \
+          bash scripts/devos/review-user.sh setup
+          cp -R pr/. /opt/devos-review-work/
+          rm -rf /opt/devos-review-work/.git
+          mkdir -p /opt/devos-review-work/.devos && cp -r .devos/doctor /opt/devos-review-work/.devos/doctor
+          bash scripts/devos/review-user.sh workspace
+          bash scripts/devos/review-user.sh run /opt/devos-review-work -- claude -p "$(cat devos/prompts/doctor.md)" --model "$MODEL" --effort high --output-format json \
+            --json-schema "$(cat devos/schemas/doctor.schema.json)" --permission-mode dontAsk --max-turns 30 \
+            --setting-sources user --settings /opt/devos-tools/settings.json --strict-mcp-config \
             --allowedTools "Read,Glob,Grep" --disallowedTools "Bash,Write,Edit,WebFetch,WebSearch" \
-            > ../.devos/doctor/claude.json 2> ../.devos/doctor/claude.err || tail -c 1500 ../.devos/doctor/claude.err
+            > .devos/doctor/claude.json 2> .devos/doctor/claude.err || tail -c 1500 .devos/doctor/claude.err
           # PR-52: nothing here is committed, so this run's usage goes on its summary page only.
-          node ../scripts/devos/usage.mjs record --stage doctor --command claude --model "$MODEL" --out ../.devos/doctor/claude.json --summary || true
+          node scripts/devos/usage.mjs record --stage doctor --command claude --model "$MODEL" --out .devos/doctor/claude.json --summary || true
+
+      - name: Scrub the second opinion
+        if: steps.c.outputs.ask_claude == 'true'
+        continue-on-error: true
+        env:
+          SCRUB_TOKEN: ${{ github.token }}
+          SCRUB_C1: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          SCRUB_C2: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 }}
+          SCRUB_A1: ${{ secrets.ANTHROPIC_API_KEY }}
+          SCRUB_A2: ${{ secrets.ANTHROPIC_API_KEY_2 }}
+          SCRUB_VERCEL: ${{ secrets.VERCEL_TOKEN }}
+          SCRUB_BYPASS: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: node scripts/devos/scrub.mjs --names SCRUB_TOKEN,SCRUB_C1,SCRUB_C2,SCRUB_A1,SCRUB_A2,SCRUB_VERCEL,SCRUB_BYPASS .devos/doctor/claude.json .devos/doctor/claude.err
 
       - name: Post the report, set devos/gate, re-run an environment failure
         id: p
         if: steps.pr.outputs.pr != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: node scripts/devos/doctor.mjs publish --claude .devos/doctor/claude.json
 
       # A re-run started with this workflow's token may not trigger the doctor again on its own,
@@ -153,6 +178,12 @@ jobs:
       - name: Wait for the ci re-run, then report again
         if: steps.p.outputs.reran != ''
         timeout-minutes: 30
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
         run: |
           gh run watch "${{ steps.p.outputs.reran }}" --repo "$REPO" --interval 30 > /dev/null || true
           node scripts/devos/doctor.mjs collect --pr "${{ steps.pr.outputs.pr }}"

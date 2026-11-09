@@ -112,31 +112,42 @@ function answeredAfter(pr, since) {
 // the maximum execution time". That run stopped; a run someone cancelled did not. `saved`: the builder's work was
 // pushed before the limit, so only the checks and the review need to run again.
 // The annotations are read with the workflow's own token (`checks: read`), since DEVOS_PAT has no Checks access. If
-// they cannot be read, a job that ran its whole limit (the cycle job's `timeout-minutes`) counts as stopped.
-function cycleJobMinutes() {
+// they cannot be read, a job that ran its whole limit (its `timeout-minutes`) counts as stopped.
+// PR-90: an attempt runs in two jobs, `work` (devos-work.yml, listed as "work / work") and `publish`; a run from before
+// has one job, `cycle`. The builder's work is pushed by publish's "Push the builder's work" (before: "Commit and push
+// the builder's work"), so a `work` job stopped at its limit has saved nothing.
+const LIMITED = {
+  cycle: ["devos-cycle.yml", "cycle", 150],
+  work: ["devos-work.yml", "work", 150],
+  "work / work": ["devos-work.yml", "work", 150],
+  publish: ["devos-cycle.yml", "publish", 120],
+};
+function jobMinutes(name) {
+  const [file, job, fallback] = LIMITED[name];
   try {
-    const text = readFileSync(P(".github/workflows/devos-cycle.yml"), "utf8");
-    const job = text.slice(text.search(/^ {2}cycle:\s*$/m));
-    const m = job.match(/^ {4}timeout-minutes:\s*(\d+)/m);
-    return m ? Number(m[1]) : 0;
+    const text = readFileSync(P(`.github/workflows/${file}`), "utf8");
+    const at = text.search(new RegExp(`^ {2}${job}:\\s*$`, "m"));
+    if (at < 0) return fallback;
+    const m = text.slice(at).match(/^ {4}timeout-minutes:\s*(\d+)/m);
+    return m ? Number(m[1]) : fallback;
   } catch {
-    return 0;
+    return fallback;
   }
 }
 function timeLimit(runId) {
   const jobs = api(`repos/${REPO}/actions/runs/${runId}/jobs`)?.jobs || [];
   for (const j of jobs) {
-    // Only the cycle job: cancelling `wait-and-resume` is how the owner stops a wait.
-    if (j.name !== "cycle" || j.conclusion !== "cancelled") continue;
+    // Only the attempt's own jobs: cancelling `wait-and-resume` is how the owner stops a wait.
+    if (!Object.hasOwn(LIMITED, j.name) || j.conclusion !== "cancelled") continue;
     let notes = null;
     try { notes = JSON.parse(gh(["api", `repos/${REPO}/check-runs/${j.id}/annotations`], { allowFail: true, report: true }) || "null"); } catch { notes = null; }
-    const limit = cycleJobMinutes();
+    const limit = jobMinutes(j.name);
     const ran = (new Date(j.completed_at).getTime() - new Date(j.started_at).getTime()) / 60000;
     const hit = Array.isArray(notes)
       ? notes.some((a) => /exceeded the maximum execution time/i.test(a.message || ""))
       : limit > 0 && ran >= limit - 1;
     if (hit) {
-      const saved = (j.steps || []).some((st) => /^Commit and push the builder's work/.test(st.name || "") && st.conclusion === "success");
+      const saved = (j.steps || []).some((st) => /^(Commit and push the builder's work|Push the builder's work)/.test(st.name || "") && st.conclusion === "success");
       return { hit: true, saved };
     }
   }

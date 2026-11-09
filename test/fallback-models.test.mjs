@@ -14,7 +14,8 @@ import { looksLikeLimit, looksUnavailable, modelUnavailable, notBefore, parseRes
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const bin = path.join(root, "bin", "devos.mjs");
 const skipWindows = process.platform === "win32";
-const workflow = readFileSync(path.join(root, "payload", "files", "dot-github", "workflows", "devos-cycle.yml"), "utf8");
+// PR-90: the cycle is devos-cycle.yml and the work job it calls, devos-work.yml.
+const workflow = ["devos-cycle.yml", "devos-work.yml"].map((f) => readFileSync(path.join(root, "payload", "files", "dot-github", "workflows", f), "utf8")).join("\n");
 
 function withAgents(dir, agents) {
   const file = path.join(dir, "devos.config.json");
@@ -318,21 +319,22 @@ test("fallback-models.test.mjs (g) a parked builder waits for the earliest reset
 
 test("fallback-models.test.mjs (h) every builder and reviewer run of the cycle tries the slots, and the builder reports the model it used", () => {
   const count = (needle) => workflow.split(needle).length - 1;
-  assert.equal(count("FALLBACKS: ${{ steps.ag.outputs.builder_fallbacks }}"), 1);
+  assert.equal(count("FALLBACKS: ${{ inputs.builder_fallbacks }}"), 1);
   assert.equal(count("models=\"$MODEL $FALLBACKS\""), 1);
   assert.equal(count("models=\"$MODEL $rev_fallbacks\""), 1);
   assert.equal(count("for slot in $(devos_slots claude $models); do"), 2);
-  assert.equal(count("for slot in $(devos_slots cursor $models); do"), 2);
-  assert.equal(count("MODEL=\"${slot%@*}\"; acc=\"${slot##*@}\""), 4);
-  assert.equal(count("$(devos_limit_file "), 4);
-  assert.equal(count("devos_unavailable .devos/"), 4);
+  // PR-90 (D11): the builder's Claude and Cursor runs, and the review's Claude runs.
+  assert.equal(count("for slot in $(devos_slots cursor $models); do"), 1);
+  assert.equal(count("MODEL=\"${slot%@*}\"; acc=\"${slot##*@}\""), 3);
+  assert.equal(count("$(devos_limit_file "), 3);
+  assert.equal(count("devos_unavailable .devos/"), 3);
   assert.equal(count("devos_settle \"$outcome\" \"$lim\" .devos/builder.err"), 1);
   assert.equal(count("devos_settle \"$outcome\" \"$lim\" .devos/reviewer.err"), 1);
   assert.equal(count(".devos/builder-prompt.md $FALLBACKS || exit 1"), 1);
-  assert.equal(count(".devos/reviewer-prompt.md $rev_fallbacks || exit 1"), 1);
+  assert.equal(count(".devos/reviewer-prompt.md $rev_fallbacks || exit 1"), 0);
   assert.equal(count("echo \"model=$MODEL\" >> \"$GITHUB_OUTPUT\""), 1);
-  assert.equal(count("${{ steps.builder.outputs.model || steps.bm.outputs.model }}"), 3);
-  assert.equal(count("builder-status.mjs --task \"$TASK\" --attempt \"$ATTEMPT\" --tool \"${{ steps.ag.outputs.builder_tool || 'cursor' }}\""), 1);
+  assert.equal(count("${{ steps.builder.outputs.model || steps.bm.outputs.model }}"), 1);
+  assert.equal(count("builder-status.mjs --task \"$TASK\" --attempt \"$ATTEMPT\" --tool \"$DEVOS_BUILDER_TOOL\""), 1);
   assert.equal(count("for acc in $accounts"), 0);
   for (const file of ["run-agent.sh", "plan-agent.sh"]) {
     const text = readFileSync(path.join(root, "payload", "files", "scripts", "devos", file), "utf8");
@@ -423,7 +425,8 @@ test("fallback-models.test.mjs (k) a builder whose tool is out for longer than a
 test("fallback-models.test.mjs (l) the cycle reads the label before it picks, moves on switch, and creates the label", () => {
   assert.equal(workflow.includes("labels=$(gh pr list"), true);
   assert.equal(workflow.includes('case ",$labels," in *",devos:fallback-builder,"*) export DEVOS_FALLBACK_BUILDER=true ;; esac'), true);
-  assert.equal(workflow.includes('--builder "${{ steps.ag.outputs.builder_id }}"'), true);
+  assert.equal(workflow.includes('--builder "$BUILDER_ID"'), true);
+  assert.equal(workflow.includes("BUILDER_ID: ${{ inputs.builder_id }}"), true);
   assert.equal(workflow.includes('elif [ "$STATE" = "switch" ]; then'), true);
   assert.equal(workflow.includes('--add-label "devos:fallback-builder"'), true);
   assert.equal(workflow.includes("continue|switch) exit 0"), true);

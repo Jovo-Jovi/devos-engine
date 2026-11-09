@@ -34,9 +34,9 @@ permissions:
   pull-requests: read
 
 jobs:
-  # Production moves at the gates the human signs. With DEVOS_PAT set, the runner's own auto-merges
-  # (label devos:auto-merged) are pushes that start this workflow too; they are skipped here, so
-  # adding the token for method fixes (PR-28) does not change when production deploys.
+  # Production moves at the gates the human signs. The runner merges with the workflow's own token, which starts no
+  # workflow (PR-90); a push whose pull request carries devos:auto-merged, or was merged by a bot account, is skipped
+  # here as well, so no token the runner holds can make production deploy.
   which:
     if: vars.DEVOS_VERCEL == 'true' && vars.DEVOS_PAUSED != 'true'
     runs-on: ubuntu-latest
@@ -52,6 +52,11 @@ jobs:
           if [ "${{ github.event_name }}" = "push" ]; then
             labels=$(gh api "repos/$REPO/commits/${{ github.sha }}/pulls" --jq '[.[].labels[].name] | join(",")' 2>/dev/null || echo "")
             case ",$labels," in *",devos:auto-merged,"*) skip=true; echo "::notice title=Dev OS::Runner auto-merge: production waits for the next gate you sign." ;; esac
+            # PR-90: a pull request merged by a bot account (the cycle's own token) never deploys either; a person's does.
+            for n in $(gh api "repos/$REPO/commits/${{ github.sha }}/pulls" --jq '.[].number' 2>/dev/null || true); do
+              merger=$(gh api "repos/$REPO/pulls/$n" --jq '.merged_by.type // ""' 2>/dev/null || echo "")
+              if [ "$merger" = "Bot" ]; then skip=true; echo "::notice title=Dev OS::PR #$n was merged by a bot: production waits for the next gate you sign."; fi
+            done
           fi
           echo "skip=$skip" >> "$GITHUB_OUTPUT"
 

@@ -20,7 +20,9 @@
 # rewritten to the final result object, the same shape `--output-format json` prints. Both streams are read:
 # Cursor's (`tool_call` started and completed) and Claude Code's (`tool_use` in an assistant message, its
 # `tool_result` in the next user message; `--verbose`), so a Claude Code builder's progress shows too (E62).
-# The agent never sees DEVOS_PROGRESS_TOKEN: it is removed from the child's environment.
+# The agent never sees DEVOS_PROGRESS_TOKEN: it is removed from the child's environment. PR-90: nor any stored key
+# (the CURSOR_KEY_N, CLAUDE_OAUTH_N, CLAUDE_APIKEY_N, CODEX_KEY_N and GEMINI_KEY_N slots, the media key, a GitHub
+# token): it sees only the one credential accounts.sh exported for the account in use.
 # Usage (PR-52): with DEVOS_USAGE_STAGE set, every run ends with one line in the usage record
 # (scripts/devos/usage.mjs record), its tool and model read from the command line.
 # PR-71: DEVOS_STDIN names a file the command reads on standard input (its prompt; /dev/null by default). A signal to
@@ -45,7 +47,13 @@ old=$(cat "$pidfile" 2>/dev/null || true)
 own=$(ps -o sid= -p $$ 2>/dev/null | tr -d ' ')
 # Never 0 (pkill's "this session") and never the watchdog's own session.
 case "$old" in ''|0|*[!0-9]*) ;; *) [ "$old" = "$own" ] || pkill -KILL -s "$old" 2>/dev/null ;; esac
-env -u DEVOS_PROGRESS_TOKEN -u GH_TOKEN -u GITHUB_TOKEN setsid "$@" < "${DEVOS_STDIN:-/dev/null}" > "$out" 2> "$err" &
+# PR-90: the slots accounts.sh reads, and every other credential name the cycle has ever held, never reach the agent.
+strip=()
+for name in DEVOS_PROGRESS_TOKEN GH_TOKEN GITHUB_TOKEN DEVOS_PAT DEVOS_MEDIA_XAI_KEY VERCEL_TOKEN VERCEL_AUTOMATION_BYPASS_SECRET \
+  CURSOR_KEY_1 CURSOR_KEY_2 CLAUDE_OAUTH_1 CLAUDE_OAUTH_2 CLAUDE_APIKEY_1 CLAUDE_APIKEY_2 CODEX_KEY_1 CODEX_KEY_2 GEMINI_KEY_1 GEMINI_KEY_2; do
+  strip+=(-u "$name")
+done
+env "${strip[@]}" setsid "$@" < "${DEVOS_STDIN:-/dev/null}" > "$out" 2> "$err" &
 pid=$!
 printf '%s\n' "$pid" > "$pidfile"
 trap 'stop; exit 143' TERM

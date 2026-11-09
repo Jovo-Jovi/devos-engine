@@ -2,6 +2,15 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
+## 1.13.0 — Unreleased
+
+- **The cycle runs each attempt in two jobs (PR-90).** The builder and your project's checks run in a job that holds no GitHub write token, no `DEVOS_PAT` and no deployment key, and is handed only the chosen builder tool's keys; the builder sees only the one key it is using. A second job checks the work against main's rules before anything is pushed: one branch, nothing it may not change (the method, the fences, the reviews, `docs/PHASES.md`, anything outside the builder's surface), and the risk, gates and required checks taken from main. Work that fails a rule is never pushed and never reviewed, and the pull request says why.
+- **The review runs without a shell.** Claude Code reviews as a user of its own, with read and write access to the review file and fences only, the documentation lookups, and a `fence_check` tool; every command it used to run is already in the evidence. Its text is scrubbed of secret values before it is posted. The reviewer must be Claude Code for now; set `agents.reviewer` to a Claude model if you chose another tool.
+- **No runner merge can deploy.** The runner merges with the workflow's own token, which starts no workflow, and `devos-deploy` also skips a pull request merged by a bot. Production still deploys when you merge.
+- **The cycle makes no Vercel preview of its own.** It holds no Vercel token, so no code of a task branch can reach one. The screenshots and the readiness checks use the local build, as they did when a preview was behind the Vercel login. If you want a preview of a task branch, turn on Vercel's Git integration for branches with `main` off; a Hobby team blocks it for the runner's commits. Production still deploys from `devos-deploy` after your merge.
+- **A method fix never changes a workflow.** The runner never pushes a workflow or action file, as it would run with your repository's secrets; when a fix needs one, the reviewer's answer on the issue gives you the exact change to apply.
+- **The doctor's tokens are in the steps that use them**, and its second opinion runs like the review.
+
 ## 1.12.0 — 2026-11-09
 
 - **The launch task (PR-88).** With a full-scope plan, the last task before launch proves the product is ready for production. Its fence names the main pages on a `- Launch:` line, and the runner checks them before the review: security headers, the full dependency audit, accessibility, and page speed (largest contentful paint up to 2.5 s, layout shift up to 0.1). A failed check stops the launch until it is fixed or you waive it in writing in `docs/DECISIONS.md` (`Readiness waiver: speed — <your reason>`).

@@ -138,8 +138,9 @@ test("tower-ask.test.mjs (d) a link run builds nothing and its report job asks; 
   const cycle = readFileSync(path.join(workflows, "devos-cycle.yml"), "utf8").replaceAll("\r\n", "\n");
   const advance = readFileSync(path.join(workflows, "devos-advance.yml"), "utf8").replaceAll("\r\n", "\n");
   for (const line of [
-    "    if: always() && (needs.cycle.result != 'skipped' || needs.resolve.outputs.done == 'true') && vars.DEVOS_REPORTING == 'on'\n",
-    "      - name: The journal of the cycle job\n        if: needs.resolve.outputs.done != 'true'\n",
+    // PR-90: the journal is the publish job's.
+    "    if: always() && (needs.publish.result != 'skipped' || needs.resolve.outputs.done == 'true') && vars.DEVOS_REPORTING == 'on'\n",
+    "      - name: The journal of the publish job\n        if: needs.resolve.outputs.done != 'true' && needs.publish.outputs.record_id != ''\n",
     "link = no task, only ask the DEV_OS registry for the link, PR-65)\"\n",
     "      - if: steps.t.outputs.done == 'true' && inputs.task != 'link'\n",
     "      - if: steps.t.outputs.done == 'true' && inputs.task == 'link'\n",

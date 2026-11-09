@@ -1,5 +1,7 @@
 # Two accounts per agent, with an automatic switch on a usage limit (PR-29). Source it in a step:
 #   . scripts/devos/accounts.sh
+# PR-90: DEVOS_SCRIPTS names the folder of the runner scripts it calls (default scripts/devos): the publish job sets it
+# to its checkout of main, so a review never runs a script from the branch.
 #
 # Credentials come from the step's environment (mapped from GitHub secrets, never printed):
 #   Cursor : CURSOR_KEY_1 (secret CURSOR_API_KEY)            · CURSOR_KEY_2 (secret CURSOR_API_KEY_2)
@@ -94,14 +96,14 @@ devos_use_codex() {
 devos_use_gemini() { eval "export GEMINI_API_KEY=\"\${GEMINI_KEY_$1}\""; }
 
 # devos_limited <json> <err> [exit] → true when that run stopped on a usage or rate limit.
-devos_limited() { node scripts/devos/limit-check.mjs --json "$1" --err "$2" ${3:+--exit "$3"}; }
+devos_limited() { node "${DEVOS_SCRIPTS:-scripts/devos}/limit-check.mjs" --json "$1" --err "$2" ${3:+--exit "$3"}; }
 
 # devos_unavailable <json> <err> [exit] → true when that run stopped because the account cannot use its model (PR-64).
-devos_unavailable() { node scripts/devos/limit-check.mjs --unavailable --json "$1" --err "$2" ${3:+--exit "$3"}; }
+devos_unavailable() { node "${DEVOS_SCRIPTS:-scripts/devos}/limit-check.mjs" --unavailable --json "$1" --err "$2" ${3:+--exit "$3"}; }
 
 # PR-87: devos_server_error <json> <err> [exit] → true when a failed run stopped on a temporary server error: an HTTP
 # 5xx, a dropped connection, or an error the CLI marks retriable (limits.mjs serverError: the CLI's own error only).
-devos_server_error() { node scripts/devos/limit-check.mjs --server --json "$1" --err "$2" ${3:+--exit "$3"}; }
+devos_server_error() { node "${DEVOS_SCRIPTS:-scripts/devos}/limit-check.mjs" --server --json "$1" --err "$2" ${3:+--exit "$3"}; }
 
 # PR-87: devos_server_wait <retries so far> → the seconds to wait before the same run is tried again (30, then 60,
 # then 120), or nothing and false once a run's three retries are spent. DEVOS_SERVER_WAIT sets the first wait.

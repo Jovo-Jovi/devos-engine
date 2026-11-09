@@ -133,7 +133,7 @@
       ]
     },
     "builder_method": {
-      "$comment": "PR-28: a method fix (Phase PM) may change workflows, runner scripts, guards, prompts and this config; never the product, the reviewer's own rules or the ledgers. The workflow from main forces the deep review and the human gate.",
+      "$comment": "PR-28: a method fix (Phase PM) may change runner scripts, guards, prompts and this config; never the product, the reviewer's own rules or the ledgers. The workflow from main forces the deep review and the human gate. PR-90: never a workflow or action file, which a person applies by hand.",
       "deny": [
         "src/**",
         "content/**",

@@ -5,7 +5,9 @@ import { execFileSync } from "node:child_process";
 import { join, dirname, relative, resolve, isAbsolute } from "node:path";
 import { fileURLToPath } from "node:url";
 
-export const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
+// PR-90: the cycle's publish job runs these scripts from its checkout of main over a workspace it built itself
+// (DEVOS_ROOT): the rules come from main, the data from the verified branch. Unset, the scripts' own repository.
+export const ROOT = process.env.DEVOS_ROOT ? resolve(process.env.DEVOS_ROOT) : join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 export const P = (...p) => join(ROOT, ...p);
 
 export function readJson(rel) {
@@ -152,13 +154,21 @@ export function updatePhasesRow(task, { done, verdict }) {
 
 // ---------- git ----------------------------------------------------------------------------
 
+// PR-90: in the publish job (DEVOS_ROOT set), git reads only the repository's own configuration, which publish wrote,
+// never starts a hook or an fsmonitor program, and reads every path as a path (a branch's firebase.json cannot pass
+// `:(exclude)…` magic to a gate's diff).
+const PUBLISH_GIT = process.env.DEVOS_ROOT ? ["-c", "core.hooksPath=/dev/null", "-c", "core.fsmonitor=false"] : [];
+const PUBLISH_ENV = process.env.DEVOS_ROOT
+  ? { env: { ...Object.fromEntries(Object.entries(process.env).filter(([k]) => !k.startsWith("GIT_"))), GIT_CONFIG_NOSYSTEM: "1", GIT_CONFIG_GLOBAL: "/dev/null", GIT_LITERAL_PATHSPECS: "1" } }
+  : {};
+
 export function git(args, opts = {}) {
-  return execFileSync("git", args, { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], ...opts }).trim();
+  return execFileSync("git", [...PUBLISH_GIT, ...args], { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], ...PUBLISH_ENV, ...opts }).trim();
 }
 
 /** Paths changed in the working tree relative to HEAD, including untracked, excluding ignored. */
 export function changedPaths() {
-  const out = execFileSync("git", ["status", "--porcelain=v1", "-z", "--untracked-files=all"], { cwd: ROOT, encoding: "utf8" });
+  const out = execFileSync("git", [...PUBLISH_GIT, "status", "--porcelain=v1", "-z", "--untracked-files=all"], { cwd: ROOT, encoding: "utf8", ...PUBLISH_ENV });
   const paths = [];
   const parts = out.split("\0").filter(Boolean);
   for (let i = 0; i < parts.length; i++) {
@@ -176,7 +186,7 @@ export function changedPaths() {
  * diff.
  */
 export function diffPaths(base, pathspec = []) {
-  const out = execFileSync("git", ["diff", "--name-only", "--no-renames", "-z", `${base}...HEAD`, ...(pathspec.length > 0 ? ["--", ...pathspec] : [])], { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+  const out = execFileSync("git", [...PUBLISH_GIT, "diff", "--name-only", "--no-renames", "-z", `${base}...HEAD`, ...(pathspec.length > 0 ? ["--", ...pathspec] : [])], { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], ...PUBLISH_ENV });
   return out.split("\0").filter(Boolean);
 }
 

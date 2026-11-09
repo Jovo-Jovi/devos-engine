@@ -137,7 +137,8 @@ test("media-cycle.test.mjs (e) setup offers DEVOS_MEDIA_XAI_KEY as an optional k
 });
 
 test("media-cycle.test.mjs (f) the Generated media step runs before the builder, alone holds the key and never stops the task", () => {
-  const cycle = read("payload/files/dot-github/workflows/devos-cycle.yml");
+  // PR-90: the media step runs in the work job (devos-work.yml), which gets the key from the cycle as MEDIA_KEY.
+  const cycle = read("payload/files/dot-github/workflows/devos-work.yml");
   const at = (name) => cycle.indexOf(`      - name: ${name}`);
   assert.ok(at("Check out the task branch") > 0);
   assert.ok(at("Generated media (PR-81)") > at("Local module services for the builder (Supabase, storage, Firebase)"));
@@ -146,7 +147,7 @@ test("media-cycle.test.mjs (f) the Generated media step runs before the builder,
   for (const line of [
     "        if: env.REVIEW_ONLY != 'true'",
     "        continue-on-error: true",
-    "          DEVOS_MEDIA_XAI_KEY: ${{ secrets.DEVOS_MEDIA_XAI_KEY }}",
+    "          DEVOS_MEDIA_XAI_KEY: ${{ secrets.MEDIA_KEY }}",
     "          DEVOS_MEDIA_BUDGET: ${{ vars.DEVOS_MEDIA_BUDGET }}",
     '          node scripts/devos/media.mjs --fence "docs/fences/$TASK.md" || echo',
     "            git add --pathspec-from-file=.devos/media-files.txt",
@@ -154,7 +155,11 @@ test("media-cycle.test.mjs (f) the Generated media step runs before the builder,
   ]) {
     assert.equal(step.includes(line), true, line);
   }
-  assert.equal(cycle.split("secrets.DEVOS_MEDIA_XAI_KEY").length - 1, 1);
+  assert.equal(cycle.split("secrets.MEDIA_KEY").length - 1, 1);
+  const caller = read("payload/files/dot-github/workflows/devos-cycle.yml");
+  assert.equal(caller.split("secrets.DEVOS_MEDIA_XAI_KEY").length - 1, 1);
+  // Only when main's fence names media (resolve's media output).
+  assert.equal(caller.includes("      MEDIA_KEY: ${{ needs.resolve.outputs.media == 'true' && secrets.DEVOS_MEDIA_XAI_KEY || '' }}\n"), true);
 });
 
 test("media-cycle.test.mjs (g) the reviewer sees what was made, and the method says so (PR-81)", () => {

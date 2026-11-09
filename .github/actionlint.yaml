@@ -1,0 +1,7 @@
+# actionlint, as engine-ci runs it on the payload's workflows (payload/files/dot-github/workflows) and this repository's.
+# PR-90: the cycle calls devos-work.yml as ./.github/workflows/devos-work.yml, where it is installed in a project; here it
+# lives under dot-github/, so actionlint cannot open it. test/two-jobs.test.mjs checks that call instead (S1).
+paths:
+  payload/files/dot-github/workflows/devos-cycle.yml:
+    ignore:
+      - 'could not read reusable workflow file for "\./\.github/workflows/devos-work\.yml"'

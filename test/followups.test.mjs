@@ -76,7 +76,8 @@ test("followups.test.mjs (b) a Claude Code stream with no result counts each mes
 });
 
 test("followups.test.mjs (c) the Claude Code builder runs with stream-json --verbose; the other Claude runs keep json", () => {
-  const cycle = read(`${PAYLOAD}/dot-github/workflows/devos-cycle.yml`);
+  // PR-90: the builder runs in the work job, devos-work.yml.
+  const cycle = read(`${PAYLOAD}/dot-github/workflows/devos-work.yml`);
   assert.equal(cycle.split("claude -p --model \"$MODEL\" --effort \"$EFFORT\" --output-format stream-json --verbose --permission-mode dontAsk").length - 1, 1);
   assert.equal(cycle.includes("--output-format stream-json --verbose --permission-mode dontAsk --allowedTools \"Read,Glob,Grep,Write,Edit,MultiEdit,Bash,Task,Agent,Skill,mcp__context7\""), true);
   const watchdog = read(`${PAYLOAD}/scripts/devos/agent-watchdog.sh`);
