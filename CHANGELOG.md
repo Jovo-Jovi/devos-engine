@@ -2,7 +2,7 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
-## 1.12.0 — Unreleased
+## 1.12.0 — 2026-11-09
 
 - **The launch task (PR-88).** With a full-scope plan, the last task before launch proves the product is ready for production. Its fence names the main pages on a `- Launch:` line, and the runner checks them before the review: security headers, the full dependency audit, accessibility, and page speed (largest contentful paint up to 2.5 s, layout shift up to 0.1). A failed check stops the launch until it is fixed or you waive it in writing in `docs/DECISIONS.md` (`Readiness waiver: speed — <your reason>`).
 - **A production-readiness checklist.** The reviewer goes through `docs/method/READINESS.md`, per layer, on the launch task: security, frontend, speed, backend and API, database, architecture and operations, and testing.
@@ -12,7 +12,7 @@ The notable changes of each DEV_OS Engine release. Versions follow [Semantic Ver
 - **`devos upgrade` is safer.** A rollback puts back an engine file your `.gitignore` leaves out, an upgrade that removes such a file no longer fails, and a version that is not a release (`1.13.0-beta.1`) is named in one line instead of a stack trace.
 - **The handbook names no client.** The project the method was distilled from is called the reference project throughout, Dev OS v1 is no longer named after a project, and the setup steps for Vercel, Supabase, R2 and Firebase are complete on their own.
 
-## 1.11.0 — Unreleased
+## 1.11.0 — 2026-11-09
 
 - **`/devos accept` (PR-87).** Comment `/devos accept`, with a note if you like, on the pull request of a task that stopped without a PASS to accept it as it is. DEV_OS records your decision as the task's next attempt (`docs/reviews/Tnn-aN.md`) and ticks its row in `docs/PHASES.md` on that branch; merging the pull request starts the next task. On a task you already merged by hand, a pull request of its own carries the record. A task you merge by hand without it is no longer built again from scratch: its pull request tells you to use `/devos accept`.
 - **Screenshots at 2×.** The settled and reduced-motion screenshots the builder and the reviewer read are taken at twice the pixel density, so an overlap of a few pixels is plain to see. The filmstrip frames stay at 1×.
