@@ -35,6 +35,8 @@ test("config-equivalence.test.mjs regenerates the Tower config", () => {
   delete merged.registry;
   // PR-91 (E67): units of acceptance are an engine addition.
   delete merged.acceptance;
+  // PR-93 (E66): the pinned tool versions are an engine addition.
+  delete merged.tool_versions;
   // PR-70 (E40): the checks' time limits are an engine addition.
   delete merged.check_timeout_minutes;
   delete merged.checks_budget_minutes;

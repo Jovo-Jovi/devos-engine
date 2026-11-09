@@ -18,13 +18,15 @@ cd "$root"
 sha=$(git rev-parse HEAD)
 log="${DEVOS_VERCEL_LOG:-/dev/stderr}"
 [ -d .vercel/output ] || { echo "vercel-deploy: .vercel/output does not exist; run vercel build first" >&2; exit 1; }
+# PR-93: the Vercel CLI at the version devos.config.json pins, never latest.
+vercel=$(node scripts/devos/pins.mjs vercel)
 
 aside="$(dirname "$root")/.devos-git-aside-$$"
 mv .git "$aside"
 trap 'mv "$aside" "$root/.git"' EXIT
 
 set +e
-out=$(timeout 300 npx --yes vercel@latest deploy --prebuilt "$@" --token="$VERCEL_TOKEN" \
+out=$(timeout 300 npx --yes "$vercel" deploy --prebuilt "$@" --token="$VERCEL_TOKEN" \
   --meta devosBranch="$branch" --meta devosSha="$sha" < /dev/null 2>>"$log")
 rc=$?
 set -e

@@ -189,10 +189,15 @@ jobs:
           node scripts/devos/doctor.mjs collect --pr "${{ steps.pr.outputs.pr }}"
           node scripts/devos/doctor.mjs publish
 
+      # D9: the findings and their evidence; never the second opinion's own output (claude.json, claude.err), which is
+      # posted already, scrubbed, in the PR comment.
       - if: always() && steps.pr.outputs.pr != ''
         uses: actions/upload-artifact@v4
         with:
           name: devos-doctor-pr${{ steps.pr.outputs.pr }}
-          path: .devos/doctor/
+          path: |
+            .devos/doctor/
+            !.devos/doctor/claude.json
+            !.devos/doctor/claude.err
           include-hidden-files: true
           if-no-files-found: ignore

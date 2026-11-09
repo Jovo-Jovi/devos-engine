@@ -77,7 +77,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install -g pnpm@10
+      - name: pnpm, at the version devos.config.json pins (PR-93)
+        run: |
+          spec=$(node scripts/devos/pins.mjs pnpm)
+          npm install -g "$spec"
       # PR-27: every setting the deploy needs, checked by name before anything moves. If one is missing
       # the deploy stops here with the full list; the setup issue has the steps, and once they are done
       # devos-setup re-runs this deploy by itself.
@@ -139,7 +142,7 @@ jobs:
       # A failure here stops the job: the old app keeps running against the old schema.
       - name: Supabase CLI
         if: hashFiles('supabase/config.toml') != '' && vars.DEVOS_SUPABASE == 'true' && (inputs.target || 'production') == 'production'
-        uses: supabase/setup-cli@v1
+        uses: supabase/setup-cli@1dedf2c611547ede7232d26866dd3c56ab903bbb # v1.7.3
         with:
           # Pinned (PR-33): "latest" asks GitHub's API, which rate-limits shared runners.
           version: ${{ vars.DEVOS_SUPABASE_CLI_VERSION || '2.120.0' }}
@@ -194,7 +197,8 @@ jobs:
           sa="$RUNNER_TEMP/firebase-deploy.json"
           printf '%s' "$FIREBASE_DEPLOY_SERVICE_ACCOUNT" > "$sa"
           trap 'shred -u "$sa" 2>/dev/null || rm -f "$sa"' EXIT
-          npm install -g firebase-tools > "$RUNNER_TEMP/firebase-tools.log" 2>&1 || { tail -n 20 "$RUNNER_TEMP/firebase-tools.log"; exit 1; }
+          spec=$(node scripts/devos/pins.mjs firebase)
+          npm install -g "$spec" > "$RUNNER_TEMP/firebase-tools.log" 2>&1 || { tail -n 20 "$RUNNER_TEMP/firebase-tools.log"; exit 1; }
           GOOGLE_APPLICATION_CREDENTIALS="$sa" firebase deploy --only firestore:rules --project "$FIREBASE_PROJECT_ID" --non-interactive \
             || { echo "::error title=Dev OS::the Firestore rules did not deploy (is the Firestore database created, and does the deploy key have the Firebase Admin role?)"; exit 1; }
           node scripts/devos/firebase.mjs validate
@@ -207,13 +211,15 @@ jobs:
           TARGET: ${{ inputs.target || 'production' }}
         run: |
           if [ "$TARGET" = "production" ]; then ENV=production; FLAG=--prod; else ENV=preview; FLAG=; fi
-          npx --yes vercel@latest pull --yes --environment="$ENV" --token="$VERCEL_TOKEN"
+          # PR-93: the Vercel CLI at the version devos.config.json pins, never latest.
+          vercel=$(node scripts/devos/pins.mjs vercel)
+          npx --yes "$vercel" pull --yes --environment="$ENV" --token="$VERCEL_TOKEN"
           # PR-24: next/font downloads the Google Fonts during the build, and that download sometimes fails
           # (Turbopack "next/font/google queries have exactly one entry"). Retry that failure, and only that.
           set -o pipefail
           built=0
           for i in 1 2 3; do
-            if npx --yes vercel@latest build $FLAG --token="$VERCEL_TOKEN" 2>&1 | tee "$RUNNER_TEMP/build.log"; then built=1; break; fi
+            if npx --yes "$vercel" build $FLAG --token="$VERCEL_TOKEN" 2>&1 | tee "$RUNNER_TEMP/build.log"; then built=1; break; fi
             grep -qiE "$(node -e 'console.log(require("./devos.config.json").retry_build_on)')" "$RUNNER_TEMP/build.log" || break
             echo "::warning title=Dev OS::the build could not download the Google Fonts (try $i of 3); retrying in 30 seconds"
             sleep 30

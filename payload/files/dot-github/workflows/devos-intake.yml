@@ -164,7 +164,8 @@ jobs:
             echo "::error title=Dev OS::The reviewer is $tool. Since PR-92 the planning runs, like the review, use Claude Code and only its keys: move the reviewer to Claude Code (devos models tool reviewer claude <model>), then run this again."
             exit 1
           fi
-          npm install -g @anthropic-ai/claude-code
+          spec=$(node scripts/devos/pins.mjs claude)
+          npm install -g "$spec"
       - name: The request, as it stood at the event, and the plan's branch
         id: req
         env:
@@ -693,7 +694,8 @@ jobs:
             echo "::error title=Dev OS::The reviewer is $tool. Since PR-92 the planning runs, like the review, use Claude Code and only its keys: move the reviewer to Claude Code (devos models tool reviewer claude <model>), then run this again."
             exit 1
           fi
-          npm install -g @anthropic-ai/claude-code
+          spec=$(node scripts/devos/pins.mjs claude)
+          npm install -g "$spec"
       - name: Work out the next attempt and save the note
         id: n
         env:

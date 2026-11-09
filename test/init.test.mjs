@@ -317,7 +317,7 @@ test("init.test.mjs (o) blueprint on Codex", () => {
     assert.equal(result.status, 0, result.stdout + result.stderr);
     const called = toolRuns(staged.parent);
     assert.equal(called.length, 1);
-    assert.deepEqual(called[0].args, ["exec", "--model", "gpt-5.1-codex", "--sandbox", "workspace-write", "-c", 'model_reasoning_effort="high"', "--json"]);
+    assert.deepEqual(called[0].args, ["exec", "--model", "gpt-5.1-codex", "--sandbox", "workspace-write", "-c", "model_reasoning_effort=high", "--json"]);
     assert.equal(called[0].stdin.startsWith("# Blueprint"), true);
   } finally {
     cleanup(staged.parent);

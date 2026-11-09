@@ -176,7 +176,7 @@
     {
       "path": ".github/workflows/ci.yml",
       "stored": "dot-github/workflows/ci.yml",
-      "sha256": "48e9f2cd22074d46a2ad8b1b360ca4ebd4aa0e65d47c3f0a84ee4135cd815435",
+      "sha256": "f87c5948c7aacb12423fef91168643fe0c638026c55eb12d569f8a0858ae43c6",
       "owner": "engine"
     },
     {
@@ -188,25 +188,25 @@
     {
       "path": ".github/workflows/devos-cycle.yml",
       "stored": "dot-github/workflows/devos-cycle.yml",
-      "sha256": "4c0892b7a54c04ebc1e1a343aa4502afbf280c36fe7a550925b9c41bf3015fbb",
+      "sha256": "4319c170743d9bb3af1a950c7cf0dd0ab45da6a905487c36400517abe5d39647",
       "owner": "engine"
     },
     {
       "path": ".github/workflows/devos-deploy.yml",
       "stored": "dot-github/workflows/devos-deploy.yml",
-      "sha256": "c2aae3ada2edcdd4d2c0d504b8b40c0ea5dc9bdad3516b918140fef0ad669190",
+      "sha256": "8437c6b51ae9acf228e1d71e3dbe8bcb6f9c0174e93ce1981206c22635a400ee",
       "owner": "engine"
     },
     {
       "path": ".github/workflows/devos-doctor.yml",
       "stored": "dot-github/workflows/devos-doctor.yml",
-      "sha256": "14b9e5bbbeab759424bf064640fdeca2a63fc14d97b1a4b1cdb7cee4a1021edf",
+      "sha256": "e160c052d0cf0d785af08c6fe0be8cba1dc1856361190f3adc6c854550dddccb",
       "owner": "engine"
     },
     {
       "path": ".github/workflows/devos-intake.yml",
       "stored": "dot-github/workflows/devos-intake.yml",
-      "sha256": "1b64c633e2112fc9241d488c7fdaa964b65744c2ef9c84ae58b7daa2eb2d2449",
+      "sha256": "e52b0aa4fbd3da2cbc605346912a7ef12c6ab92fda904a144daa08f6a43fb9a9",
       "owner": "engine"
     },
     {
@@ -230,7 +230,7 @@
     {
       "path": ".github/workflows/devos-supervisor.yml",
       "stored": "dot-github/workflows/devos-supervisor.yml",
-      "sha256": "6419f8414ec0fed8cd5b0bc0e939178a56cac7d2f3f3684f6615a54e7d160820",
+      "sha256": "421ad4f460f19dc23f6ac6c6e7740e35bb8d4aa6f65188de5e234506ba5de633",
       "owner": "engine"
     },
     {
@@ -242,7 +242,7 @@
     {
       "path": ".github/workflows/devos-work.yml",
       "stored": "dot-github/workflows/devos-work.yml",
-      "sha256": "9e7dfbae88631d5ecd195e54ee48b6885e77cc377713e043b769f22e74f6f381",
+      "sha256": "d25cffd15586342d90bda867d71057a7311319baa6b9aef852956f533e1f2bca",
       "owner": "engine"
     },
     {
@@ -272,7 +272,7 @@
     {
       "path": "devos/engine.defaults.json",
       "stored": "devos/engine.defaults.json",
-      "sha256": "1df09cbe2993f67c03f49a381bfc4419b8ec70fa7798a9c589a70da507be6d80",
+      "sha256": "b9039ea11afae3df2e4af6817092bcb19d8764709c7fc5b566782fb4242b9801",
       "owner": "engine"
     },
     {
@@ -1652,7 +1652,7 @@
     {
       "path": "docs/method/AUTOMATION.md",
       "stored": "docs/method/AUTOMATION.md",
-      "sha256": "f15f53b7aeff8431245d2ab0f12639b5dab2784b28d704564d7102b43cf39feb",
+      "sha256": "a6378637c01fcb95cc244c4a079ee9d94f3406d630c78478b2f2fb8baf3c0819",
       "owner": "engine"
     },
     {
@@ -1676,7 +1676,7 @@
     {
       "path": "docs/method/PRECEDENTS.md",
       "stored": "docs/method/PRECEDENTS.md",
-      "sha256": "dd48b0b7a0aa49a1656bb16787361d8ca50a42e73a23ed0fb6d87409dd41d257",
+      "sha256": "caab1c9c08b7880da60340b7170389691affae90534fd88e79c2576ff7706bbe",
       "owner": "engine"
     },
     {
@@ -1848,6 +1848,12 @@
       "owner": "engine"
     },
     {
+      "path": "scripts/devos/pins.mjs",
+      "stored": "scripts/devos/pins.mjs",
+      "sha256": "c46aaf3415387b4283843691da0e0ab98f1f5ab3c878b6b2430c0da0e6b9df42",
+      "owner": "engine"
+    },
+    {
       "path": "scripts/devos/plan-agent.sh",
       "stored": "scripts/devos/plan-agent.sh",
       "sha256": "8a89d724f56ed4debaca2e516558a06497f5999fe74c950fd4d29b8cc447ac1d",
@@ -1910,7 +1916,7 @@
     {
       "path": "scripts/devos/review-user.sh",
       "stored": "scripts/devos/review-user.sh",
-      "sha256": "d3fa4895db26332aa8db888d97bf23533752a3c65878ed12afcb6e28f96b98a3",
+      "sha256": "81b66bf854b1fc30537b0cfa28baee8ee4e2bed511a05e212d6e26a73c3a0eb7",
       "owner": "engine"
     },
     {
@@ -2006,7 +2012,7 @@
     {
       "path": "scripts/devos/vercel-deploy.sh",
       "stored": "scripts/devos/vercel-deploy.sh",
-      "sha256": "da3865537a1161cfaf6c7a4215ad2ca63108e8a167a63f9809a3030046bda7a3",
+      "sha256": "2e121af60a0c1e02b2dd4b7f0fcb3b170a32a85c00062b1678a105ece23e68e8",
       "owner": "engine"
     },
     {

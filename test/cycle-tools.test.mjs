@@ -387,8 +387,8 @@ test("cycle-tools.test.mjs (m) the cycle workflow keeps the proven commands and 
   assert.equal(countOf(text, "why=$(devos_restart \"$code\")"), 2);
   assert.equal(countOf(text, "bash scripts/devos/run-agent.sh builder"), 1);
   assert.equal(countOf(text, "bash scripts/devos/run-agent.sh reviewer"), 0);
-  assert.equal(countOf(text, "npm install -g @openai/codex"), 1);
-  assert.equal(countOf(text, "npm install -g @google/gemini-cli"), 1);
+  // PR-93: Codex and Gemini CLI (and Claude Code) at the version devos.config.json pins.
+  assert.equal(countOf(text, "              claude|codex|gemini)\n                spec=$(node scripts/devos/pins.mjs \"$DEVOS_BUILDER_TOOL\")\n                npm install -g \"$spec\" ;;"), 1);
   assert.equal(countOf(text, "--mcp-config devos/ci/mcp.claude.json"), 1);
   assert.equal(countOf(text, "--strict-mcp-config --mcp-config /opt/devos-tools/mcp.json"), 1);
   assert.equal(countOf(text, "Skill,mcp__context7\""), 1);

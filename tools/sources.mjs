@@ -385,6 +385,7 @@ export const LOCAL = {
     "scripts/devos/mcp-devos.mjs": "E63",
     "scripts/devos/unit.mjs": "E67",
     "scripts/devos/intake-request.mjs": "E64",
+    "scripts/devos/pins.mjs": "E66",
   },
   removed: {
     ".cursor/rules/10-security-data.mdc": "E03",

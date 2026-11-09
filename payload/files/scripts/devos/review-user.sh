@@ -51,10 +51,12 @@ case "$cmd" in
     sudo install -d -o "$(id -un)" -m 755 "$work"
     sudo chown -R root:root "$tools"
     sudo chmod -R a+rX,go-w "$tools"
-    # The CLI, installed by and for the user, from / (no project's .npmrc): nothing of the runner's runs in its place.
+    # The CLI, installed by and for the user, from / (no project's .npmrc): nothing of the runner's runs in its place. Its
+    # version is the one pinned in the devos.config.json beside this script's own copy (PR-93): main's, in a trusted job.
+    spec=$(node "$(dirname "$0")/pins.mjs" claude)
     cd /
     sudo -u "$user" -H ${net:+--preserve-env="$net"} -- /usr/bin/env HOME="$home" PATH="$node_dir:/usr/bin:/bin" \
-      npm install -g --prefix "$home/.npm-global" --no-fund --no-audit --loglevel=error @anthropic-ai/claude-code >/dev/null
+      npm install -g --prefix "$home/.npm-global" --no-fund --no-audit --loglevel=error "$spec" >/dev/null
     sudo -u "$user" -H -- /usr/bin/env HOME="$home" PATH="$home/.npm-global/bin:$node_dir:/usr/bin:/bin" claude --version
     ;;
   workspace)

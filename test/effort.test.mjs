@@ -84,7 +84,7 @@ test("effort.test.mjs (a) the blueprint agent runs at its effort: high by defaul
   assert.deepEqual(claude.slice(0, 5), ["-p", "--model", "claude-opus-5-5", "--effort", "xhigh"]);
   assert.deepEqual(
     blueprintArgs("codex", "gpt-5.1-codex", 1, "", false, "medium"),
-    ["exec", "--model", "gpt-5.1-codex", "--sandbox", "workspace-write", "-c", 'model_reasoning_effort="medium"', "--json"],
+    ["exec", "--model", "gpt-5.1-codex", "--sandbox", "workspace-write", "-c", "model_reasoning_effort=medium", "--json"],
   );
   assert.equal(blueprintArgs("cursor", "grok-4.7", 1, "", false, "xhigh").includes("--effort"), false);
   // PR-86: Claude Code's --effort also takes max; Codex stops at xhigh.

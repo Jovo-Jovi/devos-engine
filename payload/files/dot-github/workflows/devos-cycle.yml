@@ -1014,8 +1014,9 @@ jobs:
             ${{ github.workspace }}/publish/decide/.devos/
             !${{ github.workspace }}/publish/decide/.devos/screens/**/*.png
             !${{ github.workspace }}/publish/decide/.devos/**/*.env
-            !${{ github.workspace }}/publish/decide/.devos/reviewer.json
+            !${{ github.workspace }}/publish/decide/.devos/reviewer.json*
             !${{ github.workspace }}/publish/decide/.devos/reviewer.err
+            !${{ github.workspace }}/publish/decide/.devos/**/*.stream.jsonl
             !${{ github.workspace }}/publish/decide/.devos/limits/**
           include-hidden-files: true
           if-no-files-found: ignore

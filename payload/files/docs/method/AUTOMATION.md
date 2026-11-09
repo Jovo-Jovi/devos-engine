@@ -38,7 +38,7 @@ the OIDC permission (PR-61) · branch code never runs in a job that holds a writ
 recomputed from main (PR-90) · only your merge reaches main: a product PASS merges into its unit's branch, and a
 unit reaches main only by your merge of its acceptance pull request; tests, a PASS, a finished task or a preview never
 authorize it (PR-91) · secrets never enter a file · fetch, never paste (PR-02) · a usage limit is a wait, not a failure
-(PR-12, PR-29).
+(PR-12, PR-29) · the CLIs and the third-party actions are installed at pinned versions (PR-33, PR-93).
 
 ## 2. The flows
 
@@ -241,7 +241,8 @@ workflow may start late.
 | `builder-status.mjs` | ok / continue (next time slice, or the next stage of a staged fence) / quota park (usage limit or `devos-stall:`) / switch to `agents.fallback_builder` (PR-76) / halt after the build |
 | `run-checks.mjs` | module checks, then guards, typecheck, lint, test, build, e2e → `.devos/ci-results.json`; a Node stack runs its `package.json` scripts with pnpm, any other toolchain runs `stack.commands` once its manifest exists, after `install` (PR-48); `--install-only` runs just the install, before the builder. Every check, the Supabase CLI's included, has a time limit (`check_timeout_minutes`, 30) within a budget for all of them (`checks_budget_minutes`, 60): a check that passes it is stopped with everything it started and recorded as `timeout`, with its log, and a check left when the budget is used up is not started. A check gets no input, and what it leaves running is ended when it ends. Playwright's browser install for `e2e` has 10 minutes and its log `e2e-install.log`. Ctrl-C ends the running checks too, and nothing is written (PR-70) |
 | `checks-status.sh` | posts `devos/checks`; in the cycle, from `publish`, its description starting `work:` (PR-90) |
-| `vercel-deploy.sh` | git-less prebuilt upload, prints only a real URL; `devos-deploy` only, as the cycle makes no preview (PR-90) |
+| `vercel-deploy.sh` | git-less prebuilt upload, prints only a real URL; `devos-deploy` only, as the cycle makes no preview (PR-90); the Vercel CLI at its pinned version (PR-93) |
+| `pins.mjs` | the exact version of each tool a workflow installs, from `tool_versions` in the `devos.config.json` beside its own copy (main's, in a trusted job): an npm spec for Claude Code, Codex, Gemini CLI, firebase-tools, the Vercel CLI and pnpm, and Cursor's agent package with its SHA-256; it fails on `latest`, a range or a missing pin (PR-93) |
 | `screens.mjs` · `probe.mjs` | motion evidence for the visual check: settled screenshot, filmstrip, reduced-motion screenshot and layout shift in `.devos/screens/motion.json` (PR-35), the two screenshots at 2× (`screenshot_scale`, PR-87), with each capture's console errors, failed requests and axe result (PR-51); the local build is served by `stack.preview` (`next start` when it is empty); strict reachability probe |
 | `screens.test.mjs` | self-test of that capture (the fence `- Screens:` line, frame pick, filmstrip, layout shift, console errors, failed requests, axe) |
 | `ui-evidence.mjs` | for a UI fence, turns the captures into the required checks `ui-evidence` and `a11y` in `.devos/ci-results.json`: missing evidence is a failed check (PR-51) |
@@ -337,7 +338,7 @@ A UI fence carries a header line `- Screens: \`<name> <path>[ click|hover|focus 
   `devos-setup-wait`, `devos-setup-missing`, `devos-setup-resumed`, `devos-supervisor` (one per
   incident: key, action, done, AI used, pending proposal), and the builder commit tag
   "(time slice k)" that tells the next run which slice it is.
-- **Run scratch** (`.devos/`, never committed, kept as the run's artifact, PR-67: its PNG screenshots in an artifact of their own, `<artifact>-screens`, for `DEVOS_SCREENS_RETENTION_DAYS` days; its `*.env` files never uploaded): prompts, agent output,
+- **Run scratch** (`.devos/`, never committed, kept as the run's artifact, PR-67: its PNG screenshots in an artifact of their own, `<artifact>-screens`, for `DEVOS_SCREENS_RETENTION_DAYS` days; its `*.env` files never uploaded; no artifact keeps an agent's raw output, its streams or its logs, PR-93): prompts, agent output,
   `ci-results.json`, `logs/`, `evidence.md`, `screens/` (`motion.json` plus settled, filmstrip and reduced-motion PNGs), `*.env` (module services), `limits/`,
   `accounts.md`, `usage/` (usage lines not yet committed), `setup.md`, `setup-result.json`, `progress-issue` / `progress-comment` (the live
   progress comment), `supervisor/` (facts, incidents, the AI diagnosis), `journal.jsonl`, `report-state.json` and
@@ -418,7 +419,9 @@ A UI fence carries a header line `- Screens: \`<name> <path>[ click|hover|focus 
   revise); `resume` (inline wait, relay, back-off, `stall_wait_minutes`); `modules` (supabase, r2, firebase); `heavy`; `retry_build_on`; `check_timeout_minutes` and `checks_budget_minutes` (PR-70);
   `builder.max_time_slices` (4) and `builder.idle_stop_minutes` (30) for the watchdog; `registry` (`url`: the DEV_OS
   registry's address and the audience of the OIDC token, PR-61; it is used only when `DEVOS_REPORTING` is `on`, PR-62); `supervisor`
-  (`model`, `max_auto_per_key`, `max_ai_per_day`, `idle_minutes`, `overdue_park_minutes`, issue title and label).
+  (`model`, `max_auto_per_key`, `max_ai_per_day`, `idle_minutes`, `overdue_park_minutes`, issue title and label);
+  `tool_versions` (the exact version of each tool the workflows install, read by `pins.mjs`; Cursor's as `version` and
+  `sha256_linux_x64`, PR-93).
 - **Commands** (owners, members, collaborators only): `/devos intake [resume]`, `/devos revise …`, `/devos accept [note]`,
   `/devos doctor`, `/devos go`, `/devos setup`, `/devos approve <id>`, `/devos reject <id>` (on the
   supervisor issue). A command works only when the comment **starts** with it; editing a comment

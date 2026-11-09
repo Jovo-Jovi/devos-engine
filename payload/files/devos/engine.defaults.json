@@ -399,5 +399,18 @@
       "tests": "",
       "architecture": ""
     }
+  },
+  "tool_versions": {
+    "$comment": "PR-93 (M3): the exact version of each tool the workflows install, read by scripts/devos/pins.mjs. A project may set its own in devos/project.json; devos upgrade brings the engine's. Each npm package is its newest release at least two weeks old when the engine pinned it; cursor is the agent package Cursor's installer served then (it lists no older one), checked by the SHA-256 of its linux/x64 download.",
+    "claude": "2.1.310",
+    "codex": "0.164.0",
+    "gemini": "0.65.0",
+    "firebase": "15.34.1",
+    "vercel": "65.2.0",
+    "pnpm": "10.34.9",
+    "cursor": {
+      "version": "2026.11.05-86047df",
+      "sha256_linux_x64": "170b77786cbf4c93064d64fff12b71a178b968730561c64afc2e8e752535442e"
+    }
   }
 }

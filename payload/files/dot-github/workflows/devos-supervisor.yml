@@ -113,7 +113,8 @@ jobs:
           [ -n "$OAUTH" ] && export CLAUDE_CODE_OAUTH_TOKEN="$OAUTH"
           [ -n "$APIKEY" ] && export ANTHROPIC_API_KEY="$APIKEY"
           [ -n "$OAUTH$APIKEY" ] || { echo "No Claude credential; the supervisor reports without a diagnosis."; exit 0; }
-          npm install -g @anthropic-ai/claude-code > /dev/null
+          spec=$(node scripts/devos/pins.mjs claude)
+          npm install -g "$spec" > /dev/null
           MODEL=${chosen:-$(node -e 'const c=require("./devos.config.json");console.log(c.supervisor?.model||c.reviewer.gate_model)')}
           claude -p "$(cat devos/prompts/supervisor.md)" --model "$MODEL" --effort high --output-format json \
             --json-schema "$(cat devos/schemas/supervisor.schema.json)" --permission-mode dontAsk --max-turns 25 \
@@ -126,10 +127,14 @@ jobs:
         if: github.event_name != 'issue_comment' && steps.scan.outputs.incidents != '0'
         run: node scripts/devos/supervisor.mjs act $DRY --claude .devos/supervisor/claude.json
 
+      # D9: what the supervisor found and did; never the model's own output (claude.json, claude.err).
       - if: always()
         uses: actions/upload-artifact@v4
         with:
           name: devos-supervisor-${{ github.run_id }}
-          path: .devos/supervisor/
+          path: |
+            .devos/supervisor/
+            !.devos/supervisor/claude.json
+            !.devos/supervisor/claude.err
           include-hidden-files: true
           if-no-files-found: ignore
