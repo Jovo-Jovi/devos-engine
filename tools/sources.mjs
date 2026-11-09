@@ -383,6 +383,7 @@ export const LOCAL = {
     "scripts/devos/review-user.sh": "E63",
     "scripts/devos/scrub.mjs": "E63",
     "scripts/devos/mcp-devos.mjs": "E63",
+    "scripts/devos/unit.mjs": "E67",
   },
   removed: {
     ".cursor/rules/10-security-data.mdc": "E03",

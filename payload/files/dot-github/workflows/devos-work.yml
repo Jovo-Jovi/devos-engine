@@ -22,7 +22,10 @@ on:
       attempt: { type: string, required: true }
       branch: { type: string, required: true }
       method: { type: string, required: false, default: "false" }
+      # PR-91: the base the task branch starts from and merges: main for a method fix, else the task's unit branch;
+      # main_sha is the base's commit at the run's start (the unit's head, or main's for a new unit).
       main_sha: { type: string, required: true }
+      base: { type: string, required: false, default: main }
       review_only: { type: boolean, required: false, default: false }
       effort: { type: string, required: false, default: fence }
       fast: { type: string, required: false, default: fence }
@@ -76,6 +79,7 @@ jobs:
       ATTEMPT: ${{ inputs.attempt }}
       BR: ${{ inputs.branch }}
       MAIN_SHA: ${{ inputs.main_sha }}
+      DEVOS_BASE: ${{ inputs.base }}
       REVIEW_ONLY: ${{ inputs.review_only && 'true' || 'false' }}
       METHOD: ${{ inputs.method }}
       DEVOS_BUILDER_TOOL: ${{ inputs.builder_tool }}
@@ -87,8 +91,8 @@ jobs:
       DEVOS_ACCOUNT_SWITCH: ${{ vars.DEVOS_ACCOUNT_SWITCH || 'auto' }}
       DEVOS_BUILDER_MODEL: ${{ vars.DEVOS_BUILDER_MODEL }}
     steps:
-      # Main at the commit this run was started on, the same one publish checks out; the token is read-only and is not
-      # kept (PR-04).
+      # The base at the commit this run started from (main's, the same one publish checks out, or the unit's head, PR-91);
+      # the token is read-only and is not kept (PR-04).
       - uses: actions/checkout@v6
         with:
           ref: ${{ inputs.main_sha }}
@@ -146,10 +150,12 @@ jobs:
         run: |
           git config user.name "devos-runner"
           git config user.email "devos-runner@users.noreply.github.com"
+          # PR-91: the scripts compare with origin/<base>; a new unit's branch is made by publish, so it points here.
+          git update-ref "refs/remotes/origin/$DEVOS_BASE" "$MAIN_SHA"
           if git rev-parse --verify --quiet "origin/$BR" >/dev/null; then
             git checkout -B "$BR" "origin/$BR"
             echo "REMOTE_HEAD=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
-            # Main at this run's commit, merged first: publish computes the same merge and compares with it (PR-90).
+            # The base at this run's start, merged first: publish computes the same merge and compares with it (PR-90).
             git merge-base --is-ancestor "$MAIN_SHA" HEAD || git merge --no-edit "$MAIN_SHA"
           elif [ "$REVIEW_ONLY" = "true" ]; then
             echo "::error::review_only needs an existing branch $BR"; exit 1
@@ -329,7 +335,7 @@ jobs:
             fi
           fi
           if [ "$DEVOS_SLICE" -gt 1 ]; then
-            printf '\n\n**This is time slice %s of this attempt.** The earlier slice ran out of time while working; everything it did is committed on this branch (`git diff --stat origin/main...HEAD`, `git log`). Read it, verify it against the fence, and finish only what is still missing or failing. Do not start over, redo or duplicate anything.\n' "$DEVOS_SLICE" >> .devos/builder-prompt.md
+            printf '\n\n**This is time slice %s of this attempt.** The earlier slice ran out of time while working; everything it did is committed on this branch (`git diff --stat origin/'"$DEVOS_BASE"'...HEAD`, `git log`). Read it, verify it against the fence, and finish only what is still missing or failing. Do not start over, redo or duplicate anything.\n' "$DEVOS_SLICE" >> .devos/builder-prompt.md
           fi
           set +e
           # Heartbeat: Cursor's output goes to a file, so print progress every minute.

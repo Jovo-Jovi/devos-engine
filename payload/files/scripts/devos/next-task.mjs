@@ -1,9 +1,12 @@
 #!/usr/bin/env node
 // Resolve which task the runner works on, and everything the workflow needs to know about it.
-// Usage: node scripts/devos/next-task.mjs [--task T01|link] [--attempt 1] [--revision true]
+// Usage: node scripts/devos/next-task.mjs [--task T01|link] [--attempt 1] [--revision true] [--unit-phases <file>]
 // PR-65: --task link is a run with no task: it says done, so only the report job runs and asks for the link.
+// PR-91: --unit-phases is the open unit's docs/PHASES.md: the product rows' progress is read from it (it is on the unit's
+// branch until your merge), the method rows from main.
 import { execFileSync } from "node:child_process";
-import { parsePhases, nextOpenTask, isHumanGate, isMethodRow, reviewerModel, reviewerEffort, taskAfter, config, emit, fail } from "./lib.mjs";
+import { readFileSync } from "node:fs";
+import { parsePhases, nextOpenTask, waitsOnTaskPr, isMethodRow, reviewerModel, reviewerEffort, taskAfter, config, emit, fail } from "./lib.mjs";
 
 const arg = (name) => {
   const i = process.argv.indexOf(`--${name}`);
@@ -17,6 +20,14 @@ if (arg("task").toLowerCase() === "link") {
 
 const cfg = config();
 const { rows } = parsePhases();
+if (arg("unit-phases")) {
+  const unit = parsePhases(readFileSync(arg("unit-phases"), "utf8")).rows;
+  for (const r of rows) {
+    const u = isMethodRow(r) ? null : unit.find((x) => x.task === r.task);
+    // Ticked on the unit, or on main (an accept recorded there): done either way.
+    if (u && u.done && !r.done) Object.assign(r, { done: true, doneRaw: u.doneRaw, verdict: u.verdict });
+  }
+}
 // Accept "T01", "t1" or "1" from the workflow form.
 const rawTask = arg("task");
 const wanted = /^t?\d{1,2}$/i.test(rawTask) ? `T${rawTask.replace(/^t/i, "").padStart(2, "0")}` : rawTask.toUpperCase();
@@ -59,7 +70,7 @@ emit({
   method: isMethodRow(row) ? "true" : "false",
   risk: row.risk,
   gate: row.gate,
-  human_gate: isHumanGate(row) ? "true" : "false",
+  human_gate: waitsOnTaskPr(row) ? "true" : "false",
   attempt,
   max_attempts: cfg.max_attempts,
   branch: `${cfg.branch_prefix}${row.task}`,

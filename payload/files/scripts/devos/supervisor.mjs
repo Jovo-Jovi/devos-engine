@@ -11,7 +11,7 @@
 // Env: GH_TOKEN (the runner token), REPO, EVENT_NAME, WF_NAME, WF_RUN_ID, WF_CONCLUSION.
 import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync, readFileSync, existsSync } from "node:fs";
-import { P, config, parsePhases, nextOpenTask, emit } from "./lib.mjs";
+import { P, config, parsePhases, nextOpenTask, isMethodRow, emit } from "./lib.mjs";
 
 const argv = process.argv.slice(2);
 const cmd = argv[0] || "scan";
@@ -52,6 +52,22 @@ const today = () => new Date().toISOString().slice(0, 10);
 // ---------- facts ----------
 function collect() {
   const rows = parsePhases().rows;
+  // PR-91: the open unit's progress is on its branch until your merge (unit.mjs open, as the cycle reads it). A unit
+  // that is complete waits for your acceptance, whether its pull request is open or closed: nothing is idle then.
+  let unitComplete = false;
+  try {
+    const dir = P(".devos/supervisor/unit");
+    execFileSync(process.execPath, [P("scripts/devos/unit.mjs"), "open", "--repo", REPO, "--out", dir], { stdio: "ignore", env: { ...process.env, GITHUB_OUTPUT: "" } });
+    const open = JSON.parse(readFileSync(`${dir}/open.json`, "utf8"));
+    if (open) {
+      const unitRows = parsePhases(readFileSync(`${dir}/PHASES.md`, "utf8")).rows;
+      for (const r of rows) {
+        const u = isMethodRow(r) ? null : unitRows.find((x) => x.task === r.task);
+        if (u?.done) r.done = true;
+      }
+      unitComplete = open.tasks.every((t) => rows.find((r) => r.task === t)?.done);
+    }
+  } catch { /* no unit, or GitHub did not answer: main's view */ }
   const next = nextOpenTask(rows);
   const runsJson = api(`repos/${REPO}/actions/workflows/${CYCLE}/runs?per_page=25`) || { workflow_runs: [] };
   const runs = (runsJson.workflow_runs || []).map((r) => ({
@@ -77,6 +93,9 @@ function collect() {
     event: { name: process.env.EVENT_NAME || "", workflow: (process.env.WF_PATH || "").split("/").pop().replace(/\.ya?ml$/, "") || process.env.WF_NAME || "", run: process.env.WF_RUN_ID || "", conclusion: process.env.WF_CONCLUSION || "" },
     next_task: next ? { task: next.task, name: next.name, phase: next.phase } : null,
     runs, active: active.map((r) => r.id), task_prs: taskPrs, intake_prs: intakePrs.map((p) => p.number), rescues,
+    // PR-91: a unit's acceptance pull request waits for your merge; nothing is idle meanwhile.
+    acceptance_prs: prs.filter((p) => p.labels.includes("devos:acceptance")).map((p) => p.number),
+    unit_complete: unitComplete,
   };
   writeFileSync(`${DIR}/facts.json`, JSON.stringify(facts, null, 2));
   return facts;
@@ -276,7 +295,8 @@ function detect(facts) {
 
   // 4. Nothing moving although work is waiting.
   const lastRun = facts.runs[0];
-  const waitingForOwner = facts.task_prs.some((p) => p.labels.some((l) => ["devos:human-gate", "devos:quota-wait", "devos:halted", "devos:needs-you"].includes(l)));
+  const waitingForOwner = facts.task_prs.some((p) => p.labels.some((l) => ["devos:human-gate", "devos:quota-wait", "devos:halted", "devos:needs-you"].includes(l))) ||
+    (facts.acceptance_prs ?? []).length > 0 || facts.unit_complete === true;
   if (!busy && !waitingForOwner && !inc.length && facts.next_task && facts.intake_prs.length === 0 &&
       (!lastRun || minutesSince(lastRun.updated) > S.idle_minutes) &&
       !facts.task_prs.some((p) => p.head === `task/${facts.next_task.task}`)) {

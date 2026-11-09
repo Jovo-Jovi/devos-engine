@@ -3,6 +3,10 @@
   "base_branch": "main",
   "branch_prefix": "task/",
   "max_attempts": 3,
+  "acceptance": {
+    "$comment": "PR-91: product tasks are built in units. A unit ends at a row with a Gate and at the last row of a phase (gate), at the last row of a phase (phase), or at every task (task). A PASS merges into the unit's branch, devos/unit-<its last task>; at the unit's end the cycle opens one pull request into main (devos:acceptance) and stops, and only your merge of it reaches main. Method fixes (Phase PM) are in no unit.",
+    "unit": "gate"
+  },
   "builder": {
     "cli": "agent",
     "model": "grok-4.7-high",

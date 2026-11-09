@@ -5,6 +5,8 @@
 # fence says ("Resume after merge"), then the cycle carries on from there.
 # PR-87: a task PR the human merges with its row still open (no PASS) is not built again: the PR is told to use
 # `/devos accept`, and the merge of its devos/accept-Tnn pull request starts the next task.
+# PR-91: your merge of a unit's acceptance pull request (devos/unit-Tnn into main) is the unit's acceptance: it starts
+# the next unit. A task PR you merge into a unit's branch (risk 3) reads that unit's progress, not main's.
 # PR-65: after the merge of the DEV_OS registry link answer (the project page's devos/connect pull request), a link run
 # of devos-cycle (task=link: no task) asks the registry to link the repository from its report job.
 name: devos-advance
@@ -23,7 +25,7 @@ jobs:
     if: >-
       github.event.pull_request.merged == true &&
       (startsWith(github.event.pull_request.head.ref, 'task/') || startsWith(github.event.pull_request.head.ref, 'intake/') ||
-        startsWith(github.event.pull_request.head.ref, 'devos/accept-')) &&
+        startsWith(github.event.pull_request.head.ref, 'devos/accept-') || startsWith(github.event.pull_request.head.ref, 'devos/unit-')) &&
       contains(github.event.pull_request.labels.*.name, 'devos') &&
       !contains(github.event.pull_request.labels.*.name, 'devos:auto-merged') &&
       vars.DEVOS_PAUSED != 'true'
@@ -43,8 +45,20 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           HEAD: ${{ github.event.pull_request.head.ref }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
           METHOD: ${{ contains(github.event.pull_request.labels.*.name, 'devos:method') }}
         run: |
+          # PR-91: a unit accepted by your merge: the next unit starts (the cycle finds it from main).
+          if [[ "$HEAD" =~ ^devos/unit-T[0-9]{2,3}$ ]] && [ "$BASE_REF" = "main" ]; then
+            gh workflow run devos-cycle.yml --repo "$REPO" --ref main
+            echo "::notice title=Dev OS::$HEAD accepted by your merge of #${{ github.event.pull_request.number }}; the next unit starts."
+            exit 0
+          fi
+          # The open unit's progress, as the cycle reads it, whatever PR was merged (a method fix or an intake plan into
+          # main mid-unit too); with no open unit, main's.
+          unit_args=()
+          node scripts/devos/unit.mjs open --repo "$REPO" > "$RUNNER_TEMP/unit.out" 2>&1 || cat "$RUNNER_TEMP/unit.out"
+          if [ -s .devos/unit/PHASES.md ]; then unit_args=(--unit-phases .devos/unit/PHASES.md); fi
           task="${HEAD#task/}"
           if [ "$METHOD" = "true" ] && [ "$task" != "$HEAD" ] && [ -f "docs/fences/$task.md" ]; then
             line=$(grep -m1 -E '^- Resume after merge:' "docs/fences/$task.md" || true)
@@ -63,7 +77,7 @@ jobs:
             fi
           fi
           # Name the next task in the dispatch so the run is titled "devos Tnn · attempt 1", not "devos next".
-          next=$(node scripts/devos/next-task.mjs 2>/dev/null | sed -n 's/^task=//p' | head -1 || true)
+          next=$(node scripts/devos/next-task.mjs "${unit_args[@]}" 2>/dev/null | sed -n 's/^task=//p' | head -1 || true)
           # PR-87: the merged task is still the next open one, so it was merged without a PASS: never build it again.
           if [ "$task" != "$HEAD" ] && [ -n "$next" ] && [ "$next" = "$task" ]; then
             gh pr comment "${{ github.event.pull_request.number }}" --repo "$REPO" --body "Dev OS: you merged $task, and its row in docs/PHASES.md is still open, so the cycle does not build it again (PR-87). Comment \`/devos accept\` here to record your acceptance: a pull request ticks the row, and merging it starts the next task. To build $task again instead, run devos-cycle for it."

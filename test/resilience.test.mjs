@@ -132,7 +132,7 @@ test("resilience.test.mjs (b) the comment, the job that commits it, and a merge 
   assert.equal(read(`${PAYLOAD}/scripts/devos/verdict.mjs`).includes("stopped at its last attempt: comment \\`/devos revise <what to change>\\` on this PR for another attempt, or \\`/devos accept [note]\\` to accept it as it is (PR-87)"), true);
 
   const advance = read(`${PAYLOAD}/dot-github/workflows/devos-advance.yml`);
-  assert.equal(advance.includes("startsWith(github.event.pull_request.head.ref, 'devos/accept-')) &&"), true);
+  assert.equal(advance.includes("startsWith(github.event.pull_request.head.ref, 'devos/accept-') || startsWith(github.event.pull_request.head.ref, 'devos/unit-')) &&"), true);
   assert.equal(advance.includes("if [ \"$task\" != \"$HEAD\" ] && [ -n \"$next\" ] && [ \"$next\" = \"$task\" ]; then"), true);
   assert.equal(advance.includes("so the cycle does not build it again (PR-87). Comment \\`/devos accept\\` here to record your acceptance"), true);
   assert.ok(advance.indexOf("[ \"$next\" = \"$task\" ]") < advance.indexOf("gh workflow run devos-cycle.yml --repo \"$REPO\" --ref main -f task=\"$next\" -f attempt=1"));

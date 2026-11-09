@@ -7,8 +7,9 @@
 //
 // Actions:
 //   merge       PASS, checks green, not a human gate, next fence present
-//   human_gate  PASS on a risk-3 task, a gate task, a schema change (PR-17), a change to a path of
-//               reviewer.human_gate_paths (a project in production, PR-72), or with no next fence
+//   human_gate  PASS on a risk-3 task, a method fix, a schema change (PR-17), a change to a path of
+//               reviewer.human_gate_paths (a project in production, PR-72), or with no next fence. A product
+//               task's Gate is signed once, by the person's merge of its unit (PR-91)
 //   retry       FAIL and attempt < max_attempts
 //   halt        FAIL at max attempts, or the reviewer produced no usable verdict
 //   quota_wait  the reviewer hit a usage/rate limit: nothing recorded, same attempt, review-only
@@ -17,7 +18,7 @@
 //               variable, an account or dashboard setting). Grok cannot fix it, so no retry is spent:
 //               the human gets the steps, and the same attempt is re-reviewed once it is in place (PR-27)
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
-import { P, config, parsePhases, isHumanGate, taskAfter, updatePhasesRow, changedPaths, diffPaths, matchesAny, importsGated, emit, fail } from "./lib.mjs";
+import { P, config, parsePhases, waitsOnTaskPr, taskAfter, updatePhasesRow, changedPaths, diffPaths, matchesAny, importsGated, emit, fail } from "./lib.mjs";
 import { looksLikeLimit, readText, resumeMarker, earliestNotBefore, agentStats, parseJsonLoose, finishedRun } from "./limits.mjs";
 import { rulesFiles } from "./firebase.mjs";
 
@@ -203,8 +204,10 @@ if (verdict === "PASS") {
   if (schema.length) notes.push(`schema change: ${code(schema)}`);
   const guarded = gatePaths();
   if (guarded.length) notes.push(`production paths changed (PR-72): ${code(guarded)}`);
-  const gate = isHumanGate(row) || schema.length > 0 || guarded.length > 0;
-  const why = isHumanGate(row) ? (row.risk >= 3 ? "Risk-3 task" : `Gate ${row.gate}`) : schema.length ? "Schema change (PR-17)" : "Production paths (PR-72)";
+  // PR-91 (Q2 a): a product task's Gate is signed once, by your merge of its unit; risk 3 still waits on its own PR.
+  const own = waitsOnTaskPr(row);
+  const gate = own || schema.length > 0 || guarded.length > 0;
+  const why = own ? (row.risk >= 3 ? "Risk-3 task" : `Gate ${row.gate}`) : schema.length ? "Schema change (PR-17)" : "Production paths (PR-72)";
   const named = guarded.length ? ` and every change to ${code(guarded.slice(0, 6))}${guarded.length > 6 ? ", …" : ""}` : "";
   finish("PASS", gate ? "human_gate" : "merge", {
     summary: structured.summary,

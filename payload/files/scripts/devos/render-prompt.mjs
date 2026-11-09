@@ -5,7 +5,7 @@
 // Environment it reads when set: DEVOS_BUILDER_MODEL, DEVOS_BUILDER_EFFORT, DEVOS_BUILDER_FAST,
 // DEVOS_BUILDER_TOOL, DEVOS_PREVIEW_URL, DEVOS_ISSUE, DEVOS_INTAKE_RESUME, DEVOS_REVIEW_MODE, DEVOS_REVIEW_REASONS, DEVOS_REVIEW_CRITICAL.
 import { readFileSync, writeFileSync, existsSync, readdirSync } from "node:fs";
-import { P, parsePhases, isHumanGate, taskAfter, config, fail } from "./lib.mjs";
+import { P, parsePhases, waitsOnTaskPr, isMethodRow, taskAfter, config, fail } from "./lib.mjs";
 import { poolText } from "./agents.mjs";
 import { motionCounts } from "./screens.mjs";
 import { skillsBlock } from "./skills.mjs";
@@ -71,7 +71,8 @@ export function renderPrompt(role, task, attempt) {
     BRANCH: `${cfg.branch_prefix}${task}`,
     NEXT_TASK: next ? next.task : "",
     NEXT_TASK_OR_NONE: next ? next.task : "none (last task)",
-    HUMAN_GATE: isHumanGate(row) ? "yes — the PR waits for the human's merge" : "no — the runner merges a PASS",
+    // PR-91: a product PASS merges into its unit's branch; main takes only the human's merge of the unit.
+    HUMAN_GATE: waitsOnTaskPr(row) ? "yes — the PR waits for the human's merge" : isMethodRow(row) ? "no — the runner merges a PASS" : "no — the runner merges a PASS into the unit's branch; the unit reaches main only by the human's merge of its acceptance PR",
     REISSUE_BLOCK: hasPrev
       ? `\nThis is a REISSUE. Read the previous verdict \`${prevReview}\` and the fence's "Attempt ${attempt} focus" section first. The earlier attempt's work is already in the tree on this branch: verify it against the Done-when list and change only what fails. Never redo or duplicate it.\n`
       : "",

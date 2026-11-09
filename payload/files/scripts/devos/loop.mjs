@@ -118,7 +118,9 @@ for (let done = 0; done < maxTasks; ) {
     task = n.task; attempt = 1;
   }
   console.log(`\n=========== ${task} · attempt ${attempt} ===========`);
-  const { action, br } = cycleOnce(task, attempt);
+  let { action, br } = cycleOnce(task, attempt);
+  // PR-91: the cycle signs a product Gate with the unit's acceptance; the local loop has no units, so a Gate stops here.
+  if (action === "merge" && isHumanGate(parsePhases().rows.find((r) => r.task === task) ?? {})) action = "human_gate";
 
   if (action === "merge") {
     sh("git", ["checkout", BASE]);

@@ -4,7 +4,8 @@
 // recomputes everything it decides from main's files: the bundle is data, never instructions.
 //
 //   verify  --task Tnn --attempt N --branch task/Tnn --main-sha <sha> --out <dir> [--bundle <file>] [--remote <url>]
-//           [--builder true|false --exit <code> --model <id> --effort <e> --fast yes|no]
+//           [--base main|devos/unit-Tnn] [--builder true|false --exit <code> --model <id> --effort <e> --fast yes|no]
+//           PR-91: a product task's base is its unit's branch; "main" below is that base, and --main-sha its commit.
 //           Fetches main and the task branch into a repository it creates (<out>/decide), takes the bundle's one ref,
 //           and rejects, each with its own line: (a) another ref, or more than one; (b) a head that does not descend
 //           from the task branch on GitHub (or, for a new branch, from main at <sha>); (c) a symbolic link, a
@@ -20,7 +21,7 @@
 //   review-tree --out <dir> --dest <dir>                         the head's files, and .devos/diff.patch, for the review
 //   take-review --out <dir> --from <dir> --task Tnn --attempt N  copies the review file and fences the reviewer wrote
 //   commit  --out <dir> --message <text> [--amend]               commits the runner's files (reviews, fences, PHASES, usage)
-//   sync    --out <dir> [--remote <url>]                         merges a main that moved since the run started
+//   sync    --out <dir> [--remote <url>]                         merges a base (main or the unit) that moved meanwhile
 //   push    --out <dir> [--remote <url>] [--to refs/heads/rescue/…]
 //
 // Every git command runs with no system or global configuration, hooks off and no fsmonitor, in a repository this
@@ -177,6 +178,9 @@ export function verify(a) {
   const attempt = Number(a.attempt);
   const branch = String(a.branch ?? "");
   const mainSha = String(a["main-sha"] ?? "");
+  // PR-91: the base is main, or the unit branch a product task merges into; --main-sha is the base's commit.
+  const baseName = String(a.base ?? "main");
+  if (baseName !== "main" && !/^devos\/unit-T\d{2,3}$/.test(baseName)) die("--base must be main or devos/unit-Tnn", 2);
   if (!/^T\d{2}$/.test(task) || !Number.isInteger(attempt) || attempt < 1) die("usage: verify --task Tnn --attempt N …", 2);
   if (branch !== `task/${task}`) die(`the branch must be task/${task}`, 2);
   if (!/^[0-9a-f]{40}$/.test(mainSha)) die("--main-sha must be a full commit id", 2);
@@ -189,7 +193,7 @@ export function verify(a) {
   const reasons = [];
   const reject = (why) => reasons.push(why);
   const finish = (extra = {}) => {
-    const result = { ok: reasons.length === 0, reasons, task, attempt, branch, main_sha: mainSha, ...extra };
+    const result = { ok: reasons.length === 0, reasons, task, attempt, branch, main_sha: mainSha, base: baseName, ...extra };
     writeState(out, result);
     if (reasons.length) {
       for (const r of reasons) console.log(`REJECTED: ${r}`);
@@ -205,8 +209,10 @@ export function verify(a) {
   for (const [k, v] of [["core.hooksPath", "/dev/null"], ["core.fsmonitor", "false"], ["gc.auto", "0"], ["user.name", "devos-runner"], ["user.email", "devos-runner@users.noreply.github.com"]]) {
     g(["config", k, v], { cwd: repo });
   }
-  // main and the task branch, from GitHub (or a test's remote).
-  g(["fetch", "-q", "--no-tags", remote, "+refs/heads/main:refs/devos/main-latest"], { cwd: repo, auth: true });
+  // The base and the task branch, from GitHub (or a test's remote). A new unit's branch is made after verify.
+  if (g(["ls-remote", remote, `refs/heads/${baseName}`], { cwd: repo, auth: true }).stdout.trim()) {
+    g(["fetch", "-q", "--no-tags", remote, `+refs/heads/${baseName}:refs/devos/base-latest`], { cwd: repo, auth: true });
+  }
   const listed = g(["ls-remote", remote, `refs/heads/${branch}`], { cwd: repo, auth: true }).stdout.trim();
   let remoteHead = "";
   if (listed) {
@@ -214,7 +220,7 @@ export function verify(a) {
     remoteHead = sha(repo, "refs/devos/remote-branch");
   }
   if (!sha(repo, `${mainSha}^{commit}`)) g(["fetch", "-q", "--no-tags", remote, mainSha], { cwd: repo, auth: true });
-  if (!sha(repo, `${mainSha}^{commit}`)) die(`main's commit ${mainSha} is not on ${remote}`);
+  if (!sha(repo, `${mainSha}^{commit}`)) die(`${baseName}'s commit ${mainSha} is not on ${remote}`);
 
   // (a) the bundle: exactly one ref, the task branch.
   const bundle = a.bundle ? path.resolve(String(a.bundle)) : "";
@@ -243,7 +249,7 @@ export function verify(a) {
   // (b) the head descends from what is on GitHub.
   const base = remoteHead || mainSha;
   if (bundleHead && !isAncestor(repo, base, bundleHead)) {
-    reject(`(b) the bundle's head ${bundleHead.slice(0, 12)} does not descend from ${remoteHead ? `${branch} on GitHub` : "main at the run's commit"} (${base.slice(0, 12)})`);
+    reject(`(b) the bundle's head ${bundleHead.slice(0, 12)} does not descend from ${remoteHead ? `${branch} on GitHub` : baseName === "main" ? "main at the run's commit" : `${baseName} at the run's start`} (${base.slice(0, 12)})`);
     return finish({ remote_head: remoteHead || null, bundle_sha256: bundleSha256 });
   }
 
@@ -255,10 +261,10 @@ export function verify(a) {
       const m = g(["merge-tree", "--write-tree", "--no-messages", "--name-only", remoteHead, mainSha], { cwd: repo, allowFail: true });
       const lines = m.stdout.split(/\r?\n/);
       if (m.status !== 0) {
-        reject(`${branch} and main conflict: ${lines.slice(1).filter(Boolean).join(", ") || "(unknown paths)"}`);
+        reject(`${branch} and ${baseName} conflict: ${lines.slice(1).filter(Boolean).join(", ") || "(unknown paths)"}`);
         return finish({ remote_head: remoteHead, bundle_sha256: bundleSha256 });
       }
-      merge = commitTree(repo, lines[0].trim(), [remoteHead, mainSha], `Merge main into ${branch}`);
+      merge = commitTree(repo, lines[0].trim(), [remoteHead, mainSha], `Merge ${baseName} into ${branch}`);
     }
   }
   const baseTree = sha(repo, `${merge}^{tree}`);
@@ -338,7 +344,7 @@ export function verify(a) {
     const message = builderMessage({ task, attempt, model: a.model, effort: a.effort, fast: a.fast, exit: a.exit, slice: tags.slice, stage: tags.stage, stages });
     headCommit = commitTree(repo, headTree, [merge], message);
   }
-  g(["update-ref", "refs/remotes/origin/main", mainSha], { cwd: repo });
+  g(["update-ref", `refs/remotes/origin/${baseName}`, mainSha], { cwd: repo });
   g(["checkout", "-q", "-f", "-B", branch, headCommit], { cwd: repo });
   for (const rel of OVERLAY) {
     rmSync(path.join(repo, rel), { recursive: true, force: true });
@@ -608,9 +614,10 @@ function sync(a) {
   const out = path.resolve(String(a.out ?? ""));
   const s = readState(out);
   const repo = path.join(out, "decide");
-  g(["fetch", "-q", "--no-tags", remoteOf(a), "+refs/heads/main:refs/devos/main-latest"], { cwd: repo, auth: true });
-  const latest = sha(repo, "refs/devos/main-latest");
-  if (isAncestor(repo, latest, s.head)) { console.log("sync: main has not moved past this branch"); emit({ moved: "false", code_moved: "false", conflict: "" }); return; }
+  const base = s.base ?? "main";
+  g(["fetch", "-q", "--no-tags", remoteOf(a), `+refs/heads/${base}:refs/devos/base-latest`], { cwd: repo, auth: true });
+  const latest = sha(repo, "refs/devos/base-latest");
+  if (isAncestor(repo, latest, s.head)) { console.log(`sync: ${base} has not moved past this branch`); emit({ moved: "false", code_moved: "false", conflict: "" }); return; }
   const m = g(["merge-tree", "--write-tree", "--no-messages", "--name-only", s.head, latest], { cwd: repo, allowFail: true });
   const lines = m.stdout.split(/\r?\n/);
   let tree = lines[0].trim();
@@ -631,17 +638,17 @@ function sync(a) {
       tree = g(["write-tree"], { cwd: repo, env: index }).stdout.trim();
       console.log("sync: docs/USAGE.md counted again from the merged usage records");
     } else {
-      console.log(`sync: main changed during this run and conflicts with it: ${conflicts.join(", ")}`);
+      console.log(`sync: ${base} changed during this run and conflicts with it: ${conflicts.join(", ")}`);
       emit({ moved: "true", code_moved: "true", conflict: conflicts.join(" ") });
       process.exit(3);
     }
   }
-  const merged = commitTree(repo, tree, [s.head, latest], `Merge main into ${s.branch}`);
+  const merged = commitTree(repo, tree, [s.head, latest], `Merge ${base} into ${s.branch}`);
   const moved = g(["diff", "--name-only", "--no-renames", "-z", s.head, merged], { cwd: repo }).stdout.split("\0").filter(Boolean);
   const code = moved.filter((p) => !p.startsWith("docs/") && !p.startsWith(".devos/"));
   g(["update-ref", `refs/heads/${s.branch}`, merged], { cwd: repo });
   writeState(out, { ...s, head: merged, synced_main: latest });
-  console.log(`sync: merged main ${latest.slice(0, 12)}; ${moved.length} path(s) came in${code.length ? `, ${code.length} of them code` : ""}`);
+  console.log(`sync: merged ${base} ${latest.slice(0, 12)}; ${moved.length} path(s) came in${code.length ? `, ${code.length} of them code` : ""}`);
   emit({ moved: "true", code_moved: code.length ? "true" : "false", conflict: "", head: merged });
 }
 

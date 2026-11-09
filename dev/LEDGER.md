@@ -104,7 +104,7 @@ before merging. Plan: `dev/PLAN.md` §12.
 | E64 | Intake, revise and accept the same way: the planner in `work`, a trusted `publish`; the trusted issue author and the request taken from the event (audit M1); `accept` runs `main`'s script; canary T93 | 3 | owner | draft d1 — awaiting approval; fence v1 after E63 and E67 | [ ] | — |
 | E65 | Adopt: every tool still selectable, each made safe (no shell for Cursor, Gemini `auto_edit`, Claude without web tools and reads kept to the tree); one secret-file list (audit H2, L1; D5) | 2 | — | fence after E64 | [ ] | — |
 | E66 | Hygiene: no raw agent streams in artifacts (D9); the three third-party actions pinned by SHA and the CLI and `vercel` versions pinned (M3); the `main` ruleset at setup, best effort (D4); `--faint` (L3); `winQuote` (L4) | 2 | — | fence after E65 | [ ] | — |
-| E67 | Branch-based development and your acceptance (owner 2026-11-09, 11:02): tasks merge into a unit branch (`devos/unit-Tnn`), a completion report and a preview at the unit's end, and only your merge reaches `main`; the doctor's deployment checks. Built after E63, before E64 | 3 | owner | proposal d1 — awaiting approval (Q1–Q3) | [ ] | — |
+| E67 | Branch-based development and your acceptance (owner 2026-11-09, 11:02): tasks merge into a unit branch (`devos/unit-Tnn`), a completion report and a way to verify at the unit's end (no preview by DEV_OS, D12), and only your merge reaches `main`; the doctor's deployment checks. Built after E63, before E64 | 3 | owner | fence v2; built a2 (65ff048); a1 FIX was the fence's own (Windows import) | [x] | PASS a2 — dev/reviews/E67-a2-remote.md |
 
 ## Ports (Tower method changes after `a49ca6d` to carry into the payload)
 

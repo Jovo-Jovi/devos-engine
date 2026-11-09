@@ -33,6 +33,8 @@ test("config-equivalence.test.mjs regenerates the Tower config", () => {
   delete merged.structure;
   // PR-61 (E09): the registry's address is an engine addition.
   delete merged.registry;
+  // PR-91 (E67): units of acceptance are an engine addition.
+  delete merged.acceptance;
   // PR-70 (E40): the checks' time limits are an engine addition.
   delete merged.check_timeout_minutes;
   delete merged.checks_budget_minutes;

@@ -66,7 +66,11 @@ export function withModelOverrides(cfg, env = process.env) {
 }
 
 export function config() {
-  return withModelOverrides(readJson("devos.config.json")).config;
+  const cfg = withModelOverrides(readJson("devos.config.json")).config;
+  // PR-91: inside a unit the cycle's base is the unit's branch; the publish job names it.
+  const base = String(process.env.DEVOS_BASE ?? "").trim();
+  if (base && UNIT_BRANCH.test(base)) cfg.base_branch = base;
+  return cfg;
 }
 
 // ---------- PHASES.md ----------------------------------------------------------------------
@@ -136,6 +140,42 @@ export function taskAfter(rows, task) {
   const i = rows.findIndex((r) => r.task === task);
   if (i < 0 || isMethodRow(rows[i])) return null;
   return rows.slice(i + 1).find((r) => !isMethodRow(r)) ?? null;
+}
+
+// ---------- units of acceptance (PR-91) -----------------------------------------------------
+// Product tasks are built in units. Inside a unit a PASS merges into the unit's branch; at the unit's end the cycle
+// opens one pull request into main and stops: only the person's merge reaches main. Method fixes are in no unit.
+
+export const UNIT_PREFIX = "devos/unit-";
+export const UNIT_BRANCH = /^devos\/unit-T\d{2,3}$/;
+export const UNIT_MODES = ["gate", "phase", "task"];
+
+/** acceptance.unit: gate (a unit ends at a row with a Gate and at a phase's last row), phase, or task. */
+export function acceptanceUnit(cfg) {
+  const mode = String(cfg?.acceptance?.unit ?? "gate");
+  return UNIT_MODES.includes(mode) ? mode : "gate";
+}
+
+const hasGate = (row) => Boolean(row?.gate && row.gate !== "—" && row.gate !== "-");
+
+/** The unit that holds `task`: its product rows in order, first and last task, and branch; null for a method row. */
+export function unitOf(rows, task, mode = "gate") {
+  const product = rows.filter((r) => !isMethodRow(r));
+  const i = product.findIndex((r) => r.task === task);
+  if (i < 0) return null;
+  const ends = (k) => mode === "task" || k === product.length - 1 || product[k + 1].phase !== product[k].phase || (mode === "gate" && hasGate(product[k]));
+  let start = i;
+  while (start > 0 && !ends(start - 1)) start--;
+  let end = i;
+  while (!ends(end)) end++;
+  const tasks = product.slice(start, end + 1);
+  return { tasks: tasks.map((r) => r.task), first: tasks[0].task, last: tasks.at(-1).task, branch: `${UNIT_PREFIX}${tasks.at(-1).task}` };
+}
+
+/** PR-91 (Q2 a): a product PASS waits on its own task PR only at risk 3; a Gate is signed by the unit's acceptance. A
+ *  method fix waits as before (PR-28). */
+export function waitsOnTaskPr(row) {
+  return isMethodRow(row) ? isHumanGate(row) : row.risk >= 3;
 }
 
 export function updatePhasesRow(task, { done, verdict }) {

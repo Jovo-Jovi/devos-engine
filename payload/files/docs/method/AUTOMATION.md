@@ -35,8 +35,9 @@ Invariants every change must keep: the Boundary gate is non-waivable · red chec
 (PR-08) · nothing merges before its verdict (PR-13) · human gates (risk 3, a gate, a migration or
 rules change, a method change) wait for your merge · agents never hold a git credential (PR-04) or
 the OIDC permission (PR-61) · branch code never runs in a job that holds a write token, and every decision is
-recomputed from main (PR-90) ·
-secrets never enter a file · fetch, never paste (PR-02) · a usage limit is a wait, not a failure
+recomputed from main (PR-90) · only your merge reaches main: a product PASS merges into its unit's branch, and a
+unit reaches main only by your merge of its acceptance pull request; tests, a PASS, a finished task or a preview never
+authorize it (PR-91) · secrets never enter a file · fetch, never paste (PR-02) · a usage limit is a wait, not a failure
 (PR-12, PR-29).
 
 ## 2. The flows
@@ -53,13 +54,31 @@ last builder commit ("(stage k of N done)" → k+1; "(stage k of N)" → continu
 makes `builder-status.mjs` return `continue` (unless its report says `STATUS: HALT`), and the review
 runs once, after the last stage. Intake splits big work into separate ledger rows.
 
+**Units of acceptance (PR-91).** Product tasks are built in units (`acceptance.unit`): by default a unit ends at a row
+with a Gate and at the last row of a phase (`gate`); `phase` ends units only at phases, `task` at every task. A unit's
+branch is `devos/unit-<its last task>`, made by `publish` from main when its first task is pushed. Its task PRs target
+it, and a PASS merges into it (risk 3 and the paths of `human_gate_paths` still wait for your merge of the task PR; a
+Gate is signed once, by the unit's acceptance). When every row of the unit is ticked on its branch, the next run opens
+one pull request into main, labelled `devos:acceptance`, with a completion report (`unit.mjs report`: each task's
+verdict, review and pull request, the paths it changes, how to check it on your machine and the link to Vercel's own
+branch preview when your project builds branches; the cycle makes none, D12), sets `devos/verdict` on its head, asks
+the doctor (its deployment checks), and stops: no product task is built while it is open, or closed until you reopen it
+(method fixes still are). Before a unit's next task is built, `resolve` merges main into the unit (GitHub's merge API:
+main's commits, already yours; a conflict stops the run), so the task runs main's scripts and rules. Your merge of it is
+the acceptance: `devos-deploy` deploys it, and `devos-advance` starts the next unit. Method fixes are in no unit:
+they target main and wait for your merge (PR-28). For now `/devos revise` and `/devos accept` still target main.
+
 **One task attempt** (`devos-cycle`, one run = one attempt of one task):
 1. `resolve`: `next-task.mjs` picks the task (method fixes first, PR-28); `setup-check.mjs --for
    cycle` stops a run that has no credentials (PR-27); `heavy.mjs` announces or holds heavy runs (PR-20).
    `resolve` also picks the builder from the pool (`agents.mjs pick`, the `devos:fallback-builder` label, PR-76) and
-   stops a run whose reviewer is not Claude Code (PR-90, D11).
-2. `work` (`devos-work.yml`, called with only the chosen builder tool's keys, and the media key when main's fence has a
-   `- Media:` line; its token reads and nothing else, PR-90): main at the run's commit → branch `task/Tnn` (a reissue continues it, PR-03) with that main
+   stops a run whose reviewer is not Claude Code (PR-90, D11). PR-91: `unit.mjs open` finds the open unit (its
+   progress and fences, read through GitHub), `next-task.mjs --unit-phases` reads it, and `unit.mjs place` says where
+   the task is built (main, or its unit's branch) or that the run opens the unit's acceptance pull request (`accept`)
+   or waits for yours (`waiting`).
+2. `work` (`devos-work.yml`, called with only the chosen builder tool's keys, and the media key when the task's fence
+   (main's, or the open unit's) has a `- Media:` line; its token reads and nothing else, PR-90): the task's base at the
+   run's start (main at the run's commit, or the unit's head, PR-91) → branch `task/Tnn` (a reissue continues it, PR-03) with that base
    merged in → `builder-model.mjs` picks the builder's model id → `modules.mjs start` brings up the local services →
    `media.mjs --fence` makes the media the fence's `- Media:` line names, within `DEVOS_MEDIA_BUDGET` (PR-81) → the
    builder agent builds (`accounts.sh` switches to the same tool's other account on a limit, PR-29, then to the
@@ -90,7 +109,7 @@ runs once, after the last stage. Intake splits big work into separate ledger row
    branch, PR-14), and a PASS whose code moved waits for a check-only run (`review_only` with the review kept: no
    builder, no AI call, PR-25) → push → statuses → act → publish's record (`devos-Tnn-aN`), which the `report` job
    takes by its id, never by its name.
-4. Actions: `merge` (auto-merge of the reviewed commit only, `--match-head-commit`, with the workflow's own token, so it starts no workflow; label `devos:auto-merged`; next task dispatched) · `human_gate`
+4. Actions: `merge` (auto-merge of the reviewed commit only, `--match-head-commit`, into the task's unit branch, never into main (a PR whose base is not the run's unit waits for you, PR-91), with the workflow's own token, so it starts no workflow; label `devos:auto-merged`; next task dispatched) · `human_gate`
    (label `devos:human-gate`, doctor dispatched) · `retry` (next attempt with the reissued fence) ·
    `quota_wait` (label `devos:quota-wait`, `wait-and-resume` job or `devos-resume`) · `setup_wait`
    (PR-27, `setup-issue.mjs wait`) · `halt` (label `devos:halted`, doctor dispatched).
@@ -107,7 +126,7 @@ for a read-only second opinion when no rule explains a failure and Claude Code i
 as `devos-review`, with no shell and no token, its text scrubbed before it is posted (PR-90); each token is in the steps
 that use it. Your merge → `devos-advance`.
 
-**Production.** Push to main by you → `devos-deploy`: `which` skips the runner's auto-merges (the label
+**Production.** Push to main by you (your merge of a unit's acceptance pull request, PR-91) → `devos-deploy`: `which` skips the runner's auto-merges (the label
 `devos:auto-merged`, or a pull request merged by a bot account, PR-90) →
 settings check (PR-27) → guards → storage preflight (PR-26) → database backup + migrations (PR-18) →
 Firestore rules + seed (PR-26) → Vercel build and upload (`vercel-deploy.sh`, PR-16, PR-24) → strict
@@ -149,7 +168,7 @@ by a usage limit resumes as the revision it is.
 | `devos-cycle.yml` | dispatch only (form: task, attempt, review_only, effort, fast, revision, reuse_review, go, cursor_account, claude_account) | `resolve`, `work`, `publish`, `report`, `wait-and-resume` | one task attempt, end to end (§2), in two jobs (PR-90); `report` links the repository to the DEV_OS registry and sends the events `publish` noted (PR-61); a run with every task PASS, or a link run (`task=link`, which starts no task), runs `report` only, to ask for the link (PR-65); once the link is approved, a link run's `report` also sends the project's plan (PR-66) |
 | `devos-work.yml` | called by `devos-cycle` only (`workflow_call`) | `work` | the untrusted half of an attempt (PR-90): the builder and the project's checks, with a read-only token and only the secrets the caller passes (the builder tool's `KEY_1`, `KEY_2`, `ALT_1`, `ALT_2` and `MEDIA_KEY`); its output is one artifact for `publish` |
 | `devos-intake.yml` | issue labelled `devos:request` / `devos:method`; comments `/devos intake`, `/devos go`, `/devos revise`, `/devos accept`; dispatch (resume) | `intake`, `intake-wait`, `go`, `revise`, `accept` | plans requests and method fixes on the reviewer agent (`plan-agent.sh`, PR-53); holds and resumes plans across limits; releases held runs; revisions; the owner's acceptance of a stopped task (PR-87) |
-| `devos-advance.yml` | PR closed (merged, `task/`, `intake/` or `devos/accept-`, not auto-merged; or `devos/connect`, the link answer) | `advance`, `link` | `advance` dispatches the next task, or restarts the task a method fix unblocked, and never a task merged with its row open (PR-87); `link` (with `DEVOS_REPORTING` on, not paused) dispatches a `devos-cycle` link run (`task=link`) when no `devos-cycle` run is queued or going, so its `report` job asks for the link (PR-65) ; `link` then starts `devos-state` with `wait_minutes=15`, which waits for the approval (PR-75) |
+| `devos-advance.yml` | PR closed (merged, `task/`, `intake/`, `devos/accept-` or `devos/unit-`, not auto-merged; or `devos/connect`, the link answer) | `advance`, `link` | `advance` dispatches the next task, or restarts the task a method fix unblocked, and never a task merged with its row open (PR-87); after your merge of a unit's acceptance PR it starts the next unit, and a task PR merged into a unit reads that unit's progress (PR-91); `link` (with `DEVOS_REPORTING` on, not paused) dispatches a `devos-cycle` link run (`task=link`) when no `devos-cycle` run is queued or going, so its `report` job asks for the link (PR-65) ; `link` then starts `devos-state` with `wait_minutes=15`, which waits for the approval (PR-75) |
 | `devos-doctor.yml` | ci finished; `/devos doctor`; push to main; dispatch (PR) | `gates`, `doctor` | the gate doctor (§2) |
 | `devos-state.yml` | twice a day (03:41 and 15:41 UTC); dispatch (`wait_minutes`, 0 to 30) | `state` | with `DEVOS_REPORTING` on, `DEVOS_STATE` not `off` and not paused: asks the DEV_OS registry for the link (`report.mjs link --wait`, waiting for a pending link's approval when started with minutes), then sends the task history (`history`, PR-66); its own concurrency group, so it never holds a task (PR-75) |
 | `devos-resume.yml` | every 2 hours; dispatch | `resume` | backstop for parked runs and plans; re-checks the setup issue |
@@ -172,7 +191,8 @@ workflow may start late.
 | `config.mjs` | builds `devos.config.json` from `devos/engine.defaults.json` and `devos/project.json`; `--write`, `--check`, `--print`; PR-39 |
 | `agents.mjs` | resolves the builder pool id, the reviewer model, each agent's `fallback_models` (`builder_fallbacks`, `reviewer_fallbacks`, PR-64) and `next --after` (not used by the cycle since PR-53), `agents.fallback_builder` under the `devos:fallback-builder` label (PR-76) from `devos.config.json` `agents`; `tools` lists the tools the agents use, so the cycle installs only those CLIs (PR-41, PR-42, PR-45) |
 | `role-env.mjs` | installs a role kit for a tool in the other role and restores the tool's own config (PR-42); `devos/roles/cursor-blueprint/` is the kit `devos init` gives Cursor while it writes the blueprint (PR-44); `cursor-planner` is Cursor's kit for a planning run (PR-53); the kits `codex-builder`, `codex-reviewer`, `gemini-builder` and `gemini-reviewer` give Codex its `AGENTS.md` and Gemini its `GEMINI.md` for the run (PR-45) |
-| `next-task.mjs` | which task and attempt; refuses out-of-order product tasks |
+| `next-task.mjs` | which task and attempt; refuses out-of-order product tasks; `--unit-phases` reads the product rows' progress from the open unit's branch (PR-91) |
+| `unit.mjs` | units of acceptance (PR-91): `open` (the open unit, its PHASES and acceptance PR, through `gh`), `place` (main or the unit's branch for this task, or `accept`, or `waiting`), `report` (the acceptance PR's completion report, no AI call) |
 | `accept.mjs` | `/devos accept`: the owner's acceptance of a stopped task as the next attempt's record, and its row ticked; refuses a ticked task or one after an open task (PR-87) |
 | `heavy.mjs` | heavy-run notice or hold (`DEVOS_HEAVY`) |
 | `builder-model.mjs` | the builder model id from the pool item's family, checked against `agent models`: the Fast id at the same effort before the configured model, and a changed effort said (PR-86) |
@@ -210,7 +230,7 @@ workflow may start late.
 | `limits.mjs` | limit patterns (read on the last 4000 characters of each output only, PR-54), reset parsing, `earliestNotBefore`, run cost for every tool |
 | `usage.mjs` | the usage record (PR-52): `record` adds one line per agent run to `.devos/usage/pending.jsonl` (stage, task, tool, model, input, output, cache-read and cache-write tokens, the tool's own cost, seconds); `flush` moves the lines to `docs/usage/<task>.jsonl` in the runner's commit; `report --write` rebuilds `docs/USAGE.md`, the totals by model, stage and task, priced from the tool's own cost or `devos/prices.json`. Every builder run is recorded by `agent-watchdog.sh` (`DEVOS_USAGE_STAGE`), every reviewer, intake and revise run right after its call; the gate doctor's and the supervisor's runs go on their run summary only (`--summary`). A record never fails a run |
 | `media.mjs` · `media-providers/` | generated media (PR-80): makes the items of `docs/design/media.json` still to make, through the plan's provider (`media-providers/xai.mjs` first). The budget is the authorization: `--budget`, else `DEVOS_MEDIA_BUDGET`, else 0; at 0 it only lists each item's estimate and calls nothing, and above 0 it makes items in plan order while their estimates fit. The key, `DEVOS_MEDIA_<PROVIDER>_KEY`, is read from the environment only and never printed. Each file is written through `.part`, checked by its signature and moved into place, and its row records the model, date, terms, cost (`reported` or `price list`) and `prompt_sha`: a made item is kept, a changed request makes it again, a started video's `request_id` is resumed by the next run. 429, 5xx and network errors are tried 3 times; a refusal records `last_error` and the run goes on. Each made item adds a line to `docs/usage/media.jsonl` (stage `media`); the run's report is `.devos/media-report.md`, and `.devos/media-files.txt` lists the files it changed for the runner's commit. `--fence docs/fences/Tnn.md` makes only the items the fence's `- Media:` line names (PR-81), and nothing for a fence that names none. An image the developer owns (source `own`, PR-82) is placed first, as a copy of its `from` in `docs/design/own/`, checked by its signature: free, with no provider or key, at any budget, and kept while its file matches. `devos media` runs it on the developer's computer and asks before it pays |
-| `doctor.mjs` | the gate doctor's facts, rules and comment |
+| `doctor.mjs` | the gate doctor's facts, rules and comment; on a unit's acceptance PR, Vercel's own preview of the branch and the deployment checks (Vercel deploying main from Git, a variable Production and Preview share; names only, PR-91) |
 | `setup-check.mjs` · `setup-issue.mjs` | settings by name; the setup issue and resumptions (PR-27). An item applies only to what the project uses: a module it chose at `devos init` (`chosen:`, from `devos/answers.json`) or a fence names, a tool an agent runs on (PR-53) |
 | `report.mjs` | the DEV_OS registry link and the step events (PR-61, the registry's event contract v1). `note` (in the cycle's `publish` job, PR-90) appends one event to `.devos/journal.jsonl` at each moment: `build` started and its end (pass, waiting on a usage limit, fail; a time slice that continues ends nothing), `checks`, `review` started and its end, `verdict` (pass, fail, waiting), `gate` (skipped before an automatic merge, waiting at a human gate or a halt) and `merge`; `note --failed` ends a step a runner failure left open as `fail`. The `report` job (with `devos-state`'s `state` job, PR-75, the only jobs with `id-token: write`; neither runs an agent) downloads the journal, asks the registry to link the repository with GitHub's OIDC identity of the workflow (`link`: the registry's owner approves it once and the answer names the project's key; until then the events wait and are not sent), then sends each unsent event once, in order (`flush`). The job runs only when `DEVOS_REPORTING` is `on`, the developer's own answer at `devos init` (PR-62); in a run with every task PASS, or a link run (`task=link`), it runs alone, asks for the link and has nothing to send (PR-65). `history` (in a link run, PR-66): once the link is approved, one event for each task of `docs/PHASES.md` (`verdict pass` for a finished task, dated by its review's commit; `intake pass` for a task to do, dated by the plan's commit), as the run `import-<the plan's commit>`, at most 50 stored in any 61 seconds for 5 minutes, the OIDC token renewed every 4 minutes; only to a project that accepted the contract's version 2 or later; git gives only paths and dates. No key or token is stored; nothing here reads a secret, code, a diff or a prompt; every command exits 0, so reporting never blocks a run. PR-74: each call to GitHub or the registry has 20 seconds; the OIDC token is asked up to 3 times, 2 then 5 seconds apart, and a message names why none came (`permission`, `timeout`, `network`, `HTTP <status>`, `no token`); `flush` stops at the first event the registry does not answer; events not sent stay in the run's evidence (`devos-<task>-a<attempt>`), and re-running the report job sends them. PR-75: `link --wait <minutes>` (0 to 30) asks again every minute while the link is pending, until it is approved or declined or the minutes pass. |
 | `loop.mjs` | the same cycle on your machine, with your logged-in CLIs: Cursor builds and Claude Code reviews, so it refuses a project that chose other agents (PR-53); it sets `TASK` and `DEVOS_SCOPE_BASE` (the local base branch) for the guards (PR-58) |
@@ -281,11 +301,11 @@ A UI fence carries a header line `- Screens: \`<name> <path>[ click|hover|focus 
   yours: `devos/prices.json`, US dollars per million tokens per model.
 - **Commit statuses:** `devos/verdict` (the review's result), `devos/checks` (the runner's checks),
   `devos/gate` (the doctor: ready for your merge or not).
-- **Labels:** `devos`, `risk-1..3`, `devos:auto-merged`, `devos:human-gate`, `devos:halted`,
+- **Labels:** `devos`, `risk-1..3`, `devos:acceptance` (a unit's acceptance PR, PR-91), `devos:auto-merged`, `devos:human-gate`, `devos:halted`,
   `devos:quota-wait`, `devos:fallback-builder` (PR-76), `devos:setup-wait`, `devos:needs-you`, `devos:method`, `devos:intake`,
   `devos:request`, `devos:setup`, `devos:notices` (issue #1: run notices and the live builder progress
   comments), `devos:supervisor` (the supervisor's issue).
-- **Branches:** `task/Tnn` (one per task), `intake/issue-N` (plans), `rescue/task/Tnn-<run id>` (the
+- **Branches:** `task/Tnn` (one per task), `devos/unit-Tnn` (a unit, named after its last task, PR-91), `intake/issue-N` (plans), `rescue/task/Tnn-<run id>` (the
   work of a run whose push conflicted; the supervisor recovers it with `rescue.sh`).
 - **Comment markers** (HTML comments the runner reads back): `devos-resume` (park and resume),
   `devos-intake-resume`, `devos-held` / `devos-held-done` (PR-20), `devos-doctor`, `devos-setup`,
@@ -367,7 +387,7 @@ A UI fence carries a header line `- Screens: \`<name> <path>[ click|hover|focus 
   another, `max` for Claude Code too; Cursor's model id carries its own. A Claude Code reviewer's
   `reviewer.modes.*.effort` and `gate_effort` may be `max`; a retry raises the effort one step up to `xhigh`, and
   `max` stays `max` (PR-86).
-- **`devos.config.json`:** generated — edit `devos/project.json`; engine defaults in `devos/engine.defaults.json`. `max_attempts`; `builder` (model family, effort by risk); `reviewer`
+- **`devos.config.json`:** generated — edit `devos/project.json`; engine defaults in `devos/engine.defaults.json`. `max_attempts`; `acceptance` (`unit`: `gate`, `phase` or `task`, PR-91); `builder` (model family, effort by risk); `reviewer`
   (models and efforts by risk and gate, `modes.light/deep`, `deep_paths`, `human_gate_paths` (PR-72: a project in production, filled by `devos adopt`), `human_gate_imports` (PR-73: packages whose import in a changed file stops at the gate, filled the same way), intake and method efforts; its Claude model ids apply only to a project without `agents`, PR-53); `agents` (reviewer, reviewer_light, pool, policy; without reviewer_light the reviewer reviews every task, PR-53; any of Cursor, Claude Code, Codex and Gemini may take either role (PR-45); a usage limit switches to the same tool's other account, then to the agent's next model in its `fallback_models` (up to 4 model ids of its own tool, PR-64), and with none left the attempt waits for the earliest reset: no other agent takes over, PR-53; `devos init` writes them from the developer's choices, and the setup items `cursor`, `claude`, `codex` and `gemini` apply only when an agent uses that tool, PR-44);
   `required_checks` / `optional_checks`; `stack` (the toolchain, its manifest and the commands of its checks, written by `devos init`, PR-48, and `scaffold`, the recipe fence T01 follows, PR-49, with `scaffold.modules`, the stack's module convention, PR-58); `structure` (the product's feature modules: `modules`, each with its `dir` and `public` entries, `aliases` and `exempt`, written by the blueprint, PR-58); `screens` (`pages`, `filmstrip_ms`, `settle_max_ms`; a fence `- Screens:` line overrides `pages`); `surfaces` (builder, builder_method, reviewer, intake,
   revise); `resume` (inline wait, relay, back-off, `stall_wait_minutes`); `modules` (supabase, r2, firebase); `heavy`; `retry_build_on`; `check_timeout_minutes` and `checks_budget_minutes` (PR-70);

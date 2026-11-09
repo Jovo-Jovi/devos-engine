@@ -142,7 +142,7 @@ test("tower-ask.test.mjs (d) a link run builds nothing and its report job asks; 
     "    if: always() && (needs.publish.result != 'skipped' || needs.resolve.outputs.done == 'true') && vars.DEVOS_REPORTING == 'on'\n",
     "      - name: The journal of the publish job\n        if: needs.resolve.outputs.done != 'true' && needs.publish.outputs.record_id != ''\n",
     "link = no task, only ask the DEV_OS registry for the link, PR-65)\"\n",
-    "      - if: steps.t.outputs.done == 'true' && inputs.task != 'link'\n",
+    "      - if: steps.t.outputs.done == 'true' && inputs.task != 'link' && steps.place.outputs.accept != 'true' && steps.place.outputs.waiting != 'true'\n",
     "      - if: steps.t.outputs.done == 'true' && inputs.task == 'link'\n",
   ]) {
     assert.equal(cycle.includes(line), true, line);
