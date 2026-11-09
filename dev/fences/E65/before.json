@@ -1,0 +1,10 @@
+{
+  "CHANGELOG.md": "3ef293836237dc77ed1023c3faf1ec7001c3cc93256bd8ef79930f0cec4b3d4c",
+  "lib/adopt.mjs": "a120758ae40716d19bac741dc671d4dcd27e1340fed32690a61d835b96eefe1c",
+  "lib/data/adopt-blueprint.md": "a0fd4d15087e381ee09bbf3e9adb63022e04f5bc222066d0c1864a36c82bee17",
+  "payload/files/dot-gitignore": "e45529a9d7e596fd47769f2bdb25175cc37d81d89aebdbf9df55f421f9a4e5d5",
+  "payload/manifest.json": "60500eb18550a5e13c68fb3c603a3bdcb19e8d07b9adfcf4d5b7070dd84c5adc",
+  "test/adopt-files.test.mjs": "ae7f233eee21b44b15332d0cc9d24c371f4f3c323d99709822cee05a4503c8ff",
+  "test/adopt-install.test.mjs": "5383c653ae6b477f12ebf699b00887b6ec25288a187363772e97d39d122d7480",
+  "test/adopt.test.mjs": "8de8013f510e5106c653c18f36af012f390fe724fa32dd06e66adfcff9f652a8"
+}

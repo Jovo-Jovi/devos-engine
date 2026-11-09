@@ -94,6 +94,19 @@ test("adopt-install.test.mjs (m) yes after the brief puts DEV_OS on devos/adopt 
     assert.equal(t.git(["ls-tree", "--name-only", "devos/adopt", "docs/design/UI_ACCEPTANCE.md"]).out, "docs/design/UI_ACCEPTANCE.md\n");
     assert.equal(t.git(["show", "devos/adopt:CLAUDE.md"]).out, `# Our own notes\nUse pnpm.\n\n${AGENT_START}\n# CLAUDE.md\n\nStub reviewer rules.\n<!-- devos:end -->\n`);
     assert.equal(t.git(["show", "devos/adopt:.claude/settings.json"]).out, readFileSync(path.join(root, "payload", "files", "dot-claude", "settings.json"), "utf8").replaceAll("\r\n", "\n"));
+    // E65: the documents round of Claude Code runs no command and reaches no web page (devos writes the config and runs
+    // the checks), reads only its folder and no secret file, and loads none of the project's settings or MCP servers.
+    const docs = t.rounds().filter((round) => round.stdin.startsWith("# DEV_OS adoption: the documents of a project that already exists\n"));
+    assert.equal(docs.length >= 1, true);
+    for (const round of docs) {
+      const at = round.args.indexOf("--allowedTools");
+      assert.deepEqual(round.args.slice(at, at + 9).slice(0, 8), ["--allowedTools", "Read,Glob,Grep,Write,Edit", "--disallowedTools", "Bash,PowerShell,WebFetch,WebSearch", "--setting-sources", "user", "--strict-mcp-config", "--settings"]);
+      const file = round.args[at + 8];
+      assert.equal(path.basename(file), "claude-settings.json");
+      assert.equal(path.basename(path.dirname(file)).endsWith(".fence"), true, file);
+      assert.equal(JSON.parse(readFileSync(file, "utf8")).permissions.blockReadsOutsideWorkingDirectories, true);
+      assert.equal(round.args.some((arg) => /WebFetch|WebSearch|Bash\(/.test(arg) && arg !== "Bash,PowerShell,WebFetch,WebSearch"), false);
+    }
     const answers = JSON.parse(t.git(["show", "devos/adopt:devos/answers.json"]).out);
     assert.equal(answers.key, "DEMO-APP");
     assert.equal(answers.type, "saas");
@@ -249,6 +262,10 @@ test("adopt-install.test.mjs (s) with Cursor, its kit writes DEV_OS's CLAUDE.md 
     assert.equal(kit.allow.includes("Write(.devos/adopt/CLAUDE.md)"), true);
     assert.equal(kit.allow.includes("Write(CLAUDE.md)"), false);
     assert.equal(kit.deny.includes("Write(CLAUDE.md)"), true);
+    // E65: no shell in an adoption (the blueprint kit's Shell(node), Shell(ls) and Shell(cat) go), and no secret file read.
+    assert.deepEqual(kit.allow.filter((rule) => rule.startsWith("Shell(")), []);
+    assert.equal(kit.deny[0], "Shell(*)");
+    for (const rule of ["WebFetch(*)", "Mcp(*:*)", "Read(**/.env)", "Read(**/.env.*)", "Read(**/*.pem)", "Read(**/.npmrc)", "Read(**/*.tfvars)"]) assert.equal(kit.deny.includes(rule), true, rule);
     assert.equal(t.git(["show", "devos/adopt:.cursor/cli.json"]).out, readFileSync(path.join(root, "payload", "files", "dot-cursor", "cli.json"), "utf8").replaceAll("\r\n", "\n"));
     assert.equal(t.git(["show", "devos/adopt:CLAUDE.md"]).out, `# Our own notes\nUse pnpm.\n\n${AGENT_START}\n# CLAUDE.md\n\nStub reviewer rules.\n<!-- devos:end -->\n`);
     assert.deepEqual(JSON.parse(t.git(["show", "devos/adopt:devos/answers.json"]).out).blueprint_agent, { tool: "cursor", model: "grok-4.7" });
@@ -669,6 +686,44 @@ test("adopt-install.test.mjs (ac) a production adoption reads the project's sour
     assert.deepEqual(project.guards.source_roots_extra, ["app"]);
     assert.deepEqual(project.reviewer.human_gate_imports_extra, GATE_IMPORTS);
     assert.deepEqual(JSON.parse(t.git(["show", "devos/adopt:devos.config.json"]).out).guards.source_roots, ["src", "app"]);
+  } finally {
+    cleanup(t.staged.parent);
+  }
+});
+
+test("adopt-install.test.mjs (ad) E65: a documents round that fails its checks is repaired in a second round, fenced as the first", () => {
+  const t = setUp();
+  try {
+    const result = t.run([t.folder, ...AGENT], `yes\nyes\n${asked()}no\n`, { STUB_MODE: "bad-fence-then-good" });
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    assert.equal(result.stdout.includes("devos: the documents after round 1 fail their checks:\n"), true, result.stdout);
+    const docs = t.rounds().filter((round) => round.stdin.startsWith("# DEV_OS adoption: the documents of a project that already exists\n") || round.stdin.startsWith("Your documents and fence T01 are written"));
+    assert.equal(docs.length, 2);
+    const fenced = (round) => round.args.slice(round.args.indexOf("--allowedTools"), round.args.indexOf("--allowedTools") + 9);
+    assert.deepEqual(fenced(docs[1]), fenced(docs[0]));
+    assert.equal(fenced(docs[0])[8].endsWith(path.join("demo-app.fence", "claude-settings.json")), true, fenced(docs[0])[8]);
+    assert.deepEqual([docs[0].args.includes("--continue"), docs[1].args.at(-1)], [false, "--continue"]);
+    assert.equal(JSON.parse(t.git(["show", "devos/adopt:devos.config.json"]).out).project, "DEMO-APP");
+  } finally {
+    cleanup(t.staged.parent);
+  }
+});
+
+test("adopt-install.test.mjs (ae) E65: a project that tracks the chosen tool's own configuration stops the adoption before the tool runs", () => {
+  const t = setUp({ ".gemini/settings.json": "{\"mcpServers\":{}}\n" }, ["gemini"]);
+  try {
+    const head = t.git(["rev-parse", "HEAD"]).out;
+    const stop = "devos: the project tracks .gemini/settings.json, which Gemini CLI would load and run while it writes the adoption; adopt with --agent claude, or remove it from the project first\n";
+    const brief = t.run([t.folder, "--agent", "gemini:gemini-2.5-pro"], "");
+    assert.equal(brief.status, 1, brief.stdout + brief.stderr);
+    assert.equal(brief.stdout.endsWith(stop), true, brief.stdout);
+    // A brief written with Claude Code, then the documents asked of Gemini: stopped before the contract.
+    assert.equal(t.run([t.folder, ...AGENT], "yes\nno\n").status, 0);
+    const install = t.run(["--install", t.folder, "--agent", "gemini:gemini-2.5-pro"], asked());
+    assert.equal(install.status, 1, install.stdout + install.stderr);
+    assert.equal(install.stdout.endsWith(stop), true, install.stdout);
+    assert.deepEqual(t.toolRounds(), []);
+    unchanged(t, head);
   } finally {
     cleanup(t.staged.parent);
   }

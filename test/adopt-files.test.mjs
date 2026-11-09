@@ -155,7 +155,8 @@ test("adopt-files.test.mjs (f) placeEngineFiles merges only DEV_OS's own gitigno
   const own = "keep-me\n";
   const folder = existing({ ".gitignore": own, "README.md": "# Demo\n" });
   const bare = existing({ "README.md": "# Demo\n" });
-  const banned = ["dist/", "out/", "/build", "*.pem", "node_modules/"];
+  // E65: the secret files are DEV_OS's own lines (one list with secretFile); the toolchain's are the project's business.
+  const banned = ["dist/", "out/", "/build", "node_modules/"];
   try {
     assert.equal(placeEngineFiles(folder, "DEMO").code, 0);
     const ignore = read(folder, ".gitignore");

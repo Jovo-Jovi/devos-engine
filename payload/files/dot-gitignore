@@ -8,18 +8,42 @@
 supabase/.temp/
 supabase/.branches/
 
-# Firebase CLI local state and emulator logs; service-account keys never enter the tree (PR-26)
+# Firebase CLI local state and emulator logs (PR-26)
 .firebase/
 firebase-debug*.log
 firestore-debug*.log
 ui-debug*.log
-*-firebase-adminsdk-*.json
-*service-account*.json
 
-# Local environment
+# Files that may hold a secret: environment files, private keys, service-account and cloud credentials, Terraform
+# variables and state, registry and login tokens. DEV_OS never reads them, and an adoption's AI tool may not (E65). One
+# with no secret in it (a .npmrc or an .envrc, say) can still be committed: git add -f <file>
 .env
 .env.*
+.envrc
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+id_rsa
+id_dsa
+id_ecdsa
+id_ed25519
+*-firebase-adminsdk-*.json
+*service-account*.json
+serviceAccountKey*.json
+*credentials*.json
+*.tfvars
+*.tfstate
+*.tfstate.*
+.npmrc
+.netrc
+.pgpass
 !.env.example
+!.env.sample
+!.env.template
+!.env.dist
 
 # Node / Next.js
 node_modules/

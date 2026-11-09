@@ -14,10 +14,15 @@ Read first:
 
 ## The differences
 
+0. **You run no command and open no web page.** In an adoption you read and write files only: the project's text may
+   not be the developer's own. Where the blueprint says to run a command (`config.mjs --write`, `fence-check`), skip
+   it: after each round devos writes `devos.config.json` from `devos/project.json`, runs `fence-check` on T01 and
+   DEV_OS's document guards, and gives you what fails. Never read an environment file, a key or a credential; you
+   need none: the survey names the environment variables.
 1. **Never change the project's code, tests, workflows or its own documents.** Write only:
    - DEV_OS's documents in `docs/`, beside the project's own (never a file the project already had);
    - in `docs/method/`, only PR-01 of `PRECEDENTS.md`, as the blueprint says; its other files stay as installed;
-   - `devos/project.json`, then `node scripts/devos/config.mjs --write`;
+   - `devos/project.json` (devos writes `devos.config.json` from it);
    - `.cursor/rules/10-security-data.mdc` and `.cursor/rules/30-vocabulary.mdc`;
    - `.cursor/mcp.example.json` and `devos/ci/mcp.ci.json`;
    - `.devos/adopt/CLAUDE.md`.

@@ -294,7 +294,7 @@ test("adopt.test.mjs (g) the AI tool writes the brief on a copy outside the proj
     assert.equal(confirmed.schema, "devos-brief-confirmed/1");
     assert.equal(confirmed.repository, "devtest/demo-app");
     assert.equal(confirmed.head, head.trim());
-    assert.equal(result.stdout.includes("(2 held back: environment files and private keys); your project is not touched\n"), true, result.stdout);
+    assert.equal(result.stdout.includes("(2 held back: environment files, keys and credentials); your project is not touched\n"), true, result.stdout);
     assert.equal(existsSync(path.join(staging, "workspace", "app", "page.tsx")), true);
     assert.equal(existsSync(path.join(staging, "workspace", ".env.example")), true);
     assert.equal(existsSync(path.join(staging, "workspace", ".env.local")), false);
@@ -310,7 +310,14 @@ test("adopt.test.mjs (g) the AI tool writes the brief on a copy outside the proj
     assert.equal(done[0].stdin.startsWith("# DEV_OS adoption brief\n"), true);
     assert.match(done[0].stdin, /^- Stacks: .*`next`/m);
     const at = done[0].args.indexOf("--allowedTools");
-    assert.deepEqual(done[0].args.slice(at, at + 4), ["--allowedTools", "Read,Glob,Grep,Write,Edit", "--disallowedTools", "Bash,WebFetch,WebSearch"]);
+    assert.deepEqual(done[0].args.slice(at, at + 4), ["--allowedTools", "Read,Glob,Grep,Write,Edit", "--disallowedTools", "Bash,PowerShell,WebFetch,WebSearch"]);
+    // E65: the developer's own user settings and the adoption's only (no project hook, no project MCP server); reads
+    // kept to the staging folder, and no secret file read. The settings are beside the staging folder, out of reach.
+    assert.deepEqual(done[0].args.slice(at + 4), ["--setting-sources", "user", "--strict-mcp-config", "--settings", path.join(`${staging}.fence`, "claude-settings.json")]);
+    assert.equal(existsSync(path.join(staging, "claude-settings.json")), false);
+    const settings = JSON.parse(readFileSync(path.join(`${staging}.fence`, "claude-settings.json"), "utf8")).permissions;
+    assert.equal(settings.blockReadsOutsideWorkingDirectories, true);
+    for (const rule of ["Bash", "PowerShell", "WebFetch", "WebSearch", "Read(**/.env)", "Read(**/.env.*)", "Read(**/*.pem)", "Read(**/.npmrc)", "Read(**/*credentials*.json)"]) assert.equal(settings.deny.includes(rule), true, rule);
     assert.equal(done[0].args.includes("--continue"), false);
     assert.equal(git(["rev-parse", "HEAD"], folder), head);
     assert.equal(git(["status", "--porcelain"], folder), "");
