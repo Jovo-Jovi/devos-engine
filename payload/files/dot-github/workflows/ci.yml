@@ -19,11 +19,11 @@ jobs:
     env:
       NEXT_TELEMETRY_DISABLED: "1"
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
           fetch-depth: 0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
       - name: pnpm, at the version devos.config.json pins (PR-93)
@@ -39,12 +39,15 @@ jobs:
         uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6.8.0
         with:
           python-version: "3.12"
+          enable-cache: false
 
       - name: Go (Go stacks, PR-48)
         if: steps.tc.outputs.toolchain == 'go'
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
         with:
           go-version: stable
+          # PR-94: no cache: a cache one run saves, another restores (N3).
+          cache: false
 
       - name: Flutter (Dart stacks, PR-48)
         if: steps.tc.outputs.toolchain == 'dart'
@@ -70,7 +73,7 @@ jobs:
         run: node scripts/devos/run-checks.mjs --strict
       # PR-67: the gate doctor reads ci-results.json and logs/ from this artifact; screenshots and *.env files stay out.
       - if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: ci-evidence
           path: |

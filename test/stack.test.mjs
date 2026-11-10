@@ -189,8 +189,8 @@ function countOf(text, needle) {
 }
 
 test("stack.test.mjs (g) the workflows set up the toolchain and install it", () => {
-  // PR-93: the third-party actions by commit; GitHub's own on their major tag.
-  const uses = ["astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6.8.0", "actions/setup-go@v5", "subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0"];
+  // PR-93: the third-party actions by commit; PR-94: GitHub's own too, and no toolchain cache.
+  const uses = ["astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6.8.0", "actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0", "subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0", "          cache: false\n", "          enable-cache: false\n"];
   const conditions = [
     "steps.tc.outputs.toolchain == 'python'",
     "steps.tc.outputs.toolchain == 'go'",

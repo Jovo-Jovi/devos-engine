@@ -169,6 +169,10 @@ instruction.
    - **PASS and a next task exists** → write `docs/fences/{{NEXT_TASK}}.md` in the format of
      `docs/fences/T01.md`, from `docs/PHASES.md` "Phase outlines". Check with Glob/Grep that every
      path, script and name it cites exists or is created by its own steps. Do not build or run it.
+     **If it already exists, it is issued** (the owner or an earlier review wrote it): keep it as it
+     is. Change it only where this tree moved something it cites (a path, a count, a name): then
+     reissue the whole fence with `Fence version` +1, keep its scope, and say what moved in your
+     review. A changed fence whose `Fence version` did not go up is not kept (PR-94).
    - **PASS and no next task** → write nothing else.
    - **FAIL classified `SETUP` only** → write nothing else; the attempt is re-reviewed once the human
      has added what you named.

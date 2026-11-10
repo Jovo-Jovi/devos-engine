@@ -8,7 +8,14 @@
 //   node scripts/devos/supervisor.mjs scan   [--dry-run]   → .devos/supervisor/{facts,incidents}.json
 //   node scripts/devos/supervisor.mjs act    [--dry-run] [--claude .devos/supervisor/claude.json]
 //   node scripts/devos/supervisor.mjs approve --comment-id <id> --body "<comment>"
-// Env: GH_TOKEN (the runner token), REPO, EVENT_NAME, WF_NAME, WF_RUN_ID, WF_CONCLUSION.
+// Env: GH_TOKEN (the workflow's built-in token: reads and reports), OWNER_TOKEN (DEVOS_PAT, only in the steps that act:
+// a dispatch, a re-run, a `/devos revise`, an issue the owner approved, a rescue), REPO, EVENT_NAME, WF_NAME, WF_RUN_ID,
+// WF_CONCLUSION.
+//
+// PR-94: what Claude Code diagnoses is data. An action it chooses that writes text (an issue, a `/devos revise`) is only
+// proposed: the report shows its exact text and nothing is posted until you reply `/devos approve <id>`. Its text never
+// carries HTML, so it cannot hide a marker; only this workflow's own comments are read as the supervisor's history, and
+// of each, only its last marker.
 import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync, readFileSync, existsSync } from "node:fs";
 import { P, config, parsePhases, nextOpenTask, isMethodRow, emit } from "./lib.mjs";
@@ -25,16 +32,17 @@ mkdirSync(DIR, { recursive: true });
 const cfg = config();
 const S = {
   max_auto_per_key: 2, max_ai_per_day: 6, idle_minutes: 20, overdue_park_minutes: 45,
-  issue_title: "Dev OS: supervisor", issue_label: "devos:supervisor", ...(cfg.supervisor ?? {}),
+  issue_title: "Dev OS: supervisor", issue_label: "devos:supervisor", bot_login: "github-actions[bot]", ...(cfg.supervisor ?? {}),
 };
 const CYCLE = "devos-cycle.yml";
 
 // ---------- GitHub helpers ----------
-// Reports go out with REPORT_TOKEN (the workflow's built-in token): its comments start no workflow, so
-// the supervisor can never wake itself up through its own issue. Only a `/devos revise` it posts on
-// purpose uses GH_TOKEN (the owner's token), because that comment must start the revision.
-function gh(args, { input, allowFail = false, report = false } = {}) {
-  const env = report && process.env.REPORT_TOKEN ? { ...process.env, GH_TOKEN: process.env.REPORT_TOKEN } : process.env;
+// Reads and reports go out with the workflow's built-in token (GH_TOKEN, REPORT_TOKEN): its comments start no workflow,
+// so the supervisor can never wake itself up through its own issue. Only what must start a workflow or count as yours
+// (a dispatch, a re-run, a `/devos revise`, an issue you approved) uses OWNER_TOKEN, which only the steps that act hold.
+function gh(args, { input, allowFail = false, report = false, owner = false } = {}) {
+  const token = owner ? process.env.OWNER_TOKEN : report ? process.env.REPORT_TOKEN : "";
+  const env = token ? { ...process.env, GH_TOKEN: token } : process.env;
   try {
     return execFileSync("gh", args, { encoding: "utf8", input, env, stdio: ["pipe", "pipe", "pipe"], maxBuffer: 64 * 1024 * 1024 });
   } catch (e) {
@@ -117,14 +125,18 @@ function failingStep(runId) {
   return { job: "", step: "", tail: "" };
 }
 
+// PR-94: a comment counts only when a bot (the cycle's own token) or the owners, members and collaborators wrote it: on a
+// public repository anyone may comment, and a comment that only looks like the runner's would choose the fix.
+const TRUSTED_AUTHORS = ["OWNER", "MEMBER", "COLLABORATOR"];
+const trustedComment = (c) => Boolean(c) && (c.user?.type === "Bot" || TRUSTED_AUTHORS.includes(c.author_association));
 function lastBotComment(pr) {
   const cs = api(`repos/${REPO}/issues/${pr}/comments?per_page=100`) || [];
-  return (Array.isArray(cs) ? cs : []).filter((c) => /^### Dev OS |Dev OS runner stopped/.test(c.body || "")).pop() || null;
+  return (Array.isArray(cs) ? cs : []).filter((c) => trustedComment(c) && /^### Dev OS |Dev OS runner stopped/.test(c.body || "")).pop() || null;
 }
 // The owner (or an approved proposal) already answered this stop: a revision was asked for after it.
 function answeredAfter(pr, since) {
   const cs = api(`repos/${REPO}/issues/${pr}/comments?per_page=100`) || [];
-  return (Array.isArray(cs) ? cs : []).some((c) => c.created_at > since && /^(\/devos revise|Dev OS: revising)/.test(c.body || ""));
+  return (Array.isArray(cs) ? cs : []).some((c) => trustedComment(c) && c.created_at > since && /^(\/devos revise|Dev OS: revising)/.test(c.body || ""));
 }
 
 // PR-70: GitHub ends a run that passes its time limit as "cancelled", with a note on the job that it "exceeded
@@ -359,22 +371,49 @@ function allComments(issue) {
   const one = api(`repos/${REPO}/issues/${issue}/comments?per_page=100`);
   return Array.isArray(one) ? one : [];
 }
-function history(issue) {
-  if (!issue) return [];
-  const cs = allComments(issue);
-  return cs.flatMap((c) => {
-    const m = (c.body || "").match(/<!-- devos-supervisor (\{.*?\}) -->/);
-    if (!m) return [];
-    try { return [{ ...JSON.parse(m[1]), comment: c.id }]; } catch { return []; }
+// PR-94: only this workflow's own comments (its built-in token's account), and of each only the last marker: the text
+// before it may quote a diagnosis, never a marker of its own (aiText), but the last one is always the supervisor's.
+const MARKER_RE = /<!-- devos-supervisor (\{.*?\}) -->/g;
+function markerOf(body) {
+  const all = [...String(body ?? "").matchAll(MARKER_RE)];
+  if (!all.length) return null;
+  try { return JSON.parse(all[all.length - 1][1]); } catch { return null; }
+}
+/** A marker that no text can close early: < and > travel as JSON escapes. */
+const marker = (obj) => `<!-- devos-supervisor ${JSON.stringify(obj).replace(/</g, "\\u003c").replace(/>/g, "\\u003e")} -->`;
+function historyOf(comments, bot = S.bot_login) {
+  return (Array.isArray(comments) ? comments : []).flatMap((c) => {
+    if (c?.user?.login !== bot) return [];
+    const m = markerOf(c.body);
+    return m && typeof m === "object" && !Array.isArray(m) ? [{ ...m, comment: c.id }] : [];
   });
 }
+function history(issue) {
+  if (!issue) return [];
+  return historyOf(allComments(issue));
+}
+
+// ---------- what Claude Code wrote: data, never markup or a command ----------
+const AI_ACTIONS = ["redispatch", "rerun-failed", "revise-continue", "revise-with-note", "method-issue", "request-issue", "setup", "none"];
+/** Plain text from the diagnosis: no HTML (so no hidden marker), no NUL, at most `max` characters. */
+function aiText(value, max = 2000) {
+  return String(value ?? "").replace(/\u0000/g, "").slice(0, max).replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+/** A fenced block that shows `text` exactly: its fence is longer than any run of backticks inside. */
+function fenced(text) {
+  const longest = Math.max(2, ...[...String(text).matchAll(/`+/g)].map((m) => m[0].length));
+  const fence = "`".repeat(longest + 1);
+  return `${fence}text\n${text}\n${fence}`;
+}
+/** The fixed words of a continuation; the diagnosis adds none of its own. */
+const continueText = (by) => `/devos revise continue from the work on this branch: finish only what is still missing or failing against the Done-when list, never redo it. (${by}.)`;
 
 // ---------- actions (the only things the supervisor ever does) ----------
 function dispatch(fields) {
   const args = ["workflow", "run", CYCLE, "--repo", REPO, "--ref", "main"];
   for (const [k, v] of Object.entries(fields)) args.push("-f", `${k}=${v}`);
   if (DRY) return `dry-run: gh ${args.join(" ")}`;
-  gh(args);
+  gh(args, { owner: true });
   return `dispatched ${CYCLE} ${Object.entries(fields).map(([k, v]) => `${k}=${v}`).join(" ")}`;
 }
 const AUTO = {
@@ -392,20 +431,20 @@ const AUTO = {
   "dispatch-next": (i) => ({ done: true, note: dispatch({ task: i.task, attempt: "1" }) }),
   "rerun-failed": (i) => {
     if (DRY) return { done: true, note: `dry-run: gh run rerun ${i.run} --failed` };
-    gh(["run", "rerun", String(i.run), "--failed", "--repo", REPO]);
+    gh(["run", "rerun", String(i.run), "--failed", "--repo", REPO], { owner: true });
     return { done: true, note: `re-ran the failed job of run ${i.run}` };
   },
   "revise-continue": (i) => {
-    const body = `/devos revise continue from the work on this branch: finish only what is still missing or failing against the Done-when list, never redo it. (Started by the Dev OS supervisor: ${i.cause}.)`;
+    const body = continueText(`Started by the Dev OS supervisor: ${i.cause}`);
     if (DRY) return { done: true, note: `dry-run: comment on PR #${i.pr}: ${body}` };
-    gh(["api", `repos/${REPO}/issues/${i.pr}/comments`, "-f", `body=${body}`]);
+    gh(["api", `repos/${REPO}/issues/${i.pr}/comments`, "-f", `body=${body}`], { owner: true });
     return { done: true, note: `asked for a continuation on PR #${i.pr} (\`/devos revise\`)` };
   },
   "recover-rescue": (i, facts) => {
     if (facts.active.length) return { done: false, note: "a cycle run is active; recovery waits for the next scan" };
     if (DRY) return { done: true, note: `dry-run: merge main into ${i.rescue}, push it to task/${i.task}, delete ${i.rescue}, dispatch review_only` };
     // The workflow runs the git part (it has the checkout and the credentials): see scripts/devos/rescue.sh.
-    execFileSync("bash", [P("scripts/devos/rescue.sh"), i.rescue, `task/${i.task}`], { stdio: "inherit" });
+    execFileSync("bash", [P("scripts/devos/rescue.sh"), i.rescue, `task/${i.task}`], { stdio: "inherit", env: { ...process.env, GH_TOKEN: process.env.OWNER_TOKEN || process.env.GH_TOKEN || "" } });
     const attempt = i.attempt || attemptFromBranch(i.task);
     return { done: true, note: `recovered ${i.rescue} onto task/${i.task}; ${dispatch({ task: i.task, attempt: String(attempt), review_only: "true", revision: "true" })}` };
   },
@@ -421,18 +460,23 @@ function attemptFromBranch(task) {
 
 // ---------- report ----------
 function report(issue, i, outcome) {
-  const marker = { key: i.key, kind: i.kind, task: i.task, action: i.action, done: outcome.done, ai: !!i.ai, day: today(), id: i.id, pending: outcome.pending || null };
+  const mark = { key: i.key, kind: i.kind, task: i.task, action: i.action, done: outcome.done, ai: !!i.ai, day: today(), id: i.id, pending: outcome.pending || null };
   const icon = outcome.pending ? "🟠" : outcome.done ? "🟢" : outcome.escalate ? "🔴" : "🟡";
+  const p = outcome.pending;
+  const proposal = !p ? "" : p.kind === "issue"
+    ? `\n**Proposed issue (${p.label}), exactly as it would be opened:**\n\nTitle: ${p.title}\n\n${fenced(p.body)}`
+    : `\n**Proposed comment on PR #${p.pr}, exactly as it would be posted:**\n\n${fenced(p.kind === "continue" ? p.text : `/devos revise ${p.note} (Approved by the owner from the Dev OS supervisor, ${i.id}.)`)}`;
   const lines = [
     `### ${icon} Dev OS supervisor · ${i.task || "—"}${i.attempt ? ` · attempt ${i.attempt}` : ""} · ${i.kind}`,
     "",
     `**What happened:** ${i.cause || "unknown"}${i.url ? ` ([run](${i.url}))` : ""}${i.pr ? ` · PR #${i.pr}` : ""}`,
     i.explanation ? `\n**Diagnosis (Claude):** ${i.explanation}` : "",
     `\n**What I did:** ${outcome.note}`,
+    proposal,
     outcome.pending ? `\n**Needs your approval:** reply \`/devos approve ${i.id}\` to do it, or \`/devos reject ${i.id}\`.` : "",
     i.owner_steps ? `\n**Steps for you:**\n${i.owner_steps}` : "",
     "",
-    `<!-- devos-supervisor ${JSON.stringify(marker)} -->`,
+    marker(mark),
   ].filter((l) => l !== "");
   const body = lines.join("\n");
   if (DRY || !issue) { console.log(`\n--- report (dry-run) ---\n${body}`); return; }
@@ -471,7 +515,9 @@ if (cmd === "scan") {
     if (i.action === "ask-claude") {
       const d = ai.find((a) => a.id === i.id);
       if (!d) { report(issue, i, { done: false, escalate: true, note: "no rule explains this and no diagnosis was available; a person needs to look at the run" }); continue; }
-      Object.assign(i, { ai: true, cause: d.cause, explanation: d.explanation, owner_steps: d.owner_steps || "", action: d.action, note: d.note || "", issue_title: d.issue_title, issue_body: d.issue_body });
+      // PR-94: the diagnosis is data: plain text, bounded, and an action from the fixed list or none.
+      Object.assign(i, { ai: true, cause: aiText(d.cause, 300), explanation: aiText(d.explanation, 2000), owner_steps: aiText(d.owner_steps, 2000),
+        action: AI_ACTIONS.includes(d.action) ? d.action : "escalate", note: aiText(d.note, 1500), issue_title: aiText(d.issue_title, 120), issue_body: aiText(d.issue_body, 6000) });
     }
     const seen = hist.filter((h) => h.key === i.key && h.done).length;
     if (i.action === "report") {
@@ -487,13 +533,16 @@ if (cmd === "scan") {
       continue;
     }
     if (["method-issue", "request-issue"].includes(i.action)) {
+      // PR-94: only Claude Code chooses these, and an issue it would open is a proposal until you approve its exact text.
       if (hist.some((h) => h.key === i.key && h.action === i.action && h.day === today())) continue;
       const label = i.action === "method-issue" ? "devos:method" : "devos:request";
-      const title = i.issue_title || `${i.action === "method-issue" ? "Method fix" : "Request"}: ${i.cause}`.slice(0, 120);
-      const body = `${i.issue_body || i.explanation || i.cause}\n\n_Opened by the Dev OS supervisor (${i.kind}, ${i.task || "no task"}). The plan it starts still needs your merge._`;
-      if (DRY) { report(issue, i, { done: true, note: `dry-run: open issue "${title}" with label ${label}` }); continue; }
-      const made = JSON.parse(gh(["api", `repos/${REPO}/issues`, "-f", `title=${title}`, "-f", `body=${body}`, "-f", `labels[]=${label}`]));
-      report(issue, i, { done: true, note: `opened #${made.number} (${label}); its plan PR waits for your merge` });
+      const title = (i.issue_title || `${i.action === "method-issue" ? "Method fix" : "Request"}: ${i.cause}`).slice(0, 120);
+      const body = `${i.issue_body || i.explanation || i.cause}\n\n_Proposed by the Dev OS supervisor (${i.kind}, ${i.task || "no task"}) and approved by the owner. The plan it starts still needs your merge._`;
+      report(issue, i, { done: false, pending: { kind: "issue", label, title, body }, note: `proposed an issue (${label}); nothing is opened until you approve it` });
+      continue;
+    }
+    if (i.action === "escalate") {
+      report(issue, i, { done: false, escalate: true, note: "the diagnosis named no action the supervisor knows; a person needs to look" });
       continue;
     }
     if (["revise-with-note", "revise-continue"].includes(i.action) && !i.pr) {
@@ -501,7 +550,12 @@ if (cmd === "scan") {
       continue;
     }
     if (i.action === "revise-with-note") {
-      report(issue, i, { done: false, pending: { pr: i.pr, note: i.note }, note: `proposed a revision of PR #${i.pr}: "${i.note}"` });
+      report(issue, i, { done: false, pending: { kind: "revise", pr: i.pr, note: i.note }, note: `proposed a revision of PR #${i.pr}` });
+      continue;
+    }
+    // PR-94: a continuation Claude Code chose posts a command as you: it waits for your approval too, with fixed words.
+    if (i.action === "revise-continue" && i.ai) {
+      report(issue, i, { done: false, pending: { kind: "continue", pr: i.pr, text: continueText(`Approved by the owner from the Dev OS supervisor, ${i.id}`) }, note: `proposed a continuation of PR #${i.pr}` });
       continue;
     }
     if (seen >= S.max_auto_per_key) {
@@ -524,15 +578,27 @@ if (cmd === "scan") {
     runs: [{ id: r.id, title: r.display_title, status: r.status, conclusion: r.conclusion, created: r.created_at, updated: r.updated_at, url: r.html_url }] };
   for (const i of detect(facts)) console.log(JSON.stringify({ kind: i.kind, task: i.task, attempt: i.attempt, step: i.step, key: i.key, cause: i.cause, action: i.action, rescue: i.rescue || null, review_only: Boolean(i.review_only) }));
 } else if (cmd === "approve") {
-  const body = opt("body"); const m = body.match(/^\/devos (approve|reject) (\S+)/);
+  const body = opt("body"); const m = body.match(/^\/devos (approve|reject) ([A-Za-z0-9-]{1,80})(\s|$)/);
   if (!m) process.exit(0);
   const issue = supervisorIssue();
   const hist = history(issue);
   const target = hist.find((h) => h.id === m[2] && h.pending && !hist.some((x) => x.decided === m[2]));
   if (!target) { gh(["api", `repos/${REPO}/issues/${issue}/comments`, "-f", `body=Dev OS supervisor: no pending proposal with id \`${m[2]}\`.`], { report: true }); process.exit(0); }
-  const decided = `\n\n<!-- devos-supervisor ${JSON.stringify({ decided: m[2], key: target.key, day: today() })} -->`;
+  const decided = `\n\n${marker({ decided: m[2], key: target.key, day: today() })}`;
   if (m[1] === "reject") { gh(["api", `repos/${REPO}/issues/${issue}/comments`, "-f", `body=Dev OS supervisor: \`${m[2]}\` rejected; nothing done.${decided}`], { report: true }); process.exit(0); }
   const p = target.pending;
-  gh(["api", `repos/${REPO}/issues/${p.pr}/comments`, "-f", `body=/devos revise ${p.note} (Approved by the owner from the Dev OS supervisor, ${m[2]}.)`]);
-  gh(["api", `repos/${REPO}/issues/${issue}/comments`, "-f", `body=Dev OS supervisor: \`${m[2]}\` approved; the revision is posted on PR #${p.pr}.${decided}`], { report: true });
+  const pr = Number(p.pr);
+  let done = "";
+  if (p.kind === "issue") {
+    const label = ["devos:method", "devos:request"].includes(p.label) ? p.label : "devos:request";
+    const made = JSON.parse(gh(["api", `repos/${REPO}/issues`, "-f", `title=${String(p.title ?? "").slice(0, 120)}`, "-f", `body=${String(p.body ?? "")}`, "-f", `labels[]=${label}`], { owner: true }));
+    done = `opened #${made.number} (${label}); its plan PR waits for your merge`;
+  } else if (Number.isInteger(pr) && pr > 0) {
+    const text = p.kind === "continue" ? String(p.text ?? "") : `/devos revise ${p.note} (Approved by the owner from the Dev OS supervisor, ${m[2]}.)`;
+    gh(["api", `repos/${REPO}/issues/${pr}/comments`, "-f", `body=${text}`], { owner: true });
+    done = `the ${p.kind === "continue" ? "continuation" : "revision"} is posted on PR #${pr}`;
+  } else {
+    done = "the proposal names no pull request; nothing posted";
+  }
+  gh(["api", `repos/${REPO}/issues/${issue}/comments`, "-f", `body=Dev OS supervisor: \`${m[2]}\` approved; ${done}.${decided}`], { report: true });
 }

@@ -147,7 +147,11 @@ jobs:
       - id: t
         env:
           UNIT_PHASES: ${{ steps.unit.outputs.unit_phases }}
-        run: node scripts/devos/next-task.mjs --task "${{ inputs.task }}" --attempt "${{ inputs.attempt }}" --revision "${{ inputs.revision }}" ${UNIT_PHASES:+--unit-phases "$UNIT_PHASES"}
+          # PR-94: an input reaches a script only through the environment, never as text inside it (I1).
+          IN_TASK: ${{ inputs.task }}
+          IN_ATTEMPT: ${{ inputs.attempt }}
+          IN_REVISION: ${{ inputs.revision }}
+        run: node scripts/devos/next-task.mjs --task "$IN_TASK" --attempt "$IN_ATTEMPT" --revision "$IN_REVISION" ${UNIT_PHASES:+--unit-phases "$UNIT_PHASES"}
       - name: Where the task is built (PR-91)
         id: place
         if: inputs.task != 'link'
@@ -211,6 +215,9 @@ jobs:
           VARS_JSON: ${{ toJSON(vars) }}
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
+          T_TASK: ${{ steps.t.outputs.task }}
+          T_ATTEMPT: ${{ steps.t.outputs.attempt }}
+          IN_REVIEW_ONLY: ${{ inputs.review_only && 'true' || 'false' }}
         run: |
           if node scripts/devos/setup-check.mjs --for cycle > .setup-check.log 2>&1; then
             echo "blocked=false" >> "$GITHUB_OUTPUT"; exit 0
@@ -218,9 +225,9 @@ jobs:
           cat .setup-check.log
           echo "blocked=true" >> "$GITHUB_OUTPUT"
           missing=$(node -e 'console.log(require("./.devos/setup-result.json").missing_required.join(", "))')
-          node scripts/devos/setup-issue.mjs wait --task "${{ steps.t.outputs.task }}" --attempt "${{ steps.t.outputs.attempt }}" \
-            --review-only "${{ inputs.review_only && 'true' || 'false' }}" --reason "the cycle needs settings that are missing ($missing)"
-          echo "::warning title=Dev OS::${{ steps.t.outputs.task }} did not start: missing settings ($missing). See the 'Dev OS: setup needed' issue."
+          node scripts/devos/setup-issue.mjs wait --task "$T_TASK" --attempt "$T_ATTEMPT" \
+            --review-only "$IN_REVIEW_ONLY" --reason "the cycle needs settings that are missing ($missing)"
+          echo "::warning title=Dev OS::$T_TASK did not start: missing settings ($missing). See the 'Dev OS: setup needed' issue."
       - name: Heavy-run notice, or hold (PR-20)
         id: heavy
         if: steps.place.outputs.build == 'true' && steps.setup.outputs.blocked != 'true'
@@ -228,12 +235,19 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           DEVOS_HEAVY: ${{ vars.DEVOS_HEAVY }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          T_TASK: ${{ steps.t.outputs.task }}
+          T_ATTEMPT: ${{ steps.t.outputs.attempt }}
+          IN_REVIEW_ONLY: ${{ inputs.review_only }}
+          IN_REVISION: ${{ inputs.revision }}
+          IN_GO: ${{ inputs.go }}
         run: |
-          node scripts/devos/heavy.mjs --task "${{ steps.t.outputs.task }}" --attempt "${{ steps.t.outputs.attempt }}" \
-            --review-only "${{ inputs.review_only }}" --revision "${{ inputs.revision }}" --go "${{ inputs.go }}"
+          node scripts/devos/heavy.mjs --task "$T_TASK" --attempt "$T_ATTEMPT" \
+            --review-only "$IN_REVIEW_ONLY" --revision "$IN_REVISION" --go "$IN_GO"
       - if: steps.heavy.outputs.held == 'true'
+        env:
+          T_TASK: ${{ steps.t.outputs.task }}
         run: |
-          echo "::notice title=Dev OS::${{ steps.t.outputs.task }} is heavy and DEVOS_HEAVY=hold. Comment /devos go in the run notices issue to start it."
+          echo "::notice title=Dev OS::$T_TASK is heavy and DEVOS_HEAVY=hold. Comment /devos go in the run notices issue to start it."
       # PR-90: the builder is chosen here, by main's code, so the work job is handed only that tool's keys. The review
       # runs in publish with no shell, as its own user; Claude Code is the reviewer tool verified to work that way (D11).
       - name: Choose the builder from the pool; the reviewer must be Claude Code
@@ -388,6 +402,8 @@ jobs:
           W_EFFORT: ${{ needs.work.outputs.effort }}
           W_FAST: ${{ needs.work.outputs.fast }}
           WORK_RESULT: ${{ needs.work.result }}
+          # PR-94 (N6): the model ids this run chose (main's code) and the variable, against which the work job's is kept.
+          TRUSTED_MODELS: ${{ needs.resolve.outputs.pick_model }} ${{ needs.resolve.outputs.builder_model }} ${{ needs.resolve.outputs.builder_fallbacks }} ${{ vars.DEVOS_BUILDER_MODEL }}
         run: |
           name="devos-$TASK-a$ATTEMPT-work"
           count=$(gh api "repos/$REPO/actions/runs/$RUN_ID/artifacts?name=$name" --jq '.total_count' 2>/dev/null || echo "unknown")
@@ -402,10 +418,19 @@ jobs:
             echo "::error title=Dev OS::the work job failed before it handed over its work; nothing is pushed"; exit 1
           fi
           node "$T/publish-verify.mjs" verify --task "$TASK" --attempt "$ATTEMPT" --branch "$BR" --main-sha "$BASE_SHA" --base "$BASE" \
-            --out "$OUT" ${bundle:+--bundle "$bundle"} --builder "$builder" --exit "$W_EXIT" --model "$W_MODEL" --effort "$W_EFFORT" --fast "$W_FAST"
+            --out "$OUT" ${bundle:+--bundle "$bundle"} --builder "$builder" --exit "$W_EXIT" --model "$W_MODEL" --effort "$W_EFFORT" --fast "$W_FAST" \
+            --trusted-models "$TRUSTED_MODELS"
+
+      # PR-94 (N2): main's guards on the verified tree (no secret, no package manager), and main's secret rules on every
+      # file this run changed, before anything is pushed. A secret, or guards that do not finish, reject the bundle here;
+      # every other guard result is red or green in the checks below, whatever the work job reported.
+      - name: Main's guards, before any push
+        id: pg
+        if: needs.resolve.outputs.accept != 'true'
+        run: node "$T/publish-verify.mjs" guards --out "$OUT"
 
       - name: Rejected by publish — nothing pushed, no review
-        if: always() && steps.vb.outcome == 'failure'
+        if: always() && (steps.vb.outcome == 'failure' || steps.pg.outcome == 'failure')
         env:
           GH_TOKEN: ${{ github.token }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
@@ -566,6 +591,7 @@ jobs:
           fi
 
       # U8: the work job's results with main's list of required checks; a required check without a passing result is red.
+      # PR-94: the guards are publish's own run (red too when the work job's was); every other green is the work job's claim.
       - name: The checks, from main's rules (red blocks; green is the work job's claim)
         id: ck
         if: steps.bs.outputs.state == 'ok'
@@ -645,10 +671,11 @@ jobs:
           DEVOS_REVIEW_REASONS: ${{ steps.rp.outputs.reasons }}
           DEVOS_REVIEW_CRITICAL: ${{ steps.rp.outputs.critical }}
           METHOD_CHANGE: ${{ steps.vb.outputs.method_changed }}
-          DEVOS_BUILDER_MODEL: ${{ needs.work.outputs.model }}
+          # PR-94 (N6): the builder as verify kept it (a configured model id, a known effort, yes or no), never the work job's text.
+          DEVOS_BUILDER_MODEL: ${{ steps.vb.outputs.builder_model }}
           DEVOS_BUILDER_TOOL: ${{ needs.resolve.outputs.builder_tool }}
-          DEVOS_BUILDER_EFFORT: ${{ needs.work.outputs.effort }}
-          DEVOS_BUILDER_FAST: ${{ needs.work.outputs.fast }}
+          DEVOS_BUILDER_EFFORT: ${{ steps.vb.outputs.builder_effort }}
+          DEVOS_BUILDER_FAST: ${{ steps.vb.outputs.builder_fast }}
         run: |
           . "$T/accounts.sh"
           # PR-28, PR-53: a method fix is always a deep review, by the project's own reviewer agent.
@@ -838,7 +865,9 @@ jobs:
           gh api "repos/$REPO/statuses/$head" -f state="$st" -f context=devos/verdict -f description="$d" >/dev/null || true
           if [ -f .devos/accounts.md ]; then printf '\n\n**Accounts (PR-29)**\n%s\n' "$(cat .devos/accounts.md)" >> .devos/verdict-summary.md; fi
           if [ -s .devos/fence-check.txt ]; then printf '\n\n**fence-check on the fences the reviewer wrote (PR-58)**\n\n~~~text\n%s\n~~~\n' "$(cat .devos/fence-check.txt)" >> .devos/verdict-summary.md; fi
-          printf '\n\n<sub>Publish (PR-90): head %s; the work job bundle sha256 %s (run %s). The checks are the work job report.</sub>\n' "$head" "${BUNDLE_SHA:-none}" "$RUN_ID" >> .devos/verdict-summary.md
+          # PR-94: every fence this review wrote or reissued, with its Fence version; an issued fence changes only upward.
+          if [ -s .devos/fence-changes.txt ]; then printf '\n\n**Fences this review wrote or changed (PR-94)**\n\n~~~text\n%s\n~~~\n' "$(cat .devos/fence-changes.txt)" >> .devos/verdict-summary.md; fi
+          printf '\n\n<sub>Publish (PR-90): head %s; the work job bundle sha256 %s (run %s). The guards are publish own run; the other checks are the work job report.</sub>\n' "$head" "${BUNDLE_SHA:-none}" "$RUN_ID" >> .devos/verdict-summary.md
           gh pr comment "$PRN" --repo "$REPO" --body-file .devos/verdict-summary.md
           cat .devos/verdict-summary.md >> "$GITHUB_STEP_SUMMARY"
 
@@ -1055,7 +1084,7 @@ jobs:
       contents: read
       actions: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
           fetch-depth: ${{ inputs.task == 'link' && '0' || '1' }}
@@ -1100,7 +1129,7 @@ jobs:
       pull-requests: write
       contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
           sparse-checkout: devos.config.json
