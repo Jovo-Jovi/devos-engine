@@ -1,5 +1,5 @@
 {
-  "engine_version": "1.13.1",
+  "engine_version": "1.13.2",
   "source": {
     "repo": "Jovo-Jovi/devos-control-tower",
     "commit": "a49ca6db268b98d6558077bf3e95b8ae759d91b3"
@@ -188,13 +188,13 @@
     {
       "path": ".github/workflows/devos-cycle.yml",
       "stored": "dot-github/workflows/devos-cycle.yml",
-      "sha256": "dd978a0ebc1b727cb795ca164b0a6421a35c4621eef8bc8a34c4ab29654d76a7",
+      "sha256": "266dfeb511f0ebe8a28628b97b9f19024409d291a0e343087af14d8c137166ce",
       "owner": "engine"
     },
     {
       "path": ".github/workflows/devos-deploy.yml",
       "stored": "dot-github/workflows/devos-deploy.yml",
-      "sha256": "f84f10c6efa1685c7ba341dd1f71e90e467d6495574caa095e8f5dc5231907a7",
+      "sha256": "52434f564cb1b9abce7537b2237bf20efa2c22d58d678fc20f21a384af2717d2",
       "owner": "engine"
     },
     {
@@ -230,7 +230,7 @@
     {
       "path": ".github/workflows/devos-supervisor.yml",
       "stored": "dot-github/workflows/devos-supervisor.yml",
-      "sha256": "39b29e597070ff116e0ae6e7d83429afc3d27fde24e09207d5a4a066d9c20a4c",
+      "sha256": "1988326dd2f4e1401a3cc95e9d127d9479c7d715ce884b68d4b3e0d3fb2bee47",
       "owner": "engine"
     },
     {
@@ -1650,9 +1650,33 @@
       "owner": "engine"
     },
     {
+      "path": "devos/tools/firebase/package-lock.json",
+      "stored": "devos/tools/firebase/package-lock.json",
+      "sha256": "9e99e5b9ffc8cb4bb35c40d5422ae9b3402b743da80e8c0a40166911ff51b3e8",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/tools/firebase/package.json",
+      "stored": "devos/tools/firebase/package.json",
+      "sha256": "40f1cd546d2464f66b72c96469ea023de71e054378824a6374e43ec0d4eb82cf",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/tools/vercel/package-lock.json",
+      "stored": "devos/tools/vercel/package-lock.json",
+      "sha256": "7886701afb9a69aa3e2e5202d3c40c13f8c6fc5a83bc36088bb646b1d929680b",
+      "owner": "engine"
+    },
+    {
+      "path": "devos/tools/vercel/package.json",
+      "stored": "devos/tools/vercel/package.json",
+      "sha256": "3505c0eed292a81fd687228109c25bef35e933f31fc444bc9fcbd4da8539d4ab",
+      "owner": "engine"
+    },
+    {
       "path": "docs/method/AUTOMATION.md",
       "stored": "docs/method/AUTOMATION.md",
-      "sha256": "ac17085d5f78c6b7cd83c8fbf85552cee6fd15ae51e3ce810431c278e33d4911",
+      "sha256": "a629151dc0eaf05105eadac56d4c0b130de0223c2d051e8936205012d8f4bd91",
       "owner": "engine"
     },
     {
@@ -1676,7 +1700,7 @@
     {
       "path": "docs/method/PRECEDENTS.md",
       "stored": "docs/method/PRECEDENTS.md",
-      "sha256": "6b8ca3503d8157935a6710d597f38d246a84a520cfda1900f6ef72c0c4bb9202",
+      "sha256": "888274b74f791766fd1d56fcaa642d05c180b335d846a44a62eeac517547c718",
       "owner": "engine"
     },
     {
@@ -1982,7 +2006,7 @@
     {
       "path": "scripts/devos/supervisor.mjs",
       "stored": "scripts/devos/supervisor.mjs",
-      "sha256": "71ab42e92333857a5747c5a71274b2c8ce8eeb1803abdbbf6e98146d5ca325df",
+      "sha256": "1cfcd943f72bd6a242bcd695b05cd9f3c36177f6ea6ba1a49e25a21fd38bfe3f",
       "owner": "engine"
     },
     {
@@ -2012,7 +2036,7 @@
     {
       "path": "scripts/devos/vercel-deploy.sh",
       "stored": "scripts/devos/vercel-deploy.sh",
-      "sha256": "2e121af60a0c1e02b2dd4b7f0fcb3b170a32a85c00062b1678a105ece23e68e8",
+      "sha256": "b5985d3d21a2554570e0d5f142cc5b63419bccc324ab090efa3e3cef1f2fde78",
       "owner": "engine"
     },
     {

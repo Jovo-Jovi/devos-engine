@@ -12,6 +12,8 @@
 # Storage and Firebase modules (PR-26): with DEVOS_R2=true a storage preflight runs first (secrets R2_*);
 # with DEVOS_FIREBASE=true the Firestore rules and the seed are applied before the app (secrets
 # FIREBASE_PROJECT_ID, FIREBASE_DEPLOY_SERVICE_ACCOUNT). The app's own values live in Vercel.
+# PR-95 (N5): the Vercel and Firebase CLIs come from the lockfiles in devos/tools, installed with no install script in a
+# step that holds no secret; each secret is only in the step that uses it.
 name: devos-deploy
 
 on:
@@ -68,9 +70,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      # PR-95: no secret at the job's level. The Vercel token is in the Deploy step only.
       NEXT_TELEMETRY_DISABLED: "1"
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -115,6 +115,25 @@ jobs:
         run: |
           pnpm install --frozen-lockfile
           node scripts/guards/run-all.mjs
+      # PR-95 (N5): the deploy's CLIs, each with its whole tree locked in devos/tools/<tool>/package-lock.json and checked
+      # by integrity; no install script runs, and this step holds no secret. Each must be the version devos.config.json
+      # pins (tool_versions), or nothing moves.
+      - name: The deploy's CLIs, from their lockfiles (no secret, no install script)
+        env:
+          TARGET: ${{ inputs.target || 'production' }}
+          DEVOS_FIREBASE: ${{ vars.DEVOS_FIREBASE }}
+        run: |
+          locked() {
+            npm ci --prefix "devos/tools/$1" --ignore-scripts --no-audit --no-fund > "$RUNNER_TEMP/tools-$1.log" 2>&1 \
+              || { tail -n 20 "$RUNNER_TEMP/tools-$1.log"; echo "::error title=Dev OS::devos/tools/$1 did not install; nothing was deployed"; exit 1; }
+            have="$2@$(node -p "require('./devos/tools/$1/node_modules/$2/package.json').version")"
+            [ "$have" = "$3" ] || { echo "::error title=Dev OS::devos/tools/$1 locks $have but devos.config.json pins $3; run devos upgrade. Nothing was deployed."; exit 1; }
+            echo "$have, from devos/tools/$1/package-lock.json"
+          }
+          locked vercel vercel "$(node scripts/devos/pins.mjs vercel)"
+          if [ -f firebase.json ] && [ "$DEVOS_FIREBASE" = "true" ] && [ "$TARGET" = "production" ]; then
+            locked firebase firebase-tools "$(node scripts/devos/pins.mjs firebase)"
+          fi
       # Storage module (PR-26): before anything moves, prove the production bucket with the production
       # keys: write a probe object, read it back from the public URL, delete it. Nothing is kept.
       - name: Storage preflight — R2 keys, bucket and public URL
@@ -199,9 +218,9 @@ jobs:
           sa="$RUNNER_TEMP/firebase-deploy.json"
           printf '%s' "$FIREBASE_DEPLOY_SERVICE_ACCOUNT" > "$sa"
           trap 'shred -u "$sa" 2>/dev/null || rm -f "$sa"' EXIT
-          spec=$(node scripts/devos/pins.mjs firebase)
-          npm install -g "$spec" > "$RUNNER_TEMP/firebase-tools.log" 2>&1 || { tail -n 20 "$RUNNER_TEMP/firebase-tools.log"; exit 1; }
-          GOOGLE_APPLICATION_CREDENTIALS="$sa" firebase deploy --only firestore:rules --project "$FIREBASE_PROJECT_ID" --non-interactive \
+          # PR-95: the CLI installed above from devos/tools/firebase, never an install in this step.
+          firebase="$PWD/devos/tools/firebase/node_modules/.bin/firebase"
+          GOOGLE_APPLICATION_CREDENTIALS="$sa" "$firebase" deploy --only firestore:rules --project "$FIREBASE_PROJECT_ID" --non-interactive \
             || { echo "::error title=Dev OS::the Firestore rules did not deploy (is the Firestore database created, and does the deploy key have the Firebase Admin role?)"; exit 1; }
           node scripts/devos/firebase.mjs validate
           FIREBASE_SERVICE_ACCOUNT="$FIREBASE_DEPLOY_SERVICE_ACCOUNT" node scripts/devos/firebase.mjs seed --production \
@@ -211,24 +230,28 @@ jobs:
         id: d
         env:
           TARGET: ${{ inputs.target || 'production' }}
+          # PR-95: the Vercel credentials, in this step only.
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
           if [ "$TARGET" = "production" ]; then ENV=production; FLAG=--prod; else ENV=preview; FLAG=; fi
-          # PR-93: the Vercel CLI at the version devos.config.json pins, never latest.
-          vercel=$(node scripts/devos/pins.mjs vercel)
-          npx --yes "$vercel" pull --yes --environment="$ENV" --token="$VERCEL_TOKEN"
+          # PR-95: the Vercel CLI installed above from devos/tools/vercel (PR-93's pinned version, its tree locked).
+          vercel="$PWD/devos/tools/vercel/node_modules/.bin/vercel"
+          "$vercel" pull --yes --environment="$ENV" --token="$VERCEL_TOKEN"
           # PR-24: next/font downloads the Google Fonts during the build, and that download sometimes fails
           # (Turbopack "next/font/google queries have exactly one entry"). Retry that failure, and only that.
           set -o pipefail
           built=0
           for i in 1 2 3; do
-            if npx --yes "$vercel" build $FLAG --token="$VERCEL_TOKEN" 2>&1 | tee "$RUNNER_TEMP/build.log"; then built=1; break; fi
+            if "$vercel" build $FLAG --token="$VERCEL_TOKEN" 2>&1 | tee "$RUNNER_TEMP/build.log"; then built=1; break; fi
             grep -qiE "$(node -e 'console.log(require("./devos.config.json").retry_build_on)')" "$RUNNER_TEMP/build.log" || break
             echo "::warning title=Dev OS::the build could not download the Google Fonts (try $i of 3); retrying in 30 seconds"
             sleep 30
           done
           [ "$built" = 1 ] || { echo "::error title=Dev OS::the build failed; the database step above already ran, the site was not deployed"; exit 1; }
           # Uploads from this directory with .git moved aside, and fails unless Vercel returns a URL (PR-16).
-          url=$(bash scripts/devos/vercel-deploy.sh main $FLAG)
+          url=$(DEVOS_VERCEL_BIN="$vercel" bash scripts/devos/vercel-deploy.sh main $FLAG)
           echo "url=$url" >> "$GITHUB_OUTPUT"
           echo "::notice title=Dev OS::Deployed $(git rev-parse --short HEAD) to $TARGET: $url"
       - name: Smoke test the deployment

@@ -2,6 +2,13 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
+## 1.13.2 — Unreleased
+
+- **The deploy's tools are locked, and its secrets stay where they are used (PR-95).** `devos-deploy` now installs the Vercel CLI and, for Firebase, firebase-tools from lockfiles in `devos/tools/`, with every package of their trees checked and no install script run, in a step that holds no secret. Your Vercel token is only in the Deploy step, so the project's install, the guards and the Firestore step never see it.
+- **The supervisor hears about every failed run.** A task the cycle started by itself used to fail unseen until the supervisor's schedule came round, which GitHub runs only when it can. The cycle now starts the supervisor itself when one of its runs fails.
+- **The supervisor's report names the task and shows the log.** A run titled "devos next" takes its task from its artifacts, and the diagnosis gets the failed steps' log, or a line saying why it could not be read.
+- **Claude's reading of the logs is shown as plain text.** It sits in one fenced block under a fixed heading, so no link, image or mention in it renders or notifies anyone.
+
 ## 1.13.1 — 2026-11-10
 
 - **The supervisor proposes; you approve (PR-94).** Your `DEVOS_PAT` is now only in the two supervisor steps that act; it reads and reports with the workflow's own token. Its Claude Code diagnosis runs like the review, as a user of its own with no shell, and its answer is scrubbed of secret values. An issue, a revision or a continuation the diagnosis chooses is now a proposal: the supervisor's comment shows the exact text, and nothing is opened or posted until you reply `/devos approve <id>`. Only the workflow's own comments count as the supervisor's history, so a comment someone else writes on its issue cannot pose as one.

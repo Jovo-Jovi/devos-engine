@@ -313,3 +313,145 @@ test("hardening.test.mjs (h) no workflow puts an expression inside a script's te
   assert.ok(deps.indexOf('process.env.DEVOS_GUARDS_NO_AUDIT === "1"') < deps.indexOf("const report = audit();"));
   assert.ok(existsSync(path.join(payload, "scripts", "guards", "secrets.mjs")));
 });
+
+// ---------- PR-95: the deploy's CLIs (N5), the cycle wakes the supervisor (C4), the run's task (C5), Claude's text (F1)
+
+/** A gh that answers from [pattern, stdout, exit] rules on its joined arguments, and records every call. */
+function ruleGh(bin, rules) {
+  writeFileSync(path.join(bin, "rules.json"), JSON.stringify(rules));
+  writeFileSync(path.join(bin, "gh"), `#!/usr/bin/env node
+const fs = require("fs"), p = require("path");
+const args = process.argv.slice(2), line = args.join(" ");
+fs.appendFileSync(p.join(${JSON.stringify(bin)}, "calls.jsonl"), JSON.stringify({ args, token: process.env.GH_TOKEN || "" }) + "\\n");
+for (const [re, out, code] of JSON.parse(fs.readFileSync(p.join(${JSON.stringify(bin)}, "rules.json"), "utf8"))) {
+  if (new RegExp(re).test(line)) { if (code) { process.stderr.write(out); process.exit(code); } process.stdout.write(out); process.exit(0); }
+}
+process.stdout.write("null");
+`);
+  chmodSync(path.join(bin, "gh"), 0o755);
+}
+const outsideFences = (body) => body.replace(/(`{3,})text\n[\s\S]*?\n\1/g, "");
+
+test("hardening.test.mjs (i) the deploy's CLIs come from lockfiles at the pinned versions, installed with no script and no secret; the Vercel token only where it is used", { skip: windows && "a stand-in CLI cannot run without a shell on Windows" }, () => {
+  const deploy = read(path.join(workflows, "devos-deploy.yml"));
+  const job = deploy.slice(deploy.indexOf("\n  deploy:\n"));
+  assert.equal(job.slice(0, job.indexOf("\n    steps:\n")).includes("secrets."), false);
+  const steps = job.split("\n      - ");
+  const tools = steps.find((s) => s.startsWith("name: The deploy's CLIs, from their lockfiles (no secret, no install script)")) ?? "";
+  assert.ok(tools.includes('npm ci --prefix "devos/tools/$1" --ignore-scripts --no-audit --no-fund'), tools);
+  assert.equal(tools.includes("secrets."), false);
+  for (const line of ['locked vercel vercel "$(node scripts/devos/pins.mjs vercel)"', 'locked firebase firebase-tools "$(node scripts/devos/pins.mjs firebase)"']) assert.ok(tools.includes(line), line);
+  assert.ok(steps.indexOf(tools) < steps.findIndex((s) => s.startsWith("name: Firestore — rules, then the seed")));
+  const holding = steps.filter((s) => s.includes("secrets.VERCEL_TOKEN }}") && !s.includes("SECRETS_JSON"));
+  assert.deepEqual(holding.map((s) => s.split("\n")[0]), ["name: Deploy"]);
+  assert.equal(/\bnpx\b/.test(deploy), false);
+  assert.deepEqual(deploy.match(/npm install -g [^\n]*/g), ['npm install -g "$spec"']);
+  // The lockfiles: the versions tool_versions pins, every package from the npm registry with its integrity hash.
+  const versions = JSON.parse(read(path.join(payload, "devos", "engine.defaults.json"))).tool_versions;
+  for (const [dir, pkg] of [["vercel", "vercel"], ["firebase", "firebase-tools"]]) {
+    const manifest = JSON.parse(read(path.join(payload, "devos", "tools", dir, "package.json")));
+    const lock = JSON.parse(read(path.join(payload, "devos", "tools", dir, "package-lock.json")));
+    assert.deepEqual([manifest.dependencies, lock.packages[""].dependencies, lock.packages[`node_modules/${pkg}`].version], [{ [pkg]: versions[dir] }, { [pkg]: versions[dir] }, versions[dir]], dir);
+    for (const [name, entry] of Object.entries(lock.packages).filter(([k]) => k)) {
+      assert.ok(entry.integrity?.startsWith("sha512-") && entry.resolved?.startsWith("https://registry.npmjs.org/"), `${dir}: ${name}`);
+    }
+  }
+  // vercel-deploy.sh runs the CLI it is given, and still prints only the URL.
+  const dir = mkdtempSync(path.join(tmpdir(), "devos-vd-"));
+  try {
+    git(dir, ["init", "-q"]);
+    mkdirSync(path.join(dir, ".vercel", "output"), { recursive: true });
+    writeFileSync(path.join(dir, "a.txt"), "a\n");
+    git(dir, ["add", "-A"]);
+    git(dir, ["commit", "-q", "-m", "a"]);
+    const cli = path.join(dir, ".vercel", "fake-vercel");
+    writeFileSync(cli, `#!/bin/sh\necho "$@" > "${path.join(dir, ".vercel", "args")}"\necho "Inspect: x"\necho "https://demo-abc.vercel.app"\n`);
+    chmodSync(cli, 0o755);
+    const r = spawnSync("bash", [path.join(payload, "scripts", "devos", "vercel-deploy.sh"), "main", "--prod"], { cwd: dir, encoding: "utf8", env: { ...process.env, VERCEL_TOKEN: "t0k", DEVOS_VERCEL_BIN: cli, DEVOS_VERCEL_LOG: path.join(dir, ".vercel", "log") } });
+    assert.equal(r.status, 0, r.stderr);
+    assert.equal(r.stdout, "https://demo-abc.vercel.app\n");
+    assert.match(read(path.join(dir, ".vercel", "args")), /^deploy --prebuilt --prod --token=t0k --meta devosBranch=main --meta devosSha=[0-9a-f]{40}\n$/);
+    assert.ok(existsSync(path.join(dir, ".git")));
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test("hardening.test.mjs (j) a failed run the cycle started itself wakes the supervisor, which waits for it to finish", () => {
+  const cycle = read(path.join(workflows, "devos-cycle.yml"));
+  const job = cycle.slice(cycle.indexOf("\n  notify-supervisor:\n"));
+  for (const part of [
+    "    needs: [resolve, work, publish]\n",
+    "always() && github.actor == 'github-actions[bot]' && vars.DEVOS_SUPERVISOR != 'off' && vars.DEVOS_PAUSED != 'true' &&",
+    "(contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled'))",
+    "    permissions:\n      actions: write\n    steps:\n",
+    'run: gh workflow run devos-supervisor.yml --repo "$REPO" --ref main -f after_run="$RUN_ID"',
+  ]) assert.ok(job.includes(part), part);
+  assert.equal(job.includes("secrets."), false);
+  const sup = read(path.join(workflows, "devos-supervisor.yml"));
+  assert.ok(sup.includes("      after_run:\n        description:"));
+  const wait = sup.indexOf("      - name: Wait for the cycle run that called");
+  assert.ok(wait > 0 && wait < sup.indexOf("      - name: Scan — what has stopped, and why (fixed rules)"));
+  assert.ok(sup.includes(`case "$AFTER_RUN" in ''|*[!0-9]*) echo "::error title=Dev OS::after_run must be a run id"; exit 1;; esac`));
+});
+
+test("hardening.test.mjs (k) a run titled without its task takes it from its artifacts, with the failed steps' log as evidence, or why none could be read", { skip: windows && "a stand-in gh cannot run without a shell on Windows" }, () => {
+  const dir = mkdtempSync(path.join(tmpdir(), "devos-sup-"));
+  const bin = mkdtempSync(path.join(tmpdir(), "devos-gh-"));
+  try {
+    stagedAt(dir);
+    mkdirSync(path.join(dir, "docs"), { recursive: true });
+    writeFileSync(path.join(dir, "docs", "PHASES.md"), "# Phases\n\n| Task | Phase | Station | Name | Risk | Gate | Done | Verdict |\n|---|---|---|---|---|---|---|---|\n| T28 | P1 | build | The canary | 1 | — | [ ] | — |\n");
+    const at = (min) => new Date(Date.now() - min * 60000).toISOString();
+    const runs = { workflow_runs: [{ id: 900, display_title: "devos next · attempt 1", status: "completed", conclusion: "failure", created_at: at(12), updated_at: at(2), html_url: "https://github.com/devtest/demo/actions/runs/900" }] };
+    const log = ["publish\tVerify the bundle\t2026-11-10T10:10:00Z REJECTED: (d) .github/workflows/canary.yml: a workflow or action file", "publish\tVerify the bundle\t2026-11-10T10:10:01Z ##[error]Process completed with exit code 1.", ...Array.from({ length: 40 }, (_, n) => `publish\tPost job cleanup.\t2026-11-10T10:11:${String(n).padStart(2, "0")}Z cleanup ${n}`)].join("\n");
+    const base = [
+      ["actions/workflows/devos-cycle.yml/runs", JSON.stringify(runs)],
+      ["actions/runs/900/jobs", JSON.stringify({ jobs: [{ id: 77, name: "publish", conclusion: "failure", steps: [{ name: "Verify the bundle", conclusion: "failure" }] }] })],
+      ["actions/runs/900/artifacts", JSON.stringify({ artifacts: [{ name: "devos-T28-a1-work" }, { name: "devos-T28-a1" }] })],
+      ["issues\\?labels=", '[{"number":50}]'],
+    ];
+    const env = { ...process.env, PATH: `${bin}${path.delimiter}${process.env.PATH}`, REPO: "devtest/demo", GH_TOKEN: "builtin-token", REPORT_TOKEN: "builtin-token", EVENT_NAME: "workflow_dispatch", WF_NAME: "", WF_PATH: "", WF_RUN_ID: "", WF_CONCLUSION: "" };
+    const incident = () => {
+      const r = spawnSync(process.execPath, ["scripts/devos/supervisor.mjs", "scan"], { cwd: dir, encoding: "utf8", env, windowsHide: true });
+      assert.equal(r.status, 0, r.stderr || r.stdout);
+      return JSON.parse(read(path.join(dir, ".devos", "supervisor", "incidents.json"))).find((i) => i.kind === "runner-failure");
+    };
+    ruleGh(bin, [["^run view 900 --repo devtest/demo --log-failed$", log], ...base]);
+    let i = incident();
+    assert.deepEqual([i.task, i.attempt, i.step], ["T28", 1, "Verify the bundle"]);
+    assert.ok(i.evidence.includes("REJECTED: (d) .github/workflows/canary.yml") && i.evidence.includes("##[error]Process completed"), i.evidence);
+    assert.equal(i.evidence.includes("cleanup 39"), false);
+    ruleGh(bin, [["^run view 900", "HTTP 403: Resource not accessible by integration\n", 1], ["actions/jobs/77/logs", "HTTP 404: Not Found\n", 1], ...base]);
+    i = incident();
+    assert.equal(i.evidence, "(the run's log could not be read: HTTP 403: Resource not accessible by integration; HTTP 404: Not Found)");
+  } finally {
+    cleanup(dir);
+    cleanup(bin);
+  }
+});
+
+test("hardening.test.mjs (l) what Claude Code wrote is shown only inside a fenced block: no link, image or mention renders from it", { skip: windows && "a stand-in gh cannot run without a shell on Windows" }, () => {
+  const dir = mkdtempSync(path.join(tmpdir(), "devos-sup-"));
+  const bin = mkdtempSync(path.join(tmpdir(), "devos-gh-"));
+  try {
+    stagedAt(dir);
+    ruleGh(bin, [["issues\\?labels=", '[{"number":50}]'], ["--paginate", "[[]]"], ["issues/50/comments -f", "{}"]]);
+    const sup = path.join(dir, ".devos", "supervisor");
+    mkdirSync(sup, { recursive: true });
+    writeFileSync(path.join(sup, "facts.json"), JSON.stringify({ task_prs: [], active: [] }));
+    writeFileSync(path.join(sup, "incidents.json"), JSON.stringify([{ id: "runner-failure-T05-k2-0", kind: "runner-failure", task: "T05", attempt: 1, key: "T05:a1:x", action: "ask-claude", cause: "" }]));
+    writeFileSync(path.join(sup, "claude.json"), JSON.stringify({ structured_output: { incidents: [{ id: "runner-failure-T05-k2-0",
+      cause: "[click here](https://x.example/a) @someone", explanation: "see ![img](https://x.example/i.png) and ping @someone", owner_steps: "rotate your PAT at https://x.example/pat", action: "none" }] } }));
+    const env = { ...process.env, PATH: `${bin}${path.delimiter}${process.env.PATH}`, REPO: "devtest/demo", GH_TOKEN: "builtin-token", REPORT_TOKEN: "builtin-token" };
+    const r = spawnSync(process.execPath, ["scripts/devos/supervisor.mjs", "act", "--claude", path.join(sup, "claude.json")], { cwd: dir, encoding: "utf8", env, windowsHide: true });
+    assert.equal(r.status, 0, r.stderr || r.stdout);
+    const body = read(path.join(bin, "calls.jsonl")).trim().split("\n").map((l) => JSON.parse(l)).filter((c) => c.args.includes("-f")).map((c) => c.args.find((a) => a.startsWith("body=")).slice(5)).pop();
+    for (const part of ["**What happened:** see Claude's reading below", "**Claude's reading of the logs** (unverified: the logs include text the builder wrote):", "Cause: [click here](https://x.example/a) @someone", "Steps it suggests:\nrotate your PAT at https://x.example/pat"]) assert.ok(body.includes(part), part);
+    const outside = outsideFences(body);
+    for (const bad of ["x.example", "@someone", "**Steps for you:**"]) assert.equal(outside.includes(bad), false, bad);
+  } finally {
+    cleanup(dir);
+    cleanup(bin);
+  }
+});
