@@ -2,7 +2,7 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
-## 1.13.2 — Unreleased
+## 1.13.2 — 2026-11-10
 
 - **The deploy's tools are locked, and its secrets stay where they are used (PR-95).** `devos-deploy` now installs the Vercel CLI and, for Firebase, firebase-tools from lockfiles in `devos/tools/`, with every package of their trees checked and no install script run, in a step that holds no secret. Your Vercel token is only in the Deploy step, so the project's install, the guards and the Firestore step never see it.
 - **The supervisor hears about every failed run.** A task the cycle started by itself used to fail unseen until the supervisor's schedule came round, which GitHub runs only when it can. The cycle now starts the supervisor itself when one of its runs fails.
