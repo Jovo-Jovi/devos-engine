@@ -157,7 +157,8 @@ settings check (PR-27) → guards → the deploy's CLIs from their lockfiles (`d
 `devos/tools/firebase`: `npm ci --ignore-scripts` in a step with no secret, each at the version `tool_versions` pins,
 PR-95) → storage preflight (PR-26) → database backup + migrations (PR-18) → Firestore rules + seed (PR-26) → Vercel
 build and upload (`vercel-deploy.sh`, PR-16, PR-24) → strict smoke test with `probe.mjs`. No secret is at the job's
-level: each is only in the step that uses it, and the Vercel token only in the Deploy step (PR-95).
+level: each is only in the step that uses it, and the Vercel token only in the settings check, which lists the
+Vercel project's variable names (PR-96), and the Deploy step (PR-95).
 
 **Settings.** `devos-setup` (push to main, `/devos setup`, every two hours via `devos-resume` while
 the issue is open) → `setup-check.mjs` → `setup-issue.mjs sync` keeps the issue "Dev OS: setup

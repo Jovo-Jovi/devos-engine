@@ -70,7 +70,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      # PR-95: no secret at the job's level. The Vercel token is in the Deploy step only.
+      # PR-95: no secret at the job's level. The Vercel token is in the settings check (PR-96) and the Deploy step only.
       NEXT_TELEMETRY_DISABLED: "1"
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -109,6 +109,12 @@ jobs:
               "FIREBASE_PROJECT_ID":"${{ secrets.FIREBASE_PROJECT_ID != '' && '1' || '' }}",
               "FIREBASE_DEPLOY_SERVICE_ACCOUNT":"${{ secrets.FIREBASE_DEPLOY_SERVICE_ACCOUNT != '' && '1' || '' }}"
             }
+          # PR-96: the check lists the names (never the values) of the Vercel project's Production variables through
+          # Vercel's API, as devos-setup does, so it holds the Vercel credentials too. It runs only setup-check.mjs,
+          # before the project's dependencies and the deploy's CLIs are installed.
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
           VARS_JSON: ${{ toJSON(vars) }}
         run: node scripts/devos/setup-check.mjs --for deploy
       - name: Gate check — the guards must pass on what ships

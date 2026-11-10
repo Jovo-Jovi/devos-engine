@@ -2,6 +2,10 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
+## 1.13.3 — Unreleased
+
+- **Production deploys on Vercel run again (PR-96).** In 1.13.2 the deploy's settings check no longer had the Vercel credentials, so it could not read the project's variables on Vercel and reported them all missing: every production deploy stopped at "Settings the deploy needs" with nothing touched. The check holds them again, as `devos-setup` does; the install steps still hold no secret. Run `devos upgrade` and merge its pull request yourself: your merge starts the deploy.
+
 ## 1.13.2 — 2026-11-10
 
 - **The deploy's tools are locked, and its secrets stay where they are used (PR-95).** `devos-deploy` now installs the Vercel CLI and, for Firebase, firebase-tools from lockfiles in `devos/tools/`, with every package of their trees checked and no install script run, in a step that holds no secret. Your Vercel token is only in the Deploy step, so the project's install, the guards and the Firestore step never see it.

@@ -1,0 +1,16 @@
+{
+  "CHANGELOG.md": "41be14414661ddc8bac12ac0b0af2c442240047b14192c0177ced759fd0796e9",
+  "README.md": "e04a59b67374d65e0c9560d65ad0317bff646a5ead931f421702efa455ead092",
+  "package.json": "e32f0927ffb078abdcb07c6f4218a8a709ca43a9d0f7520897faefa51c86a08d",
+  "payload/files/docs/method/AUTOMATION.md": "a629151dc0eaf05105eadac56d4c0b130de0223c2d051e8936205012d8f4bd91",
+  "payload/files/docs/method/PRECEDENTS.md": "888274b74f791766fd1d56fcaa642d05c180b335d846a44a62eeac517547c718",
+  "payload/files/dot-github/workflows/devos-deploy.yml": "52434f564cb1b9abce7537b2237bf20efa2c22d58d678fc20f21a384af2717d2",
+  "payload/manifest.json": "541d35167406ad4d859e91b750b6b819e32686bc23779b154d7d716ec027fa74",
+  "test/adopt-files.test.mjs": "93f7fae71c401712539bb2dbab67f4f7ab9686c57464fafa8e55b34e05c11295",
+  "test/adopt-install.test.mjs": "8fbc2e3d07d8ad19569d92e2ba174af40b894181f9d6fa9881db685f23c26649",
+  "test/hardening.test.mjs": "48ccb6f9ba1e5089956cd99282d92e413cc10c1476b7a88b925f74589a5ae106",
+  "test/install.test.mjs": "daba28f7b395fccc5612c3457c8f4c4acd589dc34d593c08110e26febcfbce06",
+  "test/remove.test.mjs": "9e34afe76abe8d3b25c59a823a10dcabdcb63bdf982b5ab63fbd5b9734408df3",
+  "test/upgrade.test.mjs": "74a81a88ff8008e1fe58d987fed5e66edabade8b50f2cc0a7f2ed62433f7e593",
+  "test/version.test.mjs": "09b8bd48d3ac1b6c211c5951bfb04e3f2c785420ca55cae229e5b03e86ce834f"
+}

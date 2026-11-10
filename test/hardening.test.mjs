@@ -7,7 +7,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 import assert from "node:assert/strict";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { cleanup } from "./harness.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -342,8 +342,9 @@ test("hardening.test.mjs (i) the deploy's CLIs come from lockfiles at the pinned
   assert.equal(tools.includes("secrets."), false);
   for (const line of ['locked vercel vercel "$(node scripts/devos/pins.mjs vercel)"', 'locked firebase firebase-tools "$(node scripts/devos/pins.mjs firebase)"']) assert.ok(tools.includes(line), line);
   assert.ok(steps.indexOf(tools) < steps.findIndex((s) => s.startsWith("name: Firestore — rules, then the seed")));
-  const holding = steps.filter((s) => s.includes("secrets.VERCEL_TOKEN }}") && !s.includes("SECRETS_JSON"));
-  assert.deepEqual(holding.map((s) => s.split("\n")[0]), ["name: Deploy"]);
+  // PR-96: the settings check lists the Vercel project's variable names, so it holds the Vercel credentials as well.
+  const holding = steps.filter((s) => s.includes("secrets.VERCEL_TOKEN }}"));
+  assert.deepEqual(holding.map((s) => s.split("\n")[0]), ["name: Settings the deploy needs (PR-27)", "name: Deploy"]);
   assert.equal(/\bnpx\b/.test(deploy), false);
   assert.deepEqual(deploy.match(/npm install -g [^\n]*/g), ['npm install -g "$spec"']);
   // The lockfiles: the versions tool_versions pins, every package from the npm registry with its integrity hash.
@@ -450,6 +451,58 @@ test("hardening.test.mjs (l) what Claude Code wrote is shown only inside a fence
     for (const part of ["**What happened:** see Claude's reading below", "**Claude's reading of the logs** (unverified: the logs include text the builder wrote):", "Cause: [click here](https://x.example/a) @someone", "Steps it suggests:\nrotate your PAT at https://x.example/pat"]) assert.ok(body.includes(part), part);
     const outside = outsideFences(body);
     for (const bad of ["x.example", "@someone", "**Steps for you:**"]) assert.equal(outside.includes(bad), false, bad);
+  } finally {
+    cleanup(dir);
+    cleanup(bin);
+  }
+});
+
+// ---------- PR-96: the deploy's settings check reads the Vercel project's variables again (a regression of PR-95)
+
+test("hardening.test.mjs (m) the deploy's settings check holds the Vercel credentials, so it reads the project's Production variables instead of reporting them missing", { skip: windows && "not rehearsed on Windows: it stages a project and loads a stand-in fetch, as (k) and (l) stage one" }, () => {
+  const deploy = read(path.join(workflows, "devos-deploy.yml"));
+  const job = deploy.slice(deploy.indexOf("\n  deploy:\n"));
+  const step = job.split("\n      - ").find((s) => s.startsWith("name: Settings the deploy needs (PR-27)")) ?? "";
+  assert.ok(step.includes("run: node scripts/devos/setup-check.mjs --for deploy"), step);
+  // The step's own environment: the credentials it is given, and the presence flags of its SECRETS_JSON.
+  const given = Object.fromEntries([...step.matchAll(/^ {10}([A-Z_]+): \$\{\{ secrets\.([A-Z_]+) \}\}$/gm)].map((m) => [m[1], m[2]]));
+  assert.deepEqual(given, { VERCEL_TOKEN: "VERCEL_TOKEN", VERCEL_ORG_ID: "VERCEL_ORG_ID", VERCEL_PROJECT_ID: "VERCEL_PROJECT_ID" });
+  const flags = Object.fromEntries([...step.matchAll(/"([A-Z_0-9]+)":"\$\{\{ secrets\.\1 != '' && '1' \|\| '' \}\}"/g)].map((m) => [m[1], "1"]));
+  assert.equal(flags.VERCEL_TOKEN, "1");
+  const fake = { VERCEL_TOKEN: "t0k", VERCEL_ORG_ID: "team_demo", VERCEL_PROJECT_ID: "prj_demo" };
+  const dir = mkdtempSync(path.join(tmpdir(), "devos-deploy-check-"));
+  const bin = mkdtempSync(path.join(tmpdir(), "devos-fetch-"));
+  try {
+    stagedAt(dir);
+    mkdirSync(path.join(dir, "docs"), { recursive: true });
+    writeFileSync(path.join(dir, "docs", "PHASES.md"), "| Task | Phase | Station | Name | Risk | Gate | Done | Verdict |\n|---|---|---|---|---|---|---|---|\n| T01 | E | 1 | One | 1 | — | [ ] | — |\n");
+    // A stand-in for Vercel's API: it records each call and lists one Production variable, DEVOS_PRODUCTION_URL.
+    const log = path.join(bin, "fetch.jsonl");
+    const stub = path.join(bin, "fetch-stub.mjs");
+    writeFileSync(stub, `import { appendFileSync } from "node:fs";
+globalThis.fetch = async (url, init) => {
+  appendFileSync(${JSON.stringify(log)}, JSON.stringify({ url: String(url), auth: init?.headers?.authorization ?? "" }) + "\\n");
+  return { ok: true, status: 200, json: async () => ({ envs: [{ key: "DEVOS_PRODUCTION_URL", target: ["production", "preview"] }] }) };
+};
+`);
+    // Never a real key or the runner's own outputs: no VERCEL_ or GITHUB_ variable reaches the check but the test's own.
+    const base = Object.fromEntries(Object.entries(process.env).filter(([k]) => !k.startsWith("VERCEL_") && !k.startsWith("GITHUB_")));
+    const check = (env) => spawnSync(process.execPath, ["--import", pathToFileURL(stub).href, "scripts/devos/setup-check.mjs", "--for", "deploy"], {
+      cwd: dir, encoding: "utf8", windowsHide: true,
+      env: { ...base, SECRETS_JSON: JSON.stringify(flags), VARS_JSON: JSON.stringify({ DEVOS_VERCEL: "true" }), ...env },
+    });
+    const calls = () => (existsSync(log) ? read(log).trim().split("\n").map((l) => JSON.parse(l)) : []);
+    // 1.13.2's step: presence flags alone. Vercel is never asked, and the variable it holds is reported missing.
+    const flagsOnly = check({});
+    assert.equal(flagsOnly.status, 1, flagsOnly.stdout);
+    assert.ok(flagsOnly.stdout.includes("MISSING production-url: DEVOS_PRODUCTION_URL"), flagsOnly.stdout);
+    assert.ok(read(path.join(dir, ".devos", "setup.md")).includes("Vercel access is not set up (VERCEL_TOKEN, VERCEL_PROJECT_ID)"));
+    assert.deepEqual(calls(), []);
+    // The step as the workflow gives it: one call to the project's variables, with the token, and nothing missing.
+    const asGiven = check(Object.fromEntries(Object.entries(given).map(([name, secret]) => [name, fake[secret]])));
+    assert.equal(asGiven.status, 0, asGiven.stdout + asGiven.stderr);
+    assert.ok(asGiven.stdout.includes("OK      production-url"), asGiven.stdout);
+    assert.deepEqual(calls(), [{ url: "https://api.vercel.com/v10/projects/prj_demo/env?decrypt=false&teamId=team_demo", auth: "Bearer t0k" }]);
   } finally {
     cleanup(dir);
     cleanup(bin);
