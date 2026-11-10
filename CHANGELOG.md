@@ -2,7 +2,7 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
-## 1.13.3 — Unreleased
+## 1.13.3 — 2026-11-10
 
 - **Production deploys on Vercel run again (PR-96).** In 1.13.2 the deploy's settings check no longer had the Vercel credentials, so it could not read the project's variables on Vercel and reported them all missing: every production deploy stopped at "Settings the deploy needs" with nothing touched. The check holds them again, as `devos-setup` does; the install steps still hold no secret. Run `devos upgrade` and merge its pull request yourself: your merge starts the deploy.
 
