@@ -39,7 +39,7 @@ test("artifacts.test.mjs (a) a cycle run keeps its evidence without the screensh
     "name: Keep the screenshots (PR-67)",
     "        if: always()",
     "        continue-on-error: true",
-    "        uses: actions/upload-artifact@v4",
+    "        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2",
     "        with:",
     "          name: devos-${{ inputs.task }}-a${{ inputs.attempt }}-screens",
     "          path: .devos/screens/**/*.png",

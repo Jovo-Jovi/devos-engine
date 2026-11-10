@@ -67,7 +67,7 @@ test("hygiene.test.mjs (b) in an installed project, pins.mjs reads the devos.con
   }
 });
 
-test("hygiene.test.mjs (c) the workflows install every tool at its pin, third-party actions by commit, GitHub's own on their major tag", () => {
+test("hygiene.test.mjs (c) the workflows install every tool at its pin, and every action by commit (PR-94)", () => {
   const files = readdirSync(workflows).filter((file) => file.endsWith(".yml")).map((file) => path.join(workflows, file));
   const scripts = ["review-user.sh", "vercel-deploy.sh"].map((file) => path.join(payload, "scripts", "devos", file));
   const all = Object.fromEntries([...files, ...scripts].map((file) => [path.basename(file), read(file)]));
@@ -76,7 +76,8 @@ test("hygiene.test.mjs (c) the workflows install every tool at its pin, third-pa
     for (const [, action] of text.matchAll(/^\s*(?:-\s+)?uses:\s+(\S.*)$/gm)) {
       if (action.startsWith("./")) continue;
       if (action.startsWith("actions/")) {
-        assert.match(action, /^actions\/[a-z-]+@(?:v\d+|[0-9a-f]{40} # v\d+\.\d+\.\d+)$/, `${file}: ${action}`);
+        // PR-94 (N4): GitHub's own actions by commit too, in every job.
+        assert.match(action, /^actions\/[a-z-]+@[0-9a-f]{40} # v\d+\.\d+\.\d+$/, `${file}: ${action}`);
         continue;
       }
       assert.match(action, /^[\w.-]+\/[\w.-]+@[0-9a-f]{40} # v\d+\.\d+\.\d+$/, `${file}: ${action}`);
@@ -96,7 +97,8 @@ test("hygiene.test.mjs (c) the workflows install every tool at its pin, third-pa
   // Where each pin is read.
   const pins = (file, tool) => count(all[file], `$(node scripts/devos/pins.mjs ${tool})`);
   assert.deepEqual(["pnpm", "firebase"].map((tool) => [pins("devos-work.yml", tool), pins("ci.yml", tool), pins("devos-deploy.yml", tool)]), [[1, 1, 1], [1, 1, 1]]);
-  assert.deepEqual([pins("devos-intake.yml", "claude"), pins("devos-supervisor.yml", "claude"), pins("devos-deploy.yml", "vercel"), pins("vercel-deploy.sh", "vercel")], [2, 1, 1, 1]);
+  // PR-94: the supervisor's Claude Code is the review user's, installed by review-user.sh at its pin.
+  assert.deepEqual([pins("devos-intake.yml", "claude"), pins("devos-supervisor.yml", "claude"), pins("devos-deploy.yml", "vercel"), pins("vercel-deploy.sh", "vercel")], [2, 0, 1, 1]);
   assert.equal(count(all["devos-work.yml"], 'spec=$(node scripts/devos/pins.mjs "$DEVOS_BUILDER_TOOL")'), 1);
   // The work job reads every pin from main's checkout, before the task branch is checked out: firebase-tools, installed
   // after it, takes the pin read then.

@@ -15,11 +15,20 @@
 //           with the merge of the task branch and main that it computes itself, so main's changes are never the
 //           builder's. Accepted: <out>/decide is checked out at the new head, main's method files are laid over it,
 //           and <out>/verify.json records the result.
+//           PR-94: the builder's model is kept only when main's configuration or --trusted-models names it (or one of
+//           its effort and Fast variants), else "unknown"; its effort and Fast only from their fixed lists.
+//   guards  --out <dir>                                          PR-94: main's guards on the verified tree, before any
+//           push, with no secret and no package manager (DEVOS_GUARDS_NO_AUDIT); and main's secret rules on every file
+//           this run changed, as it will be pushed. A secret finding, or guards that do not finish, rejects the bundle
+//           (verify.json ok=false): nothing is pushed. Every other result is <out>/guards.json, for checks.
 //   state   --out <dir> --claimed <state> [--not-before <iso>] [--picked <pool id>]     the builder's outcome, bounded
-//   checks  --out <dir> [--ci <work's ci-results.json>]          the required checks from main's rules (needs DEVOS_ROOT)
+//   checks  --out <dir> [--ci <work's ci-results.json>]          the required checks from main's rules (needs DEVOS_ROOT);
+//           PR-94: "guards" is publish's own run, red also when the work job's was
 //   usage   --in <file> --dest <file>                            keeps only well-formed usage records
 //   review-tree --out <dir> --dest <dir>                         the head's files, and .devos/diff.patch, for the review
-//   take-review --out <dir> --from <dir> --task Tnn --attempt N  copies the review file and fences the reviewer wrote
+//   take-review --out <dir> --from <dir> --task Tnn --attempt N  copies the review file and fences the reviewer wrote;
+//           PR-94: a fence the head already has changes only with a higher Fence version, and each fence taken is
+//           listed in .devos/fence-changes.txt
 //   commit  --out <dir> --message <text> [--amend]               commits the runner's files (reviews, fences, PHASES, usage)
 //   sync    --out <dir> [--remote <url>]                         merges a base (main or the unit) that moved meanwhile
 //   push    --out <dir> [--remote <url>] [--to refs/heads/rescue/…]
@@ -171,8 +180,35 @@ export function priorTags(subjects, task, attempt) {
 }
 
 /** The builder commit's message, from publish's own count and the work job's claims, each checked. */
+const MODEL_ID = /^[A-Za-z0-9._:/@+-]{1,100}$/;
+const VARIANT = /(-(low|medium|high|xhigh))?(-fast)?(-(low|medium|high|xhigh))?$/;
+/** PR-94 (N6): every model id main's configuration names (agents, builder), and those of this run's own choice. */
+export function trustedModels(cfg, extra = []) {
+  const out = new Set();
+  const walk = (o, key) => {
+    if (Array.isArray(o)) for (const x of o) walk(x, key);
+    else if (o && typeof o === "object") for (const [k, v] of Object.entries(o)) walk(v, k);
+    else if (typeof o === "string" && /model|family|fallback/i.test(key ?? "")) out.add(o);
+  };
+  walk(cfg?.agents, "agents");
+  walk(cfg?.builder, "builder");
+  for (const v of extra) for (const w of String(v ?? "").split(/[\s,]+/)) if (w) out.add(w);
+  return [...out].filter((m) => MODEL_ID.test(m));
+}
+/** The work job's model, kept only when a trusted id names it or one of its effort and Fast variants; else "unknown". */
+export function allowedModel(model, trusted) {
+  const m = String(model ?? "");
+  if (!MODEL_ID.test(m)) return "unknown";
+  for (const t of trusted) {
+    const base = String(t).replace(VARIANT, "");
+    if (m === t || m === base) return m;
+    if (base && m.startsWith(`${base}-`) && new RegExp(`^${VARIANT.source}`).test(m.slice(base.length))) return m;
+  }
+  return "unknown";
+}
+
 export function builderMessage({ task, attempt, model, effort, fast, exit, slice, stage, stages }) {
-  const m = /^[A-Za-z0-9._:/@+-]{1,100}$/.test(String(model ?? "")) ? model : "unknown";
+  const m = MODEL_ID.test(String(model ?? "")) ? model : "unknown";
   const e = EFFORTS.includes(effort) ? effort : "unknown";
   const f = fast === "yes" || fast === "no" ? fast : "unknown";
   let tag = String(exit) === "124" ? ` (time slice ${slice})` : "";
@@ -346,11 +382,17 @@ export function verify(a) {
   let headCommit = merge;
   let tags = { slice: 1, stage: 1 };
   const stages = Number(/^- Stages: *(\d+)/m.exec(fence)?.[1] ?? 1) || 1;
+  // PR-94 (N6): what the work job says of its builder reaches a commit and the reviewer's prompt only from fixed lists.
+  const told = {
+    model: allowedModel(a.model, trustedModels(cfg, [a["trusted-models"]])),
+    effort: EFFORTS.includes(a.effort) ? a.effort : "unknown",
+    fast: a.fast === "yes" || a.fast === "no" ? a.fast : "unknown",
+  };
   if (builder) {
     const subjects = remoteHead ? g(["log", "-20", "--format=%s", remoteHead], { cwd: repo }).stdout.split(/\r?\n/) : [];
     tags = priorTags(subjects, task, attempt);
     if (tags.stage > stages) tags.stage = stages;
-    const message = builderMessage({ task, attempt, model: a.model, effort: a.effort, fast: a.fast, exit: a.exit, slice: tags.slice, stage: tags.stage, stages });
+    const message = builderMessage({ task, attempt, model: told.model, effort: told.effort, fast: told.fast, exit: a.exit, slice: tags.slice, stage: tags.stage, stages });
     headCommit = commitTree(repo, headTree, [merge], message);
   }
   g(["update-ref", `refs/remotes/origin/${baseName}`, mainSha], { cwd: repo });
@@ -373,8 +415,82 @@ export function verify(a) {
   for (const p of changed) console.log(`  ${q(p)}`);
   console.log(`diff ${mainSha.slice(0, 12)}...${headCommit.slice(0, 12)}:`);
   for (const p of vsMain) console.log(`  ${q(p)}`);
-  emit({ ok: "true", head: headCommit, method_changed: methodChanged, slice: tags.slice, stage: tags.stage, stages, bundle_sha256: bundleSha256 });
+  emit({ ok: "true", head: headCommit, method_changed: methodChanged, slice: tags.slice, stage: tags.stage, stages, bundle_sha256: bundleSha256,
+    builder_model: told.model, builder_effort: told.effort, builder_fast: told.fast });
   return result;
+}
+
+// ---------- main's guards, before any push (PR-94, N2) -------------------------------------------------------------
+
+const GUARD_TIMEOUT = 300000;
+/** A finding without the text of its line: a secret's line is never repeated in a log, a comment or an artifact. */
+const findingLine = (f) => String(f).replace(/^(.*? — [^:]*):.*$/s, "$1").slice(0, 300);
+
+/** main's secret rules (`rules`, `skip`: guard:secrets') on every path this run changed, read from the head to be pushed. */
+export function secretsInChange(repo, head, paths, { rules, skip }) {
+  const found = [];
+  for (const p of paths) {
+    if (skip.some((re) => re.test(p))) continue;
+    const blob = g(["cat-file", "-p", `${head}:${p}`], { cwd: repo, allowFail: true });
+    if (blob.status !== 0) continue;
+    blob.stdout.split(/\r?\n/).forEach((line, i) => {
+      for (const { re, label } of rules) {
+        re.lastIndex = 0;
+        if (re.test(line)) found.push(`${q(p)}:${i + 1} — ${label}`);
+      }
+    });
+  }
+  return found;
+}
+
+export async function guards(a) {
+  const out = path.resolve(String(a.out ?? ""));
+  const s = readState(out);
+  const repo = path.join(out, "decide");
+  // main's own copy of guard:secrets' rules, beside this script: a copy that cannot load rejects (nothing is pushed).
+  let secretRules = null;
+  try {
+    const mod = await import(new URL("../guards/secrets.mjs", import.meta.url).href);
+    if (Array.isArray(mod.RULES) && Array.isArray(mod.SKIP)) secretRules = { rules: mod.RULES, skip: mod.SKIP };
+  } catch { secretRules = null; }
+  // No secret, no token and no package manager: only main's guard code over the verified tree's files.
+  const env = {
+    PATH: process.env.PATH ?? "", HOME: process.env.HOME ?? "", LANG: "C.UTF-8", TASK: s.task, DEVOS_SCOPE_BASE: s.main_sha,
+    DEVOS_GUARDS_NO_AUDIT: "1", GIT_CONFIG_NOSYSTEM: "1", GIT_CONFIG_GLOBAL: "/dev/null", GIT_TERMINAL_PROMPT: "0",
+  };
+  for (const name of ["TMPDIR", "TEMP", "TMP", "SystemRoot", "ComSpec"]) if (process.env[name]) env[name] = process.env[name];
+  const run = spawnSync(process.execPath, [path.join(repo, "scripts", "guards", "run-all.mjs"), "--json"], {
+    cwd: repo, env, encoding: "utf8", timeout: GUARD_TIMEOUT, maxBuffer: 64 * 1024 * 1024,
+  });
+  let results = null;
+  try {
+    const parsed = JSON.parse(run.stdout || "null");
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) results = parsed;
+  } catch { results = null; }
+  const reasons = [];
+  if (!results) reasons.push(`(f) main's guards did not finish on the verified tree (${run.error ? run.error.code || "error" : `exit ${run.status}`}); nothing is pushed until they do`);
+  else if (results.secrets?.status !== "PASS") {
+    const found = Array.isArray(results.secrets?.findings) && results.secrets.findings.length ? results.secrets.findings : ["guard:secrets did not pass"];
+    reasons.push(...found.slice(0, 20).map((f) => `(f) guard:secrets: ${findingLine(f)}`));
+  }
+  if (!secretRules) reasons.push("(f) main's secret rules (scripts/guards/secrets.mjs) cannot be loaded; nothing is pushed until they can");
+  else for (const f of secretsInChange(repo, s.head, Array.isArray(s.changed) ? s.changed : [], secretRules).slice(0, 20)) reasons.push(`(f) a secret in this run's change: ${f}`);
+  const failed = results ? Object.entries(results).filter(([, r]) => r?.status === "FAIL").map(([n]) => n) : [];
+  const lines = results ? Object.entries(results).flatMap(([n, r]) => [
+    `guard:${n} ${String(r?.status ?? "?")}${r?.note ? ` (${String(r.note).slice(0, 300)})` : ""}`,
+    ...(Array.isArray(r?.findings) ? r.findings.slice(0, 20).map((f) => `    ${n === "secrets" ? findingLine(f) : String(f).slice(0, 300)}`) : []),
+  ]) : [];
+  writeFileSync(path.join(out, "guards.json"), `${JSON.stringify({ finished: Boolean(results), exit: run.status, failed, lines }, null, 2)}\n`);
+  for (const l of lines) console.log(l);
+  if (reasons.length) {
+    writeState(out, { ...s, ok: false, reasons: [...(Array.isArray(s.reasons) ? s.reasons : []), ...reasons] });
+    for (const r of reasons) console.log(`REJECTED: ${r}`);
+    console.log("guards: a secret, or guards that did not finish; the bundle is rejected and nothing is pushed");
+    if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, `ok=false\n`);
+    process.exit(1);
+  }
+  console.log(failed.length ? `guards: ${failed.join(", ")} failed (red in the checks; the review decides)` : "guards: every guard passed on the verified tree");
+  emit({ guards: failed.length ? "fail" : "pass", guards_failed: failed.join(",") });
 }
 
 // ---------- a planning run's bundle (PR-92) --------------------------------------------------------------------------
@@ -637,6 +753,20 @@ async function checks(a) {
   const str = (v, n) => (typeof v === "string" ? v.slice(0, n) : "");
   const results = (Array.isArray(work.results) ? work.results : []).filter((r) => r && typeof r.name === "string" && /^[A-Za-z0-9:._-]{1,60}$/.test(r.name))
     .map((r) => ({ name: r.name, required: r.required === true, command: str(r.command, 300), status: /^[a-z][a-z-]{0,39}$/.test(String(r.status)) ? r.status : "missing", exit: Number.isInteger(r.exit) ? r.exit : null, seconds: Number.isFinite(r.seconds) ? r.seconds : null, tail: str(r.tail, 8000), reported_by: "work" }));
+  // PR-94 (N2): the guards are publish's own run on the verified tree; a red the work job reported stays red.
+  let own = null;
+  try { own = JSON.parse(readFileSync(path.join(out, "guards.json"), "utf8")); } catch { own = null; }
+  if (own?.finished === true) {
+    const work = results.find((r) => r.name === "guards");
+    const workRed = Boolean(work) && work.status !== "pass";
+    const mine = {
+      name: "guards", required: work?.required === true, command: "node scripts/guards/run-all.mjs (main's, run by publish on the verified tree; the dependency audit stays the work job's)",
+      status: (Array.isArray(own.failed) && own.failed.length) || workRed ? "fail" : "pass", exit: Number.isInteger(own.exit) ? own.exit : null, seconds: null,
+      tail: [...(Array.isArray(own.lines) ? own.lines.map(String) : []), ...(workRed ? [`the work job's own run of the guards: ${work.status}`, work.tail] : [])].join("\n").slice(0, 8000),
+      reported_by: "publish",
+    };
+    if (work) results.splice(results.indexOf(work), 1, mine); else results.push(mine);
+  }
   const cfg = JSON.parse(readFileSync(path.join(root, "devos.config.json"), "utf8"));
   let fenceText = "";
   try { fenceText = readFileSync(path.join(root, "docs", "fences", `${s.task}.md`), "utf8"); } catch { fenceText = ""; }
@@ -660,7 +790,7 @@ async function checks(a) {
   mkdirSync(path.join(root, ".devos"), { recursive: true });
   writeFileSync(path.join(root, ".devos", "ci-results.json"), JSON.stringify(summary, null, 2));
   for (const name of required) console.log(`${(results.find((r) => r.name === name)?.status ?? "missing").toUpperCase().padEnd(18)} ${name}`);
-  console.log(failed.length ? `required checks not green: ${failed.join(", ")}` : "every required check reported green (a claim of the work job)");
+  console.log(failed.length ? `required checks not green: ${failed.join(", ")}` : `every required check reported green (${own?.finished === true ? "the guards publish's own run, the rest" : "a claim of"} the work job's)`);
   emit({ green: failed.length === 0, failed: failed.join(",") });
 }
 
@@ -722,6 +852,12 @@ function reviewTree(a) {
   console.log(`review tree: ${s.head} in ${dest}; the diff against main in .devos/diff.patch`);
 }
 
+/** A fence's `Fence version` (its head's `- Fence version: 3`, `v3` or `**v3 · date**`), or 0 when it has none. */
+export function fenceVersion(text) {
+  const m = /^- *Fence version: *\**\s*v?(\d{1,4})\b/im.exec(headOf(String(text ?? "")));
+  return m ? Number(m[1]) : 0;
+}
+
 /** The review file of this attempt, and any fence, that the reviewer wrote and that differ from the head. */
 function takeReview(a) {
   const out = path.resolve(String(a.out ?? ""));
@@ -732,6 +868,7 @@ function takeReview(a) {
   const attempt = Number(a.attempt ?? s.attempt);
   const taken = [];
   const ignored = [];
+  const fenceChanges = [];
   const consider = (rel) => {
     const src = path.join(from, rel);
     let st;
@@ -740,7 +877,17 @@ function takeReview(a) {
     if (st.size > MAX_TEXT) { ignored.push(`${q(rel)} (over ${MAX_TEXT} bytes)`); return; }
     const text = readFileSync(src);
     const dest = path.join(repo, rel);
-    if (existsSync(dest) && readFileSync(dest).equals(text)) return;
+    const before = existsSync(dest) ? readFileSync(dest) : null;
+    if (before && before.equals(text)) return;
+    // PR-94: a fence the head already has is issued. It changes only when its Fence version goes up, in the open.
+    if (rel.startsWith("docs/fences/")) {
+      const now = fenceVersion(text.toString("utf8"));
+      if (before) {
+        const was = fenceVersion(before.toString("utf8"));
+        if (!(now > was)) { ignored.push(`${q(rel)} (an issued fence changes only with a higher Fence version: it stays at ${was || "none"}, and this one says ${now || "none"})`); return; }
+        fenceChanges.push(`${rel}: Fence version ${was || "none"} → ${now}`);
+      } else fenceChanges.push(`${rel}: new, Fence version ${now || "none"}`);
+    }
     mkdirSync(path.dirname(dest), { recursive: true });
     writeFileSync(dest, text);
     taken.push(rel);
@@ -766,6 +913,10 @@ function takeReview(a) {
   if (ignored.length) {
     mkdirSync(path.join(repo, ".devos"), { recursive: true });
     appendFileSync(path.join(repo, ".devos", "surface-warnings.txt"), ignored.map((x) => `reviewer wrote ${x}; not kept\n`).join(""));
+  }
+  if (fenceChanges.length) {
+    mkdirSync(path.join(repo, ".devos"), { recursive: true });
+    writeFileSync(path.join(repo, ".devos", "fence-changes.txt"), `${fenceChanges.join("\n")}\n`);
   }
   console.log(`review outputs kept: ${taken.join(", ") || "none"}${ignored.length ? ` · not kept: ${ignored.join(", ")}` : ""}`);
   emit({ taken: taken.join(" "), review_written: taken.includes(reviewRel) || existsSync(path.join(repo, reviewRel)) });
@@ -884,6 +1035,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   const a = args(rest);
   try {
     if (command === "verify") verify(a);
+    else if (command === "guards") await guards(a);
     else if (command === "state") state(a);
     else if (command === "checks") await checks(a);
     else if (command === "usage") usage(a);
@@ -893,7 +1045,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     else if (command === "sync") sync(a);
     else if (command === "push") push(a);
     else if (command === "plan") plan(a);
-    else die("usage: publish-verify.mjs verify|state|checks|usage|review-tree|take-review|commit|sync|push|plan …", 2);
+    else die("usage: publish-verify.mjs verify|guards|state|checks|usage|review-tree|take-review|commit|sync|push|plan …", 2);
   } catch (e) {
     die(e.message);
   }

@@ -47,13 +47,15 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
+          EVENT_NAME: ${{ github.event_name }}
+          SHA: ${{ github.sha }}
         run: |
           skip=false
-          if [ "${{ github.event_name }}" = "push" ]; then
-            labels=$(gh api "repos/$REPO/commits/${{ github.sha }}/pulls" --jq '[.[].labels[].name] | join(",")' 2>/dev/null || echo "")
+          if [ "$EVENT_NAME" = "push" ]; then
+            labels=$(gh api "repos/$REPO/commits/$SHA/pulls" --jq '[.[].labels[].name] | join(",")' 2>/dev/null || echo "")
             case ",$labels," in *",devos:auto-merged,"*) skip=true; echo "::notice title=Dev OS::Runner auto-merge: production waits for the next gate you sign." ;; esac
             # PR-90: a pull request merged by a bot account (the cycle's own token) never deploys either; a person's does.
-            for n in $(gh api "repos/$REPO/commits/${{ github.sha }}/pulls" --jq '.[].number' 2>/dev/null || true); do
+            for n in $(gh api "repos/$REPO/commits/$SHA/pulls" --jq '.[].number' 2>/dev/null || true); do
               merger=$(gh api "repos/$REPO/pulls/$n" --jq '.merged_by.type // ""' 2>/dev/null || echo "")
               if [ "$merger" = "Bot" ]; then skip=true; echo "::notice title=Dev OS::PR #$n was merged by a bot: production waits for the next gate you sign."; fi
             done
@@ -71,10 +73,10 @@ jobs:
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
       NEXT_TELEMETRY_DISABLED: "1"
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
       - name: pnpm, at the version devos.config.json pins (PR-93)
@@ -173,7 +175,7 @@ jobs:
           echo "::notice title=Dev OS::Backup taken and migrations applied to $SUPABASE_PROJECT_REF before the app deploy."
       - name: Keep the backup (encrypted data, plain schema; 30 days)
         if: hashFiles('supabase/config.toml') != '' && vars.DEVOS_SUPABASE == 'true' && (inputs.target || 'production') == 'production'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: db-backup-${{ github.sha }}
           path: |

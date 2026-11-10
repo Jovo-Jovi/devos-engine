@@ -13,6 +13,8 @@
 #   - reports each incident as one comment on the "Dev OS: supervisor" issue.
 # It never merges, never pushes to main, never handles a secret value. Off switch: repository
 # variable DEVOS_SUPERVISOR=off (DEVOS_PAUSED=true stops it too).
+# PR-94: your DEVOS_PAT reaches only the two steps that act; Claude Code diagnoses as the review's own user (no shell,
+# no secret file, scrubbed after), and any issue or `/devos revise` it would post waits for your approval.
 name: devos-supervisor
 
 on:
@@ -62,10 +64,9 @@ jobs:
       DEVOS_REVIEWER_MODEL: ${{ vars.DEVOS_REVIEWER_MODEL }}
       DEVOS_REVIEWER_LIGHT_MODEL: ${{ vars.DEVOS_REVIEWER_LIGHT_MODEL }}
       DEVOS_BUILDER_MODEL: ${{ vars.DEVOS_BUILDER_MODEL }}
-      # The owner's runner token: its comments count as the owner's (so `/devos revise` runs) and it may
-      # dispatch the cycle. Never written anywhere; Claude's step does not receive it.
-      GH_TOKEN: ${{ secrets.DEVOS_PAT || github.token }}
-      # Its own reports use the built-in token, whose comments start no workflow: no self-trigger loop.
+      # PR-94: reads and reports use the built-in token, whose comments start no workflow (no self-trigger loop). Your
+      # DEVOS_PAT is OWNER_TOKEN in the two steps that act, never at the job's level.
+      GH_TOKEN: ${{ github.token }}
       REPORT_TOKEN: ${{ github.token }}
       EVENT_NAME: ${{ github.event_name }}
       # workflow_run.name is the run's title ("devos T05 · attempt 4"); the file names the workflow.
@@ -75,11 +76,11 @@ jobs:
       WF_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
       DRY: ${{ inputs.dry_run && '--dry-run' || '' }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: main
           persist-credentials: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
 
@@ -87,6 +88,7 @@ jobs:
         if: github.event_name == 'issue_comment'
         env:
           BODY: ${{ github.event.comment.body }}
+          OWNER_TOKEN: ${{ secrets.DEVOS_PAT || github.token }}
         run: node scripts/devos/supervisor.mjs approve --body "$BODY"
 
       - name: Scan — what has stopped, and why (fixed rules)
@@ -96,14 +98,21 @@ jobs:
 
       # Only for what no rule explains, and only when Claude Code is the project's reviewer agent (PR-53): it reads the
       # facts, the logs and the repository, read-only, on the model the developer chose.
-      - name: Diagnose — Claude Code (read-only)
+      # PR-94: as the review's own user (review-user.sh, PR-90), in a copy of main with the facts: no shell, no hooks, no
+      # MCP server, nothing to read outside that copy, and only its own credential in its environment. Its answer is
+      # scrubbed of every secret value this step holds before anything reads it.
+      - name: Diagnose — Claude Code (read-only, its own user)
         if: steps.scan.outputs.ask_claude == 'true'
         continue-on-error: true
         timeout-minutes: 15
         env:
           GH_TOKEN: ""
+          REPORT_TOKEN: ""
           OAUTH: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN || secrets.CLAUDE_CODE_OAUTH_TOKEN_2 }}
           APIKEY: ${{ secrets.ANTHROPIC_API_KEY || secrets.ANTHROPIC_API_KEY_2 }}
+          DEVOS_SCRIPTS: ${{ github.workspace }}/scripts/devos
+          DEVOS_REVIEW_PASS: CLAUDE_CODE_OAUTH_TOKEN ANTHROPIC_API_KEY
+          RW: /opt/devos-review-work
         run: |
           # PR-53: the second opinion runs only when the project's reviewer agent is Claude Code, on the model the developer chose.
           line=$(node scripts/devos/agents.mjs reviewer --mode deep 2>/dev/null || true)
@@ -113,23 +122,35 @@ jobs:
           [ -n "$OAUTH" ] && export CLAUDE_CODE_OAUTH_TOKEN="$OAUTH"
           [ -n "$APIKEY" ] && export ANTHROPIC_API_KEY="$APIKEY"
           [ -n "$OAUTH$APIKEY" ] || { echo "No Claude credential; the supervisor reports without a diagnosis."; exit 0; }
-          spec=$(node scripts/devos/pins.mjs claude)
-          npm install -g "$spec" > /dev/null
           MODEL=${chosen:-$(node -e 'const c=require("./devos.config.json");console.log(c.supervisor?.model||c.reviewer.gate_model)')}
-          claude -p "$(cat devos/prompts/supervisor.md)" --model "$MODEL" --effort high --output-format json \
-            --json-schema "$(cat devos/schemas/supervisor.schema.json)" --permission-mode dontAsk --max-turns 25 \
+          prompt=$(cat devos/prompts/supervisor.md)
+          schema=$(cat devos/schemas/supervisor.schema.json)
+          # The user (with Claude Code at main's pin), then main's files and the facts in its workspace.
+          bash scripts/devos/review-user.sh setup
+          tar --exclude=./.git -cf - . | tar -xf - -C "$RW"
+          find "$RW" -type l -delete
+          bash scripts/devos/review-user.sh workspace
+          rc=0
+          bash scripts/devos/review-user.sh run "$RW" -- claude -p "$prompt" --model "$MODEL" --effort high --output-format json \
+            --json-schema "$schema" --permission-mode dontAsk --max-turns 25 \
+            --setting-sources user --settings /opt/devos-tools/settings.json --strict-mcp-config \
             --allowedTools "Read,Glob,Grep" --disallowedTools "Bash,Write,Edit,WebFetch,WebSearch" \
-            > .devos/supervisor/claude.json 2> .devos/supervisor/claude.err || tail -c 1500 .devos/supervisor/claude.err
+            > .devos/supervisor/claude.json 2> .devos/supervisor/claude.err || rc=$?
+          bash scripts/devos/review-user.sh stop
+          node scripts/devos/scrub.mjs --names OAUTH,APIKEY,CLAUDE_CODE_OAUTH_TOKEN,ANTHROPIC_API_KEY .devos/supervisor/claude.json .devos/supervisor/claude.err
+          if [ "$rc" != "0" ]; then echo "Claude Code exited $rc"; tail -c 1500 .devos/supervisor/claude.err; fi
           # PR-52: nothing here is committed, so this run's usage goes on its summary page only.
           node scripts/devos/usage.mjs record --stage supervisor --command claude --model "$MODEL" --out .devos/supervisor/claude.json --summary || true
 
       - name: Act and report
         if: github.event_name != 'issue_comment' && steps.scan.outputs.incidents != '0'
+        env:
+          OWNER_TOKEN: ${{ secrets.DEVOS_PAT || github.token }}
         run: node scripts/devos/supervisor.mjs act $DRY --claude .devos/supervisor/claude.json
 
       # D9: what the supervisor found and did; never the model's own output (claude.json, claude.err).
       - if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: devos-supervisor-${{ github.run_id }}
           path: |

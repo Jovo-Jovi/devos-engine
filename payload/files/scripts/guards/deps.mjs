@@ -6,6 +6,8 @@
 //   (`pnpm.auditConfig` in package.json, with the owner's recorded decision) is left out by pnpm itself;
 // - an added package under a copyleft licence is a warning in the note, for the reviewer: it never fails.
 // N/A outside a task run (no TASK), without the task's fence, and for a project that is not Node.
+// PR-94: with DEVOS_GUARDS_NO_AUDIT=1 (publish's own run of the guards) the audit is not run here: no package manager
+// runs on a branch's files in a job that holds tokens, and the work job's run of this guard has the audit.
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
@@ -159,6 +161,9 @@ export default function deps() {
   let audited = "";
   if (!existsSync(P("pnpm-lock.yaml"))) {
     findings.push("pnpm-lock.yaml — missing, and the audit reads it: run pnpm install (PR-85)");
+  } else if (process.env.DEVOS_GUARDS_NO_AUDIT === "1") {
+    // PR-94: publish runs no package manager on a branch's files; the audit is the work job's run of this guard.
+    audited = "audit: not run here (DEVOS_GUARDS_NO_AUDIT); the work job's run of the guards has it";
   } else {
     const report = audit();
     if (report.error) findings.push(`pnpm audit — did not run (${report.error}); the gate needs its answer (PR-85)`);

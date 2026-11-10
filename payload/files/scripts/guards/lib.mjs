@@ -83,7 +83,7 @@ export function appDirs() {
 export const isComment = (line) => /^\s*(\/\/|\*|\/\*)/.test(line);
 
 /** Scan files line by line with regexes. Returns findings "file:line — label: excerpt". */
-export function scan(files, rules, { skipComments = true } = {}) {
+export function scan(files, rules, { skipComments = true, showLine = true } = {}) {
   const findings = [];
   for (const f of files) {
     const lines = read(f).split(/\r?\n/);
@@ -91,7 +91,7 @@ export function scan(files, rules, { skipComments = true } = {}) {
       if (skipComments && isComment(line)) return;
       for (const { re, label } of rules) {
         re.lastIndex = 0;
-        if (re.test(line)) findings.push(`${f}:${i + 1} — ${label}: ${line.trim().slice(0, 120)}`);
+        if (re.test(line)) findings.push(`${f}:${i + 1} — ${label}${showLine ? `: ${line.trim().slice(0, 120)}` : ""}`);
       }
     });
   }

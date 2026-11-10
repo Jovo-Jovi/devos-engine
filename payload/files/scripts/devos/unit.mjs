@@ -81,7 +81,7 @@ export function decide({ mainRows, unitRows, open, task, mode, mainSha }) {
 const clean = (text) => String(text ?? "").replace(/[\u0000-\u001f\u007f`|<>]/g, " ").trim();
 
 /** The acceptance pull request's body. */
-export function reportText({ unit, rows, unitRows, prs, paths, total, capped = false, stack }) {
+export function reportText({ unit, rows, unitRows, prs, paths, total, capped = false, stack, fences = [] }) {
   const byTask = new Map((unitRows ?? []).map((r) => [r.task, r]));
   const out = [
     `## Unit ${unit.first}–${unit.last}: your acceptance`,
@@ -104,7 +104,15 @@ export function reportText({ unit, rows, unitRows, prs, paths, total, capped = f
   out.push("", `### What changes against main (${capped ? `${total} or more paths: GitHub lists at most ${total} here` : `${total} path${total === 1 ? "" : "s"}`})`, "", "```text");
   for (const p of paths.slice(0, MAX_PATHS)) out.push(clean(p));
   if (total > MAX_PATHS || capped) out.push(`… and ${capped ? "more" : total - MAX_PATHS} (the Files changed tab lists them all)`);
-  out.push("```", "", "### How to check it", "",
+  out.push("```");
+  // PR-94: what was asked can change on the way. Every fence this unit adds or changes, so a rewrite is never silent.
+  if (fences.length) {
+    out.push("", `### Fences this unit adds or changes (${fences.length})`, "",
+      "The reviews wrote these. A fence that was already issued changes only with a higher Fence version, and each task's pull request comment lists the versions: read a changed one before you merge.", "", "```text");
+    for (const f of fences.slice(0, MAX_PATHS)) out.push(`${clean(f.path)} — ${clean(f.status)}`);
+    out.push("```");
+  }
+  out.push("", "### How to check it", "",
     `- **On your machine:** \`git fetch origin ${unit.branch}\`, \`git switch ${unit.branch}\`, then \`${clean(stack.install)}\`, \`${clean(stack.build)}\` and \`${clean(stack.preview) || "pnpm exec next start"}\`.`,
     "- **A preview:** the cycle makes none (it holds no Vercel credential, D12). If your Vercel project builds branches from Git, the doctor's comment on this pull request links this branch's preview.",
     "- **Each task:** its review file and its pull request above (checks, verdict, the reviewer's notes).",
@@ -198,8 +206,9 @@ function cmdReport() {
   const prs = JSON.parse(gh(["pr", "list", "--repo", repo, "--base", branch, "--state", "merged", "--json", "number,headRefName", "--limit", "100"]) || "[]");
   const cmp = JSON.parse(gh(["api", `repos/${repo}/compare/${mainSha}...${branch}`]) || "{}");
   const paths = (cmp.files ?? []).map((f) => f.filename);
+  const fences = (cmp.files ?? []).filter((f) => /^docs\/fences\/[^/]+\.md$/.test(String(f.filename))).map((f) => ({ path: f.filename, status: f.status }));
   const stack = { ...(cfg.stack?.commands ?? {}), preview: cfg.stack?.preview ?? "" };
-  writeFileSync(arg("file"), reportText({ unit, rows, unitRows, prs, paths, total: paths.length, capped: paths.length >= 300, stack }));
+  writeFileSync(arg("file"), reportText({ unit, rows, unitRows, prs, paths, total: paths.length, capped: paths.length >= 300, stack, fences }));
   emit({ first: unit.first, last: unit.last });
 }
 

@@ -2,6 +2,14 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
+## 1.13.1 — Unreleased
+
+- **The supervisor proposes; you approve (PR-94).** Your `DEVOS_PAT` is now only in the two supervisor steps that act; it reads and reports with the workflow's own token. Its Claude Code diagnosis runs like the review, as a user of its own with no shell, and its answer is scrubbed of secret values. An issue, a revision or a continuation the diagnosis chooses is now a proposal: the supervisor's comment shows the exact text, and nothing is opened or posted until you reply `/devos approve <id>`. Only the workflow's own comments count as the supervisor's history, so a comment someone else writes on its issue cannot pose as one.
+- **Publish checks the guards itself, before anything is pushed.** It runs main's guards on the verified tree and main's secret rules on every file the run changed. A secret stops the attempt with nothing pushed; any other red guard is red in the checks, whatever the work job reported. The dependency audit stays the work job's, as publish runs no package manager.
+- **An issued fence changes only in the open.** A review that changes a fence the branch already has must raise its `Fence version`, or the change is not kept. The reviewer is told to keep an existing next fence as it is, and the verdict comment and a unit's acceptance report list the fences it wrote.
+- **Every action pinned by commit, no toolchain cache, no input inside a script.** GitHub's own actions are now pinned by commit too, the Go and uv setups keep no cache, and every workflow passes its inputs to a script through the environment.
+- **A secret finding never repeats the secret.** `guard:secrets` names the file, the line and the rule, not the line's text.
+
 ## 1.13.0 — 2026-11-09
 
 - **The cycle runs each attempt in two jobs (PR-90).** The builder and your project's checks run in a job that holds no GitHub write token, no `DEVOS_PAT` and no deployment key, and is handed only the chosen builder tool's keys; the builder sees only the one key it is using. A second job checks the work against main's rules before anything is pushed: one branch, nothing it may not change (the method, the fences, the reviews, `docs/PHASES.md`, anything outside the builder's surface), and the risk, gates and required checks taken from main. Work that fails a rule is never pushed and never reviewed, and the pull request says why.

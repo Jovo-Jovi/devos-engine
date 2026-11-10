@@ -587,7 +587,9 @@ test("two-jobs.test.mjs U8 a red check, or a required check with no result, turn
 
 test("two-jobs.test.mjs U9 devos-deploy skips a runner merge (the label, or a bot merger) and deploys a person's", { skip: windows && "a stand-in gh" }, () => {
   const deploy = read(path.join(WF, "devos-deploy.yml"));
-  const which = runBlocks(job(deploy, "which"))[0].replaceAll("${{ github.event_name }}", "push").replaceAll("${{ github.sha }}", "abc");
+  // PR-94 (I1): the event and the commit reach the script through its environment.
+  const which = runBlocks(job(deploy, "which"))[0];
+  assert.equal(which.includes("${{"), false);
   const bin = mkdtempSync(path.join(tmpdir(), "devos-gh-"));
   try {
     const decideWith = (labels, type) => {
@@ -601,7 +603,7 @@ esac
       chmodSync(path.join(bin, "gh"), 0o755);
       const outFile = path.join(bin, "out");
       writeFileSync(outFile, "");
-      const r = spawnSync("bash", ["-e", "-c", which], { encoding: "utf8", env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, GITHUB_OUTPUT: outFile, REPO: "o/r" } });
+      const r = spawnSync("bash", ["-e", "-c", which], { encoding: "utf8", env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, GITHUB_OUTPUT: outFile, REPO: "o/r", EVENT_NAME: "push", SHA: "abc" } });
       assert.equal(r.status, 0, r.stderr);
       return readFileSync(outFile, "utf8").trim();
     };

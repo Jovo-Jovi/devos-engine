@@ -77,11 +77,11 @@ jobs:
       DEVOS_REVIEWER_LIGHT_MODEL: ${{ vars.DEVOS_REVIEWER_LIGHT_MODEL }}
       DEVOS_BUILDER_MODEL: ${{ vars.DEVOS_BUILDER_MODEL }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: main
           persist-credentials: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
 
@@ -110,13 +110,14 @@ jobs:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
           VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
-        run: node scripts/devos/doctor.mjs collect --pr "${{ steps.pr.outputs.pr }}"
+          PR: ${{ steps.pr.outputs.pr }}
+        run: node scripts/devos/doctor.mjs collect --pr "$PR"
 
       # Only when a failure matches no rule, and only when Claude Code is the project's reviewer agent (PR-53): it reads
       # the logs and the code, read-only, on the model the developer chose.
       - name: Check out the PR head for the second opinion
         if: steps.c.outputs.ask_claude == 'true'
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ steps.c.outputs.sha }}
           path: pr
@@ -184,15 +185,17 @@ jobs:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
           VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+          PR: ${{ steps.pr.outputs.pr }}
+          RERAN: ${{ steps.p.outputs.reran }}
         run: |
-          gh run watch "${{ steps.p.outputs.reran }}" --repo "$REPO" --interval 30 > /dev/null || true
-          node scripts/devos/doctor.mjs collect --pr "${{ steps.pr.outputs.pr }}"
+          gh run watch "$RERAN" --repo "$REPO" --interval 30 > /dev/null || true
+          node scripts/devos/doctor.mjs collect --pr "$PR"
           node scripts/devos/doctor.mjs publish
 
       # D9: the findings and their evidence; never the second opinion's own output (claude.json, claude.err), which is
       # posted already, scrubbed, in the PR comment.
       - if: always() && steps.pr.outputs.pr != ''
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: devos-doctor-pr${{ steps.pr.outputs.pr }}
           path: |

@@ -1,7 +1,9 @@
 // guard:secrets — no credential, key, token or project ref in any committable file (Dev OS §7).
+// PR-94: a finding names the file, the line and the rule, never the line's text (a log or a comment would repeat the
+// secret). publish-verify.mjs runs these rules on every file a run changed, before any push.
 import { repoFiles, scan, result, read } from "./lib.mjs";
 
-const RULES = [
+export const RULES = [
   { re: /sk-ant-[A-Za-z0-9_-]{20,}/, label: "Anthropic key" },
   { re: /\bgh[pousr]_[A-Za-z0-9]{30,}/, label: "GitHub token" },
   { re: /\bgithub_pat_[A-Za-z0-9_]{30,}/, label: "GitHub fine-grained token" },
@@ -19,11 +21,11 @@ const RULES = [
   { re: /\b[a-f0-9]{32}\.r2\.cloudflarestorage\.com\b/, label: "R2 account endpoint (keep it in secrets)" },
   { re: /\bAIza[0-9A-Za-z_-]{35}\b/, label: "Google API key" },
 ];
-const SKIP = [/^pnpm-lock\.yaml$/, /\.(png|jpe?g|gif|webp|ico|woff2?|ttf|pdf|zip)$/i, /^scripts\/guards\/secrets\.mjs$/];
+export const SKIP = [/^pnpm-lock\.yaml$/, /\.(png|jpe?g|gif|webp|ico|woff2?|ttf|pdf|zip)$/i, /^scripts\/guards\/secrets\.mjs$/];
 
 export default function secrets() {
   const files = repoFiles().filter((f) => !SKIP.some((s) => s.test(f)));
-  const findings = scan(files, RULES, { skipComments: false });
+  const findings = scan(files, RULES, { skipComments: false, showLine: false });
   // PR-32: no workflow hands every secret to a step (GitHub holds such workflows as possibly malicious).
   for (const f of files.filter((x) => /^\.github\/workflows\/.+\.ya?ml$/.test(x))) {
     read(f).split(/\r?\n/).forEach((line, i) => {
