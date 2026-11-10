@@ -386,6 +386,10 @@ export const LOCAL = {
     "scripts/devos/unit.mjs": "E67",
     "scripts/devos/intake-request.mjs": "E64",
     "scripts/devos/pins.mjs": "E66",
+    "devos/tools/vercel/package.json": "E69",
+    "devos/tools/vercel/package-lock.json": "E69",
+    "devos/tools/firebase/package.json": "E69",
+    "devos/tools/firebase/package-lock.json": "E69",
   },
   removed: {
     ".cursor/rules/10-security-data.mdc": "E03",

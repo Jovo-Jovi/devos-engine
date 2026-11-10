@@ -12,6 +12,10 @@
 // a dispatch, a re-run, a `/devos revise`, an issue the owner approved, a rescue), REPO, EVENT_NAME, WF_NAME, WF_RUN_ID,
 // WF_CONCLUSION.
 //
+// PR-95: a run whose title names no task ("devos next") takes it from its artifacts (devos-T28-a1); the evidence is the
+// failed steps' own log (gh run view --log-failed), or the reason no log could be read. What Claude Code wrote is shown
+// only inside a fenced block under a fixed heading: no link, image or mention renders from it.
+//
 // PR-94: what Claude Code diagnoses is data. An action it chooses that writes text (an issue, a `/devos revise`) is only
 // proposed: the report shows its exact text and nothing is posted until you reply `/devos approve <id>`. Its text never
 // carries HTML, so it cannot hide a marker; only this workflow's own comments are read as the supervisor's history, and
@@ -109,16 +113,33 @@ function collect() {
   return facts;
 }
 
+/** gh's output, or the first line of why it failed (PR-95: an empty log is never silent). */
+function ghText(args) {
+  try {
+    return { out: execFileSync("gh", args, { encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], maxBuffer: 64 * 1024 * 1024 }), why: "" };
+  } catch (e) {
+    return { out: "", why: String(e.stderr || e.message).split("\n").find((l) => l.trim()) || "gh failed" };
+  }
+}
+/** The lines that matter: up to the last error line (not the clean-up after it), plus outside failures further up. */
+function tailOf(log, keep = 160) {
+  const lines = String(log).replace(/\x1b\[[0-9;]*m/g, "").split("\n");
+  let end = lines.length;
+  for (let k = lines.length - 1; k >= 0; k -= 1) if (/##\[error\]/.test(lines[k])) { end = Math.min(lines.length, k + 6); break; }
+  const shown = lines.slice(Math.max(0, end - keep), end);
+  const hits = lines.slice(0, Math.max(0, end - keep)).filter((l) => ENV_RE.test(l) || FONTS_RE.test(l)).slice(-10);
+  return [...hits, ...shown].join("\n");
+}
 function failingStep(runId) {
   const jobs = api(`repos/${REPO}/actions/runs/${runId}/jobs`)?.jobs || [];
   for (const j of jobs) {
     const step = (j.steps || []).find((s) => s.conclusion === "failure" || s.conclusion === "timed_out" || s.conclusion === "cancelled");
     if (j.conclusion === "failure" || step) {
-      const log = gh(["api", `repos/${REPO}/actions/jobs/${j.id}/logs`], { allowFail: true });
-      const lines = log.replace(/\x1b\[[0-9;]*m/g, "").split("\n");
-      // The last lines, plus any earlier line that names an outside failure (a retry loop can push it up).
-      const hits = lines.slice(0, -160).filter((l) => ENV_RE.test(l) || FONTS_RE.test(l)).slice(-10);
-      const tail = [...hits, ...lines.slice(-160)].join("\n");
+      // PR-95: the failed steps' log first (gh's own reader of the run's logs), then the job's; if neither can be read,
+      // the evidence says why instead of being empty.
+      const failed = ghText(["run", "view", String(runId), "--repo", REPO, "--log-failed"]);
+      const whole = failed.out.trim() ? failed : ghText(["api", `repos/${REPO}/actions/jobs/${j.id}/logs`]);
+      const tail = whole.out.trim() ? tailOf(whole.out) : `(the run's log could not be read: ${failed.why || "empty"}; ${whole.why || "empty"})`;
       return { job: j.name, step: step?.name || "", tail };
     }
   }
@@ -188,6 +209,21 @@ const stoppedRun = (conclusion, runId) => conclusion === "failure" || (conclusio
 
 const taskOf = (s) => (String(s).match(/\bT\d\d\b/) || [""])[0];
 const attemptOf = (s) => Number((String(s).match(/attempt (\d+)/) || [0, 0])[1]) || 0;
+/** PR-95 (C5): a run's task and attempt from its title, or else from its artifacts' names (devos-T28-a1, devos-T28-a1-work). */
+function runTask(title, artifactNames = []) {
+  const task = taskOf(title);
+  if (task) return { task, attempt: attemptOf(title) };
+  for (const n of artifactNames) {
+    const m = /^devos-(T\d\d)-a(\d+)(?:-|$)/.exec(String(n));
+    if (m) return { task: m[1], attempt: Number(m[2]) };
+  }
+  return { task: "", attempt: attemptOf(title) };
+}
+const taskOfRun = (r) => {
+  if (taskOf(r.title)) return runTask(r.title);
+  const a = api(`repos/${REPO}/actions/runs/${r.id}/artifacts?per_page=20`);
+  return runTask(r.title, (a?.artifacts ?? []).map((x) => x.name));
+};
 
 // ---------- incident rules (cheap first; Claude only for what no rule explains) ----------
 const ENV_RE = /ECONNRESET|ETIMEDOUT|EAI_AGAIN|Could not resolve host|50[234] (Bad Gateway|Service Unavailable|Gateway Timeout)|rate limit exceeded|toomanyrequests|failed to pull|registry\.npmjs\.org.*(timeout|ECONN)|The operation was canceled|runner has received a shutdown signal|lost communication with the server/i;
@@ -228,8 +264,8 @@ function detect(facts) {
   }
 
   for (const r of failedRuns) {
-    const task = taskOf(r.title), attempt = attemptOf(r.title);
-    const later = facts.runs.find((x) => taskOf(x.title) === task && new Date(x.created) > new Date(r.created));
+    const { task, attempt } = taskOfRun(r);
+    const later = facts.runs.find((x) => (taskOf(x.title) === task || (!taskOf(x.title) && task)) && new Date(x.created) > new Date(r.created));
     if (later) continue;
     const f = failingStep(r.id);
     const base = { kind: "runner-failure", task, attempt, run: r.id, url: r.url, step: f.step, evidence: f.tail.slice(-6000), review_only: /review only/i.test(r.title) };
@@ -464,17 +500,20 @@ function report(issue, i, outcome) {
   const icon = outcome.pending ? "🟠" : outcome.done ? "🟢" : outcome.escalate ? "🔴" : "🟡";
   const p = outcome.pending;
   const proposal = !p ? "" : p.kind === "issue"
-    ? `\n**Proposed issue (${p.label}), exactly as it would be opened:**\n\nTitle: ${p.title}\n\n${fenced(p.body)}`
+    ? `\n**Proposed issue (${p.label}), exactly as it would be opened:**\n\n${fenced(`Title: ${p.title}\n\n${p.body}`)}`
     : `\n**Proposed comment on PR #${p.pr}, exactly as it would be posted:**\n\n${fenced(p.kind === "continue" ? p.text : `/devos revise ${p.note} (Approved by the owner from the Dev OS supervisor, ${i.id}.)`)}`;
   const lines = [
     `### ${icon} Dev OS supervisor · ${i.task || "—"}${i.attempt ? ` · attempt ${i.attempt}` : ""} · ${i.kind}`,
     "",
-    `**What happened:** ${i.cause || "unknown"}${i.url ? ` ([run](${i.url}))` : ""}${i.pr ? ` · PR #${i.pr}` : ""}`,
-    i.explanation ? `\n**Diagnosis (Claude):** ${i.explanation}` : "",
+    // PR-95 (F1): what Claude Code wrote stays inside one fenced block, so nothing in it renders or notifies anyone.
+    `**What happened:** ${i.ai ? "see Claude's reading below" : i.cause || "unknown"}${i.url ? ` ([run](${i.url}))` : ""}${i.pr ? ` · PR #${i.pr}` : ""}`,
+    i.ai ? `\n**Claude's reading of the logs** (unverified: the logs include text the builder wrote):\n\n${fenced([
+      i.cause ? `Cause: ${i.cause}` : "", i.explanation, i.owner_steps ? `Steps it suggests:\n${i.owner_steps}` : "",
+    ].filter(Boolean).join("\n\n"))}` : "",
     `\n**What I did:** ${outcome.note}`,
     proposal,
     outcome.pending ? `\n**Needs your approval:** reply \`/devos approve ${i.id}\` to do it, or \`/devos reject ${i.id}\`.` : "",
-    i.owner_steps ? `\n**Steps for you:**\n${i.owner_steps}` : "",
+    !i.ai && i.owner_steps ? `\n**Steps for you:**\n${i.owner_steps}` : "",
     "",
     marker(mark),
   ].filter((l) => l !== "");

@@ -1,0 +1,8 @@
+{
+  "name": "devos-deploy-vercel",
+  "private": true,
+  "description": "PR-95: the deploy's vercel at the version devos.config.json pins (tool_versions), its whole tree locked here. devos-deploy installs it with npm ci --ignore-scripts, in a step that holds no secret.",
+  "dependencies": {
+    "vercel": "65.2.0"
+  }
+}

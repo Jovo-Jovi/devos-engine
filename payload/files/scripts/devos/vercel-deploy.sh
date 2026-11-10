@@ -9,6 +9,7 @@
 # Fails (exit 1, no output on stdout) unless Vercel returned a deployment URL.
 # Usage: VERCEL_TOKEN=… bash scripts/devos/vercel-deploy.sh <branch> [--prod]
 #        DEVOS_VERCEL_LOG=<file> appends the CLI's log there (default: stderr).
+#        DEVOS_VERCEL_BIN=<path> runs that CLI (devos-deploy: the one locked in devos/tools/vercel, PR-95).
 set -euo pipefail
 branch="${1:?usage: vercel-deploy.sh <branch> [--prod]}"
 shift
@@ -18,15 +19,22 @@ cd "$root"
 sha=$(git rev-parse HEAD)
 log="${DEVOS_VERCEL_LOG:-/dev/stderr}"
 [ -d .vercel/output ] || { echo "vercel-deploy: .vercel/output does not exist; run vercel build first" >&2; exit 1; }
-# PR-93: the Vercel CLI at the version devos.config.json pins, never latest.
-vercel=$(node scripts/devos/pins.mjs vercel)
+# PR-95: the CLI devos-deploy installed from devos/tools/vercel; else (a run by hand) PR-93's pinned version, never latest.
+if [ -n "${DEVOS_VERCEL_BIN:-}" ]; then
+  [ -x "$DEVOS_VERCEL_BIN" ] || { echo "vercel-deploy: DEVOS_VERCEL_BIN is not an executable: $DEVOS_VERCEL_BIN" >&2; exit 1; }
+  cli=("$DEVOS_VERCEL_BIN")
+else
+  vercel=$(node scripts/devos/pins.mjs vercel)
+  cli=(npx --yes "$vercel"
+  )
+fi
 
 aside="$(dirname "$root")/.devos-git-aside-$$"
 mv .git "$aside"
 trap 'mv "$aside" "$root/.git"' EXIT
 
 set +e
-out=$(timeout 300 npx --yes "$vercel" deploy --prebuilt "$@" --token="$VERCEL_TOKEN" \
+out=$(timeout 300 "${cli[@]}" deploy --prebuilt "$@" --token="$VERCEL_TOKEN" \
   --meta devosBranch="$branch" --meta devosSha="$sha" < /dev/null 2>>"$log")
 rc=$?
 set -e

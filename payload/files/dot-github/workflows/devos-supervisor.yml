@@ -31,6 +31,11 @@ on:
         description: "Only report what it would do"
         type: boolean
         default: false
+      # PR-95 (C4): the cycle run that started this one; the scan waits for it to finish.
+      after_run:
+        description: "A cycle run to wait for before the scan (its run id)"
+        type: string
+        default: ""
 
 concurrency:
   group: devos-supervisor
@@ -90,6 +95,20 @@ jobs:
           BODY: ${{ github.event.comment.body }}
           OWNER_TOKEN: ${{ secrets.DEVOS_PAT || github.token }}
         run: node scripts/devos/supervisor.mjs approve --body "$BODY"
+
+      # PR-95 (C4): started by a cycle run that failed (its notify-supervisor job): wait, at most 5 minutes, until that run
+      # has finished, so the scan sees how it ended.
+      - name: Wait for the cycle run that called
+        if: github.event_name == 'workflow_dispatch' && inputs.after_run != ''
+        env:
+          AFTER_RUN: ${{ inputs.after_run }}
+        run: |
+          case "$AFTER_RUN" in ''|*[!0-9]*) echo "::error title=Dev OS::after_run must be a run id"; exit 1;; esac
+          for _ in $(seq 1 30); do
+            [ "$(gh api "repos/$REPO/actions/runs/$AFTER_RUN" --jq .status 2>/dev/null || true)" = "completed" ] && exit 0
+            sleep 10
+          done
+          echo "::warning title=Dev OS::run $AFTER_RUN had not finished after 5 minutes; the scan goes ahead"
 
       - name: Scan — what has stopped, and why (fixed rules)
         id: scan
