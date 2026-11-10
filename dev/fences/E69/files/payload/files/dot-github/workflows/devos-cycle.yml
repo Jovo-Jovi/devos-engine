@@ -1,0 +1,1197 @@
+# Dev OS automated cycle. One run = one task attempt, in two jobs (PR-90):
+#   resolve (main's code: the task, the settings, the builder from the pool)
+#   → work (.github/workflows/devos-work.yml, untrusted: the builder agent and the project's checks; no write token)
+#   → publish (trusted: verifies the work job's git bundle against main's rules, runs the one review as its own user with
+#     no shell, decides with verdict.mjs, pushes, then merge | human gate | retry | halt)
+# The agents and models are the ones the developer chose (agents in devos.config.json, PR-53): no other is installed or used.
+# Start it from Actions → devos-cycle → Run workflow (inputs blank = next open task).
+# The fence chooses the builder's effort/fast. The screenshots come from the work job's local build; a preview for people
+# comes from Vercel's own Git integration for the branch (PR-90: the cycle holds no Vercel token). A usage-limit wait is
+# resumed by the wait-and-resume job below (up to ~5.5 h) and otherwise by devos-resume.
+name: devos-cycle
+run-name: "devos ${{ inputs.task || 'next' }} · attempt ${{ inputs.attempt || '1' }}${{ inputs.review_only && ' · review only' || '' }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      task:
+        description: "Task id, e.g. T03 (blank = next open task in docs/PHASES.md; link = no task, only ask the DEV_OS registry for the link, PR-65)"
+        required: false
+        default: ""
+      attempt:
+        description: "Attempt number (1 for a first run)"
+        required: false
+        default: "1"
+      review_only:
+        description: "Re-run only the reviewer on the existing task branch (after a reviewer/infra failure)"
+        type: boolean
+        required: false
+        default: false
+      effort:
+        description: "Builder effort (fence = use the reviewer's choice in the fence)"
+        type: choice
+        options: [fence, low, medium, high, xhigh]
+        default: fence
+      fast:
+        description: "Cursor Fast mode (fence = use the reviewer's choice in the fence)"
+        type: choice
+        options: [fence, "no", "yes"]
+        default: fence
+      revision:
+        description: "Set by /devos revise: a human revision may go past max_attempts"
+        type: boolean
+        required: false
+        default: false
+      reuse_review:
+        description: "With review_only: keep the review file this attempt already wrote and only re-decide (PR-21)"
+        type: boolean
+        required: false
+        default: false
+      go:
+        description: "Start now even if DEVOS_HEAVY=hold would hold this heavy task (PR-20)"
+        type: boolean
+        required: false
+        default: false
+      cursor_account:
+        description: "Cursor account to start with (default = variable DEVOS_CURSOR_ACCOUNT, else 1). On a usage limit the run switches to the other (PR-29)"
+        type: choice
+        options: [default, "1", "2"]
+        default: default
+      claude_account:
+        description: "Claude account to start with (default = variable DEVOS_CLAUDE_ACCOUNT, else 1). On a usage limit the run switches to the other (PR-29)"
+        type: choice
+        options: [default, "1", "2"]
+        default: default
+
+concurrency:
+  group: devos-cycle
+  cancel-in-progress: false
+
+# PR-90: each job says what it may do. Only publish writes code, pull requests and statuses.
+permissions:
+  contents: read
+
+jobs:
+  resolve:
+    if: vars.DEVOS_PAUSED != 'true'
+    runs-on: ubuntu-latest
+    # PR-91: contents: write only to merge main into the open unit (GitHub's merge API: main's commits, never onto main).
+    # It runs main's scripts and GitHub's own actions pinned by commit, and reads the unit's files as data.
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: read
+      actions: write
+    outputs:
+      done: ${{ steps.t.outputs.done }}
+      task: ${{ steps.t.outputs.task }}
+      name: ${{ steps.t.outputs.name }}
+      risk: ${{ steps.t.outputs.risk }}
+      attempt: ${{ steps.t.outputs.attempt }}
+      branch: ${{ steps.t.outputs.branch }}
+      builder_model: ${{ steps.t.outputs.builder_model }}
+      reviewer_model: ${{ steps.t.outputs.reviewer_model }}
+      reviewer_max_turns: ${{ steps.t.outputs.reviewer_max_turns }}
+      reviewer_effort: ${{ steps.t.outputs.reviewer_effort }}
+      reviewer_fallback: ${{ steps.t.outputs.reviewer_fallback }}
+      held: ${{ steps.heavy.outputs.held }}
+      blocked: ${{ steps.setup.outputs.blocked }}
+      method: ${{ steps.t.outputs.method }}
+      builder_tool: ${{ steps.ag.outputs.builder_tool }}
+      builder_id: ${{ steps.ag.outputs.builder_id }}
+      pick_model: ${{ steps.ag.outputs.builder_model }}
+      builder_fallbacks: ${{ steps.ag.outputs.builder_fallbacks }}
+      builder_note: ${{ steps.ag.outputs.builder_note }}
+      media: ${{ steps.media.outputs.media }}
+      # PR-91: where the task is built (base, base_sha, a new unit), or what the run does instead (accept, waiting).
+      build: ${{ steps.place.outputs.build }}
+      base: ${{ steps.place.outputs.base }}
+      base_sha: ${{ steps.sync.outputs.base_sha || steps.place.outputs.base_sha }}
+      unit: ${{ steps.place.outputs.unit }}
+      unit_new: ${{ steps.place.outputs.unit_new }}
+      unit_first: ${{ steps.place.outputs.unit_first }}
+      unit_last: ${{ steps.place.outputs.unit_last }}
+      unit_sha: ${{ steps.unit.outputs.unit_sha }}
+      accept: ${{ steps.place.outputs.accept }}
+      waiting: ${{ steps.place.outputs.waiting }}
+    env:
+      # PR-63: a role's model from a repository variable (same tool); unset = the configured model.
+      DEVOS_REVIEWER_MODEL: ${{ vars.DEVOS_REVIEWER_MODEL }}
+      DEVOS_REVIEWER_LIGHT_MODEL: ${{ vars.DEVOS_REVIEWER_LIGHT_MODEL }}
+      DEVOS_BUILDER_MODEL: ${{ vars.DEVOS_BUILDER_MODEL }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      # PR-91: the open unit. Its tasks' progress and fences are on its branch until your merge; main's code reads them.
+      - name: The open unit (PR-91)
+        id: unit
+        if: inputs.task != 'link'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: node scripts/devos/unit.mjs open --repo "$REPO"
+      - name: The open unit's fences
+        if: steps.unit.outputs.unit != ''
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ steps.unit.outputs.unit }}
+          path: .devos/unit/tree
+          persist-credentials: false
+          sparse-checkout: docs/fences
+      - if: steps.unit.outputs.unit != ''
+        run: cp -R .devos/unit/tree/docs/fences/. docs/fences/
+      - id: t
+        env:
+          UNIT_PHASES: ${{ steps.unit.outputs.unit_phases }}
+          # PR-94: an input reaches a script only through the environment, never as text inside it (I1).
+          IN_TASK: ${{ inputs.task }}
+          IN_ATTEMPT: ${{ inputs.attempt }}
+          IN_REVISION: ${{ inputs.revision }}
+        run: node scripts/devos/next-task.mjs --task "$IN_TASK" --attempt "$IN_ATTEMPT" --revision "$IN_REVISION" ${UNIT_PHASES:+--unit-phases "$UNIT_PHASES"}
+      - name: Where the task is built (PR-91)
+        id: place
+        if: inputs.task != 'link'
+        env:
+          TASK: ${{ steps.t.outputs.task }}
+          MAIN_SHA: ${{ github.sha }}
+        run: node scripts/devos/unit.mjs place --main-sha "$MAIN_SHA" --task "$TASK"
+      - if: steps.place.outputs.waiting == 'true'
+        env:
+          NOTE: ${{ steps.place.outputs.note }}
+        run: echo "::notice title=Dev OS::$NOTE"
+      # PR-91: an open unit takes main's later commits (method fixes, your merges) before its next task is built, so the
+      # task runs main's scripts and rules. They are already on main; nothing moves onto main. A conflict stops the run.
+      - name: Bring main into the open unit (PR-91)
+        id: sync
+        if: steps.place.outputs.build == 'true' && steps.place.outputs.unit_new == 'false' && steps.place.outputs.base != 'main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          BASE: ${{ steps.place.outputs.base }}
+          MAIN_SHA: ${{ github.sha }}
+        run: |
+          set +e
+          out=$(gh api "repos/$REPO/merges" -f base="$BASE" -f head="$MAIN_SHA" -f commit_message="Merge main into $BASE (PR-91)" 2>&1); rc=$?
+          set -e
+          if [ "$rc" != "0" ]; then
+            echo "::error title=Dev OS::main does not merge into the open unit $BASE: ${out:0:300}. Merge main into it by hand (git switch $BASE, git merge origin/main, resolve, push), then run the cycle again."
+            exit 1
+          fi
+          sha=$(printf '%s' "$out" | node -e 'let s="";process.stdin.on("data",(d)=>{s+=d}).on("end",()=>{try{console.log(JSON.parse(s).sha||"")}catch{console.log("")}})')
+          if [ -n "$sha" ]; then
+            echo "base_sha=$sha" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Dev OS::main merged into $BASE (${sha:0:12}) before this task."
+          fi
+      - if: steps.t.outputs.done == 'true' && inputs.task != 'link' && steps.place.outputs.accept != 'true' && steps.place.outputs.waiting != 'true'
+        run: echo "::notice title=Dev OS::Every task in docs/PHASES.md is PASS. Nothing to run."
+      - if: steps.t.outputs.done == 'true' && inputs.task == 'link'
+        run: echo "::notice title=Dev OS::A link run, with no task. With DEVOS_REPORTING on, the report job asks the DEV_OS registry to link this repository."
+      # PR-27: a run that cannot work (no builder or reviewer credential, no runner token for a method
+      # fix) does not start. The setup issue gets the steps, and this run resumes when they are done.
+      - name: Settings the cycle needs (PR-27)
+        id: setup
+        if: steps.place.outputs.build == 'true'
+        env:
+          # PR-32: only whether each credential is set ("1" or empty), never its value. Handing every
+          # secret to a step (toJSON(secrets)) made GitHub hold the cycle as possibly malicious.
+          SECRETS_JSON: >-
+            {
+              "CURSOR_API_KEY":"${{ secrets.CURSOR_API_KEY != '' && '1' || '' }}",
+              "CURSOR_API_KEY_2":"${{ secrets.CURSOR_API_KEY_2 != '' && '1' || '' }}",
+              "CLAUDE_CODE_OAUTH_TOKEN":"${{ secrets.CLAUDE_CODE_OAUTH_TOKEN != '' && '1' || '' }}",
+              "CLAUDE_CODE_OAUTH_TOKEN_2":"${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 != '' && '1' || '' }}",
+              "ANTHROPIC_API_KEY":"${{ secrets.ANTHROPIC_API_KEY != '' && '1' || '' }}",
+              "ANTHROPIC_API_KEY_2":"${{ secrets.ANTHROPIC_API_KEY_2 != '' && '1' || '' }}",
+              "OPENAI_API_KEY":"${{ secrets.OPENAI_API_KEY != '' && '1' || '' }}",
+              "OPENAI_API_KEY_2":"${{ secrets.OPENAI_API_KEY_2 != '' && '1' || '' }}",
+              "GEMINI_API_KEY":"${{ secrets.GEMINI_API_KEY != '' && '1' || '' }}",
+              "GEMINI_API_KEY_2":"${{ secrets.GEMINI_API_KEY_2 != '' && '1' || '' }}",
+              "DEVOS_PAT":"${{ secrets.DEVOS_PAT != '' && '1' || '' }}"
+            }
+          VARS_JSON: ${{ toJSON(vars) }}
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          T_TASK: ${{ steps.t.outputs.task }}
+          T_ATTEMPT: ${{ steps.t.outputs.attempt }}
+          IN_REVIEW_ONLY: ${{ inputs.review_only && 'true' || 'false' }}
+        run: |
+          if node scripts/devos/setup-check.mjs --for cycle > .setup-check.log 2>&1; then
+            echo "blocked=false" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          cat .setup-check.log
+          echo "blocked=true" >> "$GITHUB_OUTPUT"
+          missing=$(node -e 'console.log(require("./.devos/setup-result.json").missing_required.join(", "))')
+          node scripts/devos/setup-issue.mjs wait --task "$T_TASK" --attempt "$T_ATTEMPT" \
+            --review-only "$IN_REVIEW_ONLY" --reason "the cycle needs settings that are missing ($missing)"
+          echo "::warning title=Dev OS::$T_TASK did not start: missing settings ($missing). See the 'Dev OS: setup needed' issue."
+      - name: Heavy-run notice, or hold (PR-20)
+        id: heavy
+        if: steps.place.outputs.build == 'true' && steps.setup.outputs.blocked != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEVOS_HEAVY: ${{ vars.DEVOS_HEAVY }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          T_TASK: ${{ steps.t.outputs.task }}
+          T_ATTEMPT: ${{ steps.t.outputs.attempt }}
+          IN_REVIEW_ONLY: ${{ inputs.review_only }}
+          IN_REVISION: ${{ inputs.revision }}
+          IN_GO: ${{ inputs.go }}
+        run: |
+          node scripts/devos/heavy.mjs --task "$T_TASK" --attempt "$T_ATTEMPT" \
+            --review-only "$IN_REVIEW_ONLY" --revision "$IN_REVISION" --go "$IN_GO"
+      - if: steps.heavy.outputs.held == 'true'
+        env:
+          T_TASK: ${{ steps.t.outputs.task }}
+        run: |
+          echo "::notice title=Dev OS::$T_TASK is heavy and DEVOS_HEAVY=hold. Comment /devos go in the run notices issue to start it."
+      # PR-90: the builder is chosen here, by main's code, so the work job is handed only that tool's keys. The review
+      # runs in publish with no shell, as its own user; Claude Code is the reviewer tool verified to work that way (D11).
+      - name: Choose the builder from the pool; the reviewer must be Claude Code
+        id: ag
+        if: steps.place.outputs.build == 'true' && steps.setup.outputs.blocked != 'true' && steps.heavy.outputs.held != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          TASK: ${{ steps.t.outputs.task }}
+          BR: ${{ steps.t.outputs.branch }}
+        run: |
+          # PR-76: a task whose PR has the devos:fallback-builder label is built by agents.fallback_builder.
+          labels=$(gh pr list --repo "$REPO" --head "$BR" --state open --json labels --jq '[.[0].labels[]?.name] | join(",")' 2>/dev/null || true)
+          case ",$labels," in *",devos:fallback-builder,"*) export DEVOS_FALLBACK_BUILDER=true ;; esac
+          node scripts/devos/agents.mjs pick --task "$TASK"
+          for mode in deep light; do
+            tool=$(GITHUB_OUTPUT=/dev/null node scripts/devos/agents.mjs reviewer --mode "$mode" | sed -n 's/^reviewer_tool=//p')
+            if [ "$tool" != "claude" ]; then
+              echo "::error title=Dev OS::The $mode reviewer is $tool. Since PR-90 the review runs with no shell, as its own user, and only Claude Code is verified to review that way: move the reviewer to Claude Code (devos models tool reviewer claude <model>, and devos models tool light claude <model>), then run the cycle again."
+              exit 1
+            fi
+          done
+      # PR-90: the media key goes to the work job only when the fence names media (PR-81): main's, or the open unit's,
+      # which only the reviewer writes (PR-91). The task branch cannot ask for it.
+      - name: Does the fence name media
+        id: media
+        if: steps.place.outputs.build == 'true'
+        env:
+          TASK: ${{ steps.t.outputs.task }}
+        run: |
+          node --input-type=module -e 'import { existsSync, readFileSync } from "node:fs"; import { fenceMedia } from "./scripts/devos/fence-check.mjs"; const f = `docs/fences/${process.env.TASK}.md`; const m = existsSync(f) ? fenceMedia(readFileSync(f, "utf8")) : null; console.log(`media=${m && m.length ? "true" : "false"}`);' >> "$GITHUB_OUTPUT"
+
+  # The untrusted job (PR-90), in its own workflow so that GitHub hands it only the secrets passed here: the chosen
+  # builder tool's keys, and the media key when the fence names media. Its token can only read; everything it makes is
+  # evidence for publish. PR-91: it starts from the task's base (main for a method fix, else the unit's branch).
+  work:
+    needs: resolve
+    if: needs.resolve.outputs.done == 'false' && needs.resolve.outputs.build == 'true' && needs.resolve.outputs.held != 'true' && needs.resolve.outputs.blocked != 'true'
+    permissions:
+      contents: read
+    uses: ./.github/workflows/devos-work.yml
+    with:
+      task: ${{ needs.resolve.outputs.task }}
+      name: ${{ needs.resolve.outputs.name }}
+      risk: ${{ needs.resolve.outputs.risk }}
+      attempt: ${{ needs.resolve.outputs.attempt }}
+      branch: ${{ needs.resolve.outputs.branch }}
+      method: ${{ needs.resolve.outputs.method }}
+      main_sha: ${{ needs.resolve.outputs.base_sha || github.sha }}
+      base: ${{ needs.resolve.outputs.base || 'main' }}
+      review_only: ${{ inputs.review_only == true }}
+      effort: ${{ inputs.effort || 'fence' }}
+      fast: ${{ inputs.fast || 'fence' }}
+      cursor_account: ${{ (inputs.cursor_account != 'default' && inputs.cursor_account) || vars.DEVOS_CURSOR_ACCOUNT || '1' }}
+      claude_account: ${{ (inputs.claude_account != 'default' && inputs.claude_account) || vars.DEVOS_CLAUDE_ACCOUNT || '1' }}
+      builder_tool: ${{ needs.resolve.outputs.builder_tool }}
+      builder_id: ${{ needs.resolve.outputs.builder_id }}
+      builder_model: ${{ needs.resolve.outputs.pick_model }}
+      builder_fallbacks: ${{ needs.resolve.outputs.builder_fallbacks }}
+      builder_note: ${{ needs.resolve.outputs.builder_note }}
+    secrets:
+      KEY_1: ${{ (needs.resolve.outputs.builder_tool == 'cursor' && secrets.CURSOR_API_KEY) || (needs.resolve.outputs.builder_tool == 'claude' && secrets.CLAUDE_CODE_OAUTH_TOKEN) || (needs.resolve.outputs.builder_tool == 'codex' && secrets.OPENAI_API_KEY) || (needs.resolve.outputs.builder_tool == 'gemini' && secrets.GEMINI_API_KEY) || '' }}
+      KEY_2: ${{ (needs.resolve.outputs.builder_tool == 'cursor' && secrets.CURSOR_API_KEY_2) || (needs.resolve.outputs.builder_tool == 'claude' && secrets.CLAUDE_CODE_OAUTH_TOKEN_2) || (needs.resolve.outputs.builder_tool == 'codex' && secrets.OPENAI_API_KEY_2) || (needs.resolve.outputs.builder_tool == 'gemini' && secrets.GEMINI_API_KEY_2) || '' }}
+      ALT_1: ${{ needs.resolve.outputs.builder_tool == 'claude' && secrets.ANTHROPIC_API_KEY || '' }}
+      ALT_2: ${{ needs.resolve.outputs.builder_tool == 'claude' && secrets.ANTHROPIC_API_KEY_2 || '' }}
+      MEDIA_KEY: ${{ needs.resolve.outputs.media == 'true' && secrets.DEVOS_MEDIA_XAI_KEY || '' }}
+
+  # The trusted job (PR-90). It checks out only main, runs only main's scripts (trusted/), uses only GitHub's own actions
+  # pinned by commit, and never runs the branch's code, a project script, a dependency, a hook or another action. Every
+  # git operation is publish-verify.mjs's, in a repository it creates. Nothing the work job says is taken as a decision.
+  publish:
+    needs: [resolve, work]
+    # PR-91: it also runs, with no work job, to open a complete unit's acceptance pull request.
+    if: always() && needs.resolve.result == 'success' && ((needs.resolve.outputs.done == 'false' && needs.resolve.outputs.held != 'true' && needs.resolve.outputs.blocked != 'true' && needs.work.result != 'skipped' && needs.work.result != 'cancelled') || needs.resolve.outputs.accept == 'true')
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      actions: write
+      statuses: write
+    outputs:
+      park_task: ${{ steps.park.outputs.task }}
+      park_attempt: ${{ steps.park.outputs.attempt }}
+      park_review_only: ${{ steps.park.outputs.review_only }}
+      park_not_before: ${{ steps.park.outputs.not_before }}
+      park_revision: ${{ steps.park.outputs.revision }}
+      park_pr: ${{ steps.park.outputs.pr }}
+      branch: ${{ needs.resolve.outputs.branch }}
+      # The report job takes the record by this id: a name the work job could claim first proves nothing.
+      record_id: ${{ steps.record.outputs.artifact-id }}
+    env:
+      DEVOS_AUTOMATED: "1"
+      TASK: ${{ needs.resolve.outputs.task }}
+      NAME: ${{ needs.resolve.outputs.name }}
+      RISK: ${{ needs.resolve.outputs.risk }}
+      ATTEMPT: ${{ needs.resolve.outputs.attempt }}
+      BR: ${{ needs.resolve.outputs.branch }}
+      REPO: ${{ github.repository }}
+      REVIEW_ONLY: ${{ inputs.review_only && 'true' || 'false' }}
+      REVISION: ${{ inputs.revision && 'true' || 'false' }}
+      METHOD: ${{ needs.resolve.outputs.method }}
+      MAIN_SHA: ${{ github.sha }}
+      # PR-91: the task's base (main for a method fix, else its unit's branch) and the base's commit at the run's start.
+      BASE: ${{ needs.resolve.outputs.base || 'main' }}
+      BASE_SHA: ${{ needs.resolve.outputs.base_sha || github.sha }}
+      DEVOS_BASE: ${{ needs.resolve.outputs.base || 'main' }}
+      UNIT_NEW: ${{ needs.resolve.outputs.unit_new || 'false' }}
+      DEVOS_CLAUDE_ACCOUNT: ${{ (inputs.claude_account != 'default' && inputs.claude_account) || vars.DEVOS_CLAUDE_ACCOUNT || '1' }}
+      DEVOS_ACCOUNT_SWITCH: ${{ vars.DEVOS_ACCOUNT_SWITCH || 'auto' }}
+      # PR-63: a role's model from a repository variable (same tool); unset = the configured model.
+      DEVOS_REVIEWER_MODEL: ${{ vars.DEVOS_REVIEWER_MODEL }}
+      DEVOS_REVIEWER_LIGHT_MODEL: ${{ vars.DEVOS_REVIEWER_LIGHT_MODEL }}
+      # Main's scripts (T), publish's workspace (OUT; D is the verified tree with main's method files laid over it), the
+      # work job's output (W) and the review's workspace (RW).
+      T: ${{ github.workspace }}/trusted/scripts/devos
+      DEVOS_SCRIPTS: ${{ github.workspace }}/trusted/scripts/devos
+      OUT: ${{ github.workspace }}/publish
+      D: ${{ github.workspace }}/publish/decide
+      W: ${{ github.workspace }}/work-out
+      RW: /opt/devos-review-work
+    steps:
+      - name: Check out main at this run's commit (publish's only checkout)
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ github.sha }}
+          path: trusted
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+
+      # U4: only this run's artifact, by the name bound to the task and attempt.
+      - name: The work job's bundle and evidence
+        if: needs.resolve.outputs.accept != 'true'
+        continue-on-error: true
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: devos-${{ needs.resolve.outputs.task }}-a${{ needs.resolve.outputs.attempt }}-work
+          path: ${{ github.workspace }}/work-out
+
+      - name: Verify the bundle (main's rules, publish's own diff)
+        id: vb
+        if: needs.resolve.outputs.accept != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEVOS_GIT_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.run_id }}
+          W_EXIT: ${{ needs.work.outputs.exit }}
+          W_MODEL: ${{ needs.work.outputs.model }}
+          W_EFFORT: ${{ needs.work.outputs.effort }}
+          W_FAST: ${{ needs.work.outputs.fast }}
+          WORK_RESULT: ${{ needs.work.result }}
+          # PR-94 (N6): the model ids this run chose (main's code) and the variable, against which the work job's is kept.
+          TRUSTED_MODELS: ${{ needs.resolve.outputs.pick_model }} ${{ needs.resolve.outputs.builder_model }} ${{ needs.resolve.outputs.builder_fallbacks }} ${{ vars.DEVOS_BUILDER_MODEL }}
+        run: |
+          name="devos-$TASK-a$ATTEMPT-work"
+          count=$(gh api "repos/$REPO/actions/runs/$RUN_ID/artifacts?name=$name" --jq '.total_count' 2>/dev/null || echo "unknown")
+          if [ "$count" != "0" ] && [ "$count" != "1" ]; then
+            mkdir -p "$OUT"; printf '{"ok":false,"reasons":["this run has %s artifacts named %s; exactly one is allowed"]}\n' "$count" "$name" > "$OUT/verify.json"
+            echo "::error title=Dev OS::$count artifacts named $name in this run; nothing is pushed"; exit 1
+          fi
+          builder=true; [ "$REVIEW_ONLY" = "true" ] && builder=false
+          bundle=""; [ -f "$W/branch.bundle" ] && bundle="$W/branch.bundle"
+          if [ "$WORK_RESULT" != "success" ] && [ -z "$bundle" ] && [ "$builder" = "true" ]; then
+            mkdir -p "$OUT"; printf '{"ok":false,"reasons":["the work job failed before it handed over its work: see its log"]}\n' > "$OUT/verify.json"
+            echo "::error title=Dev OS::the work job failed before it handed over its work; nothing is pushed"; exit 1
+          fi
+          node "$T/publish-verify.mjs" verify --task "$TASK" --attempt "$ATTEMPT" --branch "$BR" --main-sha "$BASE_SHA" --base "$BASE" \
+            --out "$OUT" ${bundle:+--bundle "$bundle"} --builder "$builder" --exit "$W_EXIT" --model "$W_MODEL" --effort "$W_EFFORT" --fast "$W_FAST" \
+            --trusted-models "$TRUSTED_MODELS"
+
+      # PR-94 (N2): main's guards on the verified tree (no secret, no package manager), and main's secret rules on every
+      # file this run changed, before anything is pushed. A secret, or guards that do not finish, reject the bundle here;
+      # every other guard result is red or green in the checks below, whatever the work job reported.
+      - name: Main's guards, before any push
+        id: pg
+        if: needs.resolve.outputs.accept != 'true'
+        run: node "$T/publish-verify.mjs" guards --out "$OUT"
+
+      - name: Rejected by publish — nothing pushed, no review
+        if: always() && (steps.vb.outcome == 'failure' || steps.pg.outcome == 'failure')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          node --input-type=module - > "$RUNNER_TEMP/rejected.md" <<'EOF'
+          import { readFileSync } from "node:fs";
+          let reasons = [];
+          try { reasons = JSON.parse(readFileSync(`${process.env.OUT}/verify.json`, "utf8")).reasons ?? []; } catch { reasons = ["the verification could not finish (see the run log)"]; }
+          const code = (r) => "`" + String(r).replaceAll("`", "'") + "`";
+          const { TASK: task, ATTEMPT: attempt, RUN_URL: run } = process.env;
+          process.stdout.write([`### Dev OS ${task} · attempt ${attempt} · rejected before review`, "",
+            "The publish job did not accept the work job's bundle, so nothing was pushed and no review ran (PR-90):", "",
+            ...reasons.map((r) => `- ${code(r)}`), "", `Run: ${run}. The task stops here: fix the cause, then re-run devos-cycle with task=${task}.`, ""].join("\n"));
+          EOF
+          cat "$RUNNER_TEMP/rejected.md" >> "$GITHUB_STEP_SUMMARY"
+          PRN=$(gh pr list --repo "$REPO" --head "$BR" --state open --json number --jq '.[0].number // empty')
+          if [ -n "$PRN" ]; then
+            gh pr comment "$PRN" --repo "$REPO" --body-file "$RUNNER_TEMP/rejected.md" || true
+            gh pr edit "$PRN" --repo "$REPO" --add-label "devos:halted" || true
+            head=$(gh pr view "$PRN" --repo "$REPO" --json headRefOid --jq .headRefOid)
+            gh api "repos/$REPO/statuses/$head" -f state=failure -f context=devos/verdict -f description="Rejected by publish: see the PR comment" >/dev/null || true
+          fi
+          echo "::error title=Dev OS::$TASK attempt $ATTEMPT: the bundle was rejected; nothing was pushed."
+          exit 1
+
+      - name: The builder's outcome, within main's limits
+        id: bs
+        if: needs.resolve.outputs.accept != 'true'
+        env:
+          CLAIMED: ${{ needs.work.outputs.state }}
+          NOT_BEFORE: ${{ needs.work.outputs.not_before }}
+          PICKED: ${{ needs.resolve.outputs.builder_id }}
+          WORK_RESULT: ${{ needs.work.result }}
+        run: |
+          claimed="$CLAIMED"
+          # A work job that failed after its builder is not reviewed (as a runner failure never was).
+          if [ "$WORK_RESULT" != "success" ] && [ "$claimed" = "ok" ]; then claimed=error; echo "the work job failed after its builder: no review"; fi
+          node "$T/publish-verify.mjs" state --out "$OUT" --claimed "${claimed:-error}" --not-before "$NOT_BEFORE" --picked "$PICKED"
+
+      # PR-52: the builder runs' usage records, checked one by one, go in with the builder's commit.
+      - name: The builder's usage records
+        if: env.REVIEW_ONLY != 'true' && steps.bs.outcome == 'success'
+        working-directory: ${{ github.workspace }}/publish/decide
+        env:
+          DEVOS_ROOT: ${{ github.workspace }}/publish/decide
+        run: |
+          node "$T/publish-verify.mjs" usage --in "$W/evidence/usage/pending.jsonl" --dest "$D/.devos/usage/pending.jsonl"
+          node "$T/usage.mjs" flush --task "$TASK"
+          node "$T/publish-verify.mjs" commit --out "$OUT" --amend
+
+      - name: Push the builder's work
+        if: needs.resolve.outputs.accept != 'true'
+        env:
+          DEVOS_GIT_TOKEN: ${{ secrets.DEVOS_PAT || github.token }}
+        run: |
+          set +e
+          node "$T/publish-verify.mjs" push --out "$OUT" > "$OUT/push.log"; rc=$?
+          cat "$OUT/push.log"
+          missing=$(sed -n 's/^setup_missing=//p' "$OUT/push.log")
+          [ -n "$missing" ] && printf '%s\n' "$missing" > "$OUT/setup-missing"
+          exit $rc
+
+      - name: Open the pull request (or reuse it)
+        if: needs.resolve.outputs.accept != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUILDER_TOOL: ${{ needs.resolve.outputs.builder_tool }}
+        run: |
+          for l in "devos:0e8a16" "risk-1:c5def5" "risk-2:fbca04" "risk-3:d93f0b" "devos:human-gate:5319e7" "devos:halted:b60205" "devos:auto-merged:0e8a16" "devos:quota-wait:fbca04" "devos:fallback-builder:c2e0c6" "devos:setup-wait:fbca04" "devos:method:5319e7" "devos:acceptance:0e8a16"; do
+            gh label create "${l%:*}" --color "${l##*:}" --force --repo "$REPO" >/dev/null
+          done
+          # Use the OPEN PR for this branch only. A PR merged early by hand must not be reused (PR-13).
+          PRN=$(gh pr list --repo "$REPO" --head "$BR" --state open --json number --jq '.[0].number // empty')
+          # PR-91: a product task's PR targets its unit's branch, made here from main at this run's commit for a new unit.
+          if [ "$UNIT_NEW" = "true" ] && ! gh api "repos/$REPO/git/ref/heads/$BASE" >/dev/null 2>&1; then
+            gh api "repos/$REPO/git/refs" -f ref="refs/heads/$BASE" -f sha="$BASE_SHA" >/dev/null
+            echo "::notice title=Dev OS::$TASK starts the unit $BASE (from main at ${BASE_SHA:0:12})."
+          fi
+          if [ -z "$PRN" ]; then
+            gh pr create --repo "$REPO" --base "$BASE" --head "$BR" \
+              --title "$TASK — $NAME" \
+              --body "Dev OS task **$TASK** (risk $RISK). Fence: \`docs/fences/$TASK.md\`. Built by $BUILDER_TOOL, reviewed by the project's reviewer agent; the verdict is posted below by the runner. Do not merge before the verdict: the \`devos/verdict\` status turns green on PASS." \
+              --label devos --label "risk-$RISK" || echo "::notice::No PR yet (nothing differs from $BASE); it is opened after the review commit."
+            PRN=$(gh pr list --repo "$REPO" --head "$BR" --state open --json number --jq '.[0].number // empty')
+          fi
+          if [ -n "$PRN" ] && [ "$METHOD" = "true" ]; then gh pr edit "$PRN" --repo "$REPO" --add-label "devos:method" >/dev/null || true; fi
+          # PR-91: a PR opened before its unit existed (or against main) is moved onto the task's base.
+          if [ -n "$PRN" ] && [ "$(gh pr view "$PRN" --repo "$REPO" --json baseRefName --jq .baseRefName)" != "$BASE" ]; then
+            gh pr edit "$PRN" --repo "$REPO" --base "$BASE" >/dev/null
+          fi
+          echo "PRN=$PRN" >> "$GITHUB_ENV"
+          if [ -n "$PRN" ]; then
+            gh pr edit "$PRN" --repo "$REPO" --remove-label "devos:halted" >/dev/null 2>&1 || true
+            gh pr edit "$PRN" --repo "$REPO" --remove-label "devos:quota-wait" >/dev/null 2>&1 || true
+          fi
+          echo "PRN=$PRN" >> "$GITHUB_ENV"
+          head=$(node -e 'console.log(require(process.argv[1]).head)' "$OUT/verify.json")
+          gh api "repos/$REPO/statuses/$head" -f state=pending -f context=devos/verdict \
+            -f description="Waiting for the Dev OS review of $TASK" >/dev/null || true
+
+      - name: devos-report build
+        if: always() && steps.bs.outcome == 'success'
+        continue-on-error: true
+        working-directory: ${{ github.workspace }}/publish/decide
+        env:
+          DEVOS_ROOT: ${{ github.workspace }}/publish/decide
+          STATE: ${{ steps.bs.outputs.state }}
+        run: |
+          [ "$REVIEW_ONLY" = "true" ] && exit 0
+          node "$T/report.mjs" note --step build --status started
+          # A time slice that continues in a new run ends nothing: that run reports the build.
+          case "$STATE" in ok) s=pass ;; quota) s=waiting ;; continue|switch) exit 0 ;; *) s=fail ;; esac
+          node "$T/report.mjs" note --step build --status "$s"
+
+      - name: Continue (next time slice), park (usage limit) or halt (builder error) without spending a review
+        if: steps.bs.outcome == 'success' && steps.bs.outputs.state != 'ok'
+        working-directory: ${{ github.workspace }}/publish/decide
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEVOS_ROOT: ${{ github.workspace }}/publish/decide
+          STATE: ${{ steps.bs.outputs.state }}
+          NOTE: ${{ steps.bs.outputs.note }}
+          NOT_BEFORE: ${{ steps.bs.outputs.not_before }}
+        run: |
+          node --input-type=module - > .devos/builder-summary.md <<'EOF'
+          import { readFileSync } from "node:fs";
+          const { resumeMarker } = await import(`${process.env.T}/limits.mjs`);
+          const { TASK: task, ATTEMPT: attempt, STATE: state, NOTE: note, NOT_BEFORE: nb } = process.env;
+          const said = {
+            continue: "the builder ran out of its time slice while still working, or finished a stage: the next run continues from the branch (PR-38)",
+            switch: "the builder's tool is out of usage until later than a run waits: agents.fallback_builder continues from the branch (PR-76)",
+            quota: `the builder's tool is out of usage on every account: the task is parked until ${nb} (UTC) and resumes on its own (PR-12)`,
+            error: "the builder failed, or its job did (not a usage limit): the task halts without spending a review (PR-12)",
+          }[state] ?? "unknown";
+          let work = "";
+          try { work = readFileSync(`${process.env.W}/evidence/builder-summary.md`, "utf8"); } catch { work = ""; }
+          work = work.replaceAll("<!--", "&lt;!--").replace(/`{3,}/g, "~~~").slice(0, 6000);
+          const lines = [`### Dev OS ${task} · attempt ${attempt} · builder: **${state}**`, "", `${said}.`, note ? `\nPublish: ${note}.` : ""];
+          if (work.trim()) lines.push("", "<details><summary>What the work job reported (its claim, not checked)</summary>", "", "```text", work, "```", "</details>");
+          if (state === "quota") lines.push("", resumeMarker(task, Number(attempt), false, nb));
+          process.stdout.write(`${lines.join("\n")}\n`);
+          EOF
+          gh pr comment "$PRN" --repo "$REPO" --body-file .devos/builder-summary.md
+          cat .devos/builder-summary.md >> "$GITHUB_STEP_SUMMARY"
+          if [ "$STATE" = "continue" ]; then
+            gh workflow run devos-cycle.yml --repo "$REPO" --ref main -f task="$TASK" -f attempt="$ATTEMPT" -f revision="$REVISION"
+            echo "::notice title=Dev OS::$TASK attempt $ATTEMPT: the next time slice or stage is queued and continues from the branch."
+          elif [ "$STATE" = "switch" ]; then
+            gh pr edit "$PRN" --repo "$REPO" --add-label "devos:fallback-builder"
+            gh workflow run devos-cycle.yml --repo "$REPO" --ref main -f task="$TASK" -f attempt="$ATTEMPT" -f revision="$REVISION"
+            echo "::notice title=Dev OS::$TASK attempt $ATTEMPT: agents.fallback_builder builds it from the branch while the builder's tool has no usage left (PR-76)."
+          elif [ "$STATE" = "quota" ]; then
+            gh pr edit "$PRN" --repo "$REPO" --add-label "devos:quota-wait"
+            echo "::warning title=Dev OS::$TASK parked (usage limit or lost connection); it resumes on its own. See the PR comment."
+          else
+            gh pr edit "$PRN" --repo "$REPO" --add-label "devos:halted"
+            echo "::error title=Dev OS::$TASK halted: the builder failed (not a usage limit). See the PR comment."
+          fi
+
+      # U8: the work job's results with main's list of required checks; a required check without a passing result is red.
+      # PR-94: the guards are publish's own run (red too when the work job's was); every other green is the work job's claim.
+      - name: The checks, from main's rules (red blocks; green is the work job's claim)
+        id: ck
+        if: steps.bs.outputs.state == 'ok'
+        working-directory: ${{ github.workspace }}/publish/decide
+        env:
+          DEVOS_ROOT: ${{ github.workspace }}/publish/decide
+          GH_TOKEN: ${{ github.token }}
+          DEVOS_CHECKS_BY: work
+        run: |
+          node "$T/publish-verify.mjs" checks --out "$OUT" --ci "$W/evidence/ci-results.json"
+          node "$T/report.mjs" note --step checks --status "$(node -e 'process.stdout.write(require(process.argv[1]).all_required_passed ? "pass" : "fail")' "$D/.devos/ci-results.json")" || true
+          bash "$T/checks-status.sh" "$(node -e 'console.log(require(process.argv[1]).head)' "$OUT/verify.json")"
+
+      - name: Review plan (PR-22)
+        id: rp
+        if: steps.bs.outputs.state == 'ok'
+        working-directory: ${{ github.workspace }}/publish/decide
+        env:
+          DEVOS_ROOT: ${{ github.workspace }}/publish/decide
+          REUSE: ${{ inputs.reuse_review && 'true' || 'false' }}
+        run: |
+          node "$T/review-mode.mjs" --task "$TASK" --attempt "$ATTEMPT"
+          # PR-21: a complete review file of this attempt is kept and only re-decided (also the PR-25 re-check).
+          if [ "$REUSE" = "true" ] && [ -f "docs/reviews/$TASK-a$ATTEMPT.md" ]; then echo "reuse=true" >> "$GITHUB_OUTPUT"; else echo "reuse=false" >> "$GITHUB_OUTPUT"; fi
+
+      - name: The screenshots, for the review
+        if: steps.bs.outputs.state == 'ok' && steps.rp.outputs.reuse != 'true'
+        continue-on-error: true
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: devos-${{ needs.resolve.outputs.task }}-a${{ needs.resolve.outputs.attempt }}-screens
+          path: ${{ github.workspace }}/screens
+
+      - name: The review's user and workspace (the verified tree, the diff, the work job's evidence)
+        if: steps.bs.outputs.state == 'ok' && steps.rp.outputs.reuse != 'true'
+        working-directory: ${{ github.workspace }}/publish/decide
+        env:
+          DEVOS_ROOT: ${{ github.workspace }}/publish/decide
+        run: |
+          bash "$T/review-user.sh" setup
+          # The work job's evidence (the prompt says whose it is), then publish's own diff and checks over it.
+          node "$T/publish-verify.mjs" review-tree --out "$OUT" --dest "$RW" --evidence "$W/evidence"
+          mkdir -p .devos/screens "$RW/.devos/screens"
+          if [ -d "$GITHUB_WORKSPACE/screens" ]; then
+            cp -R "$GITHUB_WORKSPACE/screens/." "$RW/.devos/screens/"
+            cp -R "$GITHUB_WORKSPACE/screens/." .devos/screens/
+          fi
+          if [ -f "$RW/.devos/screens/motion.json" ]; then cp "$RW/.devos/screens/motion.json" .devos/screens/motion.json; fi
+          bash "$T/review-user.sh" workspace
+
+      - name: devos-report review started
+        if: steps.bs.outputs.state == 'ok' && steps.rp.outputs.reuse != 'true'
+        continue-on-error: true
+        working-directory: ${{ github.workspace }}/publish/decide
+        env:
+          DEVOS_ROOT: ${{ github.workspace }}/publish/decide
+        run: node "$T/report.mjs" note --step review --status started
+
+      # The one AI call of the attempt (SA3, S6): Claude Code as devos-review, in the review workspace, with no shell, no
+      # hooks, no project settings and only its own MCP servers. It may write only its review file and fences.
+      - name: Reviewer (Claude Code, its own user, no shell)
+        id: reviewer
+        if: steps.bs.outputs.state == 'ok' && steps.rp.outputs.reuse != 'true'
+        timeout-minutes: 75
+        working-directory: ${{ github.workspace }}/publish/decide
+        env:
+          DEVOS_ROOT: ${{ github.workspace }}/publish/decide
+          CLAUDE_OAUTH_1: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          CLAUDE_APIKEY_1: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_OAUTH_2: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 }}
+          CLAUDE_APIKEY_2: ${{ secrets.ANTHROPIC_API_KEY_2 }}
+          DEVOS_REVIEW_PASS: CLAUDE_CODE_OAUTH_TOKEN ANTHROPIC_API_KEY
+          MODEL: ${{ steps.rp.outputs.model || needs.resolve.outputs.reviewer_model }}
+          TURNS: ${{ steps.rp.outputs.max_turns || needs.resolve.outputs.reviewer_max_turns }}
+          EFFORT: ${{ steps.rp.outputs.effort || needs.resolve.outputs.reviewer_effort }}
+          DEVOS_REVIEW_MODE: ${{ steps.rp.outputs.mode }}
+          DEVOS_REVIEW_REASONS: ${{ steps.rp.outputs.reasons }}
+          DEVOS_REVIEW_CRITICAL: ${{ steps.rp.outputs.critical }}
+          METHOD_CHANGE: ${{ steps.vb.outputs.method_changed }}
+          # PR-94 (N6): the builder as verify kept it (a configured model id, a known effort, yes or no), never the work job's text.
+          DEVOS_BUILDER_MODEL: ${{ steps.vb.outputs.builder_model }}
+          DEVOS_BUILDER_TOOL: ${{ needs.resolve.outputs.builder_tool }}
+          DEVOS_BUILDER_EFFORT: ${{ steps.vb.outputs.builder_effort }}
+          DEVOS_BUILDER_FAST: ${{ steps.vb.outputs.builder_fast }}
+        run: |
+          . "$T/accounts.sh"
+          # PR-28, PR-53: a method fix is always a deep review, by the project's own reviewer agent.
+          if [ "$METHOD_CHANGE" = "true" ]; then
+            export DEVOS_REVIEW_MODE=deep DEVOS_REVIEW_REASONS="method fix: it changes the automation itself (PR-28)"
+          fi
+          rev_line=$(GITHUB_OUTPUT=/dev/null node "$T/agents.mjs" reviewer --mode "$DEVOS_REVIEW_MODE")
+          rev_model=$(printf '%s\n' "$rev_line" | sed -n 's/^reviewer_model=//p')
+          # PR-64: the reviewer's next models (its fallback_models), tried after its model on every account.
+          rev_fallbacks=$(printf '%s\n' "$rev_line" | sed -n 's/^reviewer_fallbacks=//p')
+          MODEL="$rev_model"; first_model="$MODEL"; models="$MODEL $rev_fallbacks"; lim=""; outcome=""
+          if [ "$METHOD_CHANGE" = "true" ]; then
+            EFFORT=high; TURNS=120
+            echo "method fix: deep review (claude $MODEL, effort $EFFORT, $TURNS turns)"
+          fi
+          echo "reviewer: claude $MODEL ($DEVOS_REVIEW_MODE review)${rev_fallbacks:+ · then the models $rev_fallbacks}"
+          node "$T/render-prompt.mjs" reviewer "$TASK" "$ATTEMPT" --out .devos/reviewer-prompt.md
+          schema=$(cat "$GITHUB_WORKSPACE/trusted/devos/schemas/verdict.schema.json")
+          set +e
+          accounts=$(devos_accounts claude)
+          [ -n "$accounts" ] || { echo "::error::set secret CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY (and optionally the _2 pair)"; exit 1; }
+          ( t0=$(date +%s); while sleep 60; do
+              f="not yet"; [ -f "$RW/docs/reviews/$TASK-a$ATTEMPT.md" ] && f="written"
+              echo "Claude is reviewing $TASK: $(( ($(date +%s) - t0) / 60 )) min, verdict file $f"
+            done ) &
+          hb=$!
+          # PR-29: on a usage limit the review starts again at once on the other Claude account.
+          used=""; tries=0
+          for slot in $(devos_slots claude $models); do
+            MODEL="${slot%@*}"; acc="${slot##*@}"
+            devos_use_claude "$acc"; used="$acc"
+            while :; do
+              bash "$T/review-user.sh" run "$RW" -- claude -p \
+                --model "$MODEL" \
+                --effort "${EFFORT:-high}" \
+                --output-format json \
+                --json-schema "$schema" \
+                --permission-mode dontAsk \
+                --setting-sources user \
+                --settings /opt/devos-tools/settings.json \
+                --strict-mcp-config --mcp-config /opt/devos-tools/mcp.json \
+                --allowedTools "Read,Glob,Grep,Edit(docs/reviews/**),Edit(docs/fences/**),Task,Agent,Skill,mcp__context7,mcp__devos,WebFetch(domain:nextjs.org),WebFetch(domain:cursor.com),WebFetch(domain:code.claude.com)" \
+                --disallowedTools "Bash" \
+                --max-turns "$TURNS" < .devos/reviewer-prompt.md > .devos/reviewer.json 2> .devos/reviewer.err
+              rc=$?
+              node "$T/usage.mjs" record --stage reviewer --command claude --model "$MODEL" --out .devos/reviewer.json --code "$rc" || true
+              # PR-87: a temporary server error (a 5xx, a dropped connection, "retriable") runs the review again, three times at most.
+              if [ "$rc" != "0" ] && pause=$(devos_server_wait "$tries") && devos_server_error .devos/reviewer.json .devos/reviewer.err "$rc"; then
+                tries=$(( tries + 1 ))
+                devos_note "Reviewer: the Claude CLI stopped on a temporary server error; trying again in $pause s ($tries of 3)."
+                sleep "$pause"
+                continue
+              fi
+              break
+            done
+            if devos_limited .devos/reviewer.json .devos/reviewer.err "$rc"; then
+              lim=$(devos_limit_file claude "$acc" "$(devos_model_index "$MODEL" $models)"); outcome=limited
+              mkdir -p .devos/limits; cat .devos/reviewer.json .devos/reviewer.err > "$lim"
+              devos_note "Reviewer: Claude account $acc reached its usage limit on $MODEL."
+              continue
+            fi
+            if [ "$rc" != "0" ] && devos_unavailable .devos/reviewer.json .devos/reviewer.err "$rc"; then
+              outcome=unavailable; devos_note "Reviewer: Claude account $acc cannot use $MODEL; trying the next model."
+              continue
+            fi
+            outcome=ran
+            break
+          done
+          devos_settle "$outcome" "$lim" .devos/reviewer.err
+          kill "$hb" 2>/dev/null
+          if [ "$MODEL" != "$first_model" ]; then devos_note "Reviewer: switched to claude $MODEL (account $used)."
+          elif [ "$used" != "${accounts%% *}" ]; then devos_note "Reviewer: switched to claude account $used."; fi
+          echo "reviewer exit code: $rc (claude $MODEL, account $used)"
+          # PR-54: verdict.mjs reads which tool reviewed and how its run exited.
+          printf 'code=%s\nused=%s\naccounts="%s"\ntool=%s\nmodel=%s\n' "$rc" "$used" "$accounts" claude "$MODEL" > .devos/reviewer-run.env
+          tail -c 2000 .devos/reviewer.err || true
+          # Surface any tool calls the permission layer refused, so a denial is never silent.
+          node --input-type=module -e 'const { parseJsonLoose, readText } = await import(`${process.env.T}/limits.mjs`); const r = parseJsonLoose(readText(".devos/reviewer.json")); if (!r) { console.log("reviewer.json: no JSON result"); process.exit(0); } const d = r.permission_denials || []; console.log(`reviewer permission denials: ${d.length}`); for (const x of d.slice(0, 20)) console.log(" -", JSON.stringify(x).slice(0, 300));'
+
+      # Only the review file of this attempt and fences are taken (the reviewer surface, PR-07), then scrubbed of every
+      # secret value this job holds; fence-check runs on every fence taken (PR-58).
+      # A review that timed out leaves no process of the review user behind it.
+      - name: End the review user's processes
+        if: always()
+        continue-on-error: true
+        run: bash "$T/review-user.sh" stop
+      - name: Take the review's outputs
+        if: steps.bs.outputs.state == 'ok' && steps.rp.outputs.reuse != 'true'
+        working-directory: ${{ github.workspace }}/publish/decide
+        env:
+          DEVOS_ROOT: ${{ github.workspace }}/publish/decide
+          SCRUB_PAT: ${{ secrets.DEVOS_PAT }}
+          SCRUB_TOKEN: ${{ github.token }}
+          SCRUB_C1: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          SCRUB_C2: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 }}
+          SCRUB_A1: ${{ secrets.ANTHROPIC_API_KEY }}
+          SCRUB_A2: ${{ secrets.ANTHROPIC_API_KEY_2 }}
+        run: |
+          node "$T/publish-verify.mjs" take-review --out "$OUT" --from "$RW" --task "$TASK" --attempt "$ATTEMPT" | tee .devos/take-review.log
+          taken=$(sed -n 's/^taken=//p' .devos/take-review.log)
+          # shellcheck disable=SC2086
+          node "$T/scrub.mjs" --names SCRUB_PAT,SCRUB_TOKEN,SCRUB_C1,SCRUB_C2,SCRUB_A1,SCRUB_A2 .devos/reviewer.json .devos/reviewer.err $taken
+          for p in $taken; do
+            case "$p" in docs/fences/*) node "$T/fence-check.mjs" "$p" >> .devos/fence-check.txt 2>&1 || true ;; esac
+          done
+          if [ -s .devos/fence-check.txt ]; then cat .devos/fence-check.txt; fi
+
+      - name: Verdict (PR-08 applied, recorded in docs/PHASES.md)
+        id: v
+        if: steps.bs.outputs.state == 'ok'
+        working-directory: ${{ github.workspace }}/publish/decide
+        env:
+          DEVOS_ROOT: ${{ github.workspace }}/publish/decide
+        run: node "$T/verdict.mjs" --task "$TASK" --attempt "$ATTEMPT"
+
+      - name: Commit the review, and merge a main that moved (PR-14, PR-25, PR-52)
+        id: sync
+        if: steps.bs.outputs.state == 'ok'
+        working-directory: ${{ github.workspace }}/publish/decide
+        env:
+          DEVOS_ROOT: ${{ github.workspace }}/publish/decide
+          DEVOS_GIT_TOKEN: ${{ github.token }}
+          PUSH_TOKEN: ${{ secrets.DEVOS_PAT || github.token }}
+          RULING: ${{ steps.v.outputs.verdict }}
+          ACTION: ${{ steps.v.outputs.action }}
+        run: |
+          node "$T/usage.mjs" flush --task "$TASK"
+          node "$T/usage.mjs" report --write
+          node "$T/publish-verify.mjs" commit --out "$OUT" --message "$TASK a$ATTEMPT: review — $RULING ($ACTION)"
+          set +e
+          node "$T/publish-verify.mjs" sync --out "$OUT"; rc=$?
+          if [ "$rc" = "3" ]; then
+            # Never lose the run's work: it goes, unmerged, to a rescue branch (PR-14).
+            rescue="rescue/$BR-$GITHUB_RUN_ID"
+            if DEVOS_GIT_TOKEN="$PUSH_TOKEN" node "$T/publish-verify.mjs" push --out "$OUT" --to "refs/heads/$rescue"; then
+              echo "::error title=Dev OS::$BASE changed during this run and conflicts with this task's work. The run's work is saved on branch $rescue (not merged). Merge $BASE into it, resolve, and push it to $BR, or re-run the task."
+            else
+              echo "::error title=Dev OS::$BASE changed during this run and conflicts with this task's work, and the rescue push failed. Re-run the task; nothing was lost on $BASE."
+            fi
+          fi
+          exit $rc
+
+      - name: Push the review
+        if: steps.bs.outputs.state == 'ok'
+        env:
+          DEVOS_GIT_TOKEN: ${{ secrets.DEVOS_PAT || github.token }}
+        run: |
+          set +e
+          node "$T/publish-verify.mjs" push --out "$OUT" > "$OUT/push.log"; rc=$?
+          cat "$OUT/push.log"
+          missing=$(sed -n 's/^setup_missing=//p' "$OUT/push.log")
+          [ -n "$missing" ] && printf '%s\n' "$missing" > "$OUT/setup-missing"
+          exit $rc
+
+      # S5: devos/checks and devos/verdict are posted only here. With main moved under a PASS (PR-25), the verdict waits
+      # for a check-only run (review_only with the review kept: no builder, no AI call) on the merged result.
+      - name: Statuses and the verdict on the PR
+        if: steps.bs.outputs.state == 'ok'
+        working-directory: ${{ github.workspace }}/publish/decide
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEVOS_ROOT: ${{ github.workspace }}/publish/decide
+          DEVOS_CHECKS_BY: work
+          RULING: ${{ steps.v.outputs.verdict }}
+          CODE_MOVED: ${{ steps.sync.outputs.code_moved }}
+          BUNDLE_SHA: ${{ steps.vb.outputs.bundle_sha256 }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          head=$(node -e 'console.log(require(process.argv[1]).head)' "$OUT/verify.json")
+          if [ -z "$PRN" ]; then
+            gh pr create --repo "$REPO" --base "$BASE" --head "$BR" --title "$TASK — $NAME (review record)" \
+              --body "Dev OS: the review of $TASK, on a branch whose code is already on $BASE." --label devos --label "risk-$RISK"
+            PRN=$(gh pr list --repo "$REPO" --head "$BR" --state open --json number --jq '.[0].number // empty')
+            echo "PRN=$PRN" >> "$GITHUB_ENV"
+          fi
+          case "$RULING" in
+            PASS) st=success; d="PASS: $TASK attempt $ATTEMPT" ;;
+            WAIT) st=pending; d="Waiting for a usage limit to reset" ;;
+            *)    st=failure; d="FAIL: $TASK attempt $ATTEMPT" ;;
+          esac
+          if [ "$CODE_MOVED" = "true" ] && [ "$RULING" = "PASS" ]; then
+            st=pending; d="PASS: checking the result with the latest main again (PR-25)"
+            echo "RECHECK=1" >> "$GITHUB_ENV"
+            printf '\n\n**Re-check (PR-25):** main changed while this attempt was reviewed. A check-only run (no builder, no review) checks the merged result before anything merges.\n' >> .devos/verdict-summary.md
+          fi
+          bash "$T/checks-status.sh" "$head"
+          gh api "repos/$REPO/statuses/$head" -f state="$st" -f context=devos/verdict -f description="$d" >/dev/null || true
+          if [ -f .devos/accounts.md ]; then printf '\n\n**Accounts (PR-29)**\n%s\n' "$(cat .devos/accounts.md)" >> .devos/verdict-summary.md; fi
+          if [ -s .devos/fence-check.txt ]; then printf '\n\n**fence-check on the fences the reviewer wrote (PR-58)**\n\n~~~text\n%s\n~~~\n' "$(cat .devos/fence-check.txt)" >> .devos/verdict-summary.md; fi
+          # PR-94: every fence this review wrote or reissued, with its Fence version; an issued fence changes only upward.
+          if [ -s .devos/fence-changes.txt ]; then printf '\n\n**Fences this review wrote or changed (PR-94)**\n\n~~~text\n%s\n~~~\n' "$(cat .devos/fence-changes.txt)" >> .devos/verdict-summary.md; fi
+          printf '\n\n<sub>Publish (PR-90): head %s; the work job bundle sha256 %s (run %s). The guards are publish own run; the other checks are the work job report.</sub>\n' "$head" "${BUNDLE_SHA:-none}" "$RUN_ID" >> .devos/verdict-summary.md
+          gh pr comment "$PRN" --repo "$REPO" --body-file .devos/verdict-summary.md
+          cat .devos/verdict-summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: devos-report review and verdict
+        if: always() && steps.v.outcome == 'success'
+        continue-on-error: true
+        working-directory: ${{ github.workspace }}/publish/decide
+        env:
+          DEVOS_ROOT: ${{ github.workspace }}/publish/decide
+          RULING: ${{ steps.v.outputs.verdict }}
+          ACTION: ${{ steps.v.outputs.action }}
+        run: |
+          head=$(node -e 'console.log(require(process.argv[1]).head)' "$OUT/verify.json")
+          case "$RULING" in PASS) r=pass; v=pass ;; WAIT) r=waiting; v=waiting ;; *) r=pass; v=fail ;; esac
+          [ "$ACTION" = "setup_wait" ] && v=waiting
+          ev="docs/reviews/$TASK-a$ATTEMPT.md@$head"
+          [ -f "docs/reviews/$TASK-a$ATTEMPT.md" ] || ev="@$head"
+          node "$T/report.mjs" note --step review --status "$r" --evidence "$ev"
+          node "$T/report.mjs" note --step verdict --status "$v" --evidence "$ev"
+
+      - name: Act on the verdict
+        id: act
+        if: steps.bs.outputs.state == 'ok'
+        working-directory: ${{ github.workspace }}/publish/decide
+        env:
+          # D1 (a): the runner merges with this workflow's own token, so its merge starts no workflow (S7).
+          GH_TOKEN: ${{ github.token }}
+          DEVOS_ROOT: ${{ github.workspace }}/publish/decide
+          ACTION: ${{ steps.v.outputs.action }}
+          NEXT_ATTEMPT: ${{ steps.v.outputs.next_attempt }}
+          METHOD_CHANGE: ${{ steps.vb.outputs.method_changed }}
+        run: |
+          if [ -n "${RECHECK:-}" ]; then
+            gh workflow run devos-cycle.yml --repo "$REPO" --ref main -f task="$TASK" -f attempt="$ATTEMPT" -f review_only=true -f reuse_review=true
+            echo "FINAL_ACTION=recheck" >> "$GITHUB_ENV"
+            echo "::notice title=Dev OS::$TASK PASSED, but main changed meanwhile: a check-only run checks the merged result before it can merge (PR-25)."
+            exit 0
+          fi
+          # PR-28: whatever the review decided, a change to the method waits for the human.
+          if [ "$METHOD_CHANGE" = "true" ] && [ "$ACTION" = "merge" ]; then
+            ACTION=human_gate
+            echo "Method files changed: the human gate is forced by publish, from main."
+          fi
+          # PR-91: the runner never merges into main. A product PASS merges into its unit's branch, which only your merge
+          # of the unit's acceptance pull request brings to main; anything else waits for you.
+          if [ "$ACTION" = "merge" ]; then
+            pr_base=$(gh pr view "$PRN" --repo "$REPO" --json baseRefName --jq .baseRefName 2>/dev/null || true)
+            case "$pr_base" in
+              devos/unit-T*) [ "$pr_base" = "$BASE" ] || { ACTION=human_gate; echo "The PR targets $pr_base, not $BASE: it waits for you."; } ;;
+              *) ACTION=human_gate; echo "The PR targets ${pr_base:-an unknown base}: the runner never merges into it (PR-91); it waits for you." ;;
+            esac
+          fi
+          echo "FINAL_ACTION=$ACTION" >> "$GITHUB_ENV"
+          case "$ACTION" in
+            merge)
+              gh pr edit "$PRN" --repo "$REPO" --add-label "devos:auto-merged"
+              gh pr merge "$PRN" --repo "$REPO" --merge --delete-branch --match-head-commit "$(node -e 'console.log(require(process.argv[1]).head)' "$OUT/verify.json")"
+              gh workflow run devos-cycle.yml --repo "$REPO" --ref main
+              echo "::notice title=Dev OS::$TASK merged into $BASE; next task dispatched." ;;
+            human_gate)
+              gh pr edit "$PRN" --repo "$REPO" --add-label "devos:human-gate"
+              gh workflow run devos-doctor.yml --repo "$REPO" --ref main -f pr="$PRN" || true
+              echo "::notice title=Dev OS::$TASK PASSED and waits at a human gate. Review and merge the PR to continue." ;;
+            retry)
+              gh workflow run devos-cycle.yml --repo "$REPO" --ref main -f task="$TASK" -f attempt="$NEXT_ATTEMPT"
+              echo "::notice title=Dev OS::$TASK failed attempt $ATTEMPT; attempt $NEXT_ATTEMPT dispatched." ;;
+            quota_wait)
+              gh pr edit "$PRN" --repo "$REPO" --add-label "devos:quota-wait"
+              echo "::warning title=Dev OS::$TASK parked: the agent's usage/rate limit, with no other account of the same tool left. devos-resume re-runs it after the reset." ;;
+            halt)
+              gh pr edit "$PRN" --repo "$REPO" --add-label "devos:halted"
+              gh workflow run devos-doctor.yml --repo "$REPO" --ref main -f pr="$PRN" || true
+              echo "::warning title=Dev OS::$TASK halted. A human decision is needed (see the PR comment)." ;;
+            setup_wait)
+              # PR-27: the cause is outside the repository. No retry; the human gets the steps in the verdict and the
+              # setup issue, and this attempt is re-reviewed after `/devos setup`.
+              node "$T/setup-issue.mjs" wait --task "$TASK" --attempt "$ATTEMPT" --review-only true --manual \
+                --reason "the review found a setting outside the repository missing; the steps are in the verdict on the PR"
+              echo "::warning title=Dev OS::$TASK waits for a setting outside the repository (see the PR and the setup issue)." ;;
+            *) echo "::error::unknown action '$ACTION'"; exit 1 ;;
+          esac
+
+      # PR-91: the unit's rows are all ticked on its branch: one pull request into main with the completion report and
+      # devos/verdict, and the run stops. Only your merge of it reaches main; nothing else is built until then. No AI call.
+      - name: Open the acceptance pull request (PR-91)
+        id: accept
+        if: needs.resolve.outputs.accept == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          UNIT: ${{ needs.resolve.outputs.unit }}
+          UNIT_SHA: ${{ needs.resolve.outputs.unit_sha }}
+          DEVOS_ROOT: ${{ github.workspace }}/trusted
+        run: |
+          # The head resolve found complete is the one accepted: a unit that moved since is checked again by the next run.
+          head=$(gh api "repos/$REPO/git/ref/heads/$UNIT" --jq .object.sha)
+          if [ -z "$UNIT_SHA" ] || [ "$head" != "$UNIT_SHA" ]; then
+            echo "::error title=Dev OS::$UNIT moved since this run started (${UNIT_SHA:0:12} → ${head:0:12}); run the cycle again."
+            exit 1
+          fi
+          gh label create "devos:acceptance" --color "0e8a16" --force --repo "$REPO" >/dev/null
+          node "$T/unit.mjs" report --repo "$REPO" --unit "$UNIT" --main-sha "$MAIN_SHA" --file "$RUNNER_TEMP/unit-report.md" > "$RUNNER_TEMP/unit.out"
+          first=$(sed -n 's/^first=//p' "$RUNNER_TEMP/unit.out"); last=$(sed -n 's/^last=//p' "$RUNNER_TEMP/unit.out")
+          # This repository's pull request only: a fork can name a branch the same way.
+          mine='[.[] | select(.isCrossRepository | not)][0].number // empty'
+          PRN=$(gh pr list --repo "$REPO" --head "$UNIT" --base main --state open --json number,isCrossRepository --jq "$mine")
+          if [ -z "$PRN" ]; then
+            gh pr create --repo "$REPO" --base main --head "$UNIT" --title "Unit $first–$last: your acceptance" \
+              --body-file "$RUNNER_TEMP/unit-report.md" --label devos --label "devos:acceptance"
+            PRN=$(gh pr list --repo "$REPO" --head "$UNIT" --base main --state open --json number,isCrossRepository --jq "$mine")
+          else
+            # PR-92: the unit was revised since its PR opened (/devos revise on it): the report is renewed.
+            gh pr edit "$PRN" --repo "$REPO" --title "Unit $first–$last: your acceptance" --body-file "$RUNNER_TEMP/unit-report.md" >/dev/null
+          fi
+          gh api "repos/$REPO/statuses/$UNIT_SHA" -f state=success -f context=devos/verdict \
+            -f description="Unit $first–$last: every task PASS; your merge accepts it" >/dev/null
+          gh workflow run devos-doctor.yml --repo "$REPO" --ref main -f pr="$PRN" || true
+          echo "::notice title=Dev OS::Unit $first–$last is complete: pull request #$PRN waits for your acceptance. No product task is built until you merge it; closing it holds the unit until you reopen it."
+
+      - name: devos-report gate and merge
+        if: always() && steps.act.outcome == 'success'
+        continue-on-error: true
+        working-directory: ${{ github.workspace }}/publish/decide
+        env:
+          DEVOS_ROOT: ${{ github.workspace }}/publish/decide
+        run: |
+          case "$FINAL_ACTION" in
+            merge)
+              node "$T/report.mjs" note --step gate --status skipped
+              node "$T/report.mjs" note --step merge --status pass --evidence "docs/PHASES.md@$(node -e 'console.log(require(process.argv[1]).head)' "$OUT/verify.json")" ;;
+            human_gate|halt) node "$T/report.mjs" note --step gate --status waiting ;;
+          esac
+
+      - name: devos-report a step a runner failure left open
+        if: failure() && steps.vb.outcome == 'success'
+        continue-on-error: true
+        working-directory: ${{ github.workspace }}/publish/decide
+        env:
+          DEVOS_ROOT: ${{ github.workspace }}/publish/decide
+        run: node "$T/report.mjs" note --failed
+
+      - name: Parking info for the waiter (usage limits)
+        id: park
+        if: always()
+        env:
+          BS_STATE: ${{ steps.bs.outputs.state }}
+          BS_NOT_BEFORE: ${{ steps.bs.outputs.not_before }}
+          V_ACTION: ${{ steps.v.outputs.action }}
+          V_NOT_BEFORE: ${{ steps.v.outputs.not_before }}
+        run: |
+          echo "pr=${PRN:-}" >> "$GITHUB_OUTPUT"
+          echo "revision=$REVISION" >> "$GITHUB_OUTPUT"
+          if [ "$BS_STATE" = "quota" ]; then
+            { echo "task=$TASK"; echo "attempt=$ATTEMPT"; echo "review_only=false"; echo "not_before=$BS_NOT_BEFORE"; } >> "$GITHUB_OUTPUT"
+          elif [ "$V_ACTION" = "quota_wait" ]; then
+            { echo "task=$TASK"; echo "attempt=$ATTEMPT"; echo "review_only=true"; echo "not_before=$V_NOT_BEFORE"; } >> "$GITHUB_OUTPUT"
+          fi
+
+      # The decision's record: publish's own files, with no raw agent stream (D9) and no *.env file. The report job reads
+      # its journal.jsonl at the artifact's root.
+      - name: The record, with publish's verification
+        if: always()
+        run: |
+          mkdir -p "$D/.devos"
+          if [ -f "$OUT/verify.json" ]; then cp "$OUT/verify.json" "$D/.devos/verify.json"; fi
+      - name: Keep the evidence
+        id: record
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: devos-${{ needs.resolve.outputs.task }}-a${{ needs.resolve.outputs.attempt }}
+          path: |
+            ${{ github.workspace }}/publish/decide/.devos/
+            !${{ github.workspace }}/publish/decide/.devos/screens/**/*.png
+            !${{ github.workspace }}/publish/decide/.devos/**/*.env
+            !${{ github.workspace }}/publish/decide/.devos/reviewer.json*
+            !${{ github.workspace }}/publish/decide/.devos/reviewer.err
+            !${{ github.workspace }}/publish/decide/.devos/**/*.stream.jsonl
+            !${{ github.workspace }}/publish/decide/.devos/limits/**
+          include-hidden-files: true
+          if-no-files-found: ignore
+
+      - name: Halt on a runner failure
+        if: failure() && steps.vb.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          echo "::error title=Dev OS::The cycle stopped on a runner failure (the work job, a missing secret or fence, or a push). Nothing was merged."
+          if [ -f "$OUT/setup-missing" ]; then
+            # PR-27: a setting only the human can fix; record it so the attempt resumes after `/devos setup`.
+            (cd "$GITHUB_WORKSPACE/trusted" && node "$T/setup-issue.mjs" wait --task "$TASK" --attempt "$ATTEMPT" --review-only false --manual --reason "$(cat "$OUT/setup-missing")") || true
+            exit 0
+          fi
+          gh pr edit "${PRN:-$BR}" --repo "$REPO" --add-label "devos:halted" 2>/dev/null || true
+          gh pr comment "${PRN:-$BR}" --repo "$REPO" --body "Dev OS runner stopped on a failure in run $RUN_URL. Nothing was merged. Fix the cause, then re-run devos-cycle with task=$TASK attempt=$ATTEMPT." 2>/dev/null || true
+          [ -n "${PRN:-}" ] && gh workflow run devos-doctor.yml --repo "$REPO" --ref main -f pr="$PRN" 2>/dev/null || true
+
+  # PR-61: the only job with the OIDC permission. It runs no agent: it asks the DEV_OS registry to link this
+  # repository (its owner approves it once) and sends the events the publish job noted. It never fails the run.
+  # PR-62: it runs only when the developer answered yes at devos init (DEVOS_REPORTING = on).
+  # PR-65: a run with every task PASS, or a link run (task=link), asks for the link too; it has no event to send.
+  # PR-66: in a link run (task=link), once the registry has approved the link, it also sends one event for each task of
+  # docs/PHASES.md (history). It checks out only the files report.mjs reads, and in a link run the git history of the
+  # plan and the reviews, read for paths and dates only.
+  report:
+    needs: [resolve, work, publish]
+    if: always() && (needs.publish.result != 'skipped' || needs.resolve.outputs.done == 'true') && vars.DEVOS_REPORTING == 'on'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    continue-on-error: true
+    permissions:
+      id-token: write
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+          fetch-depth: ${{ inputs.task == 'link' && '0' || '1' }}
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /scripts/devos/
+            /devos/
+            /devos.config.json
+            /docs/PHASES.md
+      # PR-90: the record publish uploaded, taken by its id. The work job could upload an artifact by that name first;
+      # it cannot make publish's id.
+      - name: The journal of the publish job
+        if: needs.resolve.outputs.done != 'true' && needs.publish.outputs.record_id != ''
+        continue-on-error: true
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          artifact-ids: ${{ needs.publish.outputs.record_id }}
+          merge-multiple: true
+          path: .devos
+      - name: devos-report link and send
+        continue-on-error: true
+        timeout-minutes: 7
+        env:
+          LINK_RUN: ${{ inputs.task == 'link' }}
+        run: |
+          node scripts/devos/report.mjs link
+          node scripts/devos/report.mjs flush
+          if [ "$LINK_RUN" = "true" ]; then node scripts/devos/report.mjs history; fi
+
+  # Wait out a usage limit inside Actions instead of relying on GitHub's best-effort cron.
+  # Claude's session limits reset within about five hours, so a wait up to resume.inline_wait_max_minutes
+  # (330) is slept through here, then the task is re-dispatched. Longer waits (weekly limits) are
+  # left to devos-resume. Remove the devos:quota-wait label, or cancel this run, to stop the wait.
+  wait-and-resume:
+    needs: publish
+    if: needs.publish.outputs.park_task != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 345
+    permissions:
+      actions: write
+      pull-requests: write
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+          sparse-checkout: devos.config.json
+      - name: Sleep until the limit resets, then resume
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          TASK: ${{ needs.publish.outputs.park_task }}
+          ATTEMPT: ${{ needs.publish.outputs.park_attempt }}
+          REVIEW_ONLY: ${{ needs.publish.outputs.park_review_only }}
+          NOT_BEFORE: ${{ needs.publish.outputs.park_not_before }}
+          REVISION: ${{ needs.publish.outputs.park_revision || 'false' }}
+          PR: ${{ needs.publish.outputs.park_pr || needs.publish.outputs.branch }}
+          IS_PRIVATE: ${{ github.event.repository.private }}
+        run: |
+          max_min=$(node -e 'console.log(require("./devos.config.json").resume?.inline_wait_max_minutes ?? 330)')
+          now=$(date -u +%s)
+          target=$(date -u -d "$NOT_BEFORE" +%s 2>/dev/null || echo $((now + 3600)))
+          wait=$(( target - now ))
+          if [ "$wait" -gt $(( max_min * 60 )) ]; then
+            # PR-31: a long wait is relayed by devos-wait (GitHub's schedule is best effort). On a private
+            # repository sleeping costs runner minutes, so resume.relay decides.
+            relay=$(node -e 'console.log(require("./devos.config.json").resume?.relay ?? "public")')
+            if [ "$relay" = "always" ] || { [ "$relay" = "public" ] && [ "$IS_PRIVATE" != "true" ]; }; then
+              gh workflow run devos-wait.yml --repo "$REPO" --ref main -f kind=task -f not_before="$NOT_BEFORE" -f task="$TASK" -f attempt="$ATTEMPT" -f review_only="$REVIEW_ONLY" -f revision="$REVISION" -f pr="$PR"
+              echo "::notice title=Dev OS::$TASK resets at $NOT_BEFORE; devos-wait keeps waiting and resumes it then."
+            else
+              echo "::notice title=Dev OS::$TASK resets at $NOT_BEFORE; devos-resume (scheduled, best effort) picks it up, or run devos-resume by hand after that time."
+            fi
+            exit 0
+          fi
+          if [ "$wait" -gt 0 ]; then
+            echo "Waiting $(( wait / 60 )) minutes, until $NOT_BEFORE (UTC), to resume $TASK attempt $ATTEMPT."
+            sleep "$wait"
+          fi
+          labels=$(gh pr view "$PR" --repo "$REPO" --json labels --jq '[.labels[].name] | join(",")' 2>/dev/null || echo "")
+          case ",$labels," in
+            *",devos:quota-wait,"*) ;;
+            *) echo "The devos:quota-wait label was removed; not resuming."; exit 0 ;;
+          esac
+          gh pr edit "$PR" --repo "$REPO" --remove-label "devos:quota-wait" || echo "::warning title=Dev OS::GitHub did not remove the devos:quota-wait label; the run starts anyway (PR-76)."
+          gh workflow run devos-cycle.yml --repo "$REPO" --ref main \
+            -f task="$TASK" -f attempt="$ATTEMPT" -f review_only="$REVIEW_ONLY" -f revision="$REVISION" -f go=true
+          echo "::notice title=Dev OS::Resumed $TASK attempt $ATTEMPT (review_only=$REVIEW_ONLY)."
+
+  # PR-95 (C4): a run the cycle started with the workflow's own token (every chained task) fires no workflow_run event,
+  # so the supervisor never heard of its failure. When this run was started that way and a job failed or was stopped,
+  # this job starts the supervisor itself; it waits for this run to finish before it scans. Its only permission is to
+  # start a workflow. A run you or your PAT started is already seen through workflow_run.
+  notify-supervisor:
+    needs: [resolve, work, publish]
+    if: >-
+      always() && github.actor == 'github-actions[bot]' && vars.DEVOS_SUPERVISOR != 'off' && vars.DEVOS_PAUSED != 'true' &&
+      (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    steps:
+      - name: Start the supervisor
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+        run: gh workflow run devos-supervisor.yml --repo "$REPO" --ref main -f after_run="$RUN_ID"

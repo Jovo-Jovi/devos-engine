@@ -1,0 +1,21 @@
+{
+  "CHANGELOG.md": "10676126a7e4d48a8a58d30d5ac33abed4aa326e9b16e5df1c2f2b33d2af0dc0",
+  "README.md": "ffd7b4a917e81e5c4139e7a51b848c5b7f36547b74d068f1ef8fac844106e961",
+  "package.json": "81f869fa766cc42ac1ac5aad1f6a39bd5d957a33fc371cd204ed9d7a0aa1bf61",
+  "payload/files/docs/method/AUTOMATION.md": "ac17085d5f78c6b7cd83c8fbf85552cee6fd15ae51e3ce810431c278e33d4911",
+  "payload/files/docs/method/PRECEDENTS.md": "6b8ca3503d8157935a6710d597f38d246a84a520cfda1900f6ef72c0c4bb9202",
+  "payload/files/dot-github/workflows/devos-cycle.yml": "dd978a0ebc1b727cb795ca164b0a6421a35c4621eef8bc8a34c4ab29654d76a7",
+  "payload/files/dot-github/workflows/devos-deploy.yml": "f84f10c6efa1685c7ba341dd1f71e90e467d6495574caa095e8f5dc5231907a7",
+  "payload/files/dot-github/workflows/devos-supervisor.yml": "39b29e597070ff116e0ae6e7d83429afc3d27fde24e09207d5a4a066d9c20a4c",
+  "payload/files/scripts/devos/supervisor.mjs": "71ab42e92333857a5747c5a71274b2c8ce8eeb1803abdbbf6e98146d5ca325df",
+  "payload/files/scripts/devos/vercel-deploy.sh": "2e121af60a0c1e02b2dd4b7f0fcb3b170a32a85c00062b1678a105ece23e68e8",
+  "payload/manifest.json": "c632036ae1f1653d1ada6e7cdc5a945fe2109eb218f78b297e09e250d1e0b793",
+  "test/adopt-files.test.mjs": "b08b5c23c37e98db717eb5ed846aa505eac252fb67c4fd05a2f1f03b96ab1aee",
+  "test/adopt-install.test.mjs": "5dbe5bd1b3fa5eb49a8491415c8e24356eff6b6db9ff48ec941084c5ef68bcfc",
+  "test/hardening.test.mjs": "019c888563fbe34918ca6026f13b864b2d77dcabda64e6b287d2c242b5a10226",
+  "test/install.test.mjs": "1d7a0dddc21edac7280bafd23ecb4fae334270c3a62659eb6420fdb78202bcd2",
+  "test/remove.test.mjs": "de7efc596d330faed3760b71ad9436bae34a3324767fce338595ed2e2806ba13",
+  "test/upgrade.test.mjs": "620749a67284a16758931ca02c33a80840782fdc69257370cd01341430c45c3b",
+  "test/version.test.mjs": "820d6009e45bb26f7bc07344831c095e76fc90e35697866bc2449fd92f580714",
+  "tools/sources.mjs": "f786138a50ee45adff89b4f7bcdaf30d49195e2f19b7fad6e3dd1ac93c39b8a1"
+}

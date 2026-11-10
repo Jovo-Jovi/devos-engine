@@ -1,0 +1,8 @@
+{
+  "name": "devos-deploy-firebase",
+  "private": true,
+  "description": "PR-95: the deploy's firebase-tools at the version devos.config.json pins (tool_versions), its whole tree locked here. devos-deploy installs it with npm ci --ignore-scripts, in a step that holds no secret.",
+  "dependencies": {
+    "firebase-tools": "15.34.1"
+  }
+}
