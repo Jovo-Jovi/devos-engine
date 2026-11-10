@@ -2,7 +2,7 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
-## 1.13.1 — Unreleased
+## 1.13.1 — 2026-11-10
 
 - **The supervisor proposes; you approve (PR-94).** Your `DEVOS_PAT` is now only in the two supervisor steps that act; it reads and reports with the workflow's own token. Its Claude Code diagnosis runs like the review, as a user of its own with no shell, and its answer is scrubbed of secret values. An issue, a revision or a continuation the diagnosis chooses is now a proposal: the supervisor's comment shows the exact text, and nothing is opened or posted until you reply `/devos approve <id>`. Only the workflow's own comments count as the supervisor's history, so a comment someone else writes on its issue cannot pose as one.
 - **Publish checks the guards itself, before anything is pushed.** It runs main's guards on the verified tree and main's secret rules on every file the run changed. A secret stops the attempt with nothing pushed; any other red guard is red in the checks, whatever the work job reported. The dependency audit stays the work job's, as publish runs no package manager.
