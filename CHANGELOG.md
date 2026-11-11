@@ -2,6 +2,10 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
+## 1.13.9 — Unreleased
+
+- **Three more Cursor models.** `gemini-4-carbon`, `claude-fable-5-1-thinking` and `claude-haiku-5-5-thinking` are now among the models offered for Cursor: Cursor offers them, and `node tools/models-refresh.mjs` found them missing. Claude Fable 5.2 stays first, and no default changes.
+
 ## 1.13.8 — 2026-11-11
 
 - **`devos models check`: are your models the newest of their line?** It compares the reviewer's, the light reviewer's and the builder's model with what each tool offers now: Cursor's own list (`agent models`), the provider's models API when its key is already in your shell (`ANTHROPIC_API_KEY` for Claude Code, `OPENAI_API_KEY` for Codex, `GEMINI_API_KEY` or `GOOGLE_API_KEY` for Gemini; the key goes only to that provider and is never printed or kept), else the engine's own list. It suggests only a newer model of the same line (Fable 5.1 to Fable 5.2, never Opus to Fable), and says when a model is no longer offered. A model Cursor lists only with its effort (`grok-4.7-high`) counts as offered, since the cycle adds the fence's effort to it. Nothing changes until you confirm: `devos models check --apply`, or **Use** after **Check for newer models** in the guided page's Models panel. Both set the role's model variable, with no commit.

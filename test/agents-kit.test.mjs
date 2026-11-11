@@ -96,6 +96,11 @@ test("agents-kit.test.mjs cursor groups come from seeds plus reported ids", () =
     const offered = cursor.groups.flatMap((group) => group.models.map((model) => model.id));
     const seeded = tools.tools.find((tool) => tool.id === "cursor").seedGroups.flatMap((group) => group.models);
     assert.deepEqual(offered.filter((id) => !seeded.includes(id)), ["gpt-5.1", "gemini-2.5-pro", "weird-model-9"]);
+    // E76: the three models Cursor offers that the engine's refresh found missing (E75); Claude Fable 5.2 stays first.
+    const cursorSeeds = tools.tools.find((tool) => tool.id === "cursor").seedGroups;
+    assert.deepEqual(cursorSeeds.find((group) => group.id === "claude").models, ["claude-fable-5-2", "claude-fable-5-1", "claude-fable-5",
+      "claude-fable-5-1-thinking", "claude-fable-5-thinking-high", "claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5", "claude-haiku-5-5-thinking"]);
+    assert.deepEqual(cursorSeeds.find((group) => group.id === "gemini").models, ["gemini-4-argon", "gemini-4-carbon", "gemini-3.1-pro", "gemini-3.8-flash"]);
   } finally {
     restore();
   }
