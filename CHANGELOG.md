@@ -2,7 +2,7 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
-## 1.13.7 — Unreleased
+## 1.13.7 — 2026-11-11
 
 - **The protection bypass secret is advised only where it is sent (PR-98).** The setup check no longer advises `VERCEL_AUTOMATION_BYPASS_SECRET` to a project whose `deploy.bypass` is false (the default): the deploy's smoke test, the doctor and the screenshots send it only when `deploy.bypass` is true, and with it false the doctor already says no bypass secret is added.
 - **Claude Fable 5.2.** `claude-fable-5-2` (released 2026-11-09) is first in the Claude models offered for Claude Code and for Cursor. The defaults stay on Claude Opus 5.5 and Sonnet 5.5; choose Fable 5.2 for a role with `devos models set <role> claude-fable-5-2`, or on the guided page.
