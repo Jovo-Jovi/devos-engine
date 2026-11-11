@@ -172,6 +172,11 @@ test("project-settings.test.mjs smoke target, login preview, deploy workflow and
   for (const id of ["vercel-bypass", "r2-secrets", "r2-var", "r2-vercel", "firebase-secrets", "firebase-var", "firebase-vercel"]) {
     const { steps: shippedSteps, ...shipped } = setup.items.find((item) => item.id === id);
     const { steps: pilotSteps, ...fromPilot } = pilot.items.find((item) => item.id === id);
+    // PR-98: the bypass secret is advised only when deploy.bypass is true, a condition the source did not have.
+    if (id === "vercel-bypass") {
+      assert.deepEqual(shipped.when, [...fromPilot.when, "bypass:true"]);
+      shipped.when = fromPilot.when;
+    }
     assert.deepEqual(shipped, fromPilot, id);
     assert.equal(Array.isArray(shippedSteps) && shippedSteps.length > 0 && Array.isArray(pilotSteps), true, id);
   }

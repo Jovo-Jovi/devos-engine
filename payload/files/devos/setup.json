@@ -1,5 +1,5 @@
 {
-  "$comment": "PR-27. Everything outside the repository the method needs: GitHub secrets and variables, and the app's Vercel environment. scripts/devos/setup-check.mjs checks names only and keeps the Dev OS setup issue up to date. kind: secret | variable (a switch DEV_OS sets to its value) | address (a variable you set to an https:// address, PR-97) | vercel. when: always | module:<name> | var:<NAME> | method | probe:production (PR-97). blocks: cycle | deploy | none.",
+  "$comment": "PR-27. Everything outside the repository the method needs: GitHub secrets and variables, and the app's Vercel environment. scripts/devos/setup-check.mjs checks names only and keeps the Dev OS setup issue up to date. kind: secret | variable (a switch DEV_OS sets to its value) | address (a variable you set to an https:// address, PR-97) | vercel. when: always | module:<name> | var:<NAME> | method | probe:production (PR-97) | bypass:true (PR-98). blocks: cycle | deploy | none.",
   "items": [
     {
       "id": "cursor",
@@ -88,7 +88,7 @@
       "title": "Vercel protection bypass (previews and smoke tests)",
       "kind": "secret",
       "names": ["VERCEL_AUTOMATION_BYPASS_SECRET"],
-      "when": ["var:DEVOS_VERCEL"],
+      "when": ["var:DEVOS_VERCEL", "bypass:true"],
       "blocks": "none",
       "level": "recommended",
       "steps": [

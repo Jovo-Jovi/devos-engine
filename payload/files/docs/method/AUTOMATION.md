@@ -365,7 +365,8 @@ A UI fence carries a header line `- Screens: \`<name> <path>[ click|hover|focus 
   (each applies only while its module is active), `DEVOS_MEDIA_XAI_KEY` (optional, with generated media from xAI:
   only the "Generated media" step of `devos-cycle` receives it, and it is used only when `DEVOS_MEDIA_BUDGET` is
   above 0, PR-81).
-  A project with `deploy.bypass` false has no Vercel Protection Bypass for Automation secret.
+  A project with `deploy.bypass` false has no Vercel Protection Bypass for Automation secret, and the setup check does
+  not advise one (setup item `vercel-bypass`, condition `bypass:true`, PR-98).
 - **Vercel Production environment** (names only; `devos-setup` checks them through the Vercel API):
   `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (every environment),
   `SUPABASE_SECRET_KEY` (Sensitive). The production address the deploy's smoke test probes is a repository variable,

@@ -50,6 +50,7 @@
           "id": "claude",
           "label": "Claude on Cursor",
           "models": [
+            "claude-fable-5-2",
             "claude-fable-5-1",
             "claude-fable-5",
             "claude-fable-5-thinking-high",
@@ -119,6 +120,7 @@
           "id": "claude",
           "label": "Claude",
           "models": [
+            "claude-fable-5-2",
             "claude-fable-5-1",
             "claude-fable-5-1-thinking-high",
             "claude-fable-5",

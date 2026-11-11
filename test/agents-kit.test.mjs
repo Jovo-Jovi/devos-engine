@@ -108,7 +108,9 @@ test("agents-kit.test.mjs claude seeds stay offered when the CLI is signed in", 
     assert.equal(claude.status, "installed");
     assert.equal(claude.signedIn, true);
     const ids = claude.groups.flatMap((group) => group.models.map((model) => model.id));
-    for (const seed of ["claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5"]) {
+    // E74: Claude Fable 5.2 (claude-fable-5-2, released 2026-11-09) is offered first.
+    assert.equal(claude.seedGroups[0].models[0], "claude-fable-5-2");
+    for (const seed of ["claude-fable-5-2", "claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5"]) {
       assert.equal(ids.includes(seed), true, seed);
     }
   } finally {
