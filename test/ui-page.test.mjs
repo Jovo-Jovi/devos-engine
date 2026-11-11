@@ -207,3 +207,34 @@ test("ui-page.test.mjs (h) a new start offers the last choices, and a continued 
     assert.equal(js.includes(text), true, text);
   }
 });
+
+test("ui-page.test.mjs (k) E71: an adoption has its own steps, one screen per question with every option, a Keys step, a finish screen and its whole output", () => {
+  const js = readFileSync(path.join(ui, "app.js"), "utf8");
+  const css = readFileSync(path.join(ui, "app.css"), "utf8");
+  for (const text of [
+    "const ADOPT_STEPS = [",
+    "const ADOPT_GROUPS = [[\"project\", \"Your project\"], [\"devos\", \"DEV_OS\"], [\"github\", \"GitHub\"]];",
+    "if (adoptMode()) return ADOPT_STEPS;",
+    "rail.append(adopting ? adoptBlock() : titleBlock());",
+    "if (event.type === \"step\" && event.step === \"adopt\") {",
+    "if (run.logs.length > (run.mode === \"adopt\" ? 5000 : 500)) run.logs.shift();",
+    "if (ask.form === \"choice\" || ask.form === \"choices\") return adoptPick(ask, at, log);",
+    "if (ask.form === \"brief\") return adoptBriefScreen(ask, log);",
+    "if (ask.form === \"contract\") return adoptContract(ask, log);",
+    "if (ask.form === \"confirm\") return adoptConfirm(ask, at, log);",
+    "return answer(\"line\", picked.length ? picked.join(\", \") : \",\");",
+    "\"Set these in Vercel yourself\"",
+    "\"How adding DEV_OS works\"",
+    "\"DEV_OS is ready on your project\"",
+    "\"Open the project's page\"",
+    "function adoptWorking(at, log) {",
+  ]) {
+    assert.equal(js.includes(text), true, text);
+  }
+  // The adoption's output is never cut to its last lines.
+  const log = js.slice(js.indexOf("function adoptLog("), js.indexOf("// A brief or the contract as headings"));
+  assert.equal(log.includes("slice(-"), false);
+  for (const rule of [".pick-list {", ".pick-item:has(input:checked) {", ".facts {", ".keyrow.is-now {", ".pr-card {", ".step-para {"]) {
+    assert.equal(css.includes(rule), true, rule);
+  }
+});

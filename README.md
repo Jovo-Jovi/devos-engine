@@ -39,7 +39,7 @@ DEV_OS sets a project up from an empty folder and runs it as small, reviewed tas
 writes the blueprint: the brief, the scope, the design system, the phases and the first task. You approve it. Each
 task is then built from a written fence, checked, reviewed, and merged by you.
 
-Version `1.13.3`. The engine is under PolyForm Shield 1.0.0 and the files it installs into your project under MIT
+Version `1.13.4`. The engine is under PolyForm Shield 1.0.0 and the files it installs into your project under MIT
 (see [Licence](#licence)).
 
 ## Contents
@@ -338,6 +338,10 @@ From the project's own clone on GitHub, in development or in production:
 | 2. Brief | `devos adopt` | Your own AI tool writes a brief of the project, working on a copy in `~/.devos/adopt/`, never in the project. Type `yes` to keep it, or say what to change. |
 | 3. Install | `devos adopt --install` | Adds DEV_OS on a new branch `devos/adopt`, in one commit, in a separate worktree. Your code, CI and files stay; the guards' findings on your code as it is become the baseline. |
 | 4. Publish | `devos adopt --publish` | Pushes the branch and opens its pull request once you type `yes`, and sets the keys, variables and labels. No cycle starts until you merge. |
+
+On the guided page (`devos ui`, then **Existing project**) the same steps are screens: the survey as facts, the brief
+to keep or change, the contract and the Control Tower link, the cycle's agents from their whole model lists, a Keys step
+that shows which keys GitHub already has and what to set in Vercel, and the pull request with what happens next.
 
 An older hand-copied DEV_OS keeps its documents and settings; its method files become the engine's. It is adopted only
 while no task branch is open and no cycle runs.

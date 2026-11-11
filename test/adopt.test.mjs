@@ -9,6 +9,7 @@ import { cleanup, stage } from "./harness.mjs";
 import { ADOPT_IGNORE, AREA_IMPORTS, GATE_IMPORTS, adoptStops, chooseAgent, copyPrecedents, copyStops, criticalList, ownSettings, projectFromConfig, sourceRoots, surveyLines, surveyProject, uiReader } from "../lib/adopt.mjs";
 import { merge } from "../payload/files/scripts/devos/config.mjs";
 import { hubExec } from "../lib/hub.mjs";
+import { confirm, multiSelect, select } from "../lib/menu.mjs";
 import { matchesAny } from "../payload/files/scripts/devos/lib.mjs";
 
 // E33 (D-E13): devos adopt --check surveys an existing project and changes nothing. E34: devos adopt has the
@@ -618,4 +619,55 @@ test("adopt.test.mjs (s) source folders, the gate's import patterns, and the git
   const head = readFileSync(path.join(root, "payload", "files", "dot-gitignore"), "utf8").split("# Node / Next.js")[0];
   const lines = head.split(/\r?\n/).map((line) => line.trim()).filter((line) => line !== "" && !line.startsWith("#"));
   assert.deepEqual(ADOPT_IGNORE, lines);
+});
+
+test("adopt.test.mjs (s) E71: a menu question tells the page its form, and uiReader sends it once, with the step it belongs to", async () => {
+  // The terminal's text is unchanged; the form is set on the reader just before each read.
+  const seen = [];
+  const reader = (answers) => {
+    const read = async () => {
+      seen.push(read.next ?? null);
+      read.next = null;
+      return answers.shift();
+    };
+    return read;
+  };
+  const out = { text: "", write(chunk) { this.text += chunk; } };
+  const options = [{ value: "a", label: "Tool · a — on your account" }, { value: "b", label: "Tool · b" }];
+  assert.equal(await select(reader(["2"]), out, { title: "Reviewer — reviews every task", options, defaultIndex: 0, note: "later" }), "b");
+  assert.deepEqual(seen.pop(), { form: "choice", title: "Reviewer — reviews every task", options: ["Tool · a — on your account", "Tool · b"], default: 1, note: "later" });
+  assert.equal(out.text, "Reviewer — reviews every task\n  1) Tool · a — on your account\n  2) Tool · b\n[default: 1]\nlater\n");
+  assert.deepEqual(await multiSelect(reader([","]), { write() {} }, { title: "Strengths", options, defaultIndexes: [], emptyAllowed: true }), []);
+  assert.deepEqual(seen.pop(), { form: "choices", title: "Strengths", options: ["Tool · a — on your account", "Tool · b"], defaults: [], empty: true });
+  assert.deepEqual(await multiSelect(reader(["1, 2"]), { write() {} }, { title: "Pool", options, defaultIndexes: [1] }), ["a", "b"]);
+  assert.deepEqual(seen.pop().defaults, [2]);
+  assert.equal(await confirm(reader([""]), { write() {} }, "Save these?", true), true);
+  assert.deepEqual(seen.pop(), { form: "confirm", title: "Save these?", yes: "yes", no: "no", yesLabel: "Yes", noLabel: "No", default: "yes" });
+  // A plain reader ignores the form; the page's reader sends it with the question, once, and keeps the step.
+  const previous = process.env.DEVOS_UI;
+  const chunks = [];
+  const write = process.stdout.write;
+  process.env.DEVOS_UI = "1";
+  process.stdout.write = function writeCaptured(...args) {
+    chunks.push(String(args[0]));
+    return true;
+  };
+  try {
+    const wrapped = uiReader(async () => "1");
+    wrapped.step = "agents";
+    await select(wrapped, { write() {} }, { title: "Policy", options: [{ value: "x", label: "x" }] });
+    await wrapped();
+    wrapped.step = "publish";
+    await wrapped();
+  } finally {
+    process.stdout.write = write;
+    if (previous === undefined) delete process.env.DEVOS_UI;
+    else process.env.DEVOS_UI = previous;
+  }
+  const marks = chunks.join("").split("\n").filter((line) => line.startsWith("::devos-ask "));
+  assert.deepEqual(marks, [
+    "::devos-ask {\"form\":\"choice\",\"title\":\"Policy\",\"options\":[\"x\"],\"default\":1,\"kind\":\"line\",\"step\":\"agents\"}",
+    "::devos-ask {\"kind\":\"line\",\"step\":\"agents\"}",
+    "::devos-ask {\"kind\":\"line\",\"step\":\"publish\"}",
+  ]);
 });
