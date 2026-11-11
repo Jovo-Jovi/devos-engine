@@ -110,14 +110,14 @@ test("adopt-files.test.mjs (d) devos upgrade updates DEV_OS's CI where it lives 
     mkdirSync(next);
     for (const part of ["package.json", "bin", "lib", "payload"]) cpSync(path.join(root, part), path.join(next, part), { recursive: true });
     const pkg = path.join(next, "package.json");
-    writeFileSync(pkg, readFileSync(pkg, "utf8").replace("\"version\": \"1.13.7\"", "\"version\": \"1.13.8\""));
+    writeFileSync(pkg, readFileSync(pkg, "utf8").replace("\"version\": \"1.13.8\"", "\"version\": \"1.13.9\""));
     const ci = path.join(next, "payload", "files", "dot-github", "workflows", "ci.yml");
     writeFileSync(ci, `${readFileSync(ci, "utf8").replaceAll("\r\n", "\n")}# Upgrade test line.\n`);
     writeFileSync(path.join(next, "payload", "manifest.json"), manifestText(buildManifest(next)));
     const upgraded = spawnSync(process.execPath, [path.join(next, "bin", "devos.mjs"), "upgrade", "--local"], { cwd: folder, encoding: "utf8", windowsHide: true, timeout: 180000 });
     assert.equal(upgraded.status, 0, upgraded.stdout + upgraded.stderr);
-    assert.equal(upgraded.stdout.includes("devos upgrade 1.13.7 to 1.13.8: 1 updated, 0 added, 0 removed, 0 conflicts"), true, upgraded.stdout);
-    const branch = "devos/upgrade-1.13.8";
+    assert.equal(upgraded.stdout.includes("devos upgrade 1.13.8 to 1.13.9: 1 updated, 0 added, 0 removed, 0 conflicts"), true, upgraded.stdout);
+    const branch = "devos/upgrade-1.13.9";
     const changed = git(["diff", "--name-only", `main..${branch}`], folder).split("\n").filter(Boolean).sort();
     assert.deepEqual(changed, [".github/workflows/devos-ci.yml", "devos/engine.lock.json"]);
     assert.equal(git(["show", `${branch}:.github/workflows/devos-ci.yml`], folder).endsWith("# Upgrade test line.\n"), true);

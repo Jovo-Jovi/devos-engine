@@ -2,6 +2,11 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
+## 1.13.8 — Unreleased
+
+- **`devos models check`: are your models the newest of their line?** It compares the reviewer's, the light reviewer's and the builder's model with what each tool offers now: Cursor's own list (`agent models`), the provider's models API when its key is already in your shell (`ANTHROPIC_API_KEY` for Claude Code, `OPENAI_API_KEY` for Codex, `GEMINI_API_KEY` or `GOOGLE_API_KEY` for Gemini; the key goes only to that provider and is never printed or kept), else the engine's own list. It suggests only a newer model of the same line (Fable 5.1 to Fable 5.2, never Opus to Fable), and says when a model is no longer offered. A model Cursor lists only with its effort (`grok-4.7-high`) counts as offered, since the cycle adds the fence's effort to it. Nothing changes until you confirm: `devos models check --apply`, or **Use** after **Check for newer models** in the guided page's Models panel. Both set the role's model variable, with no commit.
+- **The engine's model lists stay current.** `node tools/models-refresh.mjs` (for the engine's maintainer) reads the same live lists and adds the newer models to `lib/data/tools.json`, the lists every project is offered first. It never removes one. See `dev/MAINTAINERS.md`.
+
 ## 1.13.7 — 2026-11-11
 
 - **The protection bypass secret is advised only where it is sent (PR-98).** The setup check no longer advises `VERCEL_AUTOMATION_BYPASS_SECRET` to a project whose `deploy.bypass` is false (the default): the deploy's smoke test, the doctor and the screenshots send it only when `deploy.bypass` is true, and with it false the doctor already says no bypass secret is added.

@@ -19,7 +19,7 @@ payload/files/         the method, installed and upgraded (dot-directories are s
 payload/templates/     project-owned starting points, written once at install
 payload/contract/      the contract shown by devos init
 payload/manifest.json  every engine-owned path with its sha256 (generated: npm run manifest)
-tools/                 build-manifest, find-specifics, release-check, sources, stage
+tools/                 build-manifest, find-specifics, models-refresh, release-check, sources, stage
 test/                  node:test suites, no dependencies (npm test)
 dev/                   plan, decisions, ledger, fences, reports, reviews
 ```
@@ -86,6 +86,22 @@ package so far passed on its first attempt.
   rest.
 - **Short fences.** The fence states the owner's decision, the files, the rows and their exact expected output, and
   nothing the package already shows.
+
+## The models every project is offered
+
+`lib/data/tools.json` lists each AI tool's models, the ones the guided page and `devos init` offer first. Before a
+release, or when a provider announces a model, refresh it (E75):
+
+1. Put the keys you have in your shell, by name: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`. Sign in to
+   the Cursor CLI (`agent login`) for Cursor's own list. A missing key or tool is skipped and named.
+2. `node tools/models-refresh.mjs` lists, per tool, the newer models its live list has and the engine's models it no
+   longer lists.
+3. `node tools/models-refresh.mjs --write` adds the newer ones, first in their family's group. It never removes one: a
+   model one account no longer lists may still run for another. Remove one by hand, with a reason, when its provider
+   retires it.
+4. Commit `lib/data/tools.json` on a branch and open a pull request; the tests that pin a model id say so.
+
+A project checks its own roles with `devos models check` (or Check for newer models on the guided page).
 
 ## GitHub Actions minutes
 

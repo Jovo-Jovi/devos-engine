@@ -39,7 +39,7 @@ DEV_OS sets a project up from an empty folder and runs it as small, reviewed tas
 writes the blueprint: the brief, the scope, the design system, the phases and the first task. You approve it. Each
 task is then built from a written fence, checked, reviewed, and merged by you.
 
-Version `1.13.7`. The engine is under PolyForm Shield 1.0.0 and the files it installs into your project under MIT
+Version `1.13.8`. The engine is under PolyForm Shield 1.0.0 and the files it installs into your project under MIT
 (see [Licence](#licence)).
 
 ## Contents
@@ -254,6 +254,7 @@ commas, or a name; Enter takes the default.
 | **Models** | Only the models a tool lists for your account are offered. |
 | **Effort** | The blueprint agent runs at high by default; Claude Code also takes Max. A builder's effort is chosen by the reviewer in each fence, or fixed, with Fast for Cursor. |
 | **A model for the next run** | `devos models set <role> <model>` or the page's **Models** button; same tool, no commit. |
+| **Newer models** | `devos models check`, or **Check for newer models** in the page's Models panel: each role against what its tool offers now. Only a newer model of the same line is suggested, and nothing changes until you confirm (`--apply`, or **Use**). |
 | **Next models at a limit** | Up to 4 per role, of its own tool (`devos models fallback`, by pull request). A model the account cannot use is skipped. |
 | **Another tool for a role** | `devos models tool` or the page's **Another tool**, by pull request, once the repository has that tool's key. |
 | **Second accounts** | `CURSOR_API_KEY_2`, `CLAUDE_CODE_OAUTH_TOKEN_2`, `OPENAI_API_KEY_2`, `GEMINI_API_KEY_2`: at a limit the run continues on the other account. |
@@ -379,6 +380,7 @@ must be committed.
 | `devos remove [folder] [--local]` | Takes DEV_OS out of a project: removes the files it installed and still owns on a branch `devos/remove` and opens a pull request (`--local`: a commit only), keeping your documents, fences, reviews, `docs/method/` and any DEV_OS file you edited. Run again after the merge, it deletes DEV_OS's secrets, `DEVOS_*` variables and `devos:` labels on GitHub after you type yes, and a never-merged `devos/adopt` branch. |
 | `devos models [folder]` | The reviewer's, the light reviewer's and the default builder's model. |
 | `devos models set <role> <model>` · `reset <role>` | Sets or clears the role's model variable for the next run. Roles: `reviewer`, `light`, `builder`. |
+| `devos models check [folder] [--apply]` | Each role's model against what its tool offers now: the tool's own list (Cursor), its provider's models API with a key already in your shell (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`), else the engine's list. `--apply` switches each role that has a newer model of its line, through its model variable. |
 | `devos models fallback <role> <model,…\|none>` | Opens a pull request with the role's next models (up to 4). |
 | `devos models tool <role> <tool> <model>` | Opens a pull request that moves the role to another tool (`cursor`, `claude`, `codex`, `gemini`) and model, once the repository has its key. |
 | `devos agents detect` | Lists the AI CLIs here, their versions, and whether each is signed in. |

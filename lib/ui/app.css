@@ -822,6 +822,11 @@ details.help p + p { margin-top: 8px; }
 .step.final:not(.is-still) .next li:nth-child(3) { animation-delay: 680ms; }
 .step.final:not(.is-still) .next li:nth-child(4) { animation-delay: 760ms; }
 
+/* E75: what the model check found for a role. */
+.model-check { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px 12px; border-inline-start: 2px solid var(--line-strong); }
+.model-check.is-newer, .model-check.is-gone { border-inline-start-color: var(--brass-bright); }
+.model-check .hint { margin: 0; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; }
   .sweep { display: none; }
