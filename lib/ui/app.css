@@ -356,7 +356,7 @@ code, .mono { font-family: var(--mono); font-size: 0.875em; }
 }
 .select option, .select optgroup { background: var(--ink-raised); color: var(--paper); }
 
-.check { display: flex; gap: 12px; align-items: flex-start; cursor: pointer; font-size: 15px; }
+.check { display: flex; gap: 12px; align-items: flex-start; min-height: 28px; padding-block: 3px; cursor: pointer; font-size: 15px; }
 .check input { width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--brass); flex: none; }
 .media-kinds { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 12px; }
 
@@ -633,7 +633,7 @@ code, .mono { font-family: var(--mono); font-size: 0.875em; }
   white-space: pre-wrap; overflow-wrap: anywhere;
 }
 .log-line:last-child { color: var(--paper); }
-details.disclose summary { cursor: pointer; color: var(--dim); font-size: 14px; list-style: none; }
+details.disclose summary { display: block; width: fit-content; min-height: 24px; padding-block: 3px; cursor: pointer; color: var(--dim); font-size: 14px; list-style: none; }
 details.disclose summary::-webkit-details-marker { display: none; }
 details.disclose summary::before { content: "+ "; color: var(--brass-text); }
 details.disclose[open] summary::before { content: "– "; }
@@ -778,9 +778,54 @@ details.disclose[open] summary { margin-bottom: 10px; }
 .pr-go { color: var(--brass-bright); font-size: 14px; font-weight: 500; }
 .log-tall { max-height: 60vh; }
 
+/* ---------- E72: one footer place, guides, the project's page, and motion with a direction ---------- */
+
+/* A wide step keeps its footer where every other step has it, so Back and Continue never move sideways. */
+.step-wide > .step-foot { max-width: 720px; }
+.rail:focus-visible, .log:focus-visible { outline: 2px solid var(--brass-bright); outline-offset: -2px; }
+.sheet-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; border-bottom: 1px solid var(--line-strong); }
+.sheet-head h3 { border-bottom: 0; }
+.sheet-head .btn { margin-right: 8px; }
+.btn-small { min-height: 32px; padding: 0 12px; font-size: 14px; }
+.repo-facts { display: grid; grid-template-columns: minmax(96px, auto) 1fr; gap: 8px 18px; font-size: 15px; }
+.repo-facts dt { color: var(--faint); }
+.repo-facts dd { overflow-wrap: anywhere; }
+.stack { display: flex; flex-direction: column; gap: 32px; }
+details.help p { max-width: 64ch; }
+details.help p + p { margin-top: 8px; }
+.check-detail a { color: var(--brass-bright); }
+
+/* Continue brings the next screen in from the right, Back from the left; the same screen drawn again stays still. */
+.step.is-fwd { animation: arrive-fwd 280ms var(--ease) both; }
+.step.is-back { animation: arrive-back 280ms var(--ease) both; }
+.step.is-still, .step.is-still .fact, .step.is-still .keyrow { animation: none; }
+@keyframes arrive-fwd { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: none; } }
+@keyframes arrive-back { from { opacity: 0; transform: translateX(-16px); } to { opacity: 1; transform: none; } }
+
+/* A step's tick draws in on the rail when the step is first done. */
+.rail-step.is-fresh .rail-num { animation: tick-pop 360ms var(--ease) both; }
+.rail-step.is-fresh .rail-num path { stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw 360ms var(--ease) 120ms forwards; }
+@keyframes tick-pop { from { transform: scale(0.7); } to { transform: none; } }
+
+/* Choices and buttons press; a mark moves into place. */
+.choice, .pick-item { transition-property: border-color, background-color, transform; transition-duration: 140ms; transition-timing-function: var(--ease); }
+.btn { transition-property: background-color, border-color, color, transform; }
+.choice:active, .pick-item:active { transform: scale(0.992); }
+.btn:active:not(:disabled) { transform: translateY(1px); }
+.choice-mark, .pick-mark { transition: box-shadow 160ms var(--ease), border-color 160ms var(--ease); }
+
+/* The finish mark draws itself, then what happens next comes in, one line after another. */
+.step.final:not(.is-still) .final-mark :is(circle, path) { stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw 640ms var(--ease) forwards; }
+.step.final:not(.is-still) .final-mark path { animation-delay: 360ms; animation-duration: 420ms; }
+.step.final:not(.is-still) .next li { animation: arrive 320ms var(--ease) both; animation-delay: 520ms; }
+.step.final:not(.is-still) .next li:nth-child(2) { animation-delay: 600ms; }
+.step.final:not(.is-still) .next li:nth-child(3) { animation-delay: 680ms; }
+.step.final:not(.is-still) .next li:nth-child(4) { animation-delay: 760ms; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; }
   .sweep { display: none; }
   .boot-mark { animation: none; }
   .agent-now, .now-pulse { animation: none; }
+  .choice:active, .pick-item:active, .btn:active:not(:disabled) { transform: none; }
 }

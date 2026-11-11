@@ -4,7 +4,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { cloneProject, compareVersions, engineRepository, hubExec, hubState, parseRepositoryInput } from "../lib/hub.mjs";
+import { cloneProject, compareVersions, cycleFacts, engineRepository, hubExec, hubState, parseRepositoryInput, projectTasks } from "../lib/hub.mjs";
 import { startUiServer } from "../lib/ui-server.mjs";
 import { cleanup, stage } from "./harness.mjs";
 
@@ -86,6 +86,7 @@ test("hub.test.mjs (b) the page reads a project's setup, versions and Control To
       registryLink: true,
       contractVersion: "",
       paused: false,
+      tasks: null,
     });
     // E28: the workflows skip every run while DEVOS_PAUSED is exactly "true".
     process.env.STUB_VARIABLES = JSON.stringify([{ name: "DEVOS_REPORTING", value: "on" }, { name: "DEVOS_PAUSED", value: "true" }]);
@@ -162,6 +163,8 @@ test("hub.test.mjs (d) the server reads a project's page and clones from GitHub 
     const read = await call(one, "GET", "/api/hub");
     assert.equal(read.status, 200);
     assert.deepEqual([read.body.ok, read.body.repository, read.body.versions], [true, "devtest/demo-shop", { project: version, engine: version, latest: version, latestError: "" }]);
+    // E72: the page also gets the cycle as GitHub has it; the stand-in gh has no run, no setup issue and no pull list.
+    assert.deepEqual([read.body.lastRun, read.body.setupIssue, read.body.openPulls], [null, "", null]);
     const refused = await call(one, "POST", "/api/clone", { url: "devtest/demo-shop" });
     assert.deepEqual(refused, { status: 400, body: { ok: false, errors: ["This page was opened for one folder. Run devos ui without a folder to bring a project from GitHub."] } });
   } finally {
@@ -230,5 +233,57 @@ test("hub.test.mjs (e) after the computer check the page offers a new or a curre
     "Open this project",
   ]) {
     assert.equal(js.includes(text), true, text);
+  }
+});
+
+test("hub.test.mjs (g) E72: the project's page reads its tasks from docs/PHASES.md and the cycle from GitHub, read only", () => {
+  const staged = stage();
+  try {
+    const folder = staged.project;
+    mkdirSync(path.join(folder, "docs"), { recursive: true });
+    assert.equal(projectTasks(folder), null);
+    const table = [
+      "| Task | Phase | Station | Name | Risk | Gate | Done | Verdict |",
+      "|---|---|---|---|---|---|---|---|",
+      "| T01 | 1 | S1 | Skeleton | 1 | — | [x] | PASS a1 — docs/reviews/T01-a1.md |",
+      "| T02 | 1 | S1 | Sign-in | 3 | G1 | [ ] | — |",
+      "| T03 | 2 | S2 | Catalogue | 2 | — | [ ] | — |",
+    ];
+    writeFileSync(path.join(folder, "docs", "PHASES.md"), `# Phases\n\n${table.join("\n")}\n`);
+    assert.deepEqual(projectTasks(folder), { total: 3, done: 1, next: { task: "T02", name: "Sign-in" } });
+    writeFileSync(path.join(folder, "docs", "PHASES.md"), "# Phases\n\nNo table yet.\n");
+    assert.equal(projectTasks(folder), null);
+
+    const calls = [];
+    const answers = {
+      run: JSON.stringify([{ status: "completed", conclusion: "failure", url: "https://github.com/devtest/demo-shop/actions/runs/42", createdAt: "2026-11-10T09:00:00Z" }]),
+      issue: JSON.stringify([{ title: "Dev OS: setup needed (old)", url: "https://github.com/devtest/demo-shop/issues/1" }, { title: "Dev OS: setup needed", url: "https://github.com/devtest/demo-shop/issues/3" }]),
+      pr: JSON.stringify([{ url: "https://github.com/devtest/demo-shop/pull/7" }, { url: "https://github.com/devtest/demo-shop/pull/8" }]),
+    };
+    const exec = (cmd, args) => {
+      calls.push(`${cmd} ${args.join(" ")}`);
+      return { status: 0, stdout: answers[args[0]] ?? "" };
+    };
+    assert.deepEqual(cycleFacts("devtest/demo-shop", folder, exec), {
+      lastRun: { status: "completed", conclusion: "failure", url: "https://github.com/devtest/demo-shop/actions/runs/42", at: "2026-11-10T09:00:00Z" },
+      setupIssue: "https://github.com/devtest/demo-shop/issues/3",
+      openPulls: 2,
+    });
+    // Read only: three list calls on the project's repository, nothing else.
+    assert.deepEqual(calls, [
+      "gh run list --repo devtest/demo-shop --workflow devos-cycle.yml --limit 1 --json status,conclusion,url,createdAt",
+      "gh issue list --repo devtest/demo-shop --state open --search Dev OS: setup needed in:title --json title,url --limit 5",
+      "gh pr list --repo devtest/demo-shop --state open --json url --limit 50",
+    ]);
+    // A link that is not GitHub's is dropped; a failed or unreadable call leaves its fact empty.
+    answers.run = JSON.stringify([{ status: "in_progress", conclusion: "", url: "https://example.invalid/run", createdAt: "" }]);
+    answers.issue = "not json";
+    assert.deepEqual(cycleFacts("devtest/demo-shop", folder, (cmd, args) => (args[0] === "pr" ? { status: 1, stdout: "" } : exec(cmd, args))), {
+      lastRun: { status: "in_progress", conclusion: "", url: "", at: "" },
+      setupIssue: "",
+      openPulls: null,
+    });
+  } finally {
+    cleanup(staged.parent);
   }
 });

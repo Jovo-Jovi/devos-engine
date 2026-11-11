@@ -2,6 +2,14 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
+## 1.13.5 — Unreleased
+
+- **A new project's end says what the cycle still needs.** When the setup check stops because a key or a setting is missing, the guided page no longer shows a generic error: it says the repository is created and pushed, lists what is missing, says where to set it, and offers Check again. A project that did start its first cycle also lists the keys left to set, and what to set in Vercel yourself (such as `DEVOS_PRODUCTION_URL`) appears on its Keys, GitHub and finish screens.
+- **One Keys step for both flows.** A new project's Keys step now lists every key the cycle uses, marked saved, skipped, needed or optional, as the adoption's does. "Create the repository" and the adoption's "Push and open the pull request?" are each one card with counts, and the names sit behind a disclosure.
+- **Opening a current project has its own steps** (This computer · Find the project · Project page), and the first screen's texts follow the choice. The project's page also shows its tasks from `docs/PHASES.md`, the last cycle run, whether the setup check's issue is open, and links to the repository, its cycle runs and its pull requests.
+- **More guidance.** A "How it works" opener for a new project, Change links on "Check your answers", short explanations on the agent steps, a documents checklist and the time so far while the blueprint is drafted, and the file rules of the documents step behind "What files work". Precedent ids such as "(PR-29)" no longer show in the page's texts.
+- **Motion and access.** Continue brings the next screen in from the right and Back from the left; a screen drawn again no longer replays its arrival. A step's tick draws in once on the rail, choices and buttons press, and the finish mark draws itself. Back and Continue stay in one place on every step. The step rail can be reached with the keyboard, and the "Engine output" and contract rows are at least 24 px tall. Everything stays still under "reduce motion".
+
 ## 1.13.4 — 2026-11-11
 
 - **Adopting a project on the guided page is a guided flow, like a new project.** It has its own steps in the sidebar (your project, DEV_OS, GitHub) instead of the new project's. Each question is its own screen: the survey as facts, the brief to keep or change, the contract, the Control Tower link, and the cycle's agents from their whole model lists, grouped by tool and searchable (a long list was cut at its last 200 lines before). A Keys step lists every key the cycle needs, marked as already on GitHub or needed now, and what to set in Vercel yourself. The end shows the pull request, what happens next, and anything still to set. The engine's output stays whole, behind a disclosure. In a terminal, `devos adopt` asks exactly as before.
