@@ -368,7 +368,8 @@ A UI fence carries a header line `- Screens: \`<name> <path>[ click|hover|focus 
   A project with `deploy.bypass` false has no Vercel Protection Bypass for Automation secret.
 - **Vercel Production environment** (names only; `devos-setup` checks them through the Vercel API):
   `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (every environment),
-  `SUPABASE_SECRET_KEY` (Sensitive), `DEVOS_PRODUCTION_URL` (the production URL, no trailing slash: the host the deploy's smoke test probes when `deploy.probe` is `production`)
+  `SUPABASE_SECRET_KEY` (Sensitive). The production address the deploy's smoke test probes is a repository variable,
+  `DEVOS_PRODUCTION_URL` (below), not a Vercel one (PR-97).
 - **Repository variables** (GitHub → Settings → Secrets and variables → Actions → **Variables**).
   A variable that is not set takes its default; changes apply from the next run. `devos init` and `devos adopt` set each switch below with its value, so it shows on this page; a variable already set keeps its value (PR-74).
 
@@ -394,6 +395,7 @@ A UI fence carries a header line `- Screens: \`<name> <path>[ click|hover|focus 
   | `DEVOS_REPORTING` | on · **off (not set)** | on: the `report` job links the project to the DEV_OS registry and sends its events; `devos init` sets it only when the developer answers yes; off or not set, nothing is sent | PR-61, PR-62 |
   | `DEVOS_STATE` | **on** · off | with `DEVOS_REPORTING` on, `devos-state` sends the project's state twice a day (03:41 and 15:41 UTC); off stops it; `devos init` and `devos adopt` set it to on when the developer links the project | PR-75 |
   | `DEVOS_MEDIA_BUDGET` | US dollars · **0 (not set)** | the most one cycle run may spend on the media its fence names (`- Media:`); 0 lists each item's estimate and generates nothing; setup never sets it | PR-80, PR-81 |
+  | `DEVOS_PRODUCTION_URL` | an `https://` address, no trailing slash · **not set** | the address the deploy's smoke test probes when `deploy.probe` is `production`; else `deploy.production_url_fallback`. Needed only then, with no fallback (setup item `production-url`, kind `address`); setup never sets it | PR-40, PR-97 |
 
   Accounts, in practice: nothing set = both accounts on, starting with 1 · only account 2 =
   `DEVOS_CURSOR_ACCOUNT`/`DEVOS_CLAUDE_ACCOUNT` = 2 and `DEVOS_ACCOUNT_SWITCH` = off · for a single
@@ -484,7 +486,10 @@ Recipes:
   (method). Red overrides PASS automatically.
 - **A new guard:** `scripts/guards/<name>.mjs` returning `result(...)`, registered in `run-all.mjs`,
   listed in §5.
-- **A new setting:** an item in `devos/setup.json` (method) or `docs/setup-items.json` (product).
+- **A new setting:** an item in `devos/setup.json` (method) or `docs/setup-items.json` (product). Its `kind` says
+  where it lives and how it is checked: `secret` (presence), `variable` (a switch DEV_OS sets to its `value`),
+  `address` (a variable you set to an `https://` address), `vercel` (the Vercel project's Production variables).
+  `devos adopt` moves an older copy's own items into `docs/setup-items.json` (PR-97).
 - **A new workflow or label:** listed in §3 or §7; anything a bot push should trigger must be
   dispatched explicitly.
 

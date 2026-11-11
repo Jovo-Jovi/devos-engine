@@ -5,7 +5,8 @@
 // keeps the items the project needs now (modules in use or planned, variables turned on, an open
 // method fix), and checks each by NAME: GitHub secrets and variables from the workflow's
 // toJSON(secrets) / toJSON(vars), the app's Vercel Production variables through Vercel's API.
-// Values are never printed, written or compared.
+// Values are never printed or written. A secret is checked for presence only; a switch variable for its value; an
+// address variable (kind `address`, PR-97) for the form `https://…`.
 //
 //   node scripts/devos/setup-check.mjs             → .devos/setup.md (the issue body) and .devos/setup-result.json
 //   node scripts/devos/setup-check.mjs --for deploy → also exits 1 when something the deploy needs is missing
@@ -46,6 +47,12 @@ const holds = (cond) => {
   }
   // PR-81: the provider of generated media the developer chose at setup.
   if (cond.startsWith("media:")) return mediaProvider() === cond.slice(6);
+  // PR-97: the deploy's smoke test reads DEVOS_PRODUCTION_URL only when it probes production, and needs it only when
+  // devos.config.json gives no fallback address.
+  if (cond === "probe:production") {
+    const deploy = config().deploy ?? {};
+    return deploy.probe === "production" && !deploy.production_url_fallback;
+  }
   return false;
 };
 const needed = items.filter((i) => (i.when ?? ["always"]).every(holds));
@@ -84,6 +91,8 @@ const results = needed.map((i) => {
   if (i.kind === "secret" && !known.length) return { ...i, level: i.level ?? "required", missing: [], note: "", ok: false, unchecked: true };
   if (i.kind === "secret") missing = i.any ? (i.names.some(hasSecret) ? [] : [i.names.join(" or ")]) : i.names.filter((n) => !hasSecret(n));
   else if (i.kind === "variable") missing = i.names.filter((n) => String(vars[n] ?? "") !== String(i.value ?? "true")).map((n) => `${n}=${i.value ?? "true"}`);
+  // PR-97: a repository variable holding an address the human sets; DEV_OS never sets it.
+  else if (i.kind === "address") missing = i.names.filter((n) => !/^https:\/\/\S+$/.test(String(vars[n] ?? ""))).map((n) => `${n}=https://…`);
   else if (i.kind === "vercel") {
     if (vercel.error) { missing = [...i.names]; note = vercel.error; }
     else missing = i.names.filter((n) => !vercel.names.has(n));
@@ -96,7 +105,7 @@ const required = results.filter((r) => r.level === "required" && !r.unchecked);
 const blocking = mode === "deploy" || mode === "cycle" ? required.filter((r) => r.blocks === mode) : required;
 const missingRequired = blocking.filter((r) => !r.ok);
 const missingRecommended = results.filter((r) => r.level !== "required" && !r.ok && !r.unchecked);
-const where = { secret: "GitHub → this repository → Settings → Secrets and variables → Actions → **Secrets**", variable: "GitHub → Settings → Secrets and variables → Actions → **Variables**", vercel: "Vercel → the project → Settings → Environment Variables → **Production**" };
+const where = { secret: "GitHub → this repository → Settings → Secrets and variables → Actions → **Secrets**", variable: "GitHub → Settings → Secrets and variables → Actions → **Variables**", address: "GitHub → Settings → Secrets and variables → Actions → **Variables**", vercel: "Vercel → the project → Settings → Environment Variables → **Production**" };
 const blocksText = { cycle: "the build-and-review cycle", deploy: "production deploys", none: "nothing yet" };
 
 const entry = (r) => [

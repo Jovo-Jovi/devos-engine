@@ -476,13 +476,15 @@ test("hardening.test.mjs (m) the deploy's settings check holds the Vercel creden
     stagedAt(dir);
     mkdirSync(path.join(dir, "docs"), { recursive: true });
     writeFileSync(path.join(dir, "docs", "PHASES.md"), "| Task | Phase | Station | Name | Risk | Gate | Done | Verdict |\n|---|---|---|---|---|---|---|---|\n| T01 | E | 1 | One | 1 | — | [ ] | — |\n");
-    // A stand-in for Vercel's API: it records each call and lists one Production variable, DEVOS_PRODUCTION_URL.
+    // A Vercel Production variable the deploy needs: the product's own (PR-97 made the production address a GitHub one).
+    writeFileSync(path.join(dir, "docs", "setup-items.json"), JSON.stringify({ items: [{ id: "site-url", title: "The site's own address", kind: "vercel", names: ["SITE_URL"], when: ["var:DEVOS_VERCEL"], blocks: "deploy", steps: ["Vercel → Production: SITE_URL."] }] }));
+    // A stand-in for Vercel's API: it records each call and lists one Production variable, SITE_URL.
     const log = path.join(bin, "fetch.jsonl");
     const stub = path.join(bin, "fetch-stub.mjs");
     writeFileSync(stub, `import { appendFileSync } from "node:fs";
 globalThis.fetch = async (url, init) => {
   appendFileSync(${JSON.stringify(log)}, JSON.stringify({ url: String(url), auth: init?.headers?.authorization ?? "" }) + "\\n");
-  return { ok: true, status: 200, json: async () => ({ envs: [{ key: "DEVOS_PRODUCTION_URL", target: ["production", "preview"] }] }) };
+  return { ok: true, status: 200, json: async () => ({ envs: [{ key: "SITE_URL", target: ["production", "preview"] }] }) };
 };
 `);
     // Never a real key or the runner's own outputs: no VERCEL_ or GITHUB_ variable reaches the check but the test's own.
@@ -495,16 +497,63 @@ globalThis.fetch = async (url, init) => {
     // 1.13.2's step: presence flags alone. Vercel is never asked, and the variable it holds is reported missing.
     const flagsOnly = check({});
     assert.equal(flagsOnly.status, 1, flagsOnly.stdout);
-    assert.ok(flagsOnly.stdout.includes("MISSING production-url: DEVOS_PRODUCTION_URL"), flagsOnly.stdout);
+    assert.ok(flagsOnly.stdout.includes("MISSING site-url: SITE_URL"), flagsOnly.stdout);
     assert.ok(read(path.join(dir, ".devos", "setup.md")).includes("Vercel access is not set up (VERCEL_TOKEN, VERCEL_PROJECT_ID)"));
     assert.deepEqual(calls(), []);
     // The step as the workflow gives it: one call to the project's variables, with the token, and nothing missing.
     const asGiven = check(Object.fromEntries(Object.entries(given).map(([name, secret]) => [name, fake[secret]])));
     assert.equal(asGiven.status, 0, asGiven.stdout + asGiven.stderr);
-    assert.ok(asGiven.stdout.includes("OK      production-url"), asGiven.stdout);
+    assert.ok(asGiven.stdout.includes("OK      site-url"), asGiven.stdout);
     assert.deepEqual(calls(), [{ url: "https://api.vercel.com/v10/projects/prj_demo/env?decrypt=false&teamId=team_demo", auth: "Bearer t0k" }]);
   } finally {
     cleanup(dir);
     cleanup(bin);
+  }
+});
+
+// ---------- PR-97: the production address is a GitHub variable, asked for only when the smoke test reads it
+
+test("hardening.test.mjs (n) PR-97: DEVOS_PRODUCTION_URL is a repository variable, needed only when the smoke test probes production with no fallback", { skip: windows && "not rehearsed on Windows: it stages a project, as (m) does" }, () => {
+  const setup = JSON.parse(read(path.join(root, "payload", "files", "devos", "setup.json")));
+  const item = setup.items.find((entry) => entry.id === "production-url");
+  assert.deepEqual([item.kind, item.names, item.when, item.blocks], ["address", ["DEVOS_PRODUCTION_URL"], ["var:DEVOS_VERCEL", "probe:production"], "deploy"]);
+  // The smoke test reads it from the repository's variables, never from Vercel.
+  const deploy = read(path.join(workflows, "devos-deploy.yml"));
+  assert.ok(deploy.includes("DEVOS_PRODUCTION_URL: ${{ vars.DEVOS_PRODUCTION_URL }}"));
+  const dir = mkdtempSync(path.join(tmpdir(), "devos-production-url-"));
+  try {
+    stagedAt(dir);
+    mkdirSync(path.join(dir, "docs"), { recursive: true });
+    writeFileSync(path.join(dir, "docs", "PHASES.md"), "| Task | Phase | Station | Name | Risk | Gate | Done | Verdict |\n|---|---|---|---|---|---|---|---|\n| T01 | E | 1 | One | 1 | — | [ ] | — |\n");
+    const configFile = path.join(dir, "devos.config.json");
+    const original = JSON.parse(read(configFile));
+    const withDeploy = (deploy) => writeFileSync(configFile, `${JSON.stringify({ ...original, deploy: { ...original.deploy, ...deploy } }, null, 2)}\n`);
+    // No Vercel credential reaches the check, so a Vercel item would be reported missing; this one never asks Vercel.
+    const base = Object.fromEntries(Object.entries(process.env).filter(([k]) => !k.startsWith("VERCEL_") && !k.startsWith("GITHUB_")));
+    const check = (vars) => spawnSync(process.execPath, ["scripts/devos/setup-check.mjs", "--for", "deploy"], {
+      cwd: dir, encoding: "utf8", windowsHide: true,
+      env: { ...base, SECRETS_JSON: "{}", VARS_JSON: JSON.stringify({ DEVOS_VERCEL: "true", ...vars }) },
+    });
+    const line = (out) => out.stdout.split("\n").find((l) => / production-url\b/.test(l)) ?? "";
+    // The default probe (the deployment itself): not needed, so not listed at all.
+    withDeploy({ probe: "deployment", production_url_fallback: "" });
+    assert.equal(line(check({})), "");
+    // Production with a fallback address in devos.config.json: the smoke test has an address, so not needed.
+    withDeploy({ probe: "production", production_url_fallback: "https://shop.example.com" });
+    assert.equal(line(check({})), "");
+    // Production with no fallback: needed, and only an https:// address answers it.
+    withDeploy({ probe: "production", production_url_fallback: "" });
+    const none = check({});
+    assert.equal(line(none), "MISSING production-url: DEVOS_PRODUCTION_URL=https://…");
+    assert.equal(none.status, 1);
+    const md = read(path.join(dir, ".devos", "setup.md"));
+    assert.ok(md.includes("  - Where: GitHub → Settings → Secrets and variables → Actions → **Variables**"), md);
+    assert.equal(line(check({ DEVOS_PRODUCTION_URL: "shop.example.com" })), "MISSING production-url: DEVOS_PRODUCTION_URL=https://…");
+    const given = check({ DEVOS_PRODUCTION_URL: "https://shop.example.com" });
+    assert.equal(line(given), "OK      production-url");
+    // The value is never printed.
+    assert.equal(given.stdout.includes("shop.example.com") || read(path.join(dir, ".devos", "setup.md")).includes("shop.example.com"), false);
+  } finally {
+    cleanup(dir);
   }
 });

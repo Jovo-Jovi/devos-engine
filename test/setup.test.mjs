@@ -241,7 +241,8 @@ function answers(overrides = {}) {
   ].join("\n") + "\n";
 }
 
-const SIX = ["cursor", "claude", "vercel", "vercel-bypass", "vercel-var", "production-url"];
+// PR-97: a new project probes its deployment, so the production address is not asked for.
+const FIVE = ["cursor", "claude", "vercel", "vercel-bypass", "vercel-var"];
 
 function headingsFor(ids) {
   return ids.map((id, index) => {
@@ -304,7 +305,7 @@ test("setup.test.mjs writes SETUP headings for vercel and for none", () => {
     const deployed = init(vercel, answers());
     assert.equal(deployed.status, 0, deployed.stdout + deployed.stderr);
     const headings = readFileSync(path.join(vercel.project, "SETUP.md"), "utf8").split("\n").filter((line) => line.startsWith("## "));
-    assert.deepEqual(headings, headingsFor(SIX));
+    assert.deepEqual(headings, headingsFor(FIVE));
     const plain = init(none, answers({ deploy: "none" }));
     assert.equal(plain.status, 0, plain.stdout + plain.stderr);
     const fewer = readFileSync(path.join(none.project, "SETUP.md"), "utf8").split("\n").filter((line) => line.startsWith("## "));
@@ -396,7 +397,7 @@ test("setup.test.mjs rejects a project name whose key is invalid", () => {
 });
 
 test("setup.test.mjs lists applicable items and a secret command block", () => {
-  assert.deepEqual(setupItems(setupJson, { deploy: "vercel" }).map((item) => item.id), ["cursor", "claude", "codex", "gemini", ...SIX.slice(2)]);
+  assert.deepEqual(setupItems(setupJson, { deploy: "vercel" }).map((item) => item.id), ["cursor", "claude", "codex", "gemini", ...FIVE.slice(2)]);
   assert.deepEqual(setupItems(setupJson, { deploy: "none" }).map((item) => item.id), ["cursor", "claude", "codex", "gemini"]);
   const cursor = setupJson.items.find((item) => item.id === "cursor");
   const markdown = setupMarkdown([cursor], { name: "Demo Shop", slug: "devtest/demo-shop" });
@@ -567,4 +568,27 @@ test("setup.test.mjs (v) switchVariables lists every switch with its value", () 
     ["DEVOS_ACCOUNT_SWITCH", "auto"],
     ["DEVOS_SCREENS_RETENTION_DAYS", "3"],
   ]);
+});
+
+test("setup.test.mjs (w) PR-97: the production address is asked for only when the project's smoke test probes production with no fallback", () => {
+  const dir = mkdtempSync(path.join(tmpdir(), "devos-probe-"));
+  try {
+    const ids = (deploy) => {
+      writeFileSync(path.join(dir, "devos.config.json"), `${JSON.stringify({ deploy })}\n`);
+      return setupItems(setupJson, { deploy: "vercel" }, dir).map((item) => item.id);
+    };
+    assert.equal(ids({ probe: "deployment", production_url_fallback: "" }).includes("production-url"), false);
+    assert.equal(ids({ probe: "production", production_url_fallback: "https://shop.example.com" }).includes("production-url"), false);
+    assert.equal(ids({ probe: "production", production_url_fallback: "" }).includes("production-url"), true);
+    // Never on a project that does not deploy to Vercel.
+    writeFileSync(path.join(dir, "devos.config.json"), `${JSON.stringify({ deploy: { probe: "production" } })}\n`);
+    assert.equal(setupItems(setupJson, { deploy: "none" }, dir).some((item) => item.id === "production-url"), false);
+    // SETUP.md gives its steps, and no command that would set the variable to a placeholder.
+    const item = setupJson.items.find((entry) => entry.id === "production-url");
+    const markdown = setupMarkdown([item], { name: "Demo Shop", slug: "devtest/demo-shop" });
+    assert.equal(markdown.includes("New repository variable `DEVOS_PRODUCTION_URL`"), true, markdown);
+    assert.equal(markdown.includes("gh variable set"), false, markdown);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

@@ -1,0 +1,23 @@
+{
+  "CHANGELOG.md": "c6f33a5c3d68907a9ce548c7651fbf3a1c6459681c3863373d6ed12cf0509b49",
+  "README.md": "72088f4d12b2f7679740ec04c079786a496eb08afa9b41aaf336a97096deed2f",
+  "lib/adopt.mjs": "c159ed97dc5afe3e446c1bedabfeefdf8f726f323eaf1b4f015c529e6ee9202c",
+  "lib/setup.mjs": "bb3d6d9052088e93a52c32c2a499c1e366b9f51e411052f79b8f85507110f27f",
+  "package.json": "e79b28c5441ad236950e0319cfa25323524d586124d9184489c9d12a56ab6e54",
+  "payload/files/devos/prompts/intake.md": "9d8e2c7f8bb8c324c7baaf0af520ad66a4ae4f3993a6caad452476dcfc140761",
+  "payload/files/devos/setup.json": "55976c98407f53264df5a2c4678f66ae53f42c3240b1d1c90638291194d23a96",
+  "payload/files/docs/method/AUTOMATION.md": "da8c7a31365392bc467346c3517217d9db948c8bf159a296b45ddd117c917515",
+  "payload/files/docs/method/PRECEDENTS.md": "e3e48f38ae42419b4b054239c33097aa6b0f9daa9d8a4c04037ef84c27afaeed",
+  "payload/files/scripts/devos/setup-check.mjs": "8db8aa78352e320c41485cdb8c3fe25e90fe3c059813da7fafd78cf1d9003772",
+  "payload/manifest.json": "e4992c6aefe262f9da0f4a82b3ef4f0c8da58bf4c349f51c338a3a8e77b54129",
+  "test/adopt-files.test.mjs": "b8557bf7f64de4e49e343502aa6ed8ccb422a09c4094f79a7b0bf1a666dd8388",
+  "test/adopt-install.test.mjs": "96e5c9d035ce80cdadeedbaa2fa3f4299dae9f267f6e1958e7544ef8abcee103",
+  "test/adopt.test.mjs": "72a1984bd3ebefc0458dfee6fe2c3e251da558b7247fc1d8c62b90e72feb7b21",
+  "test/hardening.test.mjs": "b150d91d459741a3cf864ddd42b196ada2c8c9d6f844457f4903ef0d195d56c6",
+  "test/install.test.mjs": "c74b04aef2c08aa8d10b7060ed9bae78ac0731ed12031d6bfc6c1d472a9d788c",
+  "test/intake-two-jobs.test.mjs": "e5f2a0b0a3374448e25f8de7ecf07c44d6e92230bad83aa83f862e713d417b56",
+  "test/remove.test.mjs": "59347d23b29fdd5a9d6f383cb0127f2b3867c3780485c235cdfffe77c747c9f7",
+  "test/setup.test.mjs": "bb9254e2b72f53b4e3f9691abe866f0be5953a03eef9b93ae46b636afe7b41a4",
+  "test/upgrade.test.mjs": "b6d60413917cbd7bee5274d928fc3df05628a4cce2132368666a048d913a7edc",
+  "test/version.test.mjs": "2b5e85e6771a0ced5948b35eadf4575e10dc0b7e1ada5f118594d9a9ef2dc3ba"
+}
