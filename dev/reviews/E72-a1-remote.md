@@ -24,10 +24,10 @@ No separate agent reviewed it, so this check is the review of record.
 Review depth (risk 2). The copied files equal the package (D3), so every changed line is the line reviewed for the
 package. For this check I read again what reaches the page and what calls GitHub:
 - **No value reaches a marker.** The keys step adds each key's `name` and `optional` and the Vercel items' `title`,
-  `names` and `steps` (from `devos/setup.json`). `plan.test.mjs` (e) pins the key fields to exactly those two. The push's
-  `summary` holds the slug, the visibility, the branch, the default permissions and five lists of names.
-  `adopt-install.test.mjs` (ae) pins its nine fields. The page records only "saved" or "skipped" per key name, and undoes
-  it if the engine refuses the answer.
+  `names` and `steps` (from `devos/setup.json`). `plan.test.mjs` (e) pins the key fields to exactly those two. The
+  push's `summary` holds the slug, the visibility, the branch, the default permissions and five lists of names.
+  `adopt-install.test.mjs` (ae) pins its nine fields. The page records only "saved" or "skipped" per key name, and
+  undoes it if the engine refuses the answer.
 - **GitHub, read only.** `cycleFacts` makes three list calls: `gh run list`, `gh issue list` and `gh pr list` on the
   project's repository. `hub.test.mjs` (g) pins exactly those three calls. A run or issue link is kept only if it starts
   with `https://github.com/`. A call that fails leaves its fact empty. Only `GET /api/hub` calls it, never the upgrade,
@@ -58,8 +58,8 @@ Ledger: D4 — PASS — the staged guards printed exactly the fence's lines, `ex
 - `guard:skills PASS (29 skills checked, 20 vendored)`
 - `guard:media N/A (no devos/answers.json)`
 Ledger: D5 — PASS — `node bin/devos.mjs --version` → `devos 1.13.5`.
-Ledger: D6 — PASS — actionlint 1.7.7 `-color -shellcheck= -pyflakes=` on both workflow folders → `exit 0`. The binary's
-checksum was checked when it was downloaded.
+Ledger: D6 — PASS — actionlint 1.7.7 `-color -shellcheck= -pyflakes=` on both workflow folders → `exit 0`. The
+binary's checksum was checked when it was downloaded.
 Ledger: D7 — PASS — `engine-ci` run 43004544913 on 84d1dcb (push, attempt 1): `checks` success,
 `test (ubuntu-latest)` success.
 Ledger: D8 — PASS — `git diff --name-only main...HEAD` lists 45 paths before this review, and only these:
