@@ -2,7 +2,7 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
-## 1.13.5 — Unreleased
+## 1.13.5 — 2026-11-11
 
 - **A new project's end says what the cycle still needs.** When the setup check stops because a key or a setting is missing, the guided page no longer shows a generic error: it says the repository is created and pushed, lists what is missing, says where to set it, and offers Check again. A project that did start its first cycle also lists the keys left to set, and what to set in Vercel yourself (such as `DEVOS_PRODUCTION_URL`) appears on its Keys, GitHub and finish screens.
 - **One Keys step for both flows.** A new project's Keys step now lists every key the cycle uses, marked saved, skipped, needed or optional, as the adoption's does. "Create the repository" and the adoption's "Push and open the pull request?" are each one card with counts, and the names sit behind a disclosure.
