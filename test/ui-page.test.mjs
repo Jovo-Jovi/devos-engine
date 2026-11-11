@@ -238,3 +238,58 @@ test("ui-page.test.mjs (k) E71: an adoption has its own steps, one screen per qu
     assert.equal(css.includes(rule), true, rule);
   }
 });
+
+test("ui-page.test.mjs (l) E72: the audit's fixes: the current project's own steps, keys and settings at the end, guides, the project's page and motion with a direction", () => {
+  const html = readFileSync(path.join(ui, "index.html"), "utf8");
+  const js = readFileSync(path.join(ui, "app.js"), "utf8");
+  const css = readFileSync(path.join(ui, "app.css"), "utf8");
+  assert.equal(html.includes('<nav class="rail" id="rail" aria-label="Setup steps" tabindex="0"></nav>'), true);
+  for (const text of [
+    "const CURRENT_STEPS = [",
+    "if (currentMode()) return choosing() ? CURRENT_STEPS : CURRENT_STEPS.filter((step) => step.id !== \"current\");",
+    "text = plain(text);",
+    "function keyOverview(keys, now = \"\", given = {}) {",
+    "return keyOverview(app.run.adopt?.keys?.keys, app.run.ask?.kind === \"key\" ? app.run.ask.name : \"\");",
+    "function hostList(host) {",
+    "if (event.step === \"keys\" && Array.isArray(event.keys)) run.keyPlan = { keys: event.keys, host: Array.isArray(event.host) ? event.host : [] };",
+    "run.logs.some((line) => line.startsWith(\"devos: the cycle still needs settings\"))",
+    "\"On GitHub, but the cycle needs settings\"",
+    "\"How it works\"",
+    "planSummary({ editable: true })",
+    "function helpBox(title, paragraphs) {",
+    "const BLUEPRINT_DOCS = [",
+    "rules: \"What files work\"",
+    "function publishCard(sum) {",
+    "function cycleRows(data) {",
+    "function repoLinks(data) {",
+    "screen.classList.add(moved ? (app.dir === \"back\" ? \"is-back\" : \"is-fwd\") : \"is-still\");",
+  ]) {
+    assert.equal(js.includes(text), true, text);
+  }
+  // Precedent ids are dropped from what the page shows.
+  const plainText = js.slice(js.indexOf("function plain(text) {"), js.indexOf("// Text with URLs and `code` spans"));
+  const plain = new Function(`${plainText}\nreturn plain;`)();
+  assert.deepEqual([
+    plain("Optional second account (PR-29): its key as `CURSOR_API_KEY_2`."),
+    plain("Nothing is generated until the variable is above 0 (PR-81)."),
+    plain("a production build ({port} is replaced, PR-51)"),
+    plain("A pull request (PR) stays as it is."),
+  ], [
+    "Optional second account: its key as `CURSOR_API_KEY_2`.",
+    "Nothing is generated until the variable is above 0.",
+    "a production build ({port} is replaced)",
+    "A pull request (PR) stays as it is.",
+  ]);
+  for (const rule of [
+    ".step-wide > .step-foot { max-width: 720px; }",
+    ".rail:focus-visible, .log:focus-visible {",
+    ".step.is-still, .step.is-still .fact, .step.is-still .keyrow { animation: none; }",
+    "@keyframes arrive-back {",
+    ".rail-step.is-fresh .rail-num path {",
+    ".step.final:not(.is-still) .final-mark :is(circle, path) {",
+    "details.disclose summary { display: block; width: fit-content; min-height: 24px;",
+    ".check { display: flex; gap: 12px; align-items: flex-start; min-height: 28px;",
+  ]) {
+    assert.equal(css.includes(rule), true, rule);
+  }
+});

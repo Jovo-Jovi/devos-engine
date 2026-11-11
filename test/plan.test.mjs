@@ -203,6 +203,11 @@ test("plan.test.mjs (e) plan mode prints the step and ask markers", () => {
       "step:done",
     ];
     assert.deepEqual(names, expected);
+    // E72: the keys step lists every key it asks for, by name only, and what the host keeps.
+    const keyStep = shown.find((item) => !item.ask && item.body.step === "keys").body;
+    assert.deepEqual(keyStep.keys.map((key) => key.name), keys.map((key) => key.name));
+    for (const key of keyStep.keys) assert.deepEqual(Object.keys(key), ["name", "optional"]);
+    assert.equal(Array.isArray(keyStep.host), true);
     assert.equal(shown[2].body.round, 1);
     assert.equal(shown.at(-1).body.code, 0);
     for (const item of markers) {
