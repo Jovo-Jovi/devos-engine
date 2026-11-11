@@ -2,6 +2,10 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
+## 1.13.4 — Unreleased
+
+- **Adopting a project on the guided page is a guided flow, like a new project.** It has its own steps in the sidebar (your project, DEV_OS, GitHub) instead of the new project's. Each question is its own screen: the survey as facts, the brief to keep or change, the contract, the Control Tower link, and the cycle's agents from their whole model lists, grouped by tool and searchable (a long list was cut at its last 200 lines before). A Keys step lists every key the cycle needs, marked as already on GitHub or needed now, and what to set in Vercel yourself. The end shows the pull request, what happens next, and anything still to set. The engine's output stays whole, behind a disclosure. In a terminal, `devos adopt` asks exactly as before.
+
 ## 1.13.3 — 2026-11-10
 
 - **Production deploys on Vercel run again (PR-96).** In 1.13.2 the deploy's settings check no longer had the Vercel credentials, so it could not read the project's variables on Vercel and reported them all missing: every production deploy stopped at "Settings the deploy needs" with nothing touched. The check holds them again, as `devos-setup` does; the install steps still hold no secret. Run `devos upgrade` and merge its pull request yourself: your merge starts the deploy.
