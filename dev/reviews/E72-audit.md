@@ -70,7 +70,8 @@ Size: S is a few lines or one screen's text; M is one screen reworked; L is seve
    - keys uploaded and to set later, with counts;
    - the variable names behind a disclosure.
 8. **The Continue button jumps** (S). Most screens use a column of about 720 px, but project type, modules and
-   review use about 850 px, so Back and Continue move sideways between steps. Use one width, or keep the footer in one place.
+   review use about 850 px, so Back and Continue move sideways between steps. Use one width, or keep the footer in
+   one place.
 
 ### Guides and details
 
@@ -86,8 +87,8 @@ Size: S is a few lines or one screen's text; M is one screen reworked; L is seve
 12. **Drafting with a document checklist** (M). While the blueprint is drafted, list the documents it writes (the
     S-01 to S-12 list of the approval screen) and tick each as it appears. Show the elapsed time and a typical
     duration.
-13. **A shorter documents step** (S). It is the longest screen: 393 words, about three screens tall on a phone. Put the file
-    rules (formats, sizes, naming) behind "What files work", and show the eight document kinds as compact cards.
+13. **A shorter documents step** (S). It is the longest screen: 393 words, about three screens tall on a phone. Put
+    the file rules (formats, sizes, naming) behind "What files work", and show the eight document kinds as compact cards.
 14. **A fuller project page** (L). Today it shows Setup, Version and the Control Tower link, plus the models once the
     project has a repository. Add:
     - the cycle now: the current task from `docs/PHASES.md`, and the last run and its result;
