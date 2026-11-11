@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { checkLine, checkRoles, judgeModel, loadTools, modelLine, newerModels, offeredIds, offeredModels } from "../lib/model-check.mjs";
+import { baseIds, checkLine, checkRoles, judgeModel, loadTools, modelLine, newerModels, offeredIds, offeredModels } from "../lib/model-check.mjs";
 import { modelsCheckCommand } from "../lib/models.mjs";
 import { startUiServer } from "../lib/ui-server.mjs";
 import { cleanup, stage } from "./harness.mjs";
@@ -91,10 +91,18 @@ test("model-check.test.mjs (a) a model id as its line and version, and how a mod
   assert.deepEqual(judgeModel("grok-4.7-xhigh-fast", ["grok-4.8-xhigh-fast", ...cursorList]), { status: "newer", suggestion: "grok-4.8-xhigh-fast" });
   assert.deepEqual(judgeModel("grok-3", ["grok-4.7-high"]), { status: "newer", suggestion: "grok-4.7" });
   assert.deepEqual(judgeModel("composer-2.5", cursorList), { status: "gone", suggestion: "" });
+  assert.deepEqual(judgeModel("claude-opus-5-5", ["claude-opus-5-5-max", "claude-opus-5-5-none-fast"]), { status: "current", suggestion: "" });
   // The engine's refresh: only newer lines and new lines of a family it lists, never older or dated ones.
   assert.deepEqual(newerModels(["claude-fable-5-1", "claude-opus-5-5", "gpt-5.5"], ["claude-fable-5-2", "claude-fable-5-1", "claude-opus-4-5", "claude-opus-5-5-20261001", "gpt-5.6-sol", "gpt-4o", "o3"]),
     ["gpt-5.6-sol", "claude-fable-5-2"]);
-  assert.deepEqual(newerModels(["grok-4.7", "grok-4.7-high"], ["grok-4.8-high", "grok-4.7-high"]), ["grok-4.8", "grok-4.8-high"]);
+  // Cursor's list names every model at each effort and speed: the refresh compares and names models without them.
+  assert.deepEqual(baseIds(["grok-4.8-high", "grok-4.8-max-fast", "grok-4.8-fast-low", "claude-fable-5-1-thinking-high-fast", "gpt-5.6-sol-none"]),
+    ["grok-4.8", "claude-fable-5-1-thinking", "gpt-5.6-sol"]);
+  assert.deepEqual(newerModels(["grok-4.7", "grok-4.7-high"], ["grok-4.8-high", "grok-4.8-max-fast", "grok-4.7-high"]), ["grok-4.8"]);
+  const cursorSeeds = ["grok-4.7", "grok-4.7-high", "claude-opus-5-5", "claude-fable-5-thinking-high", "gpt-5.6-sol", "gemini-4-argon"];
+  const cursorLive = ["grok-4.7-low", "grok-4.7-xhigh-fast", "claude-opus-5-5-max", "claude-opus-5-5-none-fast", "claude-fable-5-1-thinking-high-fast",
+    "gpt-5.6-sol-none", "gpt-5.6-sol-xhigh", "gpt-5.3-codex", "gemini-4-carbon-medium", "cursor-grok-4.6-high"];
+  assert.deepEqual(newerModels(cursorSeeds, cursorLive), ["claude-fable-5-1-thinking", "gemini-4-carbon"]);
 });
 
 test("model-check.test.mjs (b) each tool's list: the tool's own, its provider's with a key from the environment, else the engine's", async () => {
