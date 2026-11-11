@@ -1,0 +1,22 @@
+{
+  "CHANGELOG.md": "3529791b0d1ae49eeeb59b6d26d293e4288c33ca7f72bc4084b44793cd9e875a",
+  "README.md": "83a6d1c5be8cc29d8b6dca62a085fe783548f52f2965d0b8a2995338eae877a9",
+  "lib/data/tools.json": "74327fbe74b1f2855a8aadbbd0f8d5a29820925d77b1452141ba92ac7d78a658",
+  "lib/setup.mjs": "385170964674b3b702bca88cd8a2cbdb2ff0fda186e871b68553ee3a0587621b",
+  "package.json": "11d8b033dab9ad549c6fa5a9bc6d294a4d8c3c5fd3af45540f69b692e105e8bf",
+  "payload/files/devos/setup.json": "49b125128e72f1186dd03414e98750e3b9aac5d71ec0eb05f32a13778573ab7c",
+  "payload/files/docs/method/AUTOMATION.md": "c049e41e24f7cbe621f88a76347abc970e2b2391c3e22f99fb598d5f745f2a40",
+  "payload/files/docs/method/PRECEDENTS.md": "a23f461662006652904912175b717a89a7bf6b25f1ed063107444d3b28e0256e",
+  "payload/files/scripts/devos/setup-check.mjs": "bbaf31e69547598ae60fc81942bc68d9c93604b09fb1751117f1cd17a1002de0",
+  "payload/manifest.json": "4653d80144b9a87e25a93d0339654678475eb63d01c202229dfac5efec16fa50",
+  "test/adopt-files.test.mjs": "00d718af1916502fbae484879336eb5bf76881b6eca29f48a700d86bae9678fe",
+  "test/adopt-install.test.mjs": "6ace56721a1d6d83c40d0ed0cf6f483e5b1bfed52a4f34c1b5d6eebcbb739ad0",
+  "test/agents-kit.test.mjs": "d811ed67f3541e42ce4d98314edf285a86622f2381110adb8e7a0a55d3a25027",
+  "test/hardening.test.mjs": "9d53e1b2463b81f93a267116c96f50009221a002b6836ff39bc71b76023a7cbf",
+  "test/install.test.mjs": "f28249580259a161379b79598bbb67f9a843fda5a92a4f23621a5307bbf39b74",
+  "test/project-settings.test.mjs": "c20efc8e2677d753e16604d99fa4608cd0756657ff52e637c9419d8d8cd273dc",
+  "test/remove.test.mjs": "4c30bacac4d3e811d3a99e9fe02a5c84310812d3252afe35d8232f9a552b4e9d",
+  "test/setup.test.mjs": "f2559b1713c95f1711eff5cabf14d06ec3fcd8c14e6499413056a2e5e382c4e0",
+  "test/upgrade.test.mjs": "04647ab8f6648c619a37e2e13077a3c70b7b05dea822793b19582136cdc604fc",
+  "test/version.test.mjs": "6800a8bacda47f0be2c0e3292d1c5b6421d659b1fa246376c75d385cd4d5ca62"
+}
