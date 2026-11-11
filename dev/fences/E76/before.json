@@ -1,0 +1,14 @@
+{
+  "CHANGELOG.md": "406a931fd7c96d7514f3fcf59d5b150ecfcfeb5076982a675377607ae70b7a90",
+  "README.md": "656597c979b5dbdd0ce783b6732743a92d51c0f708442298fbfecbe623bce70a",
+  "lib/data/tools.json": "31c60d83ee0a8e9865c9e5f725f4b9292d8a513b3a228ace0c030be5ff080a22",
+  "package.json": "acf9bf6da0377807fd68c4707dc9ddba3e878fc41da19ea0fbafc9baec338001",
+  "payload/manifest.json": "a851ca475245b579e468dc5f0e8bbbd25d568e3e1de9148857f112b10e3419b5",
+  "test/adopt-files.test.mjs": "4c38120313bd8355239df0107c01df8ab3d25291a4a29c91aa18719d8e629eb2",
+  "test/adopt-install.test.mjs": "4c39c18d53b3cccede89c54415803ab0675e61168c1c5322724dbdba542e41fe",
+  "test/agents-kit.test.mjs": "326e77da572717decbd21d7d0274e95a3268093546222b36c4baa0b0c3bad700",
+  "test/install.test.mjs": "f992975febc18e6a617063dcbe94887872f8b0824a45cee2116d1aeaa59624cb",
+  "test/remove.test.mjs": "b7594e8fa14a52a038d699430aac7998f40dd756f498fa083d3463366ee14729",
+  "test/upgrade.test.mjs": "13c6a1c8739e0214a5ba4462b6d4ab6bbcc79f777dedd7c0729dc9dda74f8763",
+  "test/version.test.mjs": "ced2ecbf0845127e2de539e6a76f5c109bf37b7897efae4b9702bac12a2b218c"
+}
