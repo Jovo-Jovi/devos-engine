@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { checkLine, checkRoles, judgeModel, loadTools, modelLine, newerModels, offeredModels } from "../lib/model-check.mjs";
+import { checkLine, checkRoles, judgeModel, loadTools, modelLine, newerModels, offeredIds, offeredModels } from "../lib/model-check.mjs";
 import { modelsCheckCommand } from "../lib/models.mjs";
 import { startUiServer } from "../lib/ui-server.mjs";
 import { cleanup, stage } from "./harness.mjs";
@@ -81,9 +81,20 @@ test("model-check.test.mjs (a) a model id as its line and version, and how a mod
   assert.deepEqual(judgeModel("claude-sonnet-4-5", ["claude-sonnet-4-6-20260101", "claude-sonnet-4-5"]), { status: "newer", suggestion: "claude-sonnet-4-6-20260101" });
   assert.deepEqual(judgeModel("auto", ["auto", "grok-4.7"]), { status: "current", suggestion: "" });
   assert.deepEqual(judgeModel("grok-4.7", null), { status: "unknown", suggestion: "" });
+  // Cursor names a model with its effort and speed (grok-4.7-high); the cycle adds the fence's effort to the role's model,
+  // so a model listed only that way is offered, and a newer one is suggested without an ending.
+  const cursorList = ["auto", "grok-4.7-high", "grok-4.7-xhigh-fast", "grok-4.7-fast-low", "claude-opus-5-5-high"];
+  assert.deepEqual(offeredIds(cursorList), ["auto", "grok-4.7-high", "grok-4.7", "grok-4.7-xhigh-fast", "grok-4.7-fast-low", "claude-opus-5-5-high", "claude-opus-5-5"]);
+  assert.deepEqual(judgeModel("grok-4.7", cursorList), { status: "current", suggestion: "" });
+  assert.deepEqual(judgeModel("claude-opus-5-5", cursorList), { status: "current", suggestion: "" });
+  assert.deepEqual(judgeModel("grok-4.7", ["grok-4.8-high", ...cursorList]), { status: "newer", suggestion: "grok-4.8" });
+  assert.deepEqual(judgeModel("grok-4.7-xhigh-fast", ["grok-4.8-xhigh-fast", ...cursorList]), { status: "newer", suggestion: "grok-4.8-xhigh-fast" });
+  assert.deepEqual(judgeModel("grok-3", ["grok-4.7-high"]), { status: "newer", suggestion: "grok-4.7" });
+  assert.deepEqual(judgeModel("composer-2.5", cursorList), { status: "gone", suggestion: "" });
   // The engine's refresh: only newer lines and new lines of a family it lists, never older or dated ones.
   assert.deepEqual(newerModels(["claude-fable-5-1", "claude-opus-5-5", "gpt-5.5"], ["claude-fable-5-2", "claude-fable-5-1", "claude-opus-4-5", "claude-opus-5-5-20261001", "gpt-5.6-sol", "gpt-4o", "o3"]),
     ["gpt-5.6-sol", "claude-fable-5-2"]);
+  assert.deepEqual(newerModels(["grok-4.7", "grok-4.7-high"], ["grok-4.8-high", "grok-4.7-high"]), ["grok-4.8", "grok-4.8-high"]);
 });
 
 test("model-check.test.mjs (b) each tool's list: the tool's own, its provider's with a key from the environment, else the engine's", async () => {
@@ -131,7 +142,8 @@ test("model-check.test.mjs (c) devos models check reports each role, and --apply
       env: { ANTHROPIC_API_KEY: "sk-ant-test" },
       fetcher: fakeFetch({ "api.anthropic.com": ["claude-fable-5-2", "claude-opus-5-5", "claude-sonnet-5-6", "claude-sonnet-5-5"] }, []),
       find: (name) => (name === "agent" ? { path: "/bin/agent" } : null),
-      list: () => ["auto", "grok-4.8", "grok-4.7"],
+      // Cursor's own list names its models with their effort, as `agent models` does.
+      list: () => ["auto", "grok-4.8-high", "grok-4.8-xhigh-fast", "grok-4.7-high", "grok-4.7-xhigh-fast"],
     };
     assert.equal(await modelsCheckCommand([staged.project], staged.project, undefined, deps), 0);
     assert.deepEqual(logs, [
@@ -165,7 +177,9 @@ test("model-check.test.mjs (c) devos models check reports each role, and --apply
 });
 
 test("model-check.test.mjs (d) the page's check: GET /api/models?check=1 adds each role's result, and the panel offers Use", async () => {
-  const staged = stage();
+  // A stand-in `agent` first on PATH lists nothing, so the builder is judged against the engine's list on every computer,
+  // with or without the Cursor CLI installed.
+  const staged = stage({ tools: ["agent"] });
   const restore = useStubs(staged);
   startedProject(staged.project);
   const realFetch = globalThis.fetch;
@@ -183,8 +197,9 @@ test("model-check.test.mjs (d) the page's check: GET /api/models?check=1 adds ea
     assert.deepEqual(body.check.map((item) => [item.role, item.status, item.suggestion, item.source]), [
       ["reviewer", "current", "", "api"],
       ["light", "newer", "claude-sonnet-5-6", "api"],
-      ["builder", body.check[2].status, body.check[2].suggestion, "engine"],
+      ["builder", "current", "", "engine"],
     ]);
+    assert.equal(body.check[2].note, "Cursor CLI did not list its models (signed in?)");
     assert.equal(JSON.stringify(body).includes("sk-ant-test"), false);
     const plain = await realFetch(`http://127.0.0.1:${server.port}/api/models`, { headers: { "X-DEVOS-Token": server.token } });
     assert.equal(Object.hasOwn(await plain.json(), "check"), false);

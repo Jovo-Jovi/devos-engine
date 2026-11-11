@@ -16,7 +16,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { newerModels, offeredModels } from "../lib/model-check.mjs";
+import { newerModels, offeredIds, offeredModels } from "../lib/model-check.mjs";
 import { familyOf } from "../lib/probes.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -41,7 +41,9 @@ for (const tool of catalogue.tools ?? []) {
   }
   const seeds = [...new Set((tool.seedGroups ?? []).flatMap((group) => group.models ?? []))];
   const fresh = newerModels(seeds, offered.ids);
-  const missing = seeds.filter((id) => id !== "auto" && !offered.ids.includes(id));
+  // A model the live list names only with an effort or speed ending (grok-4.7-high) is still listed.
+  const listed = offeredIds(offered.ids);
+  const missing = seeds.filter((id) => id !== "auto" && !listed.includes(id));
   console.log(`${tool.id}: ${offered.label}, ${offered.ids.length} models; newer: ${fresh.length ? fresh.join(", ") : "none"}${missing.length ? `; not listed now: ${missing.join(", ")}` : ""}`);
   if (!write || fresh.length === 0) continue;
   for (const id of [...fresh].reverse()) {

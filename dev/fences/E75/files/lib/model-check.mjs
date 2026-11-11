@@ -55,6 +55,18 @@ export function loadTools(file = TOOLS_FILE) {
 
 const DATE = /^\d{6,8}$/;
 const NUMBER = /^\d+(?:\.\d+)*$/;
+// The effort and speed ending Cursor names its variants with (scripts/devos/builder-model.mjs NAMED_EFFORT): the cycle
+// runs a model with the fence's effort appended, so a listed `grok-4.7-high` offers `grok-4.7` too.
+const EFFORT_ENDING = /-(low|medium|high|xhigh)(?:-fast)?$|-fast(?:-(low|medium|high|xhigh))?$/;
+
+/** The models a list offers: each id, and each id without its effort or speed ending (grok-4.7-xhigh-fast → grok-4.7). */
+export function offeredIds(list) {
+  const ids = [];
+  for (const id of Array.isArray(list) ? list : []) {
+    for (const each of [id, String(id).replace(EFFORT_ENDING, "")]) if (each && !ids.includes(each)) ids.push(each);
+  }
+  return ids;
+}
 
 /**
  * A model id as its line and version: `claude-fable-5-1` → line `claude-fable`, version [5, 1];
@@ -110,9 +122,11 @@ function newestOn(ids, line) {
  * - newer: a newer model of its line is offered (`suggestion`);
  * - gone: a live list leaves it out (`suggestion`, the newest of its line, when there is one);
  * - unknown: no list, or the engine's list (which is not every model a tool takes) leaves it out.
+ * A model the list names only with an effort or speed ending is offered (offeredIds).
  */
-export function judgeModel(model, offered, live = true) {
-  if (!Array.isArray(offered) || offered.length === 0) return { status: "unknown", suggestion: "" };
+export function judgeModel(model, list, live = true) {
+  if (!Array.isArray(list) || list.length === 0) return { status: "unknown", suggestion: "" };
+  const offered = offeredIds(list);
   const parsed = modelLine(model);
   const newest = parsed ? newestOn(offered, parsed.line) : "";
   const newer = newest && compareVersions(modelLine(newest).version, parsed.version) > 0 ? newest : "";
@@ -191,9 +205,11 @@ export async function checkRoles(roles, deps = {}) {
 
 /**
  * The models of a live list newer than the engine's `seeds` (tools/models-refresh.mjs), newest first: a higher version
- * on a line the seeds have, or a new line of a family they list, at no lower a version than its newest.
+ * on a line the seeds have, or a new line of a family they list, at no lower a version than its newest. A model the live
+ * list names only with an effort or speed ending counts too (grok-4.8 for a listed grok-4.8-high).
  */
-export function newerModels(seeds, live) {
+export function newerModels(seeds, list) {
+  const live = offeredIds(list);
   const lines = new Map();
   const families = new Map();
   for (const id of seeds) {
