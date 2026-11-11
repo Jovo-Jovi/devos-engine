@@ -106,8 +106,9 @@ Law 151 of 2020) and state in the OD that the repository must be private before 
 Whenever the request needs something only the human can create (an account, an outside API key, a
 Vercel variable the app reads, a dashboard setting) that `devos/setup.json` does not already list,
 add it to `docs/setup-items.json` (create it with `{ "items": [ ... ] }` in the same format: id,
-title, kind secret|variable|vercel, names, when, blocks, steps). `devos-setup` then shows the human
-exactly what to add, before the task that needs it runs, and resumes waiting work afterwards.
+title, kind secret|variable|address|vercel, names, when, blocks, steps; `address` is a variable the
+human sets to an `https://` address, PR-97). `devos-setup` then shows the human exactly what to add,
+before the task that needs it runs, and resumes waiting work afterwards.
 Names only: never a value.
 
 ## Rules

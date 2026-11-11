@@ -486,7 +486,8 @@ test("intake-two-jobs.test.mjs U12 a revised unit task is built at its attempt b
 test("intake-two-jobs.test.mjs the manual, the precedent and the changelog name the two halves", () => {
   const has = (file, text) => assert.ok(read(path.join(root, file)).includes(text), `${file}: ${text}`);
   has("payload/files/docs/method/PRECEDENTS.md", "| PR-92 | **Planning, revising and accepting never share a job with a write token either.**");
-  has("payload/files/docs/method/PRECEDENTS.md", "**Live maximum: PR-92.**");
+  // The live maximum moves on with each later precedent (PR-97 at E73).
+  assert.ok(Number(/\*\*Live maximum: PR-(\d+)\.\*\*/.exec(read(path.join(root, "payload/files/docs/method/PRECEDENTS.md")))?.[1]) >= 92);
   has("payload/files/docs/method/AUTOMATION.md", "| `intake-request.mjs` | the request a planning run works from (PR-92)");
   has("payload/files/docs/method/AUTOMATION.md", "`intake-ack`, `intake-refuse`, `intake` (the planner, read-only), `intake-publish`");
   has("CHANGELOG.md", "- **Planning works the same way (PR-92).**");

@@ -1,5 +1,5 @@
 {
-  "$comment": "PR-27. Everything outside the repository the method needs: GitHub secrets and variables, and the app's Vercel environment. scripts/devos/setup-check.mjs checks names only and keeps the Dev OS setup issue up to date. when: always | module:<name> | var:<NAME> | method. blocks: cycle | deploy | none.",
+  "$comment": "PR-27. Everything outside the repository the method needs: GitHub secrets and variables, and the app's Vercel environment. scripts/devos/setup-check.mjs checks names only and keeps the Dev OS setup issue up to date. kind: secret | variable (a switch DEV_OS sets to its value) | address (a variable you set to an https:// address, PR-97) | vercel. when: always | module:<name> | var:<NAME> | method | probe:production (PR-97). blocks: cycle | deploy | none.",
   "items": [
     {
       "id": "cursor",
@@ -221,13 +221,14 @@
     },
     {
       "id": "production-url",
-      "title": "The project's production URL",
-      "kind": "vercel",
+      "title": "The production address the deploy's smoke test probes",
+      "kind": "address",
       "names": ["DEVOS_PRODUCTION_URL"],
-      "when": ["var:DEVOS_VERCEL"],
+      "when": ["var:DEVOS_VERCEL", "probe:production"],
       "blocks": "deploy",
       "steps": [
-        "Vercel → Environment Variables → Production: DEVOS_PRODUCTION_URL = https://<the production hostname> with no trailing slash."
+        "GitHub → Settings → Secrets and variables → Actions → Variables → New repository variable `DEVOS_PRODUCTION_URL` = `https://<the production hostname>`, with no trailing slash.",
+        "Or set `deploy.production_url_fallback` to that address in `devos/project.json`: the smoke test then probes it when the variable is not set."
       ]
     },
     {

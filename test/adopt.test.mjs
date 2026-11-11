@@ -671,3 +671,25 @@ test("adopt.test.mjs (s) E71: a menu question tells the page its form, and uiRea
     "::devos-ask {\"kind\":\"line\",\"step\":\"publish\"}",
   ]);
 });
+
+test("adopt.test.mjs (t) E73 (PR-97): which items of an older copy's devos/setup.json are its own, and the production address its deploy smoke-tested", async () => {
+  const { copySmokeAddress, ownSetupItems } = await import("../lib/adopt.mjs");
+  const engine = JSON.parse(readFileSync(path.join(root, "payload", "files", "devos", "setup.json"), "utf8")).items;
+  const vercel = engine.find((item) => item.id === "supabase-vercel");
+  const own = { id: "shop-url", title: "The shop's address", kind: "vercel", names: ["SHOP_URL"], when: ["var:DEVOS_VERCEL"], blocks: "deploy", steps: ["Vercel → Production: SHOP_URL."] };
+  const found = ownSetupItems([...engine, { ...vercel, names: [...vercel.names, "SUPABASE_SECRET_KEY"] }, own, { id: "old-pat", kind: "secret", names: ["DEVOS_PAT"] }], engine);
+  assert.deepEqual(found.problems, []);
+  assert.deepEqual(found.items.map((item) => [item.id, item.names]), [["supabase-vercel-own", ["SUPABASE_SECRET_KEY"]], ["shop-url", ["SHOP_URL"]]]);
+  // An id the project's docs/setup-items.json already has is left as that file has it.
+  assert.deepEqual(ownSetupItems([own], engine, ["shop-url"]).items, []);
+  // An entry without the form of an item is named, never left out quietly.
+  assert.deepEqual(ownSetupItems([own, "text", { id: "no-names", kind: "secret", names: [] }, { id: "bad-kind", kind: "file", names: ["A"] }, { id: "low", kind: "secret", names: ["lower_case"] }], engine).problems, ["item 2", "no-names", "bad-kind", "low"]);
+  // The production address: only an https:// host in the expression that picks the production target.
+  assert.equal(copySmokeAddress("URL: ${{ (inputs.target || 'production') == 'production' && (vars.TOWER_URL || 'https://devos-control-tower.vercel.app') || steps.d.outputs.url }}"), "https://devos-control-tower.vercel.app");
+  assert.equal(copySmokeAddress("URL: ${{ inputs.target == 'production' && 'https://shop.example.com/' || steps.d.outputs.url }}"), "https://shop.example.com");
+  assert.equal(copySmokeAddress("URL: ${{ vars.SHOP_URL || 'https://shop.example.com' }}"), "");
+  assert.equal(copySmokeAddress("URL: ${{ inputs.target == 'production' && 'http://shop.example.com' || '' }}"), "");
+  assert.equal(copySmokeAddress(null), "");
+  // DEV_OS's own deploy workflow names no fixed address.
+  assert.equal(copySmokeAddress(readFileSync(path.join(root, "payload", "files", "dot-github", "workflows", "devos-deploy.yml"), "utf8")), "");
+});
