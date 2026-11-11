@@ -9,7 +9,7 @@ import { continueCommand } from "../lib/continue.mjs";
 import { initCommand } from "../lib/init.mjs";
 import { installCommand } from "../lib/install.mjs";
 import { mediaCommand } from "../lib/media.mjs";
-import { modelsCommand } from "../lib/models.mjs";
+import { modelsCheckCommand, modelsCommand } from "../lib/models.mjs";
 import { profileCommand } from "../lib/profile.mjs";
 import { removeCommand } from "../lib/remove.mjs";
 import { rosterCommand } from "../lib/roster.mjs";
@@ -88,6 +88,7 @@ else if (args[0] === "continue") code = await continueCommand(path.resolve(args[
 else if (args[0] === "adopt") code = await adoptCommand(args.slice(1));
 else if (args[0] === "verify") code = verifyCommand(args.slice(1));
 else if (args[0] === "watch") code = await watchCommand(args.slice(1));
+else if (args[0] === "models" && args[1] === "check") code = await modelsCheckCommand(args.slice(2));
 else if (args[0] === "models") code = modelsCommand(args.slice(1));
 else if (args[0] === "media") code = await mediaCommand(args.slice(1));
 else {
