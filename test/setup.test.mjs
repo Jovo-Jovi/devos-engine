@@ -241,8 +241,9 @@ function answers(overrides = {}) {
   ].join("\n") + "\n";
 }
 
-// PR-97: a new project probes its deployment, so the production address is not asked for.
-const FIVE = ["cursor", "claude", "vercel", "vercel-bypass", "vercel-var"];
+// PR-97: a new project probes its deployment, so the production address is not asked for; PR-98: and sends no
+// protection bypass secret (deploy.bypass is false), so that is not advised.
+const FOUR = ["cursor", "claude", "vercel", "vercel-var"];
 
 function headingsFor(ids) {
   return ids.map((id, index) => {
@@ -305,7 +306,7 @@ test("setup.test.mjs writes SETUP headings for vercel and for none", () => {
     const deployed = init(vercel, answers());
     assert.equal(deployed.status, 0, deployed.stdout + deployed.stderr);
     const headings = readFileSync(path.join(vercel.project, "SETUP.md"), "utf8").split("\n").filter((line) => line.startsWith("## "));
-    assert.deepEqual(headings, headingsFor(FIVE));
+    assert.deepEqual(headings, headingsFor(FOUR));
     const plain = init(none, answers({ deploy: "none" }));
     assert.equal(plain.status, 0, plain.stdout + plain.stderr);
     const fewer = readFileSync(path.join(none.project, "SETUP.md"), "utf8").split("\n").filter((line) => line.startsWith("## "));
@@ -397,7 +398,7 @@ test("setup.test.mjs rejects a project name whose key is invalid", () => {
 });
 
 test("setup.test.mjs lists applicable items and a secret command block", () => {
-  assert.deepEqual(setupItems(setupJson, { deploy: "vercel" }).map((item) => item.id), ["cursor", "claude", "codex", "gemini", ...FIVE.slice(2)]);
+  assert.deepEqual(setupItems(setupJson, { deploy: "vercel" }).map((item) => item.id), ["cursor", "claude", "codex", "gemini", ...FOUR.slice(2)]);
   assert.deepEqual(setupItems(setupJson, { deploy: "none" }).map((item) => item.id), ["cursor", "claude", "codex", "gemini"]);
   const cursor = setupJson.items.find((item) => item.id === "cursor");
   const markdown = setupMarkdown([cursor], { name: "Demo Shop", slug: "devtest/demo-shop" });
@@ -588,6 +589,23 @@ test("setup.test.mjs (w) PR-97: the production address is asked for only when th
     const markdown = setupMarkdown([item], { name: "Demo Shop", slug: "devtest/demo-shop" });
     assert.equal(markdown.includes("New repository variable `DEVOS_PRODUCTION_URL`"), true, markdown);
     assert.equal(markdown.includes("gh variable set"), false, markdown);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("setup.test.mjs (x) PR-98: the protection bypass secret is advised only when deploy.bypass is true", () => {
+  const dir = mkdtempSync(path.join(tmpdir(), "devos-bypass-"));
+  try {
+    const ids = (deploy, answers = { deploy: "vercel" }) => {
+      writeFileSync(path.join(dir, "devos.config.json"), `${JSON.stringify({ deploy })}\n`);
+      return setupItems(setupJson, answers, dir).map((item) => item.id);
+    };
+    assert.equal(ids({ bypass: false }).includes("vercel-bypass"), false);
+    assert.equal(ids({ bypass: "true" }).includes("vercel-bypass"), false);
+    assert.equal(ids({ bypass: true }).includes("vercel-bypass"), true);
+    assert.equal(ids({ bypass: true }, { deploy: "none" }).includes("vercel-bypass"), false);
+    assert.deepEqual(setupJson.items.find((item) => item.id === "vercel-bypass").when, ["var:DEVOS_VERCEL", "bypass:true"]);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

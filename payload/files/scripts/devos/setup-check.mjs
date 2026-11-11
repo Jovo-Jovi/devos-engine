@@ -53,6 +53,8 @@ const holds = (cond) => {
     const deploy = config().deploy ?? {};
     return deploy.probe === "production" && !deploy.production_url_fallback;
   }
+  // PR-98: the Vercel protection bypass secret is sent only when devos.config.json turns deploy.bypass on.
+  if (cond === "bypass:true") return (config().deploy ?? {}).bypass === true;
   return false;
 };
 const needed = items.filter((i) => (i.when ?? ["always"]).every(holds));

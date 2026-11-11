@@ -1,5 +1,5 @@
 {
-  "engine_version": "1.13.6",
+  "engine_version": "1.13.7",
   "source": {
     "repo": "Jovo-Jovi/devos-control-tower",
     "commit": "a49ca6db268b98d6558077bf3e95b8ae759d91b3"
@@ -404,7 +404,7 @@
     {
       "path": "devos/setup.json",
       "stored": "devos/setup.json",
-      "sha256": "49b125128e72f1186dd03414e98750e3b9aac5d71ec0eb05f32a13778573ab7c",
+      "sha256": "8691b4dc116bd8a21a36801f7a7b4718081810fa9b65e559628bdb03086b219b",
       "owner": "engine"
     },
     {
@@ -1676,7 +1676,7 @@
     {
       "path": "docs/method/AUTOMATION.md",
       "stored": "docs/method/AUTOMATION.md",
-      "sha256": "c049e41e24f7cbe621f88a76347abc970e2b2391c3e22f99fb598d5f745f2a40",
+      "sha256": "af1b0b0da46f993d4037ed713722326bc064c435bd03d56443f0d3eba8d1137e",
       "owner": "engine"
     },
     {
@@ -1700,7 +1700,7 @@
     {
       "path": "docs/method/PRECEDENTS.md",
       "stored": "docs/method/PRECEDENTS.md",
-      "sha256": "a23f461662006652904912175b717a89a7bf6b25f1ed063107444d3b28e0256e",
+      "sha256": "2a95a760fd8526cc2430047baac014de3ace6d8e579b06f7ca7c13d56e6d7708",
       "owner": "engine"
     },
     {
@@ -1982,7 +1982,7 @@
     {
       "path": "scripts/devos/setup-check.mjs",
       "stored": "scripts/devos/setup-check.mjs",
-      "sha256": "bbaf31e69547598ae60fc81942bc68d9c93604b09fb1751117f1cd17a1002de0",
+      "sha256": "22cd122176be0dd8c9516ffa68235507e7e9598b99e8d1efce36e5a8c381d5eb",
       "owner": "engine"
     },
     {

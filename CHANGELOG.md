@@ -2,6 +2,11 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
+## 1.13.7 — Unreleased
+
+- **The protection bypass secret is advised only where it is sent (PR-98).** The setup check no longer advises `VERCEL_AUTOMATION_BYPASS_SECRET` to a project whose `deploy.bypass` is false (the default): the deploy's smoke test, the doctor and the screenshots send it only when `deploy.bypass` is true, and with it false the doctor already says no bypass secret is added.
+- **Claude Fable 5.2.** `claude-fable-5-2` (released 2026-11-09) is first in the Claude models offered for Claude Code and for Cursor. The defaults stay on Claude Opus 5.5 and Sonnet 5.5; choose Fable 5.2 for a role with `devos models set <role> claude-fable-5-2`, or on the guided page.
+
 ## 1.13.6 — 2026-11-11
 
 - **The production address is a GitHub variable, asked for only when it is used (PR-97).** The deploy's smoke test reads `DEVOS_PRODUCTION_URL` from the repository's variables, and only when `deploy.probe` is `production`. Until now the setup check asked every Vercel project to add it to Vercel's Production variables instead, where nothing read it, and the deploy stopped until it was there. Now it is asked for only when the smoke test probes production and `devos/project.json` gives no `deploy.production_url_fallback`, and the check wants an `https://` address in the GitHub variable. A project that probes its deployment (the default) is no longer asked for it at all. You may delete `DEVOS_PRODUCTION_URL` from Vercel.

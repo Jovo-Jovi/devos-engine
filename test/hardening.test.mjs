@@ -557,3 +557,31 @@ test("hardening.test.mjs (n) PR-97: DEVOS_PRODUCTION_URL is a repository variabl
     cleanup(dir);
   }
 });
+
+// ---------- PR-98: the protection bypass secret is advised only where it is sent
+
+test("hardening.test.mjs (o) PR-98: the setup check advises VERCEL_AUTOMATION_BYPASS_SECRET only when deploy.bypass is true", { skip: windows && "not rehearsed on Windows: it stages a project, as (m) and (n) do" }, () => {
+  const dir = mkdtempSync(path.join(tmpdir(), "devos-bypass-"));
+  try {
+    stagedAt(dir);
+    mkdirSync(path.join(dir, "docs"), { recursive: true });
+    writeFileSync(path.join(dir, "docs", "PHASES.md"), "| Task | Phase | Station | Name | Risk | Gate | Done | Verdict |\n|---|---|---|---|---|---|---|---|\n| T01 | E | 1 | One | 1 | — | [ ] | — |\n");
+    const configFile = path.join(dir, "devos.config.json");
+    const original = JSON.parse(read(configFile));
+    const base = Object.fromEntries(Object.entries(process.env).filter(([k]) => !k.startsWith("VERCEL_") && !k.startsWith("GITHUB_")));
+    const line = (bypass) => {
+      writeFileSync(configFile, `${JSON.stringify({ ...original, deploy: { ...original.deploy, bypass } }, null, 2)}\n`);
+      const out = spawnSync(process.execPath, ["scripts/devos/setup-check.mjs"], {
+        cwd: dir, encoding: "utf8", windowsHide: true,
+        env: { ...base, SECRETS_JSON: JSON.stringify({ VERCEL_AUTOMATION_BYPASS_SECRET: "" }), VARS_JSON: JSON.stringify({ DEVOS_VERCEL: "true" }) },
+      });
+      return out.stdout.split("\n").find((l) => / vercel-bypass\b/.test(l)) ?? "";
+    };
+    // The default: no bypass, so nothing is advised and the item is not listed at all.
+    assert.equal(original.deploy.bypass, false);
+    assert.equal(line(false), "");
+    assert.equal(line(true), "ADVISED vercel-bypass: VERCEL_AUTOMATION_BYPASS_SECRET");
+  } finally {
+    cleanup(dir);
+  }
+});
