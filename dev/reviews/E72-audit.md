@@ -88,7 +88,8 @@ Size: S is a few lines or one screen's text; M is one screen reworked; L is seve
     S-01 to S-12 list of the approval screen) and tick each as it appears. Show the elapsed time and a typical
     duration.
 13. **A shorter documents step** (S). It is the longest screen: 393 words, about three screens tall on a phone. Put
-    the file rules (formats, sizes, naming) behind "What files work", and show the eight document kinds as compact cards.
+    the file rules (formats, sizes, naming) behind "What files work", and show the eight document kinds as compact
+    cards.
 14. **A fuller project page** (L). Today it shows Setup, Version and the Control Tower link, plus the models once the
     project has a repository. Add:
     - the cycle now: the current task from `docs/PHASES.md`, and the last run and its result;
