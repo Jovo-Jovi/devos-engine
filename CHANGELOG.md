@@ -2,7 +2,7 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
-## 1.13.9 — Unreleased
+## 1.13.9 — 2026-11-11
 
 - **Three more Cursor models.** `gemini-4-carbon`, `claude-fable-5-1-thinking` and `claude-haiku-5-5-thinking` are now among the models offered for Cursor: Cursor offers them, and `node tools/models-refresh.mjs` found them missing. Claude Fable 5.2 stays first, and no default changes.
 
