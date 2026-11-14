@@ -1,0 +1,162 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" width="960" height="540" role="img" aria-labelledby="t d">
+<title id="t">DEV_OS Engine cycle</title>
+<desc id="d">The DEV_OS Engine sends each task through Brief, Blueprint, Fence, Builder, Guards, CI and Review, and you approve the merge.</desc>
+<defs>
+<pattern id="dots" width="24" height="24" patternUnits="userSpaceOnUse"><circle cx="12" cy="12" r="1" fill="#161D2B"/></pattern>
+<radialGradient id="halo" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#A78BFA" stop-opacity="0.22"/><stop offset="0.6" stop-color="#22D3EE" stop-opacity="0.05"/><stop offset="1" stop-color="#22D3EE" stop-opacity="0"/></radialGradient>
+<radialGradient id="hubfill" cx="50%" cy="40%" r="60%"><stop offset="0" stop-color="#162036"/><stop offset="1" stop-color="#0B1220"/></radialGradient>
+<linearGradient id="accent" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#22D3EE"/><stop offset="1" stop-color="#A78BFA"/></linearGradient>
+<filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+<filter id="soft" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="7"/></filter>
+<linearGradient id="beam0" gradientUnits="userSpaceOnUse" x1="480" y1="262" x2="161.3" y2="195.0"><stop offset="0" stop-color="#22D3EE" stop-opacity="0.2"/><stop offset="0.5" stop-color="#22D3EE"/><stop offset="1" stop-color="#A78BFA"/></linearGradient>
+<linearGradient id="beam1" gradientUnits="userSpaceOnUse" x1="480" y1="262" x2="348.0" y2="100.3"><stop offset="0" stop-color="#22D3EE" stop-opacity="0.2"/><stop offset="0.5" stop-color="#22D3EE"/><stop offset="1" stop-color="#A78BFA"/></linearGradient>
+<linearGradient id="beam2" gradientUnits="userSpaceOnUse" x1="480" y1="262" x2="612.0" y2="100.3"><stop offset="0" stop-color="#22D3EE" stop-opacity="0.2"/><stop offset="0.5" stop-color="#22D3EE"/><stop offset="1" stop-color="#A78BFA"/></linearGradient>
+<linearGradient id="beam3" gradientUnits="userSpaceOnUse" x1="480" y1="262" x2="798.7" y2="195.0"><stop offset="0" stop-color="#22D3EE" stop-opacity="0.2"/><stop offset="0.5" stop-color="#22D3EE"/><stop offset="1" stop-color="#A78BFA"/></linearGradient>
+<linearGradient id="beam4" gradientUnits="userSpaceOnUse" x1="480" y1="262" x2="798.7" y2="329.0"><stop offset="0" stop-color="#22D3EE" stop-opacity="0.2"/><stop offset="0.5" stop-color="#22D3EE"/><stop offset="1" stop-color="#A78BFA"/></linearGradient>
+<linearGradient id="beam5" gradientUnits="userSpaceOnUse" x1="480" y1="262" x2="612.0" y2="423.7"><stop offset="0" stop-color="#22D3EE" stop-opacity="0.2"/><stop offset="0.5" stop-color="#22D3EE"/><stop offset="1" stop-color="#A78BFA"/></linearGradient>
+<linearGradient id="beam6" gradientUnits="userSpaceOnUse" x1="480" y1="262" x2="348.0" y2="423.7"><stop offset="0" stop-color="#22D3EE" stop-opacity="0.2"/><stop offset="0.5" stop-color="#22D3EE"/><stop offset="1" stop-color="#A78BFA"/></linearGradient>
+<linearGradient id="beam7" gradientUnits="userSpaceOnUse" x1="480" y1="262" x2="161.3" y2="329.0"><stop offset="0" stop-color="#22D3EE" stop-opacity="0.2"/><stop offset="0.5" stop-color="#22D3EE"/><stop offset="1" stop-color="#34D399"/></linearGradient>
+</defs>
+<rect x="1" y="1" width="958" height="538" rx="24" fill="#0A0E16" stroke="#1C2333" stroke-width="1.5"/>
+<rect x="1" y="1" width="958" height="538" rx="24" fill="url(#dots)"/>
+<ellipse cx="480" cy="262" rx="260" ry="170" fill="url(#halo)"/>
+<ellipse cx="480" cy="262" rx="345" ry="175" fill="none" stroke="#1E293B" stroke-width="1.5" stroke-dasharray="3 7"/>
+<path d="M161.3 329.0 A345 175 0 0 1 161.3 195.0" fill="none" stroke="#34D399" stroke-width="2" stroke-linecap="round" pathLength="1" stroke-dasharray="1 1" stroke-dashoffset="1" opacity="0.85"><animate attributeName="stroke-dashoffset" dur="9.60s" repeatCount="indefinite" values="1;1;0;0;0" keyTimes="0;0.8333;0.8854;0.9635;1" /><animate attributeName="opacity" dur="9.60s" repeatCount="indefinite" values="0;0;0.85;0.85;0;0" keyTimes="0;0.8333;0.8458;0.9635;0.9760;1" /></path>
+<path d="M161.3 195.0 A345 175 0 0 1 348.0 100.3" fill="none" stroke="url(#accent)" stroke-width="2" stroke-linecap="round" pathLength="1" stroke-dasharray="1 1" stroke-dashoffset="1" opacity="0.85"><animate attributeName="stroke-dashoffset" dur="9.60s" repeatCount="indefinite" values="1;1;0;0;0" keyTimes="0;0.1615;0.2031;0.9635;1" /><animate attributeName="opacity" dur="9.60s" repeatCount="indefinite" values="0;0;0.85;0.85;0;0" keyTimes="0;0.1615;0.1740;0.9635;0.9760;1" /></path>
+<path d="M348.0 100.3 A345 175 0 0 1 612.0 100.3" fill="none" stroke="url(#accent)" stroke-width="2" stroke-linecap="round" pathLength="1" stroke-dasharray="1 1" stroke-dashoffset="1" opacity="0.85"><animate attributeName="stroke-dashoffset" dur="9.60s" repeatCount="indefinite" values="1;1;0;0;0" keyTimes="0;0.2656;0.3073;0.9635;1" /><animate attributeName="opacity" dur="9.60s" repeatCount="indefinite" values="0;0;0.85;0.85;0;0" keyTimes="0;0.2656;0.2781;0.9635;0.9760;1" /></path>
+<path d="M612.0 100.3 A345 175 0 0 1 798.7 195.0" fill="none" stroke="url(#accent)" stroke-width="2" stroke-linecap="round" pathLength="1" stroke-dasharray="1 1" stroke-dashoffset="1" opacity="0.85"><animate attributeName="stroke-dashoffset" dur="9.60s" repeatCount="indefinite" values="1;1;0;0;0" keyTimes="0;0.3698;0.4115;0.9635;1" /><animate attributeName="opacity" dur="9.60s" repeatCount="indefinite" values="0;0;0.85;0.85;0;0" keyTimes="0;0.3698;0.3823;0.9635;0.9760;1" /></path>
+<path d="M798.7 195.0 A345 175 0 0 1 798.7 329.0" fill="none" stroke="url(#accent)" stroke-width="2" stroke-linecap="round" pathLength="1" stroke-dasharray="1 1" stroke-dashoffset="1" opacity="0.85"><animate attributeName="stroke-dashoffset" dur="9.60s" repeatCount="indefinite" values="1;1;0;0;0" keyTimes="0;0.4740;0.5156;0.9635;1" /><animate attributeName="opacity" dur="9.60s" repeatCount="indefinite" values="0;0;0.85;0.85;0;0" keyTimes="0;0.4740;0.4865;0.9635;0.9760;1" /></path>
+<path d="M798.7 329.0 A345 175 0 0 1 612.0 423.7" fill="none" stroke="url(#accent)" stroke-width="2" stroke-linecap="round" pathLength="1" stroke-dasharray="1 1" stroke-dashoffset="1" opacity="0.85"><animate attributeName="stroke-dashoffset" dur="9.60s" repeatCount="indefinite" values="1;1;0;0;0" keyTimes="0;0.5781;0.6198;0.9635;1" /><animate attributeName="opacity" dur="9.60s" repeatCount="indefinite" values="0;0;0.85;0.85;0;0" keyTimes="0;0.5781;0.5906;0.9635;0.9760;1" /></path>
+<path d="M612.0 423.7 A345 175 0 0 1 348.0 423.7" fill="none" stroke="url(#accent)" stroke-width="2" stroke-linecap="round" pathLength="1" stroke-dasharray="1 1" stroke-dashoffset="1" opacity="0.85"><animate attributeName="stroke-dashoffset" dur="9.60s" repeatCount="indefinite" values="1;1;0;0;0" keyTimes="0;0.6823;0.7240;0.9635;1" /><animate attributeName="opacity" dur="9.60s" repeatCount="indefinite" values="0;0;0.85;0.85;0;0" keyTimes="0;0.6823;0.6948;0.9635;0.9760;1" /></path>
+<path d="M348.0 423.7 A345 175 0 0 1 161.3 329.0" fill="none" stroke="#34D399" stroke-width="2" stroke-linecap="round" pathLength="1" stroke-dasharray="1 1" stroke-dashoffset="1" opacity="0.85"><animate attributeName="stroke-dashoffset" dur="9.60s" repeatCount="indefinite" values="1;1;0;0;0" keyTimes="0;0.7865;0.8281;0.9635;1" /><animate attributeName="opacity" dur="9.60s" repeatCount="indefinite" values="0;0;0.85;0.85;0;0" keyTimes="0;0.7865;0.7990;0.9635;0.9760;1" /></path>
+<path d="M413.5 248.0 L161.3 195.0" stroke="#1E293B" stroke-width="1.25" fill="none"/>
+<path d="M413.5 248.0 L161.3 195.0" stroke="url(#beam0)" stroke-width="2.5" stroke-linecap="round" fill="none" pathLength="1" stroke-dasharray="0.22 3" stroke-dashoffset="0.22"><animate attributeName="stroke-dashoffset" dur="9.60s" repeatCount="indefinite" values="0.22;0.22;-1;-1" keyTimes="0;0.0010;0.0699;1" /></path>
+<circle r="4.5" fill="#A78BFA" filter="url(#glow)" opacity="0"><animateMotion dur="9.60s" repeatCount="indefinite" path="M413.5 248.0 L161.3 195.0" calcMode="linear" keyPoints="0;0;1;1" keyTimes="0;0.0000;0.0573;1"/><animate attributeName="opacity" dur="9.60s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;0.0010;0.0052;0.0573;0.0656;1" /></circle>
+<path d="M437.0 209.3 L348.0 100.3" stroke="#1E293B" stroke-width="1.25" fill="none"/>
+<path d="M437.0 209.3 L348.0 100.3" stroke="url(#beam1)" stroke-width="2.5" stroke-linecap="round" fill="none" pathLength="1" stroke-dasharray="0.22 3" stroke-dashoffset="0.22"><animate attributeName="stroke-dashoffset" dur="9.60s" repeatCount="indefinite" values="0.22;0.22;-1;-1" keyTimes="0;0.1042;0.1741;1" /></path>
+<circle r="4.5" fill="#A78BFA" filter="url(#glow)" opacity="0"><animateMotion dur="9.60s" repeatCount="indefinite" path="M437.0 209.3 L348.0 100.3" calcMode="linear" keyPoints="0;0;1;1" keyTimes="0;0.1042;0.1615;1"/><animate attributeName="opacity" dur="9.60s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;0.1042;0.1094;0.1615;0.1698;1" /></circle>
+<path d="M523.0 209.3 L612.0 100.3" stroke="#1E293B" stroke-width="1.25" fill="none"/>
+<path d="M523.0 209.3 L612.0 100.3" stroke="url(#beam2)" stroke-width="2.5" stroke-linecap="round" fill="none" pathLength="1" stroke-dasharray="0.22 3" stroke-dashoffset="0.22"><animate attributeName="stroke-dashoffset" dur="9.60s" repeatCount="indefinite" values="0.22;0.22;-1;-1" keyTimes="0;0.2083;0.2782;1" /></path>
+<circle r="4.5" fill="#A78BFA" filter="url(#glow)" opacity="0"><animateMotion dur="9.60s" repeatCount="indefinite" path="M523.0 209.3 L612.0 100.3" calcMode="linear" keyPoints="0;0;1;1" keyTimes="0;0.2083;0.2656;1"/><animate attributeName="opacity" dur="9.60s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;0.2083;0.2135;0.2656;0.2740;1" /></circle>
+<path d="M546.5 248.0 L798.7 195.0" stroke="#1E293B" stroke-width="1.25" fill="none"/>
+<path d="M546.5 248.0 L798.7 195.0" stroke="url(#beam3)" stroke-width="2.5" stroke-linecap="round" fill="none" pathLength="1" stroke-dasharray="0.22 3" stroke-dashoffset="0.22"><animate attributeName="stroke-dashoffset" dur="9.60s" repeatCount="indefinite" values="0.22;0.22;-1;-1" keyTimes="0;0.3125;0.3824;1" /></path>
+<circle r="4.5" fill="#A78BFA" filter="url(#glow)" opacity="0"><animateMotion dur="9.60s" repeatCount="indefinite" path="M546.5 248.0 L798.7 195.0" calcMode="linear" keyPoints="0;0;1;1" keyTimes="0;0.3125;0.3698;1"/><animate attributeName="opacity" dur="9.60s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;0.3125;0.3177;0.3698;0.3781;1" /></circle>
+<path d="M546.5 276.0 L798.7 329.0" stroke="#1E293B" stroke-width="1.25" fill="none"/>
+<path d="M546.5 276.0 L798.7 329.0" stroke="url(#beam4)" stroke-width="2.5" stroke-linecap="round" fill="none" pathLength="1" stroke-dasharray="0.22 3" stroke-dashoffset="0.22"><animate attributeName="stroke-dashoffset" dur="9.60s" repeatCount="indefinite" values="0.22;0.22;-1;-1" keyTimes="0;0.4167;0.4866;1" /></path>
+<circle r="4.5" fill="#A78BFA" filter="url(#glow)" opacity="0"><animateMotion dur="9.60s" repeatCount="indefinite" path="M546.5 276.0 L798.7 329.0" calcMode="linear" keyPoints="0;0;1;1" keyTimes="0;0.4167;0.4740;1"/><animate attributeName="opacity" dur="9.60s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;0.4167;0.4219;0.4740;0.4823;1" /></circle>
+<path d="M523.0 314.7 L612.0 423.7" stroke="#1E293B" stroke-width="1.25" fill="none"/>
+<path d="M523.0 314.7 L612.0 423.7" stroke="url(#beam5)" stroke-width="2.5" stroke-linecap="round" fill="none" pathLength="1" stroke-dasharray="0.22 3" stroke-dashoffset="0.22"><animate attributeName="stroke-dashoffset" dur="9.60s" repeatCount="indefinite" values="0.22;0.22;-1;-1" keyTimes="0;0.5208;0.5907;1" /></path>
+<circle r="4.5" fill="#A78BFA" filter="url(#glow)" opacity="0"><animateMotion dur="9.60s" repeatCount="indefinite" path="M523.0 314.7 L612.0 423.7" calcMode="linear" keyPoints="0;0;1;1" keyTimes="0;0.5208;0.5781;1"/><animate attributeName="opacity" dur="9.60s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;0.5208;0.5260;0.5781;0.5865;1" /></circle>
+<path d="M437.0 314.7 L348.0 423.7" stroke="#1E293B" stroke-width="1.25" fill="none"/>
+<path d="M437.0 314.7 L348.0 423.7" stroke="url(#beam6)" stroke-width="2.5" stroke-linecap="round" fill="none" pathLength="1" stroke-dasharray="0.22 3" stroke-dashoffset="0.22"><animate attributeName="stroke-dashoffset" dur="9.60s" repeatCount="indefinite" values="0.22;0.22;-1;-1" keyTimes="0;0.6250;0.6949;1" /></path>
+<circle r="4.5" fill="#A78BFA" filter="url(#glow)" opacity="0"><animateMotion dur="9.60s" repeatCount="indefinite" path="M437.0 314.7 L348.0 423.7" calcMode="linear" keyPoints="0;0;1;1" keyTimes="0;0.6250;0.6823;1"/><animate attributeName="opacity" dur="9.60s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;0.6250;0.6302;0.6823;0.6906;1" /></circle>
+<path d="M413.5 276.0 L161.3 329.0" stroke="#1E293B" stroke-width="1.25" fill="none"/>
+<path d="M413.5 276.0 L161.3 329.0" stroke="url(#beam7)" stroke-width="2.5" stroke-linecap="round" fill="none" pathLength="1" stroke-dasharray="0.22 3" stroke-dashoffset="0.22"><animate attributeName="stroke-dashoffset" dur="9.60s" repeatCount="indefinite" values="0.22;0.22;-1;-1" keyTimes="0;0.7292;0.7991;1" /></path>
+<circle r="4.5" fill="#34D399" filter="url(#glow)" opacity="0"><animateMotion dur="9.60s" repeatCount="indefinite" path="M413.5 276.0 L161.3 329.0" calcMode="linear" keyPoints="0;0;1;1" keyTimes="0;0.7292;0.7865;1"/><animate attributeName="opacity" dur="9.60s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;0.7292;0.7344;0.7865;0.7948;1" /></circle>
+<circle cx="480" cy="262" r="60" fill="none" stroke="#22D3EE" stroke-width="1.5" opacity="0"><animate attributeName="r" dur="2.4s" repeatCount="indefinite" values="60;94"/><animate attributeName="opacity" dur="2.4s" repeatCount="indefinite" values="0.45;0"/></circle>
+<circle cx="480" cy="262" r="60" fill="none" stroke="#A78BFA" stroke-width="1.5" opacity="0"><animate attributeName="r" dur="2.4s" begin="1.2s" repeatCount="indefinite" values="60;94"/><animate attributeName="opacity" dur="2.4s" begin="1.2s" repeatCount="indefinite" values="0.35;0"/></circle>
+<circle cx="480" cy="262" r="70" fill="none" stroke="#273449" stroke-width="1" stroke-dasharray="2 5"/>
+<circle cx="480" cy="262" r="60" fill="url(#hubfill)" stroke="url(#accent)" stroke-width="2"/>
+<circle cx="480" cy="262" r="60" fill="none" stroke="#34D399" stroke-width="2.5" opacity="0"><animate attributeName="opacity" dur="9.60s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;0.8854;0.8979;0.9635;0.9760;1" /></circle>
+<circle cx="480" cy="262" r="60" fill="none" stroke="#34D399" stroke-width="2" opacity="0"><animate attributeName="r" dur="9.60s" repeatCount="indefinite" values="60;60;108;108" keyTimes="0;0.8854;0.9583;1" /><animate attributeName="opacity" dur="9.60s" repeatCount="indefinite" values="0;0;0.8;0;0" keyTimes="0;0.8854;0.8875;0.9583;1" /></circle>
+<text x="480" y="260" text-anchor="middle" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="19" font-weight="700" letter-spacing="1.5" fill="#E2E8F0">DEV_OS</text>
+<text x="480" y="275" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="8.5" letter-spacing="3" fill="#64748B">ENGINE</text>
+<text x="480" y="293" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="10.5" fill="#22D3EE" opacity="0">briefing…<animate attributeName="opacity" dur="9.60s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;0.0010;0.0083;0.0958;0.1042;1" /></text>
+<text x="480" y="293" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="10.5" fill="#22D3EE" opacity="0">planning…<animate attributeName="opacity" dur="9.60s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;0.1042;0.1125;0.2000;0.2083;1" /></text>
+<text x="480" y="293" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="10.5" fill="#22D3EE" opacity="0">fencing…<animate attributeName="opacity" dur="9.60s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;0.2083;0.2167;0.3042;0.3125;1" /></text>
+<text x="480" y="293" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="10.5" fill="#22D3EE" opacity="0">building…<animate attributeName="opacity" dur="9.60s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;0.3125;0.3208;0.4083;0.4167;1" /></text>
+<text x="480" y="293" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="10.5" fill="#22D3EE" opacity="0">guarding…<animate attributeName="opacity" dur="9.60s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;0.4167;0.4250;0.5125;0.5208;1" /></text>
+<text x="480" y="293" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="10.5" fill="#22D3EE" opacity="0">testing…<animate attributeName="opacity" dur="9.60s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;0.5208;0.5292;0.6167;0.6250;1" /></text>
+<text x="480" y="293" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="10.5" fill="#22D3EE" opacity="0">reviewing…<animate attributeName="opacity" dur="9.60s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;0.6250;0.6333;0.7208;0.7292;1" /></text>
+<text x="480" y="293" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="10.5" fill="#22D3EE" opacity="0">merging…<animate attributeName="opacity" dur="9.60s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;0.7292;0.7375;0.8771;0.8854;1" /></text>
+<text x="480" y="293" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="10.5" font-weight="700" fill="#34D399" opacity="0">✓ merged<animate attributeName="opacity" dur="9.60s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;0.8854;0.8979;0.9635;0.9760;1" /></text>
+<rect x="75.3" y="168.0" width="172" height="54" rx="14" fill="#0E1420" stroke="#273449" stroke-width="1.25"/>
+<circle cx="102.3" cy="195.0" r="12" fill="#121A2A" stroke="#273449"/>
+<text x="102.3" y="198.5" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="10" fill="#64748B">01</text>
+<g opacity="0"><animate attributeName="opacity" dur="9.60s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;0.0573;0.0729;0.9635;0.9792;1" />
+<rect x="75.3" y="168.0" width="172" height="54" rx="14" fill="none" stroke="#A78BFA" stroke-width="5" opacity="0.35" filter="url(#soft)"/>
+<rect x="75.3" y="168.0" width="172" height="54" rx="14" fill="#A78BFA" fill-opacity="0.07" stroke="url(#accent)" stroke-width="1.5"/>
+<circle cx="102.3" cy="195.0" r="12" fill="url(#accent)"/>
+<text x="102.3" y="198.5" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="10" font-weight="700" fill="#0A0E16">01</text>
+</g>
+<text x="124.3" y="193.0" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="14.5" font-weight="650" fill="#E2E8F0">Brief</text>
+<text x="124.3" y="209.0" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="10.5" fill="#64748B">you describe it</text>
+<rect x="262.0" y="73.3" width="172" height="54" rx="14" fill="#0E1420" stroke="#273449" stroke-width="1.25"/>
+<circle cx="289.0" cy="100.3" r="12" fill="#121A2A" stroke="#273449"/>
+<text x="289.0" y="103.8" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="10" fill="#64748B">02</text>
+<g opacity="0"><animate attributeName="opacity" dur="9.60s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;0.1615;0.1771;0.9635;0.9792;1" />
+<rect x="262.0" y="73.3" width="172" height="54" rx="14" fill="none" stroke="#A78BFA" stroke-width="5" opacity="0.35" filter="url(#soft)"/>
+<rect x="262.0" y="73.3" width="172" height="54" rx="14" fill="#A78BFA" fill-opacity="0.07" stroke="url(#accent)" stroke-width="1.5"/>
+<circle cx="289.0" cy="100.3" r="12" fill="url(#accent)"/>
+<text x="289.0" y="103.8" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="10" font-weight="700" fill="#0A0E16">02</text>
+</g>
+<text x="311.0" y="98.3" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="14.5" font-weight="650" fill="#E2E8F0">Blueprint</text>
+<text x="311.0" y="114.3" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="10.5" fill="#64748B">plan &amp; phases</text>
+<rect x="526.0" y="73.3" width="172" height="54" rx="14" fill="#0E1420" stroke="#273449" stroke-width="1.25"/>
+<circle cx="553.0" cy="100.3" r="12" fill="#121A2A" stroke="#273449"/>
+<text x="553.0" y="103.8" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="10" fill="#64748B">03</text>
+<g opacity="0"><animate attributeName="opacity" dur="9.60s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;0.2656;0.2812;0.9635;0.9792;1" />
+<rect x="526.0" y="73.3" width="172" height="54" rx="14" fill="none" stroke="#A78BFA" stroke-width="5" opacity="0.35" filter="url(#soft)"/>
+<rect x="526.0" y="73.3" width="172" height="54" rx="14" fill="#A78BFA" fill-opacity="0.07" stroke="url(#accent)" stroke-width="1.5"/>
+<circle cx="553.0" cy="100.3" r="12" fill="url(#accent)"/>
+<text x="553.0" y="103.8" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="10" font-weight="700" fill="#0A0E16">03</text>
+</g>
+<text x="575.0" y="98.3" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="14.5" font-weight="650" fill="#E2E8F0">Fence</text>
+<text x="575.0" y="114.3" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="10.5" fill="#64748B">one scoped task</text>
+<rect x="712.7" y="168.0" width="172" height="54" rx="14" fill="#0E1420" stroke="#273449" stroke-width="1.25"/>
+<circle cx="739.7" cy="195.0" r="12" fill="#121A2A" stroke="#273449"/>
+<text x="739.7" y="198.5" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="10" fill="#64748B">04</text>
+<g opacity="0"><animate attributeName="opacity" dur="9.60s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;0.3698;0.3854;0.9635;0.9792;1" />
+<rect x="712.7" y="168.0" width="172" height="54" rx="14" fill="none" stroke="#A78BFA" stroke-width="5" opacity="0.35" filter="url(#soft)"/>
+<rect x="712.7" y="168.0" width="172" height="54" rx="14" fill="#A78BFA" fill-opacity="0.07" stroke="url(#accent)" stroke-width="1.5"/>
+<circle cx="739.7" cy="195.0" r="12" fill="url(#accent)"/>
+<text x="739.7" y="198.5" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="10" font-weight="700" fill="#0A0E16">04</text>
+</g>
+<text x="761.7" y="193.0" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="14.5" font-weight="650" fill="#E2E8F0">Builder</text>
+<text x="761.7" y="209.0" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="10.5" fill="#64748B">any model builds</text>
+<rect x="712.7" y="302.0" width="172" height="54" rx="14" fill="#0E1420" stroke="#273449" stroke-width="1.25"/>
+<circle cx="739.7" cy="329.0" r="12" fill="#121A2A" stroke="#273449"/>
+<text x="739.7" y="332.5" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="10" fill="#64748B">05</text>
+<g opacity="0"><animate attributeName="opacity" dur="9.60s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;0.4740;0.4896;0.9635;0.9792;1" />
+<rect x="712.7" y="302.0" width="172" height="54" rx="14" fill="none" stroke="#A78BFA" stroke-width="5" opacity="0.35" filter="url(#soft)"/>
+<rect x="712.7" y="302.0" width="172" height="54" rx="14" fill="#A78BFA" fill-opacity="0.07" stroke="url(#accent)" stroke-width="1.5"/>
+<circle cx="739.7" cy="329.0" r="12" fill="url(#accent)"/>
+<text x="739.7" y="332.5" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="10" font-weight="700" fill="#0A0E16">05</text>
+</g>
+<text x="761.7" y="327.0" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="14.5" font-weight="650" fill="#E2E8F0">Guards</text>
+<text x="761.7" y="343.0" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="10.5" fill="#64748B">scope · secrets</text>
+<rect x="526.0" y="396.7" width="172" height="54" rx="14" fill="#0E1420" stroke="#273449" stroke-width="1.25"/>
+<circle cx="553.0" cy="423.7" r="12" fill="#121A2A" stroke="#273449"/>
+<text x="553.0" y="427.2" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="10" fill="#64748B">06</text>
+<g opacity="0"><animate attributeName="opacity" dur="9.60s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;0.5781;0.5938;0.9635;0.9792;1" />
+<rect x="526.0" y="396.7" width="172" height="54" rx="14" fill="none" stroke="#A78BFA" stroke-width="5" opacity="0.35" filter="url(#soft)"/>
+<rect x="526.0" y="396.7" width="172" height="54" rx="14" fill="#A78BFA" fill-opacity="0.07" stroke="url(#accent)" stroke-width="1.5"/>
+<circle cx="553.0" cy="423.7" r="12" fill="url(#accent)"/>
+<text x="553.0" y="427.2" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="10" font-weight="700" fill="#0A0E16">06</text>
+</g>
+<text x="575.0" y="421.7" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="14.5" font-weight="650" fill="#E2E8F0">CI</text>
+<text x="575.0" y="437.7" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="10.5" fill="#64748B">tests &amp; checks</text>
+<rect x="262.0" y="396.7" width="172" height="54" rx="14" fill="#0E1420" stroke="#273449" stroke-width="1.25"/>
+<circle cx="289.0" cy="423.7" r="12" fill="#121A2A" stroke="#273449"/>
+<text x="289.0" y="427.2" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="10" fill="#64748B">07</text>
+<g opacity="0"><animate attributeName="opacity" dur="9.60s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;0.6823;0.6979;0.9635;0.9792;1" />
+<rect x="262.0" y="396.7" width="172" height="54" rx="14" fill="none" stroke="#A78BFA" stroke-width="5" opacity="0.35" filter="url(#soft)"/>
+<rect x="262.0" y="396.7" width="172" height="54" rx="14" fill="#A78BFA" fill-opacity="0.07" stroke="url(#accent)" stroke-width="1.5"/>
+<circle cx="289.0" cy="423.7" r="12" fill="url(#accent)"/>
+<text x="289.0" y="427.2" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="10" font-weight="700" fill="#0A0E16">07</text>
+</g>
+<text x="311.0" y="421.7" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="14.5" font-weight="650" fill="#E2E8F0">Review</text>
+<text x="311.0" y="437.7" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="10.5" fill="#64748B">PASS / FAIL</text>
+<rect x="75.3" y="302.0" width="172" height="54" rx="14" fill="#0E1420" stroke="#273449" stroke-width="1.25"/>
+<circle cx="102.3" cy="329.0" r="12" fill="#121A2A" stroke="#273449"/>
+<text x="102.3" y="332.5" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="10" fill="#64748B">08</text>
+<g opacity="0"><animate attributeName="opacity" dur="9.60s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;0.7865;0.8021;0.9635;0.9792;1" />
+<rect x="75.3" y="302.0" width="172" height="54" rx="14" fill="none" stroke="#34D399" stroke-width="5" opacity="0.35" filter="url(#soft)"/>
+<rect x="75.3" y="302.0" width="172" height="54" rx="14" fill="#34D399" fill-opacity="0.07" stroke="#34D399" stroke-width="1.5"/>
+<circle cx="102.3" cy="329.0" r="12" fill="#34D399"/>
+<text x="102.3" y="332.5" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="10" font-weight="700" fill="#0A0E16">✓</text>
+</g>
+<text x="124.3" y="327.0" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="14.5" font-weight="650" fill="#E2E8F0">Merge</text>
+<text x="124.3" y="343.0" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="10.5" fill="#64748B">you approve</text>
+<text x="480" y="514" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="11.5" letter-spacing="0.3" fill="#64748B">any reviewer model · any builder model · every task fenced, checked and reviewed · <tspan fill="#34D399">you only merge</tspan></text>
+</svg>

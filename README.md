@@ -39,6 +39,10 @@ DEV_OS sets a project up from an empty folder and runs it as small, reviewed tas
 writes the blueprint: the brief, the scope, the design system, the phases and the first task. You approve it. Each
 task is then built from a written fence, checked, reviewed, and merged by you.
 
+<p align="center">
+  <img alt="The DEV_OS Engine at the centre sends the work through each step in turn: brief, blueprint, fence, builder, guards, CI and review, and you approve the merge" src="docs/assets/devos-flow.svg" width="900">
+</p>
+
 Version `1.13.9`. The engine is under PolyForm Shield 1.0.0 and the files it installs into your project under MIT
 (see [Licence](#licence)).
 
@@ -104,6 +108,13 @@ flowchart LR
 - **You merge at the gates.** A migration, a new sign-in or payment import, and every gate task stop for a person.
 - **Usage limits are waited out:** on a second account, then the next model, then a builder of another tool, and only
   then until the earliest reset, hours or days away.
+
+Automated on GitHub, this runs as a cycle: a build loop for every task, and a ship loop for every unit, whose
+acceptance pull request waits for your merge before it deploys.
+
+<p align="center">
+  <img alt="The DEV_OS cycle on GitHub: a build loop for every task (fence, build, verify, review; a FAIL reissues the fence, a usage limit waits and resumes, a PASS merges into the unit) and a ship loop for every unit (the acceptance pull request waits for you, your merge reaches main, then it deploys)" src="docs/assets/devos-cycle.svg" width="900">
+</p>
 
 ## Features at a glance
 
