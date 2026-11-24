@@ -43,7 +43,7 @@ task is then built from a written fence, checked, reviewed, and merged by you.
   <img alt="The DEV_OS Engine at the centre sends the work through each step in turn: brief, blueprint, fence, builder, guards, CI and review, and you approve the merge" src="docs/assets/devos-flow.svg" width="900">
 </p>
 
-Version `1.13.12`. The engine is under PolyForm Shield 1.0.0 and the files it installs into your project under MIT
+Version `1.13.13`. The engine is under PolyForm Shield 1.0.0 and the files it installs into your project under MIT
 (see [Licence](#licence)).
 
 ## Contents
@@ -359,12 +359,25 @@ stays as it is. The AI tool that writes DEV_OS's documents carries over every de
 holds, and the pull request lists each move. `--move-aside` says yes without asking. A file your `.gitignore` leaves
 out goes aside after the same yes: devos commits a copy of it there, and once DEV_OS is committed it moves your own
 copy out of the project into `~/.devos/adopt/<owner>__<repo>/before-adopt/`, since git would otherwise overwrite it
-when you pull the merge. Anything else that stops the adoption says the commands that fix it.
+when you pull the merge. A file whose name differs from one of DEV_OS's only in letter case (`docs/decisions.md`
+beside DEV_OS's `docs/DECISIONS.md`) is the same file on Windows and macOS, so it goes aside too, under its own name.
+Anything else that stops the adoption says the commands that fix it.
+
+**When an adoption stops.** The branch goes and your checkout stays as it was, but the brief and your answers (the
+contract, the Control Tower link, the cycle's agents, the deploy) are kept. Fix what the last lines name, commit it if
+it is in your project, then run `devos adopt --install` (or **Try again from the brief** on the guided page): it asks
+whether to use the brief after your new commits and whether to use your answers again, then writes the documents. A
+check that cannot read one of DEV_OS's documents goes back to the AI tool for another round instead of stopping.
 
 On the guided page (`devos ui`, then **Existing project**) the same steps are screens: the survey as facts, the tool,
 model and effort that write the brief (nothing is picked for you), the brief to keep or change, the contract and the
 Control Tower link, the cycle's agents from their whole model lists, a Keys step that shows which keys GitHub already
-has and what to set in Vercel, and the pull request with what happens next.
+has and what to set in Vercel, and the pull request with what happens next. In the agents' lists, a model marked
+**Listed by your account** is one your Cursor account lists; Claude Code, Codex and Gemini do not list theirs, so
+their lists are DEV_OS's, and a model marked **Effort asked next** has its effort asked on the next question. Each
+tool's key for GitHub (`CURSOR_API_KEY`, `CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`,
+`GEMINI_API_KEY`) and your modules' keys, a database's among them, are asked at the Keys step, after DEV_OS is added
+and before anything reaches GitHub.
 
 An older hand-copied DEV_OS keeps its documents and settings; its method files become the engine's. It is adopted only
 while no task branch is open and no cycle runs.

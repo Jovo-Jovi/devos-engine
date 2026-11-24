@@ -2,6 +2,13 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
+## 1.13.13 — Unreleased
+
+- **Names that differ from DEV_OS's only in letter case go aside, on every system.** A committed `docs/decisions.md` or `docs/glossary.md` is the same file as DEV_OS's `docs/DECISIONS.md` or `docs/GLOSSARY.md` on Windows and macOS. Before, devos took it for a file git does not track, DEV_OS's documents could not take their names, and the adoption stopped at the end with `guard:naming` crashed. Now the survey finds such a file in git's own list, on every system, and it goes aside after the same single yes, under its own name (`docs/before-adopt/decisions.md`), in the first commit of `devos/adopt`. A folder in other letter case, a file DEV_OS adds its rules to (`claude.md`), or a name git tracks in both cases stops the adoption with the two `git mv` that fix it.
+- **A check that cannot read one of DEV_OS's documents goes back to the AI tool.** When a guard crashes on a document (a glossary without its fenced list, say), the tool gets another round to fix it, as for the documents' other checks, instead of the adoption stopping after them.
+- **A stopped adoption can be tried again without starting over.** The brief and your answers (the contract, the Control Tower link, the cycle's agents, the deploy) are kept, and the last line says how to go on. `devos adopt --install` asks whether to use the brief after the commits you made to fix what stopped it, and whether to use your answers again, so nothing is asked twice; on the guided page, **Try again from the brief** does the same, beside **Start over with a new brief**.
+- **The agents' lists say where each model comes from.** A model marked "listed by your account" is one your Cursor account lists; Claude Code, Codex and Gemini do not list theirs, so their lists are DEV_OS's, and their models say "effort asked next". Under the first list, a line says where each list comes from and that each tool's key for GitHub, like your modules' keys, is asked at the Keys step. A model typed without its marks is still found.
+
 ## 1.13.12 — 2026-11-24
 
 - **Adopting no longer stops on files with DEV_OS's names that git ignores.** When your `.gitignore` leaves out a file such as `docs/DECISIONS.md` or `docs/GLOSSARY.md`, `devos adopt` no longer asks you to commit it first. It joins the same plan and the same single yes as the committed ones (the terminal, the guided page's **Move them aside and continue**, or `--move-aside`):
