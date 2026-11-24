@@ -55,7 +55,7 @@ devos init --plan <file> [folder]
 devos init --help
 devos ui [folder] [--no-open]
 devos continue [folder]
-devos adopt [folder] [--install | --publish] [--agent <tool>[:<model>]]
+devos adopt [folder] [--install | --publish] [--move-aside] [--agent <tool>[:<model>]]
 devos adopt --check [folder] [--json]
 devos verify [folder]
 devos watch [folder] [--interval <seconds>] [--once]

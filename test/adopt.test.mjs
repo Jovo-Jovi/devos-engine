@@ -6,7 +6,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
 import { cleanup, stage } from "./harness.mjs";
-import { ADOPT_IGNORE, AREA_IMPORTS, GATE_IMPORTS, adoptStops, chooseAgent, copyPrecedents, copyStops, criticalList, ownSettings, projectFromConfig, sourceRoots, surveyLines, surveyProject, uiReader } from "../lib/adopt.mjs";
+import { ADOPT_IGNORE, AREA_IMPORTS, GATE_IMPORTS, adoptBlocks, adoptStops, asidePath, chooseAgent, copyPrecedents, copyStops, criticalList, ownSettings, projectFromConfig, sourceRoots, surveyLines, surveyProject, uiReader } from "../lib/adopt.mjs";
 import { merge } from "../payload/files/scripts/devos/config.mjs";
 import { hubExec } from "../lib/hub.mjs";
 import { confirm, multiSelect, select } from "../lib/menu.mjs";
@@ -241,7 +241,7 @@ test("adopt.test.mjs (f) devos adopt --check prints the survey, --json gives the
     assert.equal(git(["status", "--porcelain", "--ignored"], folder), "");
     const usage = runDevos(["adopt", "--nope"]);
     assert.equal(usage.status, 2);
-    assert.equal(usage.stdout, "usage: devos adopt [folder] [--install | --publish] [--agent <tool>[:<model>]] · devos adopt --check [folder] [--json]\n");
+    assert.equal(usage.stdout, "usage: devos adopt [folder] [--install | --publish] [--move-aside] [--agent <tool>[:<model>]] · devos adopt --check [folder] [--json]\n");
     const loose = runDevos(["adopt", "--check", staged.parent]);
     assert.equal(loose.status, 1);
     assert.equal(loose.stdout, `devos: ${staged.parent} is not a git repository; run devos adopt --check in the project's own clone\n`);
@@ -506,11 +506,11 @@ test("adopt.test.mjs (p) an older copy is adopted only between tasks: an open ta
     };
     assert.deepEqual(copyStops(folder, survey, gh([{ number: 3, headRefName: "fix/readme" }], [{ status: "completed" }])), []);
     assert.deepEqual(copyStops(folder, survey, gh([{ number: 61, headRefName: "task/T21" }], [])), [
-      "devos: devtest/shop has a task under way (task/T21, pull request #61); merge or close it first, then run devos adopt again",
+      "devos: devtest/shop has a task under way (task/T21, pull request #61); merge or close it first (gh pr merge 61 --repo devtest/shop --squash, or gh pr close 61 --repo devtest/shop), then run devos adopt again",
     ]);
     // Any run that has not completed counts, a status GitHub adds later included.
     for (const status of ["in_progress", "queued", "waiting", "action_required"]) {
-      assert.deepEqual(copyStops(folder, survey, gh([], [{ status: "completed" }, { status }])), ["devos: a DEV_OS cycle is running on devtest/shop; wait until it ends, then run devos adopt again"], status);
+      assert.deepEqual(copyStops(folder, survey, gh([], [{ status: "completed" }, { status }])), ["devos: a DEV_OS cycle is running on devtest/shop; wait until it ends (gh run list --repo devtest/shop --workflow devos-cycle.yml shows it), then run devos adopt again"], status);
     }
     for (const [pulls, runs] of [[null, []], [[], null]]) {
       assert.deepEqual(copyStops(folder, survey, gh(pulls, runs)), ["devos: could not ask GitHub whether a task or a DEV_OS cycle is under way on devtest/shop; check gh auth status, then run devos adopt again"]);
@@ -519,7 +519,7 @@ test("adopt.test.mjs (p) an older copy is adopted only between tasks: an open ta
     const prefixed = project({ "README.md": "# Shop\n", "devos.config.json": JSON.stringify({ branch_prefix: "work/" }) });
     try {
       assert.deepEqual(copyStops(prefixed, survey, gh([{ number: 7, headRefName: "work/T02" }, { number: 8, headRefName: "task/T03" }, { number: 9, headRefName: "fix/x" }], [])), [
-        "devos: devtest/shop has a task under way (work/T02, pull request #7; task/T03, pull request #8); merge or close it first, then run devos adopt again",
+        "devos: devtest/shop has a task under way (work/T02, pull request #7; task/T03, pull request #8); merge or close it first (gh pr merge 7 --repo devtest/shop --squash, or gh pr close 7 --repo devtest/shop), then run devos adopt again",
       ]);
     } finally {
       cleanup(prefixed);
@@ -547,7 +547,10 @@ test("adopt.test.mjs (q) a project is an older copy only when it tracks both DEV
       assert.equal(survey.devos.kind, "partial", folder);
       const stops = adoptStops(folder, survey, root, fakeGh());
       assert.equal(stops.length, 1, stops.join("\n"));
-      assert.match(stops[0], /^devos: devtest\/demo-app tracks some of DEV_OS's files \(.+\) but not an older copy's cycle workflow and scripts; remove them, or commit the copy's whole, then run devos adopt again$/);
+      assert.match(stops[0], /^devos: devtest\/demo-app tracks some of DEV_OS's files \((.+)\) but not an older copy's cycle workflow and scripts\. Remove them \(git rm -r (\S.*), then git commit -m "Remove DEV_OS's partial files"\), or commit the copy's whole; then run devos adopt again$/);
+      // E78: the command names exactly the files the stop names.
+      const [, listed, removed] = /\((.+)\) but not.*git rm -r (.+), then git commit/.exec(stops[0]);
+      assert.equal(removed, listed.split(", ").join(" "));
     }
     assert.equal(surveyLines(surveyProject(folders[1], { exec: fakeGh() })).includes("DEV_OS: some of its files (.github/workflows/devos-cycle.yml, devos.config.json)"), true);
   } finally {
@@ -692,4 +695,37 @@ test("adopt.test.mjs (t) E73 (PR-97): which items of an older copy's devos/setup
   assert.equal(copySmokeAddress(null), "");
   // DEV_OS's own deploy workflow names no fixed address.
   assert.equal(copySmokeAddress(readFileSync(path.join(root, "payload", "files", "dot-github", "workflows", "devos-deploy.yml"), "utf8")), "");
+});
+
+test("adopt.test.mjs (u) files with DEV_OS's names: where each goes, what the survey says, and what still stops", () => {
+  // E78: docs/X keeps its place under docs/before-adopt/; any other file keeps its folders, without leading dots.
+  assert.equal(asidePath("docs/DECISIONS.md"), "docs/before-adopt/DECISIONS.md");
+  assert.equal(asidePath("docs/method/CARRY_FORWARDS.md"), "docs/before-adopt/method/CARRY_FORWARDS.md");
+  assert.equal(asidePath(".cursor/rules/00-project.mdc"), "docs/before-adopt/cursor-rules/00-project.mdc");
+  assert.equal(asidePath(".github/workflows/devos-ci.yml"), "docs/before-adopt/github-workflows/devos-ci.yml");
+  assert.equal(asidePath(".claude/settings.json"), "docs/before-adopt/claude/settings.json");
+  assert.equal(asidePath("devos.config.json"), "docs/before-adopt/devos.config.json");
+  const folder = project({ "README.md": "# Shop\n", ".gitignore": ".claude/\n", "docs/DECISIONS.md": "# Ours\n", "docs/GLOSSARY.md": "# Terms\n", "docs/before-adopt/GLOSSARY.md": "# Older terms\n" });
+  try {
+    // Ignored and never committed: devos cannot move it, so it stops, with the commands.
+    write(folder, { ".claude/settings.json": "{}\n" });
+    const survey = surveyProject(folder, { exec: fakeGh() });
+    assert.equal(survey.ready, true, survey.blockers.join("; "));
+    const blocks = adoptBlocks(folder, survey, root, fakeGh());
+    assert.deepEqual(blocks.moves, [{ from: "docs/DECISIONS.md", to: "docs/before-adopt/DECISIONS.md" }]);
+    assert.deepEqual(blocks.stops, [
+      "devos: docs/GLOSSARY.md has a name of DEV_OS's, and docs/before-adopt/GLOSSARY.md, where devos would move it, is taken. Rename that one (git mv docs/before-adopt/GLOSSARY.md docs/before-adopt/GLOSSARY.md.old, then git commit -m \"Make room for devos adopt\"), then run devos adopt again.",
+      "devos: these files of yours have DEV_OS's names and are not committed, so devos cannot move them aside: .claude/settings.json. Commit them (git add -f .claude/settings.json, then git commit -m \"Files devos adopt moves aside\") or move them out of the folder, then run devos adopt again.",
+    ]);
+    const lines = surveyLines(survey, blocks);
+    assert.equal(lines.includes("Move aside: 1 file with DEV_OS's names, to docs/before-adopt/ on the adopt branch after your yes (docs/DECISIONS.md → docs/before-adopt/DECISIONS.md)"), true, lines.join("\n"));
+    assert.deepEqual(lines.slice(-3), ["Ready: no — 2 things to fix first, below. Nothing was changed.", ...blocks.stops]);
+    // The moves alone: ready once they are made; adoptStops, the lines of a stop, adds the move's own line.
+    assert.equal(surveyLines(survey, { stops: [], moves: blocks.moves }).at(-1), "Ready: yes, once this file is moved aside; devos adopt asks first. Nothing was changed.");
+    assert.equal(adoptStops(folder, survey, root, fakeGh()).at(-1), `devos: this file of yours has a name of DEV_OS's: docs/DECISIONS.md. Run devos adopt --move-aside ${folder} to move it to docs/before-adopt/ on the branch devos/adopt (your checkout stays as it is), or move it yourself, commit, then run devos adopt ${folder}.`);
+    // Without blocks, the survey reads as before.
+    assert.equal(surveyLines(survey).at(-1), "Ready: yes. Nothing was changed.");
+  } finally {
+    cleanup(folder);
+  }
 });

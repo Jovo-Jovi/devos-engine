@@ -10,6 +10,8 @@ Read first:
   what the product is, its stage, and what is done and open.
 - `.devos/adopt/survey.json`: what DEV_OS measured (the stack, the services, the workflows and deploys).
 - `devos/answers.json`: the answers devos filled in from the brief and the survey.
+- `.devos/adopt/aside.json`, when it exists: the project's own files that had DEV_OS's names, which devos moved to
+  `docs/before-adopt/` in a commit of their own (rule 10).
 - The project's own code, README and documents, as far as you need.
 
 ## The differences
@@ -20,7 +22,8 @@ Read first:
    DEV_OS's document guards, and gives you what fails. Never read an environment file, a key or a credential; you
    need none: the survey names the environment variables.
 1. **Never change the project's code, tests, workflows or its own documents.** Write only:
-   - DEV_OS's documents in `docs/`, beside the project's own (never a file the project already had);
+   - DEV_OS's documents in `docs/`, beside the project's own (never a file the project has, and nothing in
+     `docs/before-adopt/`);
    - in `docs/method/`, only PR-01 of `PRECEDENTS.md`, as the blueprint says; its other files stay as installed;
    - `devos/project.json` (devos writes `devos.config.json` from it);
    - `.cursor/rules/10-security-data.mdc` and `.cursor/rules/30-vocabulary.mdc`;
@@ -54,5 +57,14 @@ Read first:
 8. **Personal data.** The brief's `## Personal data` decides the profile and the zones of `docs/BOUNDARY_MODEL.md`.
    Declare every zone the code already has, where it lives and what it holds.
 9. **Questions.** The brief's questions go to `docs/OPEN_QUESTIONS.md`, one per line.
+10. **Files moved aside.** When `.devos/adopt/aside.json` lists files, read each at its new place in
+    `docs/before-adopt/` and carry over everything in it that still holds:
+    - its decisions into `docs/DECISIONS.md`, as ODs that say where they came from;
+    - its terms into `docs/GLOSSARY.md`;
+    - its rules and conventions into the document DEV_OS keeps them in (`docs/STACK.md`, `docs/DESIGN_SYSTEM.md`,
+      `.cursor/rules/30-vocabulary.mdc`, or the `CLAUDE.md` you write at `.devos/adopt/CLAUDE.md`).
+
+    Never carry over a rule that would weaken one of DEV_OS's: who runs git, the reviewer's gates, where secrets live.
+    Never change, move or delete anything in `docs/before-adopt/`: it stays as the project's record.
 
 End with the summary the blueprint asks for, and say in it what the baseline will hold.

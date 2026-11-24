@@ -43,7 +43,7 @@ task is then built from a written fence, checked, reviewed, and merged by you.
   <img alt="The DEV_OS Engine at the centre sends the work through each step in turn: brief, blueprint, fence, builder, guards, CI and review, and you approve the merge" src="docs/assets/devos-flow.svg" width="900">
 </p>
 
-Version `1.13.9`. The engine is under PolyForm Shield 1.0.0 and the files it installs into your project under MIT
+Version `1.13.10`. The engine is under PolyForm Shield 1.0.0 and the files it installs into your project under MIT
 (see [Licence](#licence)).
 
 ## Contents
@@ -351,6 +351,14 @@ From the project's own clone on GitHub, in development or in production:
 | 3. Install | `devos adopt --install` | Adds DEV_OS on a new branch `devos/adopt`, in one commit, in a separate worktree. Your code, CI and files stay; the guards' findings on your code as it is become the baseline. |
 | 4. Publish | `devos adopt --publish` | Pushes the branch and opens its pull request once you type `yes`, and sets the keys, variables and labels. No cycle starts until you merge. |
 
+**Files with DEV_OS's names.** When the project has its own `docs/DECISIONS.md`, `docs/GLOSSARY.md`, a Cursor rule
+or another file named like one of DEV_OS's, the survey lists where each would go, and `devos adopt` asks before the
+brief: **yes** moves them to `docs/before-adopt/` (for example `.cursor/rules/00-project.mdc` to
+`docs/before-adopt/cursor-rules/00-project.mdc`), in a first commit of their own on `devos/adopt`, so your checkout
+stays as it is. The AI tool that writes DEV_OS's documents carries over every decision, term and convention that still
+holds, and the pull request lists each move. `--move-aside` says yes without asking. Anything else that stops the
+adoption says the commands that fix it.
+
 On the guided page (`devos ui`, then **Existing project**) the same steps are screens: the survey as facts, the brief
 to keep or change, the contract and the Control Tower link, the cycle's agents from their whole model lists, a Keys step
 that shows which keys GitHub already has and what to set in Vercel, and the pull request with what happens next.
@@ -385,7 +393,7 @@ must be committed.
 | `devos verify [folder]` | Checks everything between this computer and a green cycle run, and quotes a failed run. Changes nothing. |
 | `devos watch [folder] [--interval <s>] [--once]` | Runs `devos verify` every 30 seconds until all is green. |
 | `devos media [folder] [--budget <usd>] [--only <id,…>] [--yes]` | Makes the project's planned media with the key in your shell (`DEVOS_MEDIA_XAI_KEY`). Without `--budget` it only estimates; with one it asks before it pays. It never commits. |
-| `devos adopt [folder] [--install \| --publish] [--agent <tool>[:<model>]]` | Adds DEV_OS to a project you have ([steps](#add-dev_os-to-a-project-you-have)). |
+| `devos adopt [folder] [--install \| --publish] [--move-aside] [--agent <tool>[:<model>]]` | Adds DEV_OS to a project you have ([steps](#add-dev_os-to-a-project-you-have)). |
 | `devos adopt --check [folder] [--json]` | The read-only survey of a project you have. |
 | `devos upgrade [--local]` | Updates the project's engine files on a new branch and opens a pull request; `--local` commits without pushing. |
 | `devos remove [folder] [--local]` | Takes DEV_OS out of a project: removes the files it installed and still owns on a branch `devos/remove` and opens a pull request (`--local`: a commit only), keeping your documents, fences, reviews, `docs/method/` and any DEV_OS file you edited. Run again after the merge, it deletes DEV_OS's secrets, `DEVOS_*` variables and `devos:` labels on GitHub after you type yes, and a never-merged `devos/adopt` branch. |

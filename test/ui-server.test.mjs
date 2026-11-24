@@ -1189,6 +1189,14 @@ if (workers[workerName]) {
       assert.equal(surveyed.status, 200);
       assert.equal(surveyed.body.ok, true);
       assert.equal(Array.isArray(surveyed.body.lines) && surveyed.body.lines.length > 0, true, JSON.stringify(surveyed.body.lines));
+      assert.deepEqual([surveyed.body.moves, surveyed.body.stops], [[], []]);
+      // E78: a document with DEV_OS's name is a move the page shows, with the survey's own line for it.
+      mkdirSync(path.join(folder, "docs"), { recursive: true });
+      writeFileSync(path.join(folder, "docs", "GLOSSARY.md"), "# Terms\n");
+      for (const args of [["add", "docs/GLOSSARY.md"], ["commit", "-q", "-m", "terms"]]) assert.equal(git(args).status, 0, args.join(" "));
+      const moving = await call(chooser, { folder });
+      assert.deepEqual([moving.body.moves, moving.body.stops], [[{ from: "docs/GLOSSARY.md", to: "docs/before-adopt/GLOSSARY.md" }], []]);
+      assert.equal(moving.body.lines.at(-1), "Ready: yes, once this file is moved aside; devos adopt asks first. Nothing was changed.");
     } finally {
       await chooser.close();
       await bound.close();
