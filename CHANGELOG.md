@@ -2,6 +2,11 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
+## 1.13.10 — Unreleased
+
+- **Adopting a project with files named like DEV_OS's no longer stops cold.** When the project has its own `docs/DECISIONS.md`, `docs/GLOSSARY.md`, a Cursor rule such as `.cursor/rules/00-project.mdc`, or another committed file with one of DEV_OS's names, `devos adopt` lists where each would go and asks once (yes by default, a **Move them aside and continue** button on the guided page, or `--move-aside` to skip the question). A yes moves them to `docs/before-adopt/` (`docs/X` to `docs/before-adopt/X`, `.cursor/rules/00-project.mdc` to `docs/before-adopt/cursor-rules/00-project.mdc`) in the first commit of the `devos/adopt` branch, so your checkout and `main` stay as they are and nothing is lost. The AI tool that writes DEV_OS's documents carries over every decision, term and convention that still holds, and never changes what was moved. The pull request lists each move. A no changes nothing and says the command to run later. A handed-over project's own engine files that differ go aside the same way.
+- **The survey says what stops the adoption.** `devos adopt --check` and the guided page's survey list the files to move aside and everything that stops the adoption, and the Ready line agrees with them: it no longer says "Ready: yes" above a stop. Each stop that remains (a link where DEV_OS writes, a task or cycle under way in an older copy, a setting that would take away a rule, a file not committed, a place already taken) names the `git` or `gh` commands that fix it.
+
 ## 1.13.9 — 2026-11-11
 
 - **Three more Cursor models.** `gemini-4-carbon`, `claude-fable-5-1-thinking` and `claude-haiku-5-5-thinking` are now among the models offered for Cursor: Cursor offers them, and `node tools/models-refresh.mjs` found them missing. Claude Fable 5.2 stays first, and no default changes.

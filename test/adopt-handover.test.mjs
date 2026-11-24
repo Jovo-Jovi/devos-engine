@@ -355,3 +355,21 @@ test("adopt-handover.test.mjs (f) the method, the manual, the README and the cha
   assert.deepEqual(answers, { name: "Shop", deploy: "none", visibility: "public", contract_version: CONTRACT_VERSION, registry_link: true, adopted: { stage: "in-development", head: "abc", engine: ENGINE, handover: { engine: "1.9.0", on: "2026-11-05", accepted: [], resume: "T01" } } });
   assert.deepEqual(ownRulings("| PR-01 | a |\n| PR-02 | b |\n", "| PR-01 | x |\n| PR-99 | y |\n| PR-02 | b |\n"), ["PR-99"]);
 });
+
+test("adopt-handover.test.mjs (g) an engine file the developer changed after the handover goes aside after a yes, and DEV_OS's takes its place", () => {
+  // E78: in a handed-over project, its own engine files that differ are moved aside, not a stop.
+  const t = handedOverProject(`${HEAD}${row("T01", "First task", true)}${row("T02", "Second task", false)}`, { extra: { ".cursor/rules/00-project.mdc": "# Our own rule\n" } });
+  try {
+    const head = t.git(["rev-parse", "HEAD"]).out;
+    const result = t.run([t.folder], `yes\n${KEEP}yes\nno\n`);
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    assert.equal(result.stdout.includes("devos: DEV_OS's own files take their places. The pull request lists each move, and your checkout stays as it is.\n"), true, result.stdout);
+    assert.equal(result.stdout.includes(`devos: DEV_OS is on the branch devos/adopt of ${t.folder}, in two commits (your files moved aside, then DEV_OS).`), true, result.stdout);
+    unchanged(t, head);
+    assert.equal(t.show("docs/before-adopt/cursor-rules/00-project.mdc"), "# Our own rule\n");
+    assert.notEqual(t.show(".cursor/rules/00-project.mdc"), "# Our own rule\n");
+    assert.deepEqual(JSON.parse(t.show("devos/answers.json")).adopted.aside, [{ from: ".cursor/rules/00-project.mdc", to: "docs/before-adopt/cursor-rules/00-project.mdc" }]);
+  } finally {
+    cleanup(t.staged.parent);
+  }
+});

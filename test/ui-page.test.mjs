@@ -178,6 +178,10 @@ test("ui-page.test.mjs (i) the page offers an existing project, the adoption scr
     "\"/api/adopt/check\"",
     "\"/api/adopt/start\"",
     "adopt: true",
+    // E78: the survey screen shows the files devos would move aside, and what to fix first with its commands.
+    "adopt.stops.length === 0",
+    "When you write the brief, DEV_OS asks to move",
+    "Fix these first, then survey it again. Each says the commands to run.",
     "https:\\/\\/github\\.com\\/[A-Za-z0-9._-]+\\/[A-Za-z0-9._-]+\\/pull\\/[0-9]+$",
   ]) {
     assert.equal(js.includes(text), true, text);
