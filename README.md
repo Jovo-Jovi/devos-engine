@@ -43,7 +43,7 @@ task is then built from a written fence, checked, reviewed, and merged by you.
   <img alt="The DEV_OS Engine at the centre sends the work through each step in turn: brief, blueprint, fence, builder, guards, CI and review, and you approve the merge" src="docs/assets/devos-flow.svg" width="900">
 </p>
 
-Version `1.13.10`. The engine is under PolyForm Shield 1.0.0 and the files it installs into your project under MIT
+Version `1.13.11`. The engine is under PolyForm Shield 1.0.0 and the files it installs into your project under MIT
 (see [Licence](#licence)).
 
 ## Contents
@@ -126,7 +126,7 @@ acceptance pull request waits for your merge before it deploys.
 | **Visual ambition and media** | Calm, Expressive or Showcase sets the direction. With generated media, the blueprint plans every image, video and voice item before a screen shows it; images you own are shown as they are. |
 | **The cycle** | 11 workflows on GitHub Actions: build, checks, review, change requests, the next task, gates, setup, deploys, waits, a supervisor. |
 | **Agents** | Claude Code, Cursor, Codex and Gemini, each as reviewer or builder. The reviewer can pick the builder for each task. |
-| **Effort** | Set per agent: chosen by the reviewer for each task, or fixed, with Fast for Cursor. |
+| **Effort** | Yours, per role: DEV_OS picks no model and no effort. A builder's is fixed, or chosen by the reviewer in each fence; Fast for Cursor. |
 | **Usage limits** | Second accounts, up to 4 next models per role, a fallback builder of another tool. |
 | **Guards** | 18 guards on every task, from scope and secrets to design, i18n, data boundaries, the media plan and new dependencies. |
 | **Launch gate** | The last task before launch checks the main pages' security headers, accessibility and speed, and audits every dependency. The reviewer verifies the OWASP ASVS and a production checklist per layer. A failed check waits for a fix or your written waiver. |
@@ -263,7 +263,7 @@ commas, or a name; Enter takes the default.
 | Setting | How |
 |---|---|
 | **Models** | Only the models a tool lists for your account are offered. |
-| **Effort** | The blueprint agent runs at high by default; Claude Code also takes Max. A builder's effort is chosen by the reviewer in each fence, or fixed, with Fast for Cursor. |
+| **Effort** | You choose each one; DEV_OS picks none. The reviewer's covers deep reviews, method changes, intake, the supervisor and the doctor; it has a gate effort of its own, and one for light reviews when no light reviewer has its own. A builder's is fixed, or `fence`: the reviewer chooses it in each fence; Fast for Cursor. The blueprint agent and the adoption agent have one too, and Claude Code also takes Max. Whether a retry raises the reviewer's effort is your yes or no. A missing choice stops the run and names the key to set in `devos/project.json`; `devos upgrade` asks an older project for them once. |
 | **A model for the next run** | `devos models set <role> <model>` or the page's **Models** button; same tool, no commit. |
 | **Newer models** | `devos models check`, or **Check for newer models** in the page's Models panel: each role against what its tool offers now. Only a newer model of the same line is suggested, and nothing changes until you confirm (`--apply`, or **Use**). |
 | **Next models at a limit** | Up to 4 per role, of its own tool (`devos models fallback`, by pull request). A model the account cannot use is skipped. |
@@ -393,7 +393,7 @@ must be committed.
 | `devos verify [folder]` | Checks everything between this computer and a green cycle run, and quotes a failed run. Changes nothing. |
 | `devos watch [folder] [--interval <s>] [--once]` | Runs `devos verify` every 30 seconds until all is green. |
 | `devos media [folder] [--budget <usd>] [--only <id,…>] [--yes]` | Makes the project's planned media with the key in your shell (`DEVOS_MEDIA_XAI_KEY`). Without `--budget` it only estimates; with one it asks before it pays. It never commits. |
-| `devos adopt [folder] [--install \| --publish] [--move-aside] [--agent <tool>[:<model>]]` | Adds DEV_OS to a project you have ([steps](#add-dev_os-to-a-project-you-have)). |
+| `devos adopt [folder] [--install \| --publish] [--move-aside] [--agent <tool>:<model>] [--effort <level>]` | Adds DEV_OS to a project you have ([steps](#add-dev_os-to-a-project-you-have)). |
 | `devos adopt --check [folder] [--json]` | The read-only survey of a project you have. |
 | `devos upgrade [--local]` | Updates the project's engine files on a new branch and opens a pull request; `--local` commits without pushing. |
 | `devos remove [folder] [--local]` | Takes DEV_OS out of a project: removes the files it installed and still owns on a branch `devos/remove` and opens a pull request (`--local`: a commit only), keeping your documents, fences, reviews, `docs/method/` and any DEV_OS file you edited. Run again after the merge, it deletes DEV_OS's secrets, `DEVOS_*` variables and `devos:` labels on GitHub after you type yes, and a never-merged `devos/adopt` branch. |
@@ -403,7 +403,7 @@ must be committed.
 | `devos models fallback <role> <model,…\|none>` | Opens a pull request with the role's next models (up to 4). |
 | `devos models tool <role> <tool> <model>` | Opens a pull request that moves the role to another tool (`cursor`, `claude`, `codex`, `gemini`) and model, once the repository has its key. |
 | `devos agents detect` | Lists the AI CLIs here, their versions, and whether each is signed in. |
-| `devos agents show` · `import <file>` | Shows or saves your default roster (`~/.devos/roster.json`). |
+| `devos agents show` · `import <file>` | Shows or saves a roster (`~/.devos/roster.json`); setup never fills a choice from it. |
 | `devos profile show` · `set <key> <value>` | Your defaults (`~/.devos/profile.json`). It refuses anything that looks like a key. |
 | `devos status` | In a project: the project and your roster. |
 | `devos install [folder] --key <KEY>` | Installs the method's files only, without the guided setup. |
@@ -457,7 +457,7 @@ change applies from the next run. The project's `docs/method/AUTOMATION.md` list
 - **Keys.** DEV_OS never stores a secret value. The keys you type stay in the engine's memory only until each one is
   handed to GitHub over standard input. No model, file, log or answer receives one.
 - **Your computer.** The files under `~/.devos/` hold names and choices only, such as `choices.json`, the choices of
-  your last project (never a key, a name or a brief).
+  your last project (never a key, a name, a brief, an agent, a model or an effort).
 - **The project.** Your answers are in `devos/answers.json` and your agents in `devos/project.json`. The method's
   settings are generated into `devos.config.json`; do not edit that file by hand.
 - **The Control Tower.** Nothing is sent anywhere unless you answer yes to the link question at setup.

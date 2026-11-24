@@ -6,7 +6,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
 import { handedOver, handOver } from "../lib/handover.mjs";
-import { cleanup, stage } from "./harness.mjs";
+import { agentLines, cleanup, stage } from "./harness.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const bin = path.join(root, "bin", "devos.mjs");
@@ -69,7 +69,8 @@ test("handover.test.mjs (a) the handover removes DEV_OS's automation, keeps the 
 });
 
 // The answers of a default devos init --local (local-mode.test.mjs keeps the same list).
-const LOCAL_FLOW = ["accept", "", "", "", "", "", "", "", "", "", "database none", "", "auth none", "", "email none", "", "", "", "", "Demo Shop", "A small shop.", "Customers", "", "", "", "", "approve", ""].join("\n") + "\n";
+// E79 (PR-99): the agents, every one answered, then the type and the stack.
+const LOCAL_FLOW = ["accept", ...agentLines(), "", "", "database none", "", "auth none", "", "email none", "", "", "", "", "Demo Shop", "A small shop.", "Customers", "", "", "", "", "approve", ""].join("\n") + "\n";
 
 test("handover.test.mjs (b) devos init --local commits a handed-over project: the plan, and no DEV_OS script, guard, workflow, agent setting or lock", () => {
   const staged = stage({ tools: ["agent"] });

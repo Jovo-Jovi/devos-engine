@@ -688,9 +688,12 @@ jobs:
           rev_fallbacks=$(printf '%s\n' "$rev_line" | sed -n 's/^reviewer_fallbacks=//p')
           MODEL="$rev_model"; first_model="$MODEL"; models="$MODEL $rev_fallbacks"; lim=""; outcome=""
           if [ "$METHOD_CHANGE" = "true" ]; then
-            EFFORT=high; TURNS=120
+            # PR-99: at the reviewer's own effort, as the developer chose it.
+            eff_line=$(GITHUB_OUTPUT=/dev/null node "$T/agents.mjs" effort --kind method) || exit 1
+            EFFORT=$(printf '%s\n' "$eff_line" | sed -n 's/^effort=//p'); TURNS=120
             echo "method fix: deep review (claude $MODEL, effort $EFFORT, $TURNS turns)"
           fi
+          [ -n "$EFFORT" ] || { echo "::error title=Dev OS::no reviewer effort for this review; set it in devos/project.json (devos upgrade asks for it, PR-99)"; exit 1; }
           echo "reviewer: claude $MODEL ($DEVOS_REVIEW_MODE review)${rev_fallbacks:+ · then the models $rev_fallbacks}"
           node "$T/render-prompt.mjs" reviewer "$TASK" "$ATTEMPT" --out .devos/reviewer-prompt.md
           schema=$(cat "$GITHUB_WORKSPACE/trusted/devos/schemas/verdict.schema.json")
@@ -710,7 +713,7 @@ jobs:
             while :; do
               bash "$T/review-user.sh" run "$RW" -- claude -p \
                 --model "$MODEL" \
-                --effort "${EFFORT:-high}" \
+                --effort "$EFFORT" \
                 --output-format json \
                 --json-schema "$schema" \
                 --permission-mode dontAsk \

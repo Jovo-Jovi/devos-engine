@@ -33,11 +33,12 @@ function staged(prefix) {
   return dir;
 }
 
-const reviewer = { id: "r", tool: "codex", model: "M1", fallback_models: ["M2", "M3"] };
-const builder = { id: "b", tool: "codex", model: "B1", default: true, note: "", fallback_models: ["B2"] };
+// E79 (PR-99): every effort chosen, as a project's own agents have them.
+const reviewer = { id: "r", tool: "codex", model: "M1", fallback_models: ["M2", "M3"], effort: "high", gate_effort: "high" };
+const builder = { id: "b", tool: "codex", model: "B1", default: true, note: "", fallback_models: ["B2"], effort: "fence" };
 
 test("fallback-models.test.mjs (a) an agent may list fallback_models of its own tool, and pick and reviewer give them in order", () => {
-  const agents = { reviewer, reviewer_light: { id: "l", tool: "codex", model: "L1" }, pool: [builder], policy: "always-default" };
+  const agents = { reviewer, reviewer_light: { id: "l", tool: "codex", model: "L1", effort: "medium" }, pool: [builder], policy: "always-default", raise_on_retry: true };
   assert.equal(validate(agents), agents);
   assert.deepEqual([fallbacks(reviewer), fallbacks(agents.reviewer_light), fallbacks({ model: "M2", fallback_models: ["M2", "M3"] })], [["M2", "M3"], [], ["M3"]]);
   assert.equal(MAX_FALLBACKS, 4);
@@ -52,7 +53,7 @@ test("fallback-models.test.mjs (a) an agent may list fallback_models of its own 
     assert.throws(() => validate({ ...agents, reviewer: { ...reviewer, fallback_models: list } }), { message });
   }
   assert.throws(() => validate({ ...agents, pool: [{ ...builder, fallback_models: ["B2", "B2"] }] }), { message: wrong("pool item b") });
-  assert.throws(() => validate({ ...agents, reviewer: { ...reviewer, extra: 1 } }), { message: "agents: reviewer must have id, tool and model, and may have fallback_models" });
+  assert.throws(() => validate({ ...agents, reviewer: { ...reviewer, extra: 1 } }), { message: "agents: reviewer must have id, tool and model, and may have fallback_models and effort, gate_effort, light_effort" });
   assert.throws(() => validate({ ...agents, pool: [{ ...builder, extra: 1 }] }), { message: "agents: pool item must have id, tool, model, default and note, and may have fallback_models" });
 
   const dir = staged("devos-fallback-");
@@ -64,7 +65,7 @@ test("fallback-models.test.mjs (a) an agent may list fallback_models of its own 
     assert.match(run(["reviewer", "--mode", "light"]).stdout, /^reviewer_model=L1\nreviewer_fallbacks=\n/m);
     // PR-63, PR-76: a model variable replaces the first model, the configured one comes next, and a fallback it names is not tried twice.
     assert.match(run(["reviewer", "--mode", "deep"], { DEVOS_REVIEWER_MODEL: "M2" }).stdout, /^reviewer_model=M2\nreviewer_fallbacks=M1 M3\n/m);
-    assert.match(run(["pool"]).stdout, /^- b — codex · B1 \(then B2\) · default$/m);
+    assert.match(run(["pool"]).stdout, /^- b — codex · B1 \(then B2\) · effort chosen in each fence · default$/m);
   } finally {
     rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
@@ -262,7 +263,7 @@ test("fallback-models.test.mjs (e) a review that no slot can run ends limited wh
 test("fallback-models.test.mjs (f) a planning run moves to the reviewer's next model and says which model answered", { skip: skipWindows }, () => {
   const dir = staged("devos-fallback-plan-");
   try {
-    withAgents(dir, { reviewer: { id: "r", tool: "claude", model: "opus-x", fallback_models: ["sonnet-x"] }, pool: [{ id: "b", tool: "claude", model: "sonnet-x", default: true, note: "" }], policy: "always-default" });
+    withAgents(dir, { reviewer: { id: "r", tool: "claude", model: "opus-x", fallback_models: ["sonnet-x"], effort: "high", gate_effort: "high", light_effort: "medium" }, pool: [{ id: "b", tool: "claude", model: "sonnet-x", default: true, note: "", effort: "fence" }], policy: "always-default", raise_on_retry: true });
     const bin = path.join(dir, "bin");
     mkdirSync(bin);
     writeFileSync(path.join(bin, "claude"), [
@@ -359,12 +360,13 @@ test("fallback-models.test.mjs (j) agents.fallback_builder names a builder of an
   const agents = {
     reviewer: { id: "r", tool: "cursor", model: "m" },
     pool: [
-      { id: "cursor-x", tool: "cursor", model: "grok", default: true, note: "" },
-      { id: "cursor-y", tool: "cursor", model: "grok-2", default: false, note: "" },
-      { id: "claude-b", tool: "claude", model: "sonnet", default: false, note: "" },
+      { id: "cursor-x", tool: "cursor", model: "grok", default: true, note: "", effort: "fence" },
+      { id: "cursor-y", tool: "cursor", model: "grok-2", default: false, note: "", effort: "fence" },
+      { id: "claude-b", tool: "claude", model: "sonnet", default: false, note: "", effort: "fence" },
     ],
     policy: "reviewer-picks",
     fallback_builder: "claude-b",
+    raise_on_retry: true,
   };
   assert.equal(validate(agents), agents);
   for (const id of ["missing", "cursor-y", 1]) {
@@ -387,11 +389,12 @@ test("fallback-models.test.mjs (k) a builder whose tool is out for longer than a
   const agents = {
     reviewer: { id: "r", tool: "cursor", model: "m" },
     pool: [
-      { id: "cursor-x", tool: "cursor", model: "grok-4.7", default: true, note: "" },
-      { id: "claude-b", tool: "claude", model: "claude-sonnet-5-5", default: false, note: "" },
+      { id: "cursor-x", tool: "cursor", model: "grok-4.7", default: true, note: "", effort: "fence" },
+      { id: "claude-b", tool: "claude", model: "claude-sonnet-5-5", default: false, note: "", effort: "fence" },
     ],
     policy: "reviewer-picks",
     fallback_builder: "claude-b",
+    raise_on_retry: true,
   };
   try {
     withAgents(dir, agents);

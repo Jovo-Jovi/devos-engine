@@ -471,7 +471,9 @@ export function stage(options = {}) {
   const project = path.join(parent, "project");
   const stubs = path.join(parent, "bin");
   const home = path.join(parent, "home");
-  writeStubs(stubs, options.tools ?? []);
+  // E79 (PR-99): the agent questions are answered by model, so Cursor's CLI is always the stand-in: the computer's own
+  // `agent models` list (which may leave out grok-4.7) never decides what a test can choose.
+  writeStubs(stubs, [...new Set(["agent", ...(options.tools ?? [])])]);
   mkdirSync(path.join(home, ".devos"), { recursive: true });
   if (options.visibility) {
     writeFileSync(path.join(home, ".devos", "profile.json"), `${JSON.stringify({ visibility: options.visibility }, null, 2)}\n`);
@@ -522,10 +524,53 @@ export function toolRuns(parent) {
   return readFileSync(log, "utf8").trim().split("\n").filter(Boolean).map((line) => JSON.parse(line));
 }
 
-export function flow({ link = "no", pool = "", blueprint = "", attachment = "", own = "", tail = "approve", confirmAnswer = "", type = "", stack = "", modules, scope = "", ambition = ["api", "cli"].includes(type) ? null : "" } = {}) {
-  const agent = ["", "", "", "", "", "", ""];
-  agent[2] = pool;
-  agent[5] = blueprint;
+// E79 (PR-99): the tool an answer to an agent question names ("claude claude-opus-5-5" or "Claude Code · claude-opus-5-5").
+function answerTool(answer) {
+  const text = String(answer).trim().toLowerCase();
+  for (const [tool, label] of [["claude", "claude code"], ["codex", "codex"], ["cursor", "cursor"], ["gemini", "gemini"]]) {
+    if (text.startsWith(`${tool} `) || text.startsWith(label)) return tool;
+  }
+  return "";
+}
+
+const EFFORT_TOOLS = new Set(["claude", "codex"]);
+const PINNED = /-(low|medium|high|xhigh)(?:-fast)?$|-fast(?:-(low|medium|high|xhigh))?$/;
+
+/**
+ * E79 (PR-99): the answers to devos init's agent questions, every one explicit, for the stub tools. The defaults are
+ * the agents earlier engines chose by themselves: reviewer Claude Code · claude-opus-5-5, light reviewer
+ * claude-sonnet-5-5, builder Cursor · grok-4.7, the reviewer picking builders, and the blueprint on Claude Code.
+ */
+export function agentLines({
+  reviewer = "claude claude-opus-5-5", reviewerEffort = "high", gateEffort = "high",
+  light = "claude claude-sonnet-5-5", lightEffort = "medium",
+  pool = "cursor grok-4.7", strengths = [], builderEfforts = [], defaultBuilder = "",
+  policy = "reviewer-picks", raise = "yes",
+  blueprint = "claude claude-opus-5-5", blueprintEffort = "high", withBlueprint = true,
+} = {}) {
+  const lines = [reviewer];
+  if (EFFORT_TOOLS.has(answerTool(reviewer))) lines.push(reviewerEffort, gateEffort);
+  lines.push(light);
+  const lightTool = light === "same" ? answerTool(reviewer) : answerTool(light);
+  if (EFFORT_TOOLS.has(lightTool)) lines.push(lightEffort);
+  lines.push(pool);
+  pool.split(",").map((item) => item.trim()).filter(Boolean).forEach((item, index) => {
+    lines.push(strengths[index] ?? "");
+    const tool = answerTool(item);
+    const model = item.split(/ · | /).at(-1);
+    if (EFFORT_TOOLS.has(tool) || (tool === "cursor" && model !== "auto" && !PINNED.test(model))) lines.push(builderEfforts[index] ?? "fence");
+  });
+  if (pool.split(",").filter((item) => item.trim()).length > 1) lines.push(defaultBuilder || "1");
+  lines.push(policy, raise);
+  if (withBlueprint) {
+    lines.push(blueprint);
+    if (EFFORT_TOOLS.has(answerTool(blueprint))) lines.push(blueprintEffort);
+  }
+  return lines;
+}
+
+export function flow({ link = "no", pool = "cursor grok-4.7", blueprint = "claude claude-opus-5-5", attachment = "", own = "", tail = "approve", confirmAnswer = "", type = "", stack = "", modules, scope = "", ambition = ["api", "cli"].includes(type) ? null : "", agents = {} } = {}) {
+  const agent = agentLines({ pool: pool || "cursor grok-4.7", blueprint: blueprint || "claude claude-opus-5-5", ...agents });
   const moduleLines = modules ?? ["database none", "", "auth none", "", "email none", "", "", ""];
   return [
     "accept",

@@ -8,6 +8,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { cleanup } from "./harness.mjs";
+import { configWithAgents } from "./chosen-agents.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const PAYLOAD = path.join(root, "payload", "files");
@@ -156,7 +157,7 @@ test("units.test.mjs U3 next-task reads the open unit's progress for product row
   try {
     mkdirSync(path.join(dir, "docs"), { recursive: true });
     cpSync(SCRIPTS, path.join(dir, "scripts", "devos"), { recursive: true });
-    writeFileSync(path.join(dir, "devos.config.json"), read(path.join(PAYLOAD, "devos", "engine.defaults.json")));
+    writeFileSync(path.join(dir, "devos.config.json"), configWithAgents(read(path.join(PAYLOAD, "devos", "engine.defaults.json"))));
     writeFileSync(path.join(dir, "docs", "PHASES.md"), TABLE({ T01: true, T02: true, T04: true }));
     writeFileSync(path.join(dir, "unit.md"), TABLE({ T01: true, T02: true, T03: true, T04: false }));
     const next = (args) => {
@@ -223,7 +224,7 @@ test("units.test.mjs U6 publish-verify verifies against the unit branch and merg
     mkdirSync(path.join(seed, "src"), { recursive: true });
     cpSync(SCRIPTS, path.join(seed, "scripts", "devos"), { recursive: true });
     cpSync(path.join(PAYLOAD, "devos"), path.join(seed, "devos"), { recursive: true });
-    writeFileSync(path.join(seed, "devos.config.json"), read(path.join(PAYLOAD, "devos", "engine.defaults.json")));
+    writeFileSync(path.join(seed, "devos.config.json"), configWithAgents(read(path.join(PAYLOAD, "devos", "engine.defaults.json"))));
     writeFileSync(path.join(seed, "docs", "PHASES.md"), TABLE());
     for (const t of ["T01", "T02"]) writeFileSync(path.join(seed, "docs", "fences", `${t}.md`), `## ${t}\n\n- Paths: \`src/**\`\n\n### Prompt\n\nBuild.\n`);
     writeFileSync(path.join(seed, "src", "a.ts"), "export const a = 1;\n");
@@ -319,7 +320,7 @@ test("units.test.mjs U7 unit.mjs open and place through a stand-in gh: forks and
     mkdirSync(path.join(dir, "docs"), { recursive: true });
     mkdirSync(bin);
     cpSync(SCRIPTS, path.join(dir, "scripts", "devos"), { recursive: true });
-    writeFileSync(path.join(dir, "devos.config.json"), read(path.join(PAYLOAD, "devos", "engine.defaults.json")));
+    writeFileSync(path.join(dir, "devos.config.json"), configWithAgents(read(path.join(PAYLOAD, "devos", "engine.defaults.json"))));
     writeFileSync(path.join(dir, "docs", "PHASES.md"), TABLE({ T01: true, T02: true }));
     writeFileSync(path.join(dir, "unit-T06.md"), TABLE({ T01: true, T02: true, T05: true, T06: true }));
     const stub = (refs, prs) => {

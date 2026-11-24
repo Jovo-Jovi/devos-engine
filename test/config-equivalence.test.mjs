@@ -53,5 +53,15 @@ test("config-equivalence.test.mjs regenerates the Tower config", () => {
   merged.surfaces.intake.allow = merged.surfaces.intake.allow.filter((p) => p !== "docs/design/REFERENCES.md");
   // PR-79 (E53b): the intake may add to the media plan.
   merged.surfaces.intake.allow = merged.surfaces.intake.allow.filter((p) => p !== "docs/design/media.json");
+  // PR-99 (E79): the engine picks no model or effort, so the Tower's own are its agents' now, not the method's settings.
+  for (const config of [merged, tower]) {
+    for (const key of ["model", "model_family", "default_effort", "effort_by_risk", "effort_note", "model_note"]) delete config.builder[key];
+    for (const key of ["model_by_risk", "gate_model", "effort_by_risk", "gate_effort", "intake_effort", "intake_effort_small", "method_effort", "fallback_model", "model_note", "review_note", "escalate_on_retry"]) delete config.reviewer[key];
+    for (const mode of ["light", "deep"]) {
+      delete config.reviewer.modes[mode].model;
+      delete config.reviewer.modes[mode].effort;
+    }
+    delete config.supervisor.model;
+  }
   assert.deepEqual(stripDollar(merged), stripDollar(tower));
 });

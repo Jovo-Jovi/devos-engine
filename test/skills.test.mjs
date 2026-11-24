@@ -6,6 +6,7 @@ import path from "node:path";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
+import { giveAgents } from "./chosen-agents.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const bin = path.join(root, "bin", "devos.mjs");
@@ -15,6 +16,8 @@ function project() {
   const dir = mkdtempSync(path.join(tmpdir(), "devos-skills-"));
   const installed = spawnSync(process.execPath, [bin, "install", dir, "--key", "DEMO"], { encoding: "utf8", windowsHide: true });
   assert.equal(installed.status, 0, installed.stdout + installed.stderr);
+  // E79 (PR-99): devos install chooses no agents; the project gives its own.
+  giveAgents(dir);
   return dir;
 }
 

@@ -22,12 +22,15 @@ const defaults = JSON.parse(defaultsText);
 
 function project(withLight = true) {
   const agents = {
-    reviewer: { id: "claude-deep", tool: "claude", model: "opus-x", fallback_models: ["sonnet-x"] },
-    pool: [{ id: "cursor-grok", tool: "cursor", model: "grok-4.7", default: true, note: "default builder" }],
+    // E79 (PR-99): the project's own efforts, every one chosen.
+    reviewer: { id: "claude-deep", tool: "claude", model: "opus-x", fallback_models: ["sonnet-x"], effort: "high", gate_effort: "high" },
+    pool: [{ id: "cursor-grok", tool: "cursor", model: "grok-4.7", default: true, note: "default builder", effort: "fence" }],
     policy: "reviewer-picks",
+    raise_on_retry: true,
   };
   // A project without a light reviewer of its own says so with null, as devos init writes it.
-  agents.reviewer_light = withLight ? { id: "claude-light", tool: "claude", model: "sonnet-x" } : null;
+  agents.reviewer_light = withLight ? { id: "claude-light", tool: "claude", model: "sonnet-x", effort: "medium" } : null;
+  if (!withLight) agents.reviewer.light_effort = "medium";
   return { project: "DEMO-SHOP", agents };
 }
 

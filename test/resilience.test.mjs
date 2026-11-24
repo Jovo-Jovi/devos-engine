@@ -7,6 +7,7 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { acceptanceText, lastAttempt } from "../payload/files/scripts/devos/accept.mjs";
 import { looksLikeServerError, serverError } from "../payload/files/scripts/devos/limits.mjs";
+import { giveAgents } from "./chosen-agents.mjs";
 
 // E61 (PR-87): the cycle's resilience. `/devos accept` records the owner's acceptance of a task that stopped without a
 // PASS and ticks its row, and a task merged by hand without one is not built again; the settled and reduced-motion
@@ -22,6 +23,8 @@ function staged(prefix) {
   const dir = mkdtempSync(path.join(tmpdir(), prefix));
   const installed = spawnSync(process.execPath, [bin, "install", dir, "--key", "DEMO"], { encoding: "utf8", windowsHide: true });
   assert.equal(installed.status, 0, installed.stdout + installed.stderr);
+  // E79 (PR-99): devos install chooses no agents; the project gives its own.
+  giveAgents(dir);
   mkdirSync(path.join(dir, ".devos"), { recursive: true });
   return dir;
 }

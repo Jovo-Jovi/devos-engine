@@ -79,10 +79,12 @@ emit({
   attempt,
   max_attempts: cfg.max_attempts,
   branch: `${cfg.branch_prefix}${row.task}`,
-  builder_model: cfg.builder.model,
+  // PR-99: the default builder's model, as the developer chose it.
+  builder_model: (cfg.agents?.pool ?? []).find((item) => item?.default)?.model ?? "",
   reviewer_model: reviewerModel(row, cfg),
   reviewer_max_turns: cfg.reviewer.max_turns,
   reviewer_effort: reviewerEffort(row, cfg),
-  reviewer_fallback: !cfg.agents && cfg.reviewer.fallback_model && cfg.reviewer.fallback_model !== reviewerModel(row, cfg) ? cfg.reviewer.fallback_model : "",
+  // PR-99: no fallback model of the engine's; an agent's own fallback_models are tried by accounts.sh.
+  reviewer_fallback: "",
   next_task: next ? next.task : "",
 });

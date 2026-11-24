@@ -7,6 +7,7 @@ import assert from "node:assert/strict";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { looksLikeLimit, LIMIT_TAIL } from "../payload/files/scripts/devos/limits.mjs";
 import { reviewPlan } from "../payload/files/scripts/devos/review-mode.mjs";
+import { chosenAgents, giveAgents } from "./chosen-agents.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const bin = path.join(root, "bin", "devos.mjs");
@@ -21,6 +22,8 @@ function project() {
   const dir = mkdtempSync(path.join(tmpdir(), "devos-verdict-"));
   const installed = spawnSync(process.execPath, [bin, "install", dir, "--key", "DEMO"], { encoding: "utf8", windowsHide: true });
   assert.equal(installed.status, 0, installed.stdout + installed.stderr);
+  // E79 (PR-99): devos install chooses no agents; the project gives its own.
+  giveAgents(dir);
   cpSync(path.join(root, "test", "fixtures", "docs"), path.join(dir, "docs"), { recursive: true });
   mkdirSync(path.join(dir, "docs", "reviews"), { recursive: true });
   mkdirSync(path.join(dir, ".devos"), { recursive: true });
@@ -156,7 +159,7 @@ test("reviewer-output.test.mjs (d) a PASS that changes a production path stops a
 });
 
 test("reviewer-output.test.mjs (e) a production path makes the review deep (PR-72)", () => {
-  const cfg = { reviewer: { deep_paths: ["supabase/migrations/**"], human_gate_paths: ["src/billing/**"], modes: { light: { model: "s", effort: "medium" }, deep: { model: "o", effort: "high" } } } };
+  const cfg = { reviewer: { deep_paths: ["supabase/migrations/**"], human_gate_paths: ["src/billing/**"], modes: { light: {}, deep: {} } }, agents: chosenAgents() };
   const row = { task: "T05", risk: 2, gate: "—" };
   assert.equal(reviewPlan(row, ["src/app/page.tsx"], 1, cfg).mode, "light");
   const plan = reviewPlan(row, ["src/billing/plan.ts", "src/app/page.tsx"], 1, cfg);
@@ -207,7 +210,8 @@ test("reviewer-output.test.mjs (f) a changed file that imports a gated package s
         assert.equal(summary.includes("production paths changed (PR-72): `lib/pay.ts`"), true, summary);
         const { reviewPlan: localPlan } = await import(pathToFileURL(path.join(dir, "scripts", "devos", "review-mode.mjs")).href);
         const plan = localPlan({ task: "T05", risk: 2, gate: "—" }, ["src/app/page.tsx", "lib/pay.ts"], 1, {
-          reviewer: { deep_paths: [], human_gate_paths: [], human_gate_imports: ["stripe"], modes: { light: { model: "s", effort: "medium" }, deep: { model: "o", effort: "high" } } },
+          reviewer: { deep_paths: [], human_gate_paths: [], human_gate_imports: ["stripe"], modes: { light: {}, deep: {} } },
+          agents: chosenAgents(),
         });
         assert.deepEqual(plan.critical, ["lib/pay.ts"]);
       } else assert.equal(/PR-72/.test(summary), false, summary);

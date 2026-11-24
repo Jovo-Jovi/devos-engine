@@ -23,7 +23,11 @@ function resultObject(isError, result, input, output) {
 }
 
 export function cliArgs({ tool, role, model, effort, last }) {
-  const E = EFFORTS.has(effort) ? effort : "high";
+  // PR-99: Codex runs at the effort the developer chose; there is no effort of the engine's to fall back on.
+  if (tool === "codex" && !EFFORTS.has(effort)) {
+    throw new Error(`devos: Codex ${model} runs at low, medium, high or xhigh, not ${effort ? `"${effort}"` : "no effort"}; choose its effort in devos/project.json (PR-99)`);
+  }
+  const E = effort;
   if (tool === "codex") {
     const args = ["codex", "exec", "--model", model, "--sandbox", "workspace-write"];
     if (role === "builder") args.push("-c", "sandbox_workspace_write.network_access=true");
@@ -130,4 +134,11 @@ function main() {
   process.exit(2);
 }
 
-if (process.argv[1]?.endsWith("agent-cli.mjs")) main();
+if (process.argv[1]?.endsWith("agent-cli.mjs")) {
+  try {
+    main();
+  } catch (error) {
+    console.error(error.message);
+    process.exit(1);
+  }
+}

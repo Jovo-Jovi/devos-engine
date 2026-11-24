@@ -52,7 +52,11 @@ export function withModelOverrides(cfg, env = process.env) {
     if (agents.reviewer_light) {
       keepConfigured(agents.reviewer_light, light);
       agents.reviewer_light.model = light;
-    } else agents.reviewer_light = { id: `${agents.reviewer.id}-light`, tool: agents.reviewer.tool, model: light };
+    } else {
+      // PR-99: the reviewer's light-review effort goes with the light reviewer the variable creates.
+      const effort = agents.reviewer.light_effort;
+      agents.reviewer_light = { id: `${agents.reviewer.id}-light`, tool: agents.reviewer.tool, model: light, ...(effort ? { effort } : {}) };
+    }
     notes.push(`light reviewer model ${light} from DEVOS_REVIEWER_LIGHT_MODEL`);
   }
   const builder = chosen("builder");
@@ -108,20 +112,61 @@ export function isHumanGate(row) {
   return row.risk >= 3 || (row.gate && row.gate !== "—" && row.gate !== "-");
 }
 
-export function reviewerModel(row, cfg = config()) {
-  // PR-53: a project with agents is reviewed only by the agent the developer chose; the Claude ids are the old default.
-  if (cfg.agents?.reviewer) {
-    const deep = row.risk >= 3 || (row.gate && row.gate !== "—" && row.gate !== "-");
-    return (!deep && cfg.agents.reviewer_light ? cfg.agents.reviewer_light : cfg.agents.reviewer).model;
-  }
-  if (row.gate && row.gate !== "—" && row.gate !== "-") return cfg.reviewer.gate_model;
-  return cfg.reviewer.model_by_risk[String(row.risk)] ?? cfg.reviewer.gate_model;
+// PR-99: every model and effort a run uses is the developer's own choice in devos/project.json; the engine has none
+// to fall back on. A tool that takes an effort flag gets one on every run: Claude Code (low to max) and Codex (low to
+// xhigh). Cursor names its effort in the model id; Gemini takes none.
+export const EFFORT_LEVELS = { claude: ["low", "medium", "high", "xhigh", "max"], codex: ["low", "medium", "high", "xhigh"] };
+export const takesEffort = (tool) => Object.hasOwn(EFFORT_LEVELS, tool);
+export const effortsFor = (tool) => EFFORT_LEVELS[tool] ?? [];
+// The runs of the reviewer agent and the effort each uses: light reviews at the light effort, gates at the gate
+// effort, and every other run (a deep review, a method fix, planning a request or a revision, the supervisor, the
+// doctor) at the reviewer's effort.
+export const RUN_KINDS = ["light", "deep", "gate", "method", "intake", "revise", "supervisor", "doctor"];
+
+/** PR-99: a choice devos/project.json lacks stops the run, and says what to set and how. */
+export function missingChoice(key, what) {
+  return new Error(`devos: devos/project.json has no ${key} (${what}); devos upgrade asks for it on your computer, or set it there and commit (PR-99)`);
 }
 
-/** Claude Code effort for the reviewer (Opus/Sonnet 5.5 default to medium, so it is always set). */
+/** PR-99: the agent, model and effort of a run of the given kind, all as the developer chose them. */
+export function runChoice(kind, cfg = config()) {
+  if (!RUN_KINDS.includes(kind)) throw new Error(`devos: no run kind ${kind}`);
+  const agents = cfg.agents;
+  if (!agents?.reviewer?.tool || !agents.reviewer.model) throw missingChoice("agents.reviewer", "the reviewer agent: tool and model");
+  const reviewer = agents.reviewer;
+  let agent = reviewer;
+  let key = "agents.reviewer.effort";
+  let what = "the reviewer's effort";
+  if (kind === "light" && agents.reviewer_light) [agent, key, what] = [agents.reviewer_light, "agents.reviewer_light.effort", "the light reviewer's effort"];
+  else if (kind === "light") key = "agents.reviewer.light_effort", what = "the effort of the reviewer's light reviews";
+  else if (kind === "gate") key = "agents.reviewer.gate_effort", what = "the reviewer's effort on a gate";
+  const effort = kind === "light" && !agents.reviewer_light ? reviewer.light_effort : kind === "gate" ? reviewer.gate_effort : agent.effort;
+  if (!takesEffort(agent.tool)) return { agent, tool: agent.tool, model: agent.model, effort: "" };
+  if (!effortsFor(agent.tool).includes(effort)) throw missingChoice(key, `${what}: ${effortsFor(agent.tool).join(", ")}`);
+  return { agent, tool: agent.tool, model: agent.model, effort };
+}
+
+/** PR-99: whether a retry raises the reviewer's effort one step, as the developer chose (no default). */
+export function raisesOnRetry(cfg = config()) {
+  const value = cfg.agents?.raise_on_retry;
+  if (typeof value !== "boolean") throw missingChoice("agents.raise_on_retry", "whether a retry raises the reviewer's effort one step: true or false");
+  return value;
+}
+
+/** The kind of review a task's row asks for before the build: a gate, deep (risk 3) or light. */
+export function rowKind(row) {
+  if (row.gate && row.gate !== "—" && row.gate !== "-") return "gate";
+  return row.risk >= 3 ? "deep" : "light";
+}
+
+export function reviewerModel(row, cfg = config()) {
+  // PR-53, PR-99: only the agent and model the developer chose.
+  return runChoice(rowKind(row), cfg).model;
+}
+
+/** PR-99: the reviewer's effort for a task's row, as the developer chose it ("" for a tool that takes none). */
 export function reviewerEffort(row, cfg = config()) {
-  if (row.gate && row.gate !== "—" && row.gate !== "-") return cfg.reviewer.gate_effort ?? "xhigh";
-  return cfg.reviewer.effort_by_risk?.[String(row.risk)] ?? "high";
+  return runChoice(rowKind(row), cfg).effort;
 }
 
 /** PR-28: a method fix (Phase PM) repairs the automation itself. It runs on its own track: before

@@ -241,7 +241,7 @@ test("adopt.test.mjs (f) devos adopt --check prints the survey, --json gives the
     assert.equal(git(["status", "--porcelain", "--ignored"], folder), "");
     const usage = runDevos(["adopt", "--nope"]);
     assert.equal(usage.status, 2);
-    assert.equal(usage.stdout, "usage: devos adopt [folder] [--install | --publish] [--move-aside] [--agent <tool>[:<model>]] · devos adopt --check [folder] [--json]\n");
+    assert.equal(usage.stdout, "usage: devos adopt [folder] [--install | --publish] [--move-aside] [--agent <tool>:<model>] [--effort <level>] · devos adopt --check [folder] [--json]\n");
     const loose = runDevos(["adopt", "--check", staged.parent]);
     assert.equal(loose.status, 1);
     assert.equal(loose.stdout, `devos: ${staged.parent} is not a git repository; run devos adopt --check in the project's own clone\n`);
@@ -252,7 +252,8 @@ test("adopt.test.mjs (f) devos adopt --check prints the survey, --json gives the
 
 // ---------- E34: the brief ----------
 
-const AGENT = ["--agent", "claude:claude-opus-5-5"];
+// E79 (PR-99): the agent that writes the adoption, its model and its effort are the developer's.
+const AGENT = ["--agent", "claude:claude-opus-5-5", "--effort", "high"];
 
 function adopt(staged, folder, input, extra = {}) {
   return spawnSync(process.execPath, [bin, "adopt", folder, ...AGENT], {
@@ -376,7 +377,7 @@ test("adopt.test.mjs (j) an empty answer stops, and the brief is not kept", () =
   }
 });
 
-test("adopt.test.mjs (k) a project that is not ready, or no tool to use, stops before any tool runs", () => {
+test("adopt.test.mjs (k) a project that is not ready, or no tool to use, stops before any tool runs", async () => {
   const staged = stage();
   try {
     const folder = project(NEXT_APP, { dir: staged.project });
@@ -386,8 +387,17 @@ test("adopt.test.mjs (k) a project that is not ready, or no tool to use, stops b
     assert.equal(result.stdout.trimEnd().endsWith("Ready: no — it has uncommitted changes; commit or stash them first. Nothing was changed."), true, result.stdout);
     assert.deepEqual(rounds(staged), []);
     assert.equal(existsSync(stagingOf(staged)), false);
-    assert.deepEqual(chooseAgent("vim", []), { error: "devos: --agent takes claude, cursor, codex or gemini, then :model if you want one; not vim" });
-    assert.deepEqual(chooseAgent("", []), { error: "devos: no signed-in AI tool on this computer; install and sign in to Claude Code, Cursor, Codex or Gemini, then run devos adopt again" });
+    assert.deepEqual(await chooseAgent("vim", []), { error: "devos: --agent takes claude, cursor, codex or gemini, then :model; not vim" });
+    assert.deepEqual(await chooseAgent("", []), { error: "devos: no signed-in AI tool on this computer; install and sign in to Claude Code, Cursor, Codex or Gemini, then run devos adopt again" });
+    // E79 (PR-99): no model, effort or tool is DEV_OS's choice for the adoption.
+    const signed = [{ toolId: "claude", status: "installed", signedIn: true, groups: [] }, { toolId: "gemini", status: "installed", signedIn: true, groups: [] }];
+    assert.deepEqual(await chooseAgent("claude", signed), { error: "devos: name a model for claude: --agent claude:<model>; DEV_OS picks none for you (PR-99)" });
+    assert.deepEqual(await chooseAgent("claude:claude-opus-5-5", signed), { error: "devos: choose the effort of claude · claude-opus-5-5: --effort low|medium|high|xhigh|max; DEV_OS picks none for you (PR-99)" });
+    assert.deepEqual(await chooseAgent("claude:claude-opus-5-5", signed, { effort: "huge" }), { error: "devos: --effort for claude is low, medium, high, xhigh, max; not huge" });
+    assert.deepEqual(await chooseAgent("claude:claude-opus-5-5", signed, { effort: "max" }), { tool: "claude", model: "claude-opus-5-5", effort: "max" });
+    assert.deepEqual(await chooseAgent("gemini:gemini-2.5-pro", signed, { effort: "high" }), { error: "devos: gemini takes no effort; leave out --effort" });
+    assert.deepEqual(await chooseAgent("gemini:gemini-2.5-pro", signed), { tool: "gemini", model: "gemini-2.5-pro", effort: "" });
+    assert.deepEqual(await chooseAgent("", signed), { error: "devos: choose the agent that writes the adoption: --agent <tool>:<model>; DEV_OS picks none for you (PR-99)" });
   } finally {
     cleanup(staged.parent);
   }

@@ -1,5 +1,5 @@
 {
-  "$comment": "Dev OS automated cycle configuration. Changing a model id is a D-row.",
+  "$comment": "Dev OS automated cycle configuration. PR-99: no model or effort is the engine's: devos/project.json holds the developer's agents, models and efforts.",
   "base_branch": "main",
   "branch_prefix": "task/",
   "max_attempts": 3,
@@ -9,52 +9,23 @@
   },
   "builder": {
     "cli": "agent",
-    "model": "grok-4.7-high",
     "timeout_minutes": 75,
-    "model_family": "grok-4.7",
-    "default_effort": "high",
-    "effort_by_risk": {
-      "1": "medium",
-      "2": "high",
-      "3": "high"
-    },
-    "effort_note": "The reviewer sets 'Effort: low|medium|high|xhigh' and 'Fast: yes|no' in each fence header; scripts/devos/builder-model.mjs turns that into a Cursor model id (grok-4.7-<effort>[-fast]) and checks it against `agent models`, falling back to `model`.",
-    "model_note": "Cursor documents only the family id grok-4.7 (default effort high, Fast the default speed on Pro). The effort/fast ids the CLI accepts come from `agent models` on your account; each run records the Grok ids it offered in the PR's runner evidence.",
+    "effort_note": "PR-99: each pool builder has an effort the developer chose (devos/project.json agents.pool[].effort): one fixed for every task, or fence, when the reviewer writes 'Effort: low|medium|high|xhigh' and 'Fast: yes|no' in each fence header. scripts/devos/builder-model.mjs turns that into a Cursor model id (<model>-<effort>[-fast]) and checks it against `agent models`; a missing effort, or an id the account does not list, stops the run.",
     "max_time_slices": 4,
     "idle_stop_minutes": 30,
     "slices_note": "agent-watchdog.sh: a build runs in 72-minute time slices; a slice that ends while files are still changing is committed and the same attempt continues in a fresh run, up to max_time_slices. Nothing changing for idle_stop_minutes = stuck (restarted once, then halted). Live progress: scripts/devos/progress.sh on the devos:notices issue."
   },
   "reviewer": {
     "cli": "claude",
-    "model_by_risk": {
-      "1": "claude-sonnet-5-5",
-      "2": "claude-sonnet-5-5",
-      "3": "claude-opus-5-5"
-    },
-    "gate_model": "claude-opus-5-5",
     "max_turns": 150,
     "timeout_minutes": 40,
-    "effort_by_risk": {
-      "1": "medium",
-      "2": "medium",
-      "3": "high"
-    },
-    "gate_effort": "high",
-    "intake_effort": "high",
-    "intake_effort_small": "medium",
-    "method_effort": "high",
-    "fallback_model": "claude-sonnet-5-5",
-    "model_note": "Official Claude ids (claude-opus-5-5, claude-sonnet-5-5). Opus 5.5 and Sonnet 5.5 default to medium effort in Claude Code, so the runner always passes --effort. --fallback-model only applies when the primary is overloaded or unavailable, never on usage limits.",
-    "review_note": "PR-22, evidence-first review: the builder does the work and proves it, the runner runs every check and writes .devos/evidence.md, and the reviewer judges that evidence. scripts/devos/review-mode.mjs picks the mode after the build: light (risk 1-2, nothing critical touched) or deep (risk 3, a gate, or a deep_paths file in the diff). A retry raises the effort one step.",
+    "model_note": "PR-99: the reviewer's tool, model and efforts are the developer's (devos/project.json agents): agents.reviewer.effort for a deep review, a method fix, planning a request or a revision, the supervisor and the doctor; agents.reviewer.gate_effort for a gate; the light reviewer's effort (agents.reviewer_light.effort, or agents.reviewer.light_effort when the reviewer reviews light tasks itself); agents.raise_on_retry. Claude Code takes low to max, Codex low to xhigh; Cursor names its effort in the model id and Gemini takes none. A missing one stops the run and says what to set.",
+    "review_note": "PR-22, evidence-first review: the builder does the work and proves it, the runner runs every check and writes .devos/evidence.md, and the reviewer judges that evidence. scripts/devos/review-mode.mjs picks the mode after the build: light (risk 1-2, nothing critical touched) or deep (risk 3, a gate, or a deep_paths file in the diff). When agents.raise_on_retry is true, a retry raises the effort one step (PR-99).",
     "modes": {
       "light": {
-        "model": "claude-sonnet-5-5",
-        "effort": "medium",
         "max_turns": 50
       },
       "deep": {
-        "model": "claude-opus-5-5",
-        "effort": "high",
         "max_turns": 120
       }
     },
@@ -78,8 +49,7 @@
     ],
     "human_gate_paths": [],
     "human_gate_imports": [],
-    "human_gate_note": "PR-72, PR-73: a PASS that changes one of these paths, or adds or changes a source file that imports a package of human_gate_imports, stops at the human gate, as a schema change does (PR-17), and its review is deep. devos adopt fills both, as reviewer.human_gate_paths_extra and reviewer.human_gate_imports_extra in devos/project.json, for a project in production.",
-    "escalate_on_retry": true
+    "human_gate_note": "PR-72, PR-73: a PASS that changes one of these paths, or adds or changes a source file that imports a package of human_gate_imports, stops at the human gate, as a schema change does (PR-17), and its review is deep. devos adopt fills both, as reviewer.human_gate_paths_extra and reviewer.human_gate_imports_extra in devos/project.json, for a project in production."
   },
   "required_checks": [
     "guards",
@@ -296,7 +266,7 @@
     }
   },
   "heavy": {
-    "$comment": "PR-20. A run is heavy when its review uses reviewer.gate_model or xhigh effort, or its fence builds at xhigh. Repository variable DEVOS_HEAVY: notify (default) announces it in the 'Dev OS: run notices' issue; hold also waits for '/devos go' before a heavy task's first attempt."
+    "$comment": "PR-20. A run is heavy when it closes a gate, its review is a risk-3 deep review or runs at xhigh or max effort, or its fence builds at xhigh (PR-99: at the efforts the developer chose). Repository variable DEVOS_HEAVY: notify (default) announces it in the 'Dev OS: run notices' issue; hold also waits for '/devos go' before a heavy task's first attempt."
   },
   "retry_build_on": "next/font/google queries have exactly one entry|turbopack-next/internal/font/google|Failed to fetch .*Google Fonts|fonts\\.googleapis\\.com.*(ETIMEDOUT|ECONNRESET|fetch failed)",
   "retry_build_note": "PR-24: a build failure whose log matches retry_build_on is the Google Fonts download, not the code; run-checks and devos-deploy retry it up to 3 times.",
@@ -304,7 +274,6 @@
   "checks_budget_minutes": 60,
   "check_limits_note": "PR-70: run-checks stops a check that passes check_timeout_minutes, with everything it started, and records it as timeout with its log; checks_budget_minutes bounds all the checks together. Playwright's browser install for e2e has 10 minutes (or check_timeout_minutes when shorter). When the cycle job's own limit still stops a run, the supervisor runs its attempt again.",
   "supervisor": {
-    "model": "claude-opus-5-5",
     "max_auto_per_key": 2,
     "max_ai_per_day": 6,
     "idle_minutes": 20,
@@ -356,28 +325,6 @@
     ],
     "bypass": false,
     "production_url_fallback": ""
-  },
-  "agents": {
-    "reviewer": {
-      "id": "claude-deep",
-      "tool": "claude",
-      "model": "claude-opus-5-5"
-    },
-    "reviewer_light": {
-      "id": "claude-light",
-      "tool": "claude",
-      "model": "claude-sonnet-5-5"
-    },
-    "pool": [
-      {
-        "id": "cursor-grok",
-        "tool": "cursor",
-        "model": "grok-4.7",
-        "default": true,
-        "note": "default builder"
-      }
-    ],
-    "policy": "reviewer-picks"
   },
   "stack": {
     "$comment": "PR-48: the stack devos init chose. node runs package.json scripts with pnpm, as before; any other toolchain runs these commands once its manifest exists. PR-51: preview serves the production build for screens.mjs ({port} is replaced, PORT is set); empty means next start.",

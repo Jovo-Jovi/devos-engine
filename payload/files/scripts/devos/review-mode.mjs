@@ -10,12 +10,14 @@
 // The agents and models are the ones the developer chose (agents in devos.config.json, PR-53). The model here is the
 // reviewer's first; the cycle tries its fallback_models after it (agents.mjs, accounts.sh devos_slots, PR-64).
 //
-// A retry (attempt 2+) raises the effort one step: the cheap review missed something or the task is hard. It stops at
-// xhigh: max is Claude Code's alone (PR-86), so only a reviewer set to max reviews at max.
+// PR-99: the model and effort are the developer's: the light effort for a light review, the gate effort for a gate, the
+// reviewer's effort for every other deep review. When the developer said yes to raise_on_retry, a retry (attempt 2+)
+// raises the effort one step; it stops at xhigh: max is Claude Code's alone (PR-86), so only an effort set to max
+// reviews at max.
 // Usage: node scripts/devos/review-mode.mjs --task T12 --attempt 1
 // Emits: mode, model, effort, max_turns, fallback, reasons, critical (comma-separated paths)
-import { P, config, parsePhases, globToRegExp, diffPaths, emit, fail, isMethodRow, importsGated } from "./lib.mjs";
-import { reviewerFor } from "./agents.mjs";
+import { P, config, parsePhases, globToRegExp, diffPaths, emit, fail, isMethodRow, importsGated, raisesOnRetry, runChoice } from "./lib.mjs";
+import { validate } from "./agents.mjs";
 
 const arg = (n) => { const i = process.argv.indexOf(`--${n}`); return i >= 0 ? (process.argv[i + 1] ?? "") : ""; };
 const EFFORTS = ["low", "medium", "high", "xhigh"];
@@ -43,18 +45,19 @@ export function reviewPlan(row, changed = [], attempt = 1, cfg = config()) {
   if (critical.length) reasons.push(`touches critical paths (${critical.slice(0, 6).join(", ")}${critical.length > 6 ? ", …" : ""})`);
   const mode = reasons.length ? "deep" : "light";
   const m = r.modes?.[mode] ?? {};
-  let effort = hasGate(row) ? (r.gate_effort ?? m.effort) : m.effort;
-  if (attempt > 1 && r.escalate_on_retry !== false && effort !== "max") {
+  // PR-53, PR-99: only the agent, model and effort the developer chose; a choice they have not made stops the run.
+  validate(cfg.agents);
+  const kind = hasGate(row) ? "gate" : isMethodRow(row) ? "method" : mode;
+  const run = runChoice(kind, cfg);
+  let effort = run.effort;
+  if (attempt > 1 && effort && effort !== "max" && raisesOnRetry(cfg)) {
     const i = Math.min(EFFORTS.indexOf(effort) + 1, EFFORTS.length - 1);
-    if (EFFORTS[i] !== effort) reasons.push(`retry: effort raised to ${EFFORTS[i]}`);
+    if (EFFORTS[i] !== effort) reasons.push(`retry: effort raised to ${EFFORTS[i]} (raise_on_retry)`);
     effort = EFFORTS[i];
   }
-  const gateOrMethod = hasGate(row) || isMethodRow(row);
-  // PR-53: a project with agents is reviewed only by the agent and model the developer chose, with no fallback model.
-  const model = cfg.agents ? reviewerFor(gateOrMethod ? "deep" : mode, cfg.agents).model : (gateOrMethod ? r.gate_model : m.model);
   return {
-    mode, model, effort, max_turns: m.max_turns ?? r.max_turns ?? 80,
-    fallback: !cfg.agents && r.fallback_model && r.fallback_model !== model ? r.fallback_model : "",
+    mode, model: run.model, effort, max_turns: m.max_turns ?? r.max_turns ?? 80,
+    fallback: "",
     reasons: reasons.length ? reasons : ["risk 1–2, no gate, no critical path"],
     critical,
   };

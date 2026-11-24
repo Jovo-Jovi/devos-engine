@@ -824,18 +824,34 @@ async function workerAb() {
       const text = await response.text();
       return { status: response.status, body: text ? JSON.parse(text) : null };
     };
-    const bad = await post("/api/adopt/start", { folder, agent: "vim" });
-    if (bad.status !== 400 || bad.body?.errors?.[0] !== "The AI tool must be claude, cursor, codex or gemini, then :model if you want one.") {
-      throw new Error(`bad agent: ${bad.status} ${JSON.stringify(bad.body)}`);
+    // E79 (PR-99): a tool given without its model is refused; DEV_OS picks none.
+    for (const agent of ["vim", "claude"]) {
+      const refused = await post("/api/adopt/start", { folder, agent });
+      if (refused.status !== 400 || refused.body?.errors?.[0] !== "The AI tool must be claude, cursor, codex or gemini, then :model.") {
+        throw new Error(`bad agent ${agent}: ${refused.status} ${JSON.stringify(refused.body)}`);
+      }
+    }
+    const loose = await post("/api/adopt/start", { folder, effort: "high" });
+    if (loose.status !== 400 || loose.body?.errors?.[0] !== "An effort is low, medium, high, xhigh or max, and goes with the AI tool and its model.") {
+      throw new Error(`effort alone: ${loose.status} ${JSON.stringify(loose.body)}`);
     }
     const started = await post("/api/adopt/start", { folder });
     if (started.status !== 202) throw new Error(`start: ${started.status} ${JSON.stringify(started.body)}`);
     const state = await fetch(`${origin}/api/state`, { headers: { "X-DEVOS-Token": server.token } });
     const stateBody = await state.json();
     if (state.status !== 200 || stateBody.runKind !== "adopt") throw new Error(`runKind: ${JSON.stringify(stateBody.runKind)}`);
+    // E79 (PR-99): the page asks the adoption agent's tool and model, then its effort, with neither chosen; then the brief.
     let asked = false;
+    const picks = [];
     const events = await readEvents(server.port, server.token, async (event) => {
       if (event.kind !== "line" || asked) return;
+      if (picks.length < 2) {
+        picks.push(event);
+        if (Object.hasOwn(event, "default")) throw new Error(`a default was chosen: ${JSON.stringify(event)}`);
+        const sent = await post("/api/answer", { kind: "line", value: picks.length === 1 ? "claude claude-opus-5-5" : "high" });
+        if (sent.status !== 204) throw new Error(`pick: ${sent.status} ${JSON.stringify(sent.body)}`);
+        return;
+      }
       asked = true;
       const two = await post("/api/answer", { kind: "line", value: "yes\nno" });
       if (two.status !== 400 || two.body?.errors?.[0] !== "An answer must be one line.") {
@@ -845,6 +861,9 @@ async function workerAb() {
       if (empty.status !== 204) throw new Error(`empty line: ${empty.status} ${JSON.stringify(empty.body)}`);
     });
     if (!asked) throw new Error("the brief's line ask did not arrive");
+    if (picks[0]?.title !== "Adoption agent — writes the brief and the documents on this computer" || picks[0]?.form !== "choice" || picks[1]?.title !== "Effort of claude · claude-opus-5-5 for the adoption") {
+      throw new Error(`picks: ${JSON.stringify(picks.map((pick) => [pick.form, pick.title]))}`);
+    }
     const done = events.find((event) => event.type === "done");
     if (!done) throw new Error("done did not arrive");
     if (!events.some((event) => event.type === "log" && String(event.text).includes("devos: stopped; nothing in"))) {
@@ -1260,7 +1279,7 @@ if (workers[workerName]) {
     }
   });
 
-  test("ui-server.test.mjs (x) an accepted plan's choices are offered next time, with no key and no project text", async () => {
+  test("ui-server.test.mjs (x) an accepted plan's choices are offered next time, with no key, no project text and no agent, model or effort (PR-99)", async () => {
     const home = mkdtempSync(path.join(tmpdir(), "devos-remember-"));
     const before = process.env.DEVOS_HOME;
     process.env.DEVOS_HOME = home;
@@ -1281,20 +1300,15 @@ if (workers[workerName]) {
       };
       rememberChoices(plan, path.join(home, "devos-projects", "hello-cli"));
       const saved = readChoices();
-      assert.deepEqual(saved.agents, {
-        reviewer: { tool: "claude", model: "claude-opus-5-5" },
-        reviewer_light: null,
-        pool: [{ tool: "cursor", model: "grok-4.7", default: true, note: "strengths: ui, tests" }],
-        policy: "reviewer-picks",
-      });
-      assert.deepEqual([saved.blueprint, saved.project, saved.fields, saved.parent], [
-        { tool: "cursor", model: "grok-4.7-xhigh-fast" },
+      // E79 (PR-99): each project's agents, models and efforts are chosen anew, so none is kept for the next one.
+      assert.deepEqual(Object.keys(saved), ["$comment", "version", "project", "fields", "parent"]);
+      assert.deepEqual([saved.project, saved.fields, saved.parent], [
         { type: "cli", stack: "node-cli", modules: { ai: "none" }, scope: "mvp" },
         { languages: ["en", "ar"], visibility: "private" },
         path.join(home, "devos-projects"),
       ]);
       const raw = readFileSync(path.join(home, ".devos", "choices.json"), "utf8");
-      for (const text of ["Hello CLI", "A greeting.", "Developers"]) assert.equal(raw.includes(text), false, text);
+      for (const text of ["Hello CLI", "A greeting.", "Developers", "claude-opus-5-5", "grok-4.7", "reviewer", "blueprint"]) assert.equal(raw.includes(text), false, text);
     } finally {
       if (before === undefined) delete process.env.DEVOS_HOME;
       else process.env.DEVOS_HOME = before;

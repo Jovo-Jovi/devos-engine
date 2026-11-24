@@ -9,14 +9,14 @@ import { CONTRACT_VERSION } from "../lib/contract.mjs";
 import { doctorCommand } from "../lib/doctor.mjs";
 import { BLUEPRINT_POINTER, blueprintArgs, startFailureLines } from "../lib/init.mjs";
 import { KEY_RE, keyFromName } from "../lib/install.mjs";
-import { checkRoster } from "../lib/roster.mjs";
-import { cleanup, flow, init, processGone, runs, stage, toolRuns } from "./harness.mjs";
+import { agentLines, cleanup, flow, init, processGone, runs, stage, toolRuns } from "./harness.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const bin = path.join(root, "bin", "devos.mjs");
 
 
-const menus = ["", "", "", "", "", "", ""];
+// E79 (PR-99): every agent, model and effort answered; no question has an answer chosen for the developer.
+const menus = agentLines();
 const accepted = [
   "accept",
   "no",
@@ -255,18 +255,53 @@ test("init.test.mjs resumes a failed blueprint with --continue", () => {
   }
 });
 
-test("init.test.mjs (m) defaults use the engine reviewer model", () => {
+// E79 (PR-99): every agent, model and effort is the developer's answer; none is chosen for them or saved as defaults.
+const ANSWERED = {
+  reviewer: { id: "claude-opus-5-5", tool: "claude", model: "claude-opus-5-5", effort: "high", gate_effort: "high" },
+  reviewer_light: { id: "claude-sonnet-5-5", tool: "claude", model: "claude-sonnet-5-5", effort: "medium" },
+  pool: [{ id: "cursor-grok-4-7", tool: "cursor", model: "grok-4.7", default: true, note: "default builder", effort: "fence" }],
+  policy: "reviewer-picks",
+  raise_on_retry: true,
+};
+
+test("init.test.mjs (m) the agents are the developer's answers: no question has one chosen, an empty answer asks again, and nothing is saved as defaults (PR-99)", () => {
   const staged = stage();
   try {
-    const result = init(staged, flow());
+    const result = init(staged, flow({ agents: { reviewer: "\nclaude claude-opus-5-5" } }));
     assert.equal(result.status, 0, result.stdout + result.stderr);
     const called = runs(staged.parent);
-    assert.equal(called[0].args.includes("--model"), true, called[0].args.join(" "));
-    assert.equal(called[0].args.includes("claude-opus-5-5"), true, called[0].args.join(" "));
+    assert.deepEqual(called[0].args.slice(0, 5), ["-p", "--model", "claude-opus-5-5", "--effort", "high"], called[0].args.join(" "));
     const project = JSON.parse(readFileSync(path.join(staged.project, "devos", "project.json"), "utf8"));
-    assert.equal(project.agents.reviewer.model, "claude-opus-5-5");
-    const roster = JSON.parse(readFileSync(path.join(staged.parent, "home", ".devos", "roster.json"), "utf8"));
-    assert.notEqual(checkRoster(roster), null);
+    assert.deepEqual(project.agents, ANSWERED);
+    const answers = JSON.parse(readFileSync(path.join(staged.project, "devos", "answers.json"), "utf8"));
+    assert.deepEqual(answers.blueprint_agent, { tool: "claude", model: "claude-opus-5-5", effort: "high" });
+    assert.equal(existsSync(path.join(staged.parent, "home", ".devos", "roster.json")), false);
+    const reviewer = result.stdout.slice(result.stdout.indexOf("Reviewer — reviews every task on GitHub\n"));
+    const shown = reviewer.slice(0, reviewer.indexOf("Reviewer effort"));
+    assert.equal(shown.includes("[default: none]\n(type a number; nothing is chosen for you)"), true, shown);
+    for (const title of ["Reviewer effort — deep reviews, method changes, intake, the supervisor and the doctor", "Reviewer effort on a gate — the tasks a human gate closes", "Light reviewer effort", "Effort of cursor-grok-4-7", "Who picks the builder for each task", "Blueprint agent effort"]) {
+      const at = result.stdout.indexOf(`${title}\n`);
+      assert.equal(at >= 0, true, title);
+      assert.equal(result.stdout.slice(at).split("\n").find((line) => line.startsWith("[default: ")), "[default: none]", title);
+    }
+    assert.equal(result.stdout.includes("On a retry, raise the reviewer's effort one step (Claude Code and Codex reviewers)? (yes/no): "), true, result.stdout);
+    assert.equal(result.stdout.includes("Save these agents as your defaults?"), false);
+    for (const line of ["Reviewer: claude · claude-opus-5-5 · effort high · gate effort high", "Light reviewer: claude · claude-sonnet-5-5 · effort medium", "Builder: cursor · grok-4.7 · default · effort chosen in each fence · default builder", "Raise the reviewer's effort on a retry: yes", "Blueprint: claude · claude-opus-5-5 · effort high"]) {
+      assert.equal(result.stdout.includes(`${line}\n`), true, line);
+    }
+  } finally {
+    cleanup(staged.parent);
+  }
+});
+
+test("init.test.mjs (m2) empty answers to an effort never choose one: the question stops before anything is written", () => {
+  const staged = stage();
+  try {
+    const result = init(staged, "accept\nno\nclaude claude-opus-5-5\n\n\n\n");
+    assert.equal(result.status, 1, result.stdout + result.stderr);
+    assert.equal(result.stdout.includes("devos: no valid answer for Reviewer effort — deep reviews, method changes, intake, the supervisor and the doctor\n"), true, result.stdout);
+    assert.equal(existsSync(staged.project), false);
+    assert.equal(runs(staged.parent).length, 0);
   } finally {
     cleanup(staged.parent);
   }
@@ -437,21 +472,20 @@ test("init.test.mjs (a) GitHub role menus omit tools the cycle cannot run", () =
   }
 });
 
-test("init.test.mjs (b) a Codex reviewer in the roster falls back to the engine default", () => {
+test("init.test.mjs (b) a roster saved earlier fills in no choice: the agents are the answers (PR-99)", () => {
   const staged = stage();
   try {
     writeFileSync(path.join(staged.parent, "home", ".devos", "roster.json"), `${JSON.stringify({
-      reviewer: { id: "codex-gpt", tool: "glm", model: "glm-4.6" },
-      reviewer_light: { id: "codex-light", tool: "glm", model: "glm-4.6" },
-      pool: [{ id: "codex-pool", tool: "glm", model: "glm-4.6", default: true, note: "default builder" }],
-      policy: "reviewer-picks",
+      reviewer: { id: "codex-gpt", tool: "codex", model: "gpt-5.1-codex", effort: "low", gate_effort: "low", light_effort: "low" },
+      reviewer_light: null,
+      pool: [{ id: "codex-pool", tool: "codex", model: "gpt-5.1-codex", default: true, note: "default builder", effort: "low" }],
+      policy: "always-default",
+      raise_on_retry: false,
     }, null, 2)}\n`);
     const result = init(staged, flow());
     assert.equal(result.status, 0, result.stdout + result.stderr);
     const project = JSON.parse(readFileSync(path.join(staged.project, "devos", "project.json"), "utf8"));
-    assert.equal(project.agents.reviewer.tool, "claude");
-    assert.equal(project.agents.reviewer.model, "claude-opus-5-5");
-    assert.equal(project.agents.pool.some((item) => item.tool === "codex"), false);
+    assert.deepEqual(project.agents, ANSWERED);
   } finally {
     cleanup(staged.parent);
   }

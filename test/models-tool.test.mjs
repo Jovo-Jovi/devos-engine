@@ -25,11 +25,14 @@ const defaults = JSON.parse(defaultsText);
 
 function project(withLight = true) {
   const agents = {
-    reviewer: { id: "claude-deep", tool: "claude", model: "opus-x", fallback_models: ["sonnet-x"] },
-    pool: [{ id: "cursor-grok", tool: "cursor", model: "grok-4.7", default: true, note: "default builder" }],
+    // E79 (PR-99): the project's own efforts, every one chosen.
+    reviewer: { id: "claude-deep", tool: "claude", model: "opus-x", fallback_models: ["sonnet-x"], effort: "high", gate_effort: "high" },
+    pool: [{ id: "cursor-grok", tool: "cursor", model: "grok-4.7", default: true, note: "default builder", effort: "fence" }],
     policy: "reviewer-picks",
+    raise_on_retry: true,
   };
-  agents.reviewer_light = withLight ? { id: "claude-light", tool: "claude", model: "sonnet-x" } : null;
+  agents.reviewer_light = withLight ? { id: "claude-light", tool: "claude", model: "sonnet-x", effort: "medium" } : null;
+  if (!withLight) agents.reviewer.light_effort = "medium";
   return { project: "DEMO-SHOP", agents };
 }
 
@@ -102,7 +105,7 @@ test("models-tool.test.mjs (a) Cursor's cursor-grok-* models are listed under Gr
   ]);
 });
 
-test("models-tool.test.mjs (b) the builder runs the Fast id at the same effort before another, and says when its effort changes (PR-86)", () => {
+test("models-tool.test.mjs (b) the builder runs the Fast id at the same effort before another, and never another effort (PR-86, PR-99)", () => {
   const dir = mkdtempSync(path.join(tmpdir(), "devos-model-fast-"));
   try {
     const staged = spawnSync(process.execPath, [path.join(root, "tools", "stage.mjs"), dir], { encoding: "utf8", windowsHide: true });
@@ -113,7 +116,7 @@ test("models-tool.test.mjs (b) the builder runs the Fast id at the same effort b
     writeFileSync(path.join(dir, "devos", "project.json"), template.replaceAll("__PROJECT_KEY__", "DEMO"));
     const written = spawnSync(process.execPath, ["scripts/devos/config.mjs", "--write"], { cwd: dir, encoding: "utf8", windowsHide: true });
     assert.equal(written.status, 0, written.stderr);
-    const run = (effort, models) => {
+    const run = (effort, models, code = 0) => {
       writeFileSync(path.join(dir, "docs", "fences", "T01.md"), `- Builder: cursor-grok · Effort: ${effort} · Fast: no\n`);
       writeFileSync(path.join(dir, "models.txt"), models);
       const result = spawnSync(process.execPath, ["scripts/devos/builder-model.mjs", "--task", "T01", "--models-file", "models.txt"], {
@@ -122,7 +125,7 @@ test("models-tool.test.mjs (b) the builder runs the Fast id at the same effort b
         windowsHide: true,
         env: { ...process.env, GITHUB_OUTPUT: "", DEVOS_BUILDER_FAMILY: "grok-4.7" },
       });
-      assert.equal(result.status, 0, result.stderr);
+      assert.equal(result.status, code, result.stdout + result.stderr);
       return { ...fields(result.stdout), stdout: result.stdout };
     };
     const normal = run("xhigh", "grok-4.7-high\ngrok-4.7-xhigh\ngrok-4.7-xhigh-fast\n");
@@ -131,17 +134,11 @@ test("models-tool.test.mjs (b) the builder runs the Fast id at the same effort b
     assert.deepEqual([fast.model, fast.effort, fast.fast, fast.source], ["grok-4.7-xhigh-fast", "xhigh", "yes", "fence"]);
     assert.equal(fast.note, "no xhigh id at normal speed is listed; running grok-4.7-xhigh-fast, the same effort at Fast speed");
     assert.equal(fast.stdout.includes("::warning"), false);
-    const lowered = run("xhigh", "grok-4.7-high\ngrok-4.7-high-fast\n");
-    assert.deepEqual([lowered.model, lowered.effort, lowered.fast], ["grok-4.7-high", "high", "no"]);
-    const said = "the builder's effort was lowered from xhigh to high: `agent models` lists none of grok-4.7-xhigh, grok-4.7-xhigh-fast, grok-4.7-fast-xhigh, so grok-4.7-high runs";
-    assert.equal(lowered.note, said);
-    assert.equal(lowered.stdout.split("\n")[0], `::warning title=Dev OS::${said} (PR-86)`);
-    const raised = run("low", "grok-4.7-high\n");
-    assert.deepEqual([raised.model, raised.effort], ["grok-4.7-high", "high"]);
-    assert.equal(raised.note.startsWith("the builder's effort was raised from low to high: "), true, raised.note);
-    const same = run("high", "grok-4.7-xhigh\n");
-    assert.deepEqual([same.model, same.effort, same.note], ["grok-4.7-high", "high", "none of grok-4.7-high, grok-4.7, grok-4.7-high-fast, grok-4.7-fast-high is listed by `agent models`; using grok-4.7-high"]);
-    assert.equal(same.stdout.includes("::warning"), false);
+    // PR-99: an effort the account does not list stops the run: never a lower or a higher one in its place.
+    const stop = (effort) => `::error title=Dev OS::devos: \`agent models\` on this account lists none of grok-4.7-${effort}, grok-4.7-${effort}-fast, grok-4.7-fast-${effort}; choose an effort it lists in the fence of T01, or another builder model (devos/project.json agents.pool, or the variable DEVOS_BUILDER_MODEL) (PR-99)`;
+    assert.equal(run("xhigh", "grok-4.7-high\ngrok-4.7-high-fast\n", 1).stdout.trim(), stop("xhigh"));
+    assert.equal(run("low", "grok-4.7-high\n", 1).stdout.trim(), stop("low"));
+    assert.equal(run("high", "grok-4.7\ngrok-4.7-xhigh\n", 1).stdout.trim(), stop("high"));
   } finally {
     rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
@@ -171,6 +168,7 @@ test("models-tool.test.mjs (c) a role moves to another tool by pull request: dev
     const [projectPut, configPut] = puts(staged);
     assert.deepEqual([projectPut.branch, configPut.branch], ["devos/models-reviewer", "devos/models-reviewer"]);
     const expected = JSON.parse(JSON.stringify(before));
+    // E79 (PR-99): Cursor's model id carries its effort, so the reviewer's efforts go with Claude Code.
     expected.agents.reviewer = { id: "claude-deep", tool: "cursor", model: "grok-4.7-high" };
     assert.equal(projectPut.text, jsonText(expected));
     assert.equal(configPut.text, jsonText(merge(defaults, expected)));
@@ -185,7 +183,7 @@ test("models-tool.test.mjs (c) a role moves to another tool by pull request: dev
     assert.deepEqual([sameTool.ok, sameTool.dropped], [true, []]);
     assert.equal(calls(staged).some((line) => line.startsWith("secret list")), false);
     const kept = JSON.parse(JSON.stringify(before));
-    kept.agents.reviewer = { id: "claude-deep", tool: "claude", model: "sonnet-x" };
+    kept.agents.reviewer = { id: "claude-deep", tool: "claude", model: "sonnet-x", effort: "high", gate_effort: "high" };
     assert.equal(puts(staged)[0].text, jsonText(kept));
 
     // The builder keeps its id and fixed effort; Fast is Cursor's alone.
@@ -235,13 +233,22 @@ test("models-tool.test.mjs (d) a move is refused without the new tool's key, wit
     delete process.env.STUB_VARIABLES;
 
     const max = JSON.parse(JSON.stringify(before));
-    max.reviewer = { modes: { deep: { effort: "max" } }, gate_effort: "max" };
+    max.agents.reviewer = { ...max.agents.reviewer, effort: "max", gate_effort: "max" };
     onGitHub(max);
     assert.deepEqual(setAgent(staged.project, "reviewer", "cursor", "grok-4.7-high"), {
       ok: false,
-      error: "the reviewer reviews at effort max, which only Claude Code takes: set reviewer.modes.deep.effort and reviewer.gate_effort to xhigh or lower in devos/project.json first",
+      error: "the reviewer reviews at effort max, which only Claude Code takes: set agents.reviewer.effort and agents.reviewer.gate_effort to xhigh or lower in devos/project.json first",
     });
     assert.equal(setAgent(staged.project, "reviewer", "claude", "fable-x").ok, true);
+
+    // E79 (PR-99): a tool that takes an effort gets none of DEV_OS's: the move names the efforts to choose first.
+    const cursorReviewer = JSON.parse(JSON.stringify(before));
+    cursorReviewer.agents.reviewer = { id: "claude-deep", tool: "cursor", model: "grok-4.7-high" };
+    onGitHub(cursorReviewer);
+    const noEffort = setAgent(staged.project, "reviewer", "claude", "fable-x");
+    assert.equal(noEffort.ok, false);
+    assert.equal(noEffort.error.startsWith("the change would leave agents the runner refuses: devos: devos/project.json has no agents.reviewer.effort, agents.reviewer.gate_effort ("), true, noEffort.error);
+    onGitHub(before);
 
     const twoTools = JSON.parse(JSON.stringify(before));
     twoTools.agents.pool.push({ id: "claude-b", tool: "claude", model: "sonnet-b", default: false, note: "other" });
@@ -327,32 +334,48 @@ test("models-tool.test.mjs (e) devos models tool, the page server and the Models
   }
 });
 
-test("models-tool.test.mjs (f) Max is Claude Code's: the page offers it, a max review stays max on a retry, and the method says so (PR-86)", () => {
+test("models-tool.test.mjs (f) Max is Claude Code's: the page offers it, a max review stays max on a retry, a retry raises the effort only when the developer said so, and the method says so (PR-86, PR-99)", () => {
   const js = readFileSync(path.join(root, "lib", "ui", "app.js"), "utf8");
   for (const text of [
     "const MAX_EFFORT = [\"max\", \"Max\"];",
-    "const levels = agent.tool === \"claude\" ? [...EFFORT_LEVELS, MAX_EFFORT] : EFFORT_LEVELS;",
+    "return tool === \"claude\" ? [...EFFORT_LEVELS, MAX_EFFORT] : EFFORT_LEVELS;",
     "Max is Claude Code's alone: the longest thinking, and the most of your plan.",
   ]) {
     assert.equal(js.includes(text), true, text);
   }
-  const cfg = (deep, light = "medium", gate = undefined) => ({ reviewer: { gate_effort: gate, modes: { light: { model: "s", effort: light }, deep: { model: "o", effort: deep } } } });
+  // E79 (PR-99): the efforts are the developer's agents', and so is raising one on a retry.
+  const cfg = (deep, light = "medium", gate = "high", raise = true) => ({
+    reviewer: { modes: { light: {}, deep: {} } },
+    agents: {
+      reviewer: { id: "r", tool: "claude", model: "o", effort: deep, gate_effort: gate },
+      reviewer_light: { id: "l", tool: "claude", model: "s", effort: light },
+      pool: [{ id: "b", tool: "cursor", model: "grok-4.7", default: true, note: "", effort: "fence" }],
+      policy: "always-default",
+      raise_on_retry: raise,
+    },
+  });
   const risky = { task: "T05", risk: 3, gate: "—" };
   const plain = { task: "T06", risk: 1, gate: "—" };
   const gated = { task: "T07", risk: 2, gate: "G1" };
   const maxRetry = reviewPlan(risky, [], 2, cfg("max"));
   assert.deepEqual([maxRetry.effort, maxRetry.reasons], ["max", ["risk 3"]]);
   assert.equal(reviewPlan(plain, [], 2, cfg("high", "xhigh")).effort, "xhigh");
-  assert.deepEqual(reviewPlan(plain, [], 2, cfg("high", "medium")).reasons, ["retry: effort raised to high"]);
+  assert.deepEqual(reviewPlan(plain, [], 2, cfg("high", "medium")).reasons, ["retry: effort raised to high (raise_on_retry)"]);
+  assert.deepEqual([reviewPlan(plain, [], 2, cfg("high", "medium", "high", false)).effort, reviewPlan(plain, [], 2, cfg("high", "medium", "high", false)).model], ["medium", "s"]);
   assert.equal(reviewPlan(gated, [], 3, cfg("high", "medium", "max")).effort, "max");
-  assert.deepEqual(heavyReasons(gated, { reviewer: { gate_model: "o", gate_effort: "max", model_by_risk: {} } }), ["review by o", "review at max effort", "closes gate G1"]);
+  assert.deepEqual([reviewPlan(gated, [], 1, cfg("low", "low", "xhigh")).effort, reviewPlan(gated, [], 1, cfg("low", "low", "xhigh")).model], ["xhigh", "o"]);
+  assert.deepEqual(heavyReasons(gated, cfg("high", "medium", "max")), ["review at max effort", "closes gate G1"]);
+  assert.deepEqual(heavyReasons(risky, cfg("high")), ["deep review by o", "risk 3"]);
+  const unchosen = cfg("high");
+  delete unchosen.agents.reviewer_light.effort;
+  assert.throws(() => reviewPlan(plain, [], 1, unchosen), /has no agents\.reviewer_light\.effort/);
 
   const read = (rel) => readFileSync(path.join(root, rel), "utf8");
   const precedents = read("payload/files/docs/method/PRECEDENTS.md");
   assert.equal(precedents.includes("| PR-86 | **A role moves to another tool only by the developer's pull request; effort is never changed quietly.**"), true);
   const manual = read("payload/files/docs/method/AUTOMATION.md");
   assert.equal(manual.includes("Another tool (PR-86): `devos models tool <role> <tool> <model>`, or the guided page's"), true);
-  assert.equal(manual.includes("`reviewer.modes.*.effort` and `gate_effort` may be `max`; a retry raises the effort one step up to `xhigh`, and"), true);
+  assert.equal(manual.includes("a Claude Code reviewer's may be `max`. A retry raises the effort one step up to `xhigh` only when"), true);
   assert.equal(read("README.md").includes("| `devos models tool <role> <tool> <model>` |"), true);
   const changes = read("CHANGELOG.md");
   for (const line of ["- **A role can move to another tool (PR-86).**", "- **Max effort for Claude Code.**", "- **The builder's effort is never lowered quietly.**", "- **Cursor's `cursor-grok-*` models are listed under Grok,**"]) {

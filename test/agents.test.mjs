@@ -5,6 +5,7 @@ import path from "node:path";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
+import { chosenAgents } from "./chosen-agents.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -44,7 +45,8 @@ test("agents.test.mjs pool choice, reviewer model, builder family and workflow l
     writeFileSync(path.join(dir, "docs", "PHASES.md"), PHASES);
     const template = readFileSync(path.join(root, "payload", "templates", "devos", "project.json"), "utf8");
     const writeProject = (extra) => {
-      const project = { ...JSON.parse(template.replaceAll("__PROJECT_KEY__", "DEMO")), ...extra };
+      // E79 (PR-99): the project's own agents, every model and effort chosen.
+      const project = { ...JSON.parse(template.replaceAll("__PROJECT_KEY__", "DEMO")), ...extra, agents: chosenAgents(extra.agents) };
       writeFileSync(path.join(dir, "devos", "project.json"), `${JSON.stringify(project, null, 2)}\n`);
       const written = run(path.join(dir, "scripts", "devos", "config.mjs"), ["--write"], dir);
       assert.equal(written.status, 0, written.stderr);
@@ -97,6 +99,7 @@ test("agents.test.mjs pool choice, reviewer model, builder family and workflow l
     const configPath = path.join(dir, "devos.config.json");
     const generated = JSON.parse(readFileSync(configPath, "utf8"));
     generated.agents.reviewer_light = null;
+    generated.agents.reviewer.light_effort = "medium";
     writeFileSync(configPath, `${JSON.stringify(generated, null, 2)}\n`);
     const light = run(agents, ["reviewer", "--mode", "light"], dir);
     assert.equal(light.status, 0, light.stderr);
@@ -122,7 +125,7 @@ test("agents.test.mjs pool choice, reviewer model, builder family and workflow l
 
     const rendered = run(path.join(dir, "scripts", "devos", "render-prompt.mjs"), ["reviewer", "T01", "1"], dir);
     assert.equal(rendered.status, 0, rendered.stderr);
-    assert.equal(rendered.stdout.includes("- cursor-grok — cursor · grok-4.7 · default — default builder"), true, rendered.stdout);
+    assert.equal(rendered.stdout.includes("- cursor-grok — cursor · grok-4.7 · effort chosen in each fence · default — default builder"), true, rendered.stdout);
 
     // PR-90: the cycle runs in devos-cycle.yml and the work job it calls, devos-work.yml.
     const workflow = ["devos-cycle.yml", "devos-work.yml"].map((f) => readFileSync(path.join(root, "payload", "files", "dot-github", "workflows", f), "utf8")).join("\n");

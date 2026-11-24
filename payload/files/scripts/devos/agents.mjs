@@ -4,16 +4,49 @@
 // pick and reviewer say so in their note. PR-64: an agent may list `fallback_models`, more models of its own tool tried
 // in order after its model (accounts.sh devos_slots); pick and reviewer give them as builder_fallbacks and
 // reviewer_fallbacks.
+// PR-99: the efforts are the developer's too: the reviewer's (`effort`, `gate_effort`, and `light_effort` when no light
+// reviewer has its own), the light reviewer's, each builder's (`effort`: fixed, or `fence` when the reviewer chooses
+// it in each fence) and `raise_on_retry`. validate() refuses agents that lack one, so the run stops and says so.
 // Usage: node scripts/devos/agents.mjs pick --task Tnn
 //        node scripts/devos/agents.mjs reviewer --mode light|deep
+//        node scripts/devos/agents.mjs effort --kind light|deep|gate|method|intake|revise|supervisor|doctor
 //        node scripts/devos/agents.mjs pool
 //        node scripts/devos/agents.mjs tools
 import { existsSync, readFileSync } from "node:fs";
-import { MODEL_ID, MODEL_VARIABLES, P, config, emit, fail, readJson, withModelOverrides } from "./lib.mjs";
+import { MODEL_ID, MODEL_VARIABLES, P, config, effortsFor, emit, fail, missingChoice, readJson, runChoice, takesEffort, withModelOverrides } from "./lib.mjs";
 
 const TOOLS = new Set(["cursor", "claude", "codex", "gemini"]);
 const POLICIES = new Set(["reviewer-picks", "always-default"]);
 const EFFORTS = ["low", "medium", "high", "xhigh"];
+// PR-99: a Cursor model id that names its effort (grok-4.7-high, grok-4.7-fast) needs no effort beside it; `auto` is
+// Cursor's own choice of model.
+const PINNED = /-(low|medium|high|xhigh)(?:-fast)?$|-fast(?:-(low|medium|high|xhigh))?$/;
+
+/** PR-99: whether a pool builder needs an effort chosen: one fixed for every task, or `fence`. */
+export function builderNeedsEffort(item) {
+  if (takesEffort(item.tool)) return true;
+  return item.tool === "cursor" && item.model !== "auto" && !PINNED.test(item.model);
+}
+
+/** PR-99: the choices the agents lack, each `{ key, what }`; none when every model and effort is chosen. */
+export function missingChoices(agents) {
+  const out = [];
+  const reviewer = agents.reviewer;
+  const need = (agent, key, value, what) => {
+    if (takesEffort(agent.tool) && !effortsFor(agent.tool).includes(value)) out.push({ key, what: `${what}: ${effortsFor(agent.tool).join(", ")}` });
+  };
+  need(reviewer, "agents.reviewer.effort", reviewer.effort, "the reviewer's effort");
+  need(reviewer, "agents.reviewer.gate_effort", reviewer.gate_effort, "the reviewer's effort on a gate");
+  if (agents.reviewer_light) need(agents.reviewer_light, "agents.reviewer_light.effort", agents.reviewer_light.effort, "the light reviewer's effort");
+  else need(reviewer, "agents.reviewer.light_effort", reviewer.light_effort, "the effort of the reviewer's light reviews");
+  for (const item of agents.pool ?? []) {
+    if (builderNeedsEffort(item) && !Object.hasOwn(item, "effort")) {
+      out.push({ key: `agents.pool[${item.id}].effort`, what: "the builder's effort: low, medium, high or xhigh for every task, or fence when the reviewer chooses it in each fence" });
+    }
+  }
+  if (typeof agents.raise_on_retry !== "boolean") out.push({ key: "agents.raise_on_retry", what: "whether a retry raises the reviewer's effort one step: true or false" });
+  return out;
+}
 // PR-64: at most this many models after an agent's own.
 export const MAX_FALLBACKS = 4;
 
@@ -38,13 +71,21 @@ function hasKeys(value, names, optional = ["fallback_models"]) {
   return keys.length === names.length && names.every((key) => keys.includes(key));
 }
 
-function isAgent(value, label) {
+function isAgent(value, label, efforts = []) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return `${label} must be an object`;
   if (typeof value.id !== "string" || typeof value.tool !== "string" || typeof value.model !== "string") {
     return `${label} must have id, tool and model`;
   }
   if (!TOOLS.has(value.tool)) return `${label}.tool must be cursor, claude, codex or gemini`;
-  if (!hasKeys(value, ["id", "tool", "model"])) return `${label} must have id, tool and model, and may have fallback_models`;
+  if (!hasKeys(value, ["id", "tool", "model"], ["fallback_models", ...efforts])) {
+    return `${label} must have id, tool and model, and may have fallback_models${efforts.length ? ` and ${efforts.join(", ")}` : ""}`;
+  }
+  // PR-99: an effort is one the agent's tool takes; a tool that takes none has none.
+  for (const key of efforts) {
+    if (Object.hasOwn(value, key) && !effortsFor(value.tool).includes(value[key])) {
+      return takesEffort(value.tool) ? `${label}.${key} must be ${effortsFor(value.tool).join(", ")}` : `${label}.${key}: ${value.tool} takes no effort`;
+    }
+  }
   return fallbackError(value, label);
 }
 
@@ -54,17 +95,18 @@ export function fallbacks(item) {
 }
 
 export function validate(agents) {
-  if (!agents || typeof agents !== "object" || Array.isArray(agents)) bad("missing");
+  // PR-99: a project with no agents has no reviewer or builder of the engine's to fall back on.
+  if (!agents || typeof agents !== "object" || Array.isArray(agents)) throw missingChoice("agents", "the reviewer, the builders and their efforts");
   // PR-53: reviewer_light may be absent (the generated config drops a null): the reviewer then reviews every task.
-  const allowed = ["reviewer", "reviewer_light", "pool", "policy", "fallback_builder"];
+  const allowed = ["reviewer", "reviewer_light", "pool", "policy", "fallback_builder", "raise_on_retry"];
   const rootKeys = Object.keys(agents);
   if (rootKeys.some((key) => !allowed.includes(key)) || ["reviewer", "pool", "policy"].some((key) => !rootKeys.includes(key))) {
-    bad("must have reviewer, pool and policy, and may have reviewer_light and fallback_builder");
+    bad("must have reviewer, pool, policy and raise_on_retry, and may have reviewer_light and fallback_builder");
   }
-  const reviewerError = isAgent(agents.reviewer, "reviewer");
+  const reviewerError = isAgent(agents.reviewer, "reviewer", ["effort", "gate_effort", "light_effort"]);
   if (reviewerError) bad(reviewerError);
   if (agents.reviewer_light != null) {
-    const lightError = isAgent(agents.reviewer_light, "reviewer_light");
+    const lightError = isAgent(agents.reviewer_light, "reviewer_light", ["effort"]);
     if (lightError) bad(lightError);
   }
   if (!Array.isArray(agents.pool)) bad("pool must be an array");
@@ -79,9 +121,9 @@ export function validate(agents) {
     }
     if (!TOOLS.has(item.tool)) bad("pool item tool must be cursor, claude, codex or gemini");
     if (typeof item.default !== "boolean") bad("pool item default must be boolean");
-    if (Object.hasOwn(item, "effort") && !EFFORTS.includes(item.effort)) bad("pool item effort must be low, medium, high or xhigh");
-    if (Object.hasOwn(item, "fast") && (item.fast !== true || !Object.hasOwn(item, "effort") || item.tool !== "cursor")) {
-      bad("pool item fast is true, only with an effort, and only for cursor");
+    if (Object.hasOwn(item, "effort") && !EFFORTS.includes(item.effort) && item.effort !== "fence") bad("pool item effort must be low, medium, high, xhigh or fence");
+    if (Object.hasOwn(item, "fast") && (item.fast !== true || !EFFORTS.includes(item.effort) || item.tool !== "cursor")) {
+      bad("pool item fast is true, only with a fixed effort, and only for cursor");
     }
     const listError = fallbackError(item, `pool item ${item.id}`);
     if (listError) bad(listError);
@@ -96,6 +138,9 @@ export function validate(agents) {
     const usual = agents.pool.find((entry) => entry.default);
     if (!item || item.tool === usual.tool) bad("fallback_builder must name a pool builder whose tool is not the default builder's");
   }
+  // PR-99: a choice the developer has not made stops the run here, before any agent runs.
+  const missing = missingChoices(agents);
+  if (missing.length > 0) throw missingChoice(missing.map((entry) => entry.key).join(", "), missing.map((entry) => entry.what).join("; "));
   return agents;
 }
 
@@ -122,7 +167,8 @@ export function poolText(agents = config().agents) {
   return pool(agents).map((item) => {
     let line = `- ${item.id} — ${item.tool} · ${item.model}`;
     if (fallbacks(item).length) line += ` (then ${fallbacks(item).join(", ")})`;
-    if (item.effort) {
+    if (item.effort === "fence") line += " · effort chosen in each fence";
+    else if (item.effort) {
       line += ` · fixed effort ${item.effort}`;
       if (item.fast === true) line += ", fast";
     }
@@ -192,6 +238,12 @@ if (process.argv[1]?.endsWith("agents.mjs")) {
       const item = reviewerFor(arg("mode"));
       const notes = overrideNotes(item.id === config().agents.reviewer.id ? "reviewer" : "light");
       emit({ reviewer_id: item.id, reviewer_tool: item.tool, reviewer_model: item.model, reviewer_fallbacks: fallbacks(item).join(" "), reviewer_note: notes.join("; ") });
+    } else if (command === "effort") {
+      // PR-99: the effort of a run of the reviewer agent ("" for a tool that takes none), checked with every choice.
+      const cfg = config();
+      validate(cfg.agents);
+      const run = runChoice(arg("kind"), cfg);
+      emit({ effort: run.effort, tool: run.tool, model: run.model });
     } else if (command === "pool") {
       console.log(poolText());
     } else if (command === "next") {
@@ -200,7 +252,7 @@ if (process.argv[1]?.endsWith("agents.mjs")) {
     } else if (command === "tools") {
       console.log(`tools=${toolList()}`);
     } else {
-      fail("usage: agents.mjs pick --task Tnn | reviewer --mode light|deep | pool | next --after <id> | tools", 2);
+      fail("usage: agents.mjs pick --task Tnn | reviewer --mode light|deep | effort --kind <run> | pool | next --after <id> | tools", 2);
     }
   } catch (error) {
     console.error(error.message);

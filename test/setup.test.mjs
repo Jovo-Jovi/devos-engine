@@ -8,6 +8,8 @@ import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
 import { installInto } from "../lib/install.mjs";
 import { finishSetup, setupItems, setupMarkdown, switchVariables } from "../lib/setup.mjs";
+import { giveAgents } from "./chosen-agents.mjs";
+import { agentLines } from "./harness.mjs";
 
 // Git 2.47 and later run their automatic maintenance in the background after a commit or a fetch, and it can still be
 // writing into .git while a test removes its folder (ENOTEMPTY on the CI runner, E32). Every git a test starts, itself
@@ -208,13 +210,8 @@ function answers(overrides = {}) {
   return [
     "accept",
     overrides.link ?? "no",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
+    // E79 (PR-99): every agent, model and effort answered.
+    ...agentLines(),
     overrides.type ?? "",
     "",
     "database none",
@@ -384,11 +381,11 @@ test("setup.test.mjs rejects a project name whose key is invalid", () => {
   const staged = stage();
   const again = stage();
   try {
-    const result = init(staged, ["accept", "no", "", "", "", "", "", "", "", "", "", "database none", "", "auth none", "", "email none", "", "", "", "", "", "X", "Demo Shop", "A small shop.", "Customers", "", "", "", "", "", "approve", ""].join("\n") + "\n");
+    const result = init(staged, ["accept", "no", ...agentLines(), "", "", "database none", "", "auth none", "", "email none", "", "", "", "", "", "X", "Demo Shop", "A small shop.", "Customers", "", "", "", "", "", "approve", ""].join("\n") + "\n");
     assert.equal(result.status, 0, result.stdout + result.stderr);
     const project = JSON.parse(readFileSync(path.join(staged.project, "devos", "project.json"), "utf8"));
     assert.equal(project.project, "DEMO-SHOP");
-    const rejected = init(again, "accept\nno\n\n\n\n\n\n\n\n\n\ndatabase none\n\nauth none\n\nemail none\n\n\n\n\n\nX\nX\nX\n");
+    const rejected = init(again, `accept\nno\n${agentLines().join("\n")}\n\n\ndatabase none\n\nauth none\n\nemail none\n\n\n\n\n\nX\nX\nX\n`);
     assert.equal(rejected.status, 1, rejected.stdout + rejected.stderr);
     assert.equal(rejected.stdout.includes("no valid answer for Project name"), true, rejected.stdout);
   } finally {
@@ -443,6 +440,8 @@ test("setup.test.mjs (s) a typed key reaches gh on stdin only", async () => {
     process.env.GIT_COMMITTER_EMAIL = "devos@example.com";
     const installed = installInto(staged.project, "DEMO-SHOP");
     assert.equal(installed.code, 0, "install");
+    // E79 (PR-99): the agents devos init would have written; their tools decide the keys asked.
+    giveAgents(staged.project);
     const docs = path.join(staged.project, "docs");
     mkdirSync(path.join(docs, "fences"), { recursive: true });
     writeFileSync(path.join(docs, "PHASES.md"), readFileSync(path.join(fixtures, "PHASES.md")));

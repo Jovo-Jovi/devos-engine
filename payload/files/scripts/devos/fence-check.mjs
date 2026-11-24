@@ -134,7 +134,8 @@ function fixedEffort(id) {
     const pool = config().agents?.pool;
     if (!Array.isArray(pool)) return null;
     const item = pool.find((entry) => entry?.id === id);
-    if (!item || !item.effort) return null;
+    // PR-99: `fence` is the developer's choice that the reviewer picks the effort in each fence: nothing fixed.
+    if (!item || !item.effort || item.effort === "fence") return null;
     return { effort: item.effort, fast: item.fast === true ? "yes" : "no" };
   } catch {
     return null;

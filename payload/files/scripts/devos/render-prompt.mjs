@@ -38,8 +38,9 @@ function commonVars(cfg, rows) {
       : "",
     // PR-54: the builder's tool by its name (the runner passes the pool pick's tool).
     BUILDER_TOOL: { cursor: "Cursor", claude: "Claude Code", codex: "Codex", gemini: "Gemini" }[env.DEVOS_BUILDER_TOOL] || env.DEVOS_BUILDER_TOOL || "the builder agent",
-    BUILDER_MODEL: env.DEVOS_BUILDER_MODEL || cfg.builder.model,
-    BUILDER_EFFORT: env.DEVOS_BUILDER_EFFORT || cfg.builder.default_effort || "high",
+    // PR-99: the builder as the run kept it; else the developer's default builder, at the fence's effort.
+    BUILDER_MODEL: env.DEVOS_BUILDER_MODEL || (cfg.agents?.pool ?? []).find((item) => item?.default)?.model || "the default builder",
+    BUILDER_EFFORT: env.DEVOS_BUILDER_EFFORT || "as the fence says",
     BUILDER_FAST: env.DEVOS_BUILDER_FAST || "no",
     PROJECT_KEY: cfg.project ?? "",
     BUILDER_POOL: poolText(),
