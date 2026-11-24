@@ -2,7 +2,7 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
-## 1.13.13 — Unreleased
+## 1.13.13 — 2026-11-24
 
 - **Names that differ from DEV_OS's only in letter case go aside, on every system.** A committed `docs/decisions.md` or `docs/glossary.md` is the same file as DEV_OS's `docs/DECISIONS.md` or `docs/GLOSSARY.md` on Windows and macOS. Before, devos took it for a file git does not track, DEV_OS's documents could not take their names, and the adoption stopped at the end with `guard:naming` crashed. Now the survey finds such a file in git's own list, on every system, and it goes aside after the same single yes, under its own name (`docs/before-adopt/decisions.md`), in the first commit of `devos/adopt`. A folder in other letter case, a file DEV_OS adds its rules to (`claude.md`), or a name git tracks in both cases stops the adoption with the two `git mv` that fix it.
 - **A check that cannot read one of DEV_OS's documents goes back to the AI tool.** When a guard crashes on a document (a glossary without its fenced list, say), the tool gets another round to fix it, as for the documents' other checks, instead of the adoption stopping after them.
