@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -707,7 +707,7 @@ test("adopt.test.mjs (t) E73 (PR-97): which items of an older copy's devos/setup
   assert.equal(copySmokeAddress(readFileSync(path.join(root, "payload", "files", "dot-github", "workflows", "devos-deploy.yml"), "utf8")), "");
 });
 
-test("adopt.test.mjs (u) files with DEV_OS's names: where each goes, what the survey says, and what still stops", () => {
+test("adopt.test.mjs (u) files with DEV_OS's names: where each goes, what the survey says (E80: an untracked file is a move too), and what still stops", () => {
   // E78: docs/X keeps its place under docs/before-adopt/; any other file keeps its folders, without leading dots.
   assert.equal(asidePath("docs/DECISIONS.md"), "docs/before-adopt/DECISIONS.md");
   assert.equal(asidePath("docs/method/CARRY_FORWARDS.md"), "docs/before-adopt/method/CARRY_FORWARDS.md");
@@ -717,22 +717,34 @@ test("adopt.test.mjs (u) files with DEV_OS's names: where each goes, what the su
   assert.equal(asidePath("devos.config.json"), "docs/before-adopt/devos.config.json");
   const folder = project({ "README.md": "# Shop\n", ".gitignore": ".claude/\n", "docs/DECISIONS.md": "# Ours\n", "docs/GLOSSARY.md": "# Terms\n", "docs/before-adopt/GLOSSARY.md": "# Older terms\n" });
   try {
-    // Ignored and never committed: devos cannot move it, so it stops, with the commands.
+    // E80: ignored and never committed, it is a move too: devos commits a copy, and keeps the original outside.
     write(folder, { ".claude/settings.json": "{}\n" });
     const survey = surveyProject(folder, { exec: fakeGh() });
     assert.equal(survey.ready, true, survey.blockers.join("; "));
     const blocks = adoptBlocks(folder, survey, root, fakeGh());
-    assert.deepEqual(blocks.moves, [{ from: "docs/DECISIONS.md", to: "docs/before-adopt/DECISIONS.md" }]);
+    assert.deepEqual(blocks.moves, [
+      { from: ".claude/settings.json", to: "docs/before-adopt/claude/settings.json", untracked: true },
+      { from: "docs/DECISIONS.md", to: "docs/before-adopt/DECISIONS.md" },
+    ]);
     assert.deepEqual(blocks.stops, [
       "devos: docs/GLOSSARY.md has a name of DEV_OS's, and docs/before-adopt/GLOSSARY.md, where devos would move it, is taken. Rename that one (git mv docs/before-adopt/GLOSSARY.md docs/before-adopt/GLOSSARY.md.old, then git commit -m \"Make room for devos adopt\"), then run devos adopt again.",
-      "devos: these files of yours have DEV_OS's names and are not committed, so devos cannot move them aside: .claude/settings.json. Commit them (git add -f .claude/settings.json, then git commit -m \"Files devos adopt moves aside\") or move them out of the folder, then run devos adopt again.",
     ]);
     const lines = surveyLines(survey, blocks);
-    assert.equal(lines.includes("Move aside: 1 file with DEV_OS's names, to docs/before-adopt/ on the adopt branch after your yes (docs/DECISIONS.md → docs/before-adopt/DECISIONS.md)"), true, lines.join("\n"));
-    assert.deepEqual(lines.slice(-3), ["Ready: no — 2 things to fix first, below. Nothing was changed.", ...blocks.stops]);
+    assert.equal(lines.includes("Move aside: 2 files with DEV_OS's names, to docs/before-adopt/ on the adopt branch after your yes (.claude/settings.json → docs/before-adopt/claude/settings.json (not in git: devos commits a copy, and keeps yours outside the project), docs/DECISIONS.md → docs/before-adopt/DECISIONS.md)"), true, lines.join("\n"));
+    assert.deepEqual(lines.slice(-2), ["Ready: no — one thing to fix first, below. Nothing was changed.", ...blocks.stops]);
+    // E80: an untracked link, or a folder, at a name of DEV_OS's is not copied: it still stops, with what to do.
+    if (process.platform !== "win32") {
+      rmSync(path.join(folder, ".claude", "settings.json"));
+      symlinkSync(path.join(folder, "README.md"), path.join(folder, ".claude", "settings.json"));
+      const linked = adoptBlocks(folder, surveyProject(folder, { exec: fakeGh() }), root, fakeGh());
+      assert.equal(linked.moves.some((move) => move.from === ".claude/settings.json"), false);
+      assert.equal(linked.stops.at(-1), `devos: these have DEV_OS's names, are not in git, and are folders or links, not files: .claude/settings.json. Move them out of ${folder}, then run devos adopt again.`);
+      rmSync(path.join(folder, ".claude", "settings.json"));
+      write(folder, { ".claude/settings.json": "{}\n" });
+    }
     // The moves alone: ready once they are made; adoptStops, the lines of a stop, adds the move's own line.
-    assert.equal(surveyLines(survey, { stops: [], moves: blocks.moves }).at(-1), "Ready: yes, once this file is moved aside; devos adopt asks first. Nothing was changed.");
-    assert.equal(adoptStops(folder, survey, root, fakeGh()).at(-1), `devos: this file of yours has a name of DEV_OS's: docs/DECISIONS.md. Run devos adopt --move-aside ${folder} to move it to docs/before-adopt/ on the branch devos/adopt (your checkout stays as it is), or move it yourself, commit, then run devos adopt ${folder}.`);
+    assert.equal(surveyLines(survey, { stops: [], moves: blocks.moves }).at(-1), "Ready: yes, once these 2 files are moved aside; devos adopt asks first. Nothing was changed.");
+    assert.equal(adoptStops(folder, survey, root, fakeGh()).at(-1), `devos: these files of yours have names of DEV_OS's: .claude/settings.json, docs/DECISIONS.md. Run devos adopt --move-aside ${folder} to move them to docs/before-adopt/ on the branch devos/adopt (your checkout stays as it is, except that what git does not track leaves it for a copy kept on this computer), or move them yourself, commit, then run devos adopt ${folder}.`);
     // Without blocks, the survey reads as before.
     assert.equal(surveyLines(survey).at(-1), "Ready: yes. Nothing was changed.");
   } finally {

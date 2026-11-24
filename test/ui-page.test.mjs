@@ -315,3 +315,19 @@ test("ui-page.test.mjs (l) E72: the audit's fixes: the current project's own ste
     assert.equal(css.includes(rule), true, rule);
   }
 });
+
+test("ui-page.test.mjs (m) E80: the adopt screen asks the tool, the model and the effort that write the brief, with nothing picked, and an untracked file is a move", () => {
+  const js = readFileSync(path.join(ui, "app.js"), "utf8");
+  for (const text of [
+    "pick: { tool: \"\", model: \"\" },",
+    "agentPicker({ name: \"adopt\", value: pick, tools, onChange: drawEffort })",
+    "effortField({ id: \"adopt-effort\", label: \"Effort\", agent: pick, key: \"effort\",",
+    "disabled: adopt.busy || !ready || !adoptPicked(pick)",
+    "const body = { folder: adopt.folder.trim(), agent: `${pick.tool}:${pick.model}`, ...(takesEffortFlag(pick.tool) ? { effort: pick.effort } : {}) };",
+    "\"Ready. Choose the tool, the model and the effort that write the brief, then write it.\"",
+    "(not in git: DEV_OS commits a copy, and keeps yours outside the project)",
+  ]) {
+    assert.equal(js.includes(text), true, text);
+  }
+  assert.equal(js.includes("Next you choose its tool, model and effort"), false);
+});
