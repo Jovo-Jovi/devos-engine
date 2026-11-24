@@ -8,6 +8,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { cleanup } from "./harness.mjs";
+import { chosenAgents } from "./chosen-agents.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const PAYLOAD = path.join(root, "payload", "files");
@@ -208,7 +209,8 @@ function fixture({ method = false, media = false } = {}) {
   cpSync(path.join(PAYLOAD, "scripts", "devos"), path.join(seed, "scripts", "devos"), { recursive: true });
   cpSync(path.join(PAYLOAD, "devos"), path.join(seed, "devos"), { recursive: true });
   const defaults = JSON.parse(read(path.join(PAYLOAD, "devos", "engine.defaults.json")));
-  const config = { ...defaults, max_attempts: 3, reviewer: { ...(defaults.reviewer ?? {}), human_gate_paths: ["src/pay/**"], human_gate_imports: [] } };
+  // E79 (PR-99): the project's own agents; the engine's defaults choose none.
+  const config = { ...defaults, max_attempts: 3, reviewer: { ...(defaults.reviewer ?? {}), human_gate_paths: ["src/pay/**"], human_gate_imports: [] }, agents: chosenAgents() };
   writeFileSync(path.join(seed, "devos.config.json"), `${JSON.stringify(config, null, 2)}\n`);
   writeFileSync(path.join(seed, "docs", "PHASES.md"), [
     "# Phases", "",

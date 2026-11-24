@@ -10,24 +10,29 @@ import { cliArgs, normalize } from "../payload/files/scripts/devos/agent-cli.mjs
 import { looksLikeLimit } from "../payload/files/scripts/devos/limits.mjs";
 import { blueprintEnv } from "../lib/init.mjs";
 import { checkRoster } from "../lib/roster.mjs";
+import { chosenAgents } from "./chosen-agents.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const skipWindows = process.platform === "win32";
 
-function agent(tool, id = "a") {
-  return { id, tool, model: "m" };
+// E79 (PR-99): each agent carries the efforts its tool takes, as the developer chose them.
+const TAKES_EFFORT = new Set(["claude", "codex"]);
+
+function agent(tool, id = "a", efforts = {}) {
+  return { id, tool, model: "m", ...(TAKES_EFFORT.has(tool) ? efforts : {}) };
 }
 
 function poolItem(tool, id = "p", isDefault = true) {
-  return { id, tool, model: "m", default: isDefault, note: "" };
+  return { id, tool, model: "m", default: isDefault, note: "", ...(tool === "gemini" ? {} : { effort: "fence" }) };
 }
 
 function agentsFor(tool) {
   return {
-    reviewer: agent(tool, "r"),
-    reviewer_light: agent(tool, "l"),
+    reviewer: agent(tool, "r", { effort: "high", gate_effort: "high" }),
+    reviewer_light: agent(tool, "l", { effort: "medium" }),
     pool: [poolItem(tool)],
     policy: "reviewer-picks",
+    raise_on_retry: true,
   };
 }
 
@@ -77,10 +82,11 @@ test("cycle-tools.test.mjs (b) tools lists the agents in use", () => {
     const project = {
       ...JSON.parse(template.replaceAll("__PROJECT_KEY__", "DEMO")),
       agents: {
-        reviewer: { id: "claude-deep", tool: "claude", model: "claude-opus-5-5" },
+        reviewer: { id: "claude-deep", tool: "claude", model: "claude-opus-5-5", effort: "high", gate_effort: "high" },
         reviewer_light: { id: "cursor-light", tool: "cursor", model: "grok-4.7" },
-        pool: [{ id: "codex-gpt", tool: "codex", model: "gpt-5.1-codex", default: true, note: "" }],
+        pool: [{ id: "codex-gpt", tool: "codex", model: "gpt-5.1-codex", default: true, note: "", effort: "fence" }],
         policy: "reviewer-picks",
+        raise_on_retry: true,
       },
     };
     writeFileSync(path.join(dir, "devos", "project.json"), `${JSON.stringify(project, null, 2)}\n`);
@@ -110,13 +116,11 @@ test("cycle-tools.test.mjs (c) codex builder arguments", () => {
     "-c", "mcp_servers.context7.url=\"https://mcp.context7.com/mcp\"",
     "--json", "-o", "last.md",
   ]);
-  assert.deepEqual(cliArgs({ tool: "codex", role: "builder", model: "M", effort: "max", last: "last.md" }), [
-    "codex", "exec", "--model", "M", "--sandbox", "workspace-write",
-    "-c", "sandbox_workspace_write.network_access=true",
-    "-c", "model_reasoning_effort=\"high\"",
-    "-c", "mcp_servers.context7.url=\"https://mcp.context7.com/mcp\"",
-    "--json", "-o", "last.md",
-  ]);
+  // PR-99: an effort Codex does not take, or none, stops the run: never "high" in its place.
+  assert.throws(() => cliArgs({ tool: "codex", role: "builder", model: "M", effort: "max", last: "last.md" }),
+    { message: "devos: Codex M runs at low, medium, high or xhigh, not \"max\"; choose its effort in devos/project.json (PR-99)" });
+  assert.throws(() => cliArgs({ tool: "codex", role: "builder", model: "M", effort: "", last: "last.md" }),
+    { message: "devos: Codex M runs at low, medium, high or xhigh, not no effort; choose its effort in devos/project.json (PR-99)" });
 });
 
 test("cycle-tools.test.mjs (d) codex reviewer arguments", () => {
@@ -409,10 +413,11 @@ test("cycle-tools.test.mjs (n) a codex pool needs an OpenAI key for the cycle", 
     const project = {
       ...JSON.parse(template.replaceAll("__PROJECT_KEY__", "DEMO")),
       agents: {
-        reviewer: { id: "claude-deep", tool: "claude", model: "claude-opus-5-5" },
+        reviewer: { id: "claude-deep", tool: "claude", model: "claude-opus-5-5", effort: "high", gate_effort: "high" },
         reviewer_light: { id: "cursor-light", tool: "cursor", model: "grok-4.7" },
-        pool: [{ id: "codex-gpt", tool: "codex", model: "gpt-5.1-codex", default: true, note: "" }],
+        pool: [{ id: "codex-gpt", tool: "codex", model: "gpt-5.1-codex", default: true, note: "", effort: "fence" }],
         policy: "reviewer-picks",
+        raise_on_retry: true,
       },
     };
     writeFileSync(path.join(dir, "devos", "project.json"), `${JSON.stringify(project, null, 2)}\n`);
@@ -511,13 +516,17 @@ test("cycle-tools.test.mjs (q) a gemini run drops a stale cursor stream", { skip
 
 test("cycle-tools.test.mjs (p) the roster accepts Codex and Gemini", () => {
   const roster = checkRoster({
-    reviewer: { id: "codex-review", tool: "codex", model: "gpt-5.1-codex" },
+    reviewer: { id: "codex-review", tool: "codex", model: "gpt-5.1-codex", effort: "high", gate_effort: "xhigh", light_effort: "low" },
     reviewer_light: null,
     pool: [{ id: "gemini-pool", tool: "gemini", model: "gemini-2.5-pro", default: true, note: "" }],
     policy: "reviewer-picks",
+    raise_on_retry: false,
   });
   assert.equal(roster.reviewer.tool, "codex");
   assert.equal(roster.pool[0].tool, "gemini");
+  // E79 (PR-99): Codex has no max, and Gemini takes no effort.
+  assert.equal(checkRoster({ ...roster, reviewer: { ...roster.reviewer, effort: "max" } }), null);
+  assert.equal(checkRoster({ ...roster, pool: [{ ...roster.pool[0], effort: "high" }] })?.pool[0].effort, "high");
 });
 
 test("cycle-tools.test.mjs (s) the prompts keep the work lean", () => {
@@ -532,7 +541,7 @@ test("cycle-tools.test.mjs (s) the prompts keep the work lean", () => {
       "",
     ].join("\n"));
     const template = readFileSync(path.join(root, "payload", "templates", "devos", "project.json"), "utf8");
-    writeFileSync(path.join(dir, "devos", "project.json"), template.replaceAll("__PROJECT_KEY__", "DEMO"));
+    writeFileSync(path.join(dir, "devos", "project.json"), `${JSON.stringify({ ...JSON.parse(template.replaceAll("__PROJECT_KEY__", "DEMO")), agents: chosenAgents() }, null, 2)}\n`);
     const written = spawnSync(process.execPath, ["scripts/devos/config.mjs", "--write"], {
       cwd: dir,
       encoding: "utf8",

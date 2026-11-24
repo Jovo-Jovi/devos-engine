@@ -6,6 +6,7 @@ import path from "node:path";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
+import { giveAgents } from "./chosen-agents.mjs";
 
 // PR-56: the security, API and database skills, chosen by context, with the security gate. Scenarios A–E run the same
 // catalogue on five stacks; (f) the record is reproducible; (g) every shipped skill is pinned and licensed; (h) the
@@ -19,6 +20,8 @@ function project({ stack, modules, rows = [], fences = {} }) {
   const dir = mkdtempSync(path.join(tmpdir(), "devos-select-"));
   const installed = spawnSync(process.execPath, [bin, "install", dir, "--key", "DEMO"], { encoding: "utf8", windowsHide: true });
   assert.equal(installed.status, 0, installed.stdout + installed.stderr);
+  // E79 (PR-99): devos install chooses no agents; the project gives its own.
+  giveAgents(dir);
   cpSync(path.join(root, "test", "fixtures", "docs"), path.join(dir, "docs"), { recursive: true });
   const phases = path.join(dir, "docs", "PHASES.md");
   writeFileSync(phases, readFileSync(phases, "utf8").replace("| T01 | P1 | S1 | First task | 1 | — | [ ] | — |", rows.join("\n")));

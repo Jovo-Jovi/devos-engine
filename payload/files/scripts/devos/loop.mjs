@@ -8,6 +8,8 @@
 import { spawnSync } from "node:child_process";
 import { writeFileSync, existsSync, copyFileSync, mkdirSync, readFileSync } from "node:fs";
 import { P, git, config, parsePhases, nextOpenTask, isHumanGate, reviewerModel, reviewerEffort, changedPaths } from "./lib.mjs";
+import { validate } from "./agents.mjs";
+import { resolve as resolveBuilder } from "./builder-model.mjs";
 import { renderPrompt } from "./render-prompt.mjs";
 
 const argv = process.argv.slice(2);
@@ -17,8 +19,15 @@ const WIN = process.platform === "win32";
 const cfg = config();
 const BASE = cfg.base_branch;
 // PR-53: this loop runs Cursor as the builder and Claude Code as the reviewer. It never runs an agent the project did not choose.
-const chosen = cfg.agents;
-if (chosen && (chosen.reviewer?.tool !== "claude" || !(chosen.pool ?? []).some((a) => a.tool === "cursor" && a.default))) {
+// PR-99: and only with the models and efforts the developer chose; a missing one stops it here.
+let chosen;
+try {
+  chosen = validate(cfg.agents);
+} catch (error) {
+  console.error(error.message);
+  process.exit(1);
+}
+if (chosen.reviewer?.tool !== "claude" || !(chosen.pool ?? []).some((a) => a.tool === "cursor" && a.default)) {
   console.error("loop.mjs runs Cursor as the builder and Claude Code as the reviewer; this project chose other agents. Use the devos-cycle workflow on GitHub.");
   process.exit(1);
 }
@@ -57,14 +66,17 @@ function cycleOnce(task, attempt) {
 
   // Builder. The prompt goes through a file so no shell ever has to quote it.
   writeFileSync(P(".devos/builder-prompt.md"), renderPrompt("builder", task, attempt));
-  const b = sh("agent", ["-p", "--force", "--trust", "--model", cfg.builder.model, "--output-format", "json",
+  // PR-99: the default builder's model at the fence's effort (or its fixed one), as the cycle resolves it.
+  process.env.DEVOS_BUILDER_FAMILY = chosen.pool.find((a) => a.default).model;
+  const built = resolveBuilder({ task });
+  const b = sh("agent", ["-p", "--force", "--trust", "--model", built.model, "--output-format", "json",
     "Follow the instructions in .devos/builder-prompt.md exactly."], { capture: true, allowFail: true, env: { DEVOS_AUTOMATED: "1" } });
   writeFileSync(P(".devos/builder.json"), b.stdout ?? "");
   writeFileSync(P(".devos/builder.err"), "");
 
   if (node("scripts/devos/guard-surfaces.mjs", "builder").status !== 0) throw new Error("builder surface guard failed: HALT");
   sh("git", ["add", "-A"]);
-  sh("git", ["commit", "--allow-empty", "-m", `${task} a${attempt}: builder (${cfg.builder.model})`]);
+  sh("git", ["commit", "--allow-empty", "-m", `${task} a${attempt}: builder (${built.model})`]);
   if (flag("push")) sh("git", ["push", "origin", `HEAD:refs/heads/${br}`]);
   writeFileSync(P(".devos/runner-evidence.md"),
     `# Runner evidence — ${task} attempt ${attempt} (local)\n\n- Branch: \`${br}\`\n- HEAD: \`${git(["rev-parse", "HEAD"])}\`\n- Remote comparison: ${flag("push") ? "pushed" : "local run, not pushed"}\n\n## Changed files vs ${BASE}\n\`\`\`\n${git(["diff", "--stat", `${BASE}...HEAD`])}\n\`\`\`\n`);

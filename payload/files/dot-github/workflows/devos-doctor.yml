@@ -133,20 +133,22 @@ jobs:
           DEVOS_REVIEW_PASS: CLAUDE_CODE_OAUTH_TOKEN ANTHROPIC_API_KEY
         run: |
           # PR-53: the second opinion runs only when the project's reviewer agent is Claude Code, on the model the developer chose.
-          line=$(node scripts/devos/agents.mjs reviewer --mode deep 2>/dev/null || true)
-          tool=$(printf '%s\n' "$line" | sed -n 's/^reviewer_tool=//p')
-          if [ -n "$line" ] && [ "$tool" != "claude" ]; then echo "The project's reviewer agent is $tool; no Claude Code second opinion (PR-53)."; exit 0; fi
-          chosen=$(printf '%s\n' "$line" | sed -n 's/^reviewer_model=//p')
+          # PR-99: on the model and at the effort the developer chose; a missing choice is said, and no AI runs.
+          err=$(mktemp)
+          line=$(GITHUB_OUTPUT=/dev/null node scripts/devos/agents.mjs effort --kind doctor 2>"$err") || { echo "::warning title=Dev OS::$(cat "$err"); no second opinion."; exit 0; }
+          tool=$(printf '%s\n' "$line" | sed -n 's/^tool=//p')
+          EFFORT=$(printf '%s\n' "$line" | sed -n 's/^effort=//p')
+          if [ "$tool" != "claude" ]; then echo "The project's reviewer agent is $tool; no Claude Code second opinion (PR-53)."; exit 0; fi
+          MODEL=$(printf '%s\n' "$line" | sed -n 's/^model=//p')
           [ -n "$OAUTH" ] && export CLAUDE_CODE_OAUTH_TOKEN="$OAUTH"
           [ -n "$APIKEY" ] && export ANTHROPIC_API_KEY="$APIKEY"
           [ -n "$OAUTH$APIKEY" ] || { echo "No Claude credential; skipping the second opinion."; exit 0; }
-          MODEL=${chosen:-$(node -e 'console.log(require("./devos.config.json").reviewer.model_by_risk["2"])')}
           bash scripts/devos/review-user.sh setup
           cp -R pr/. /opt/devos-review-work/
           rm -rf /opt/devos-review-work/.git
           mkdir -p /opt/devos-review-work/.devos && cp -r .devos/doctor /opt/devos-review-work/.devos/doctor
           bash scripts/devos/review-user.sh workspace
-          bash scripts/devos/review-user.sh run /opt/devos-review-work -- claude -p "$(cat devos/prompts/doctor.md)" --model "$MODEL" --effort high --output-format json \
+          bash scripts/devos/review-user.sh run /opt/devos-review-work -- claude -p "$(cat devos/prompts/doctor.md)" --model "$MODEL" --effort "$EFFORT" --output-format json \
             --json-schema "$(cat devos/schemas/doctor.schema.json)" --permission-mode dontAsk --max-turns 30 \
             --setting-sources user --settings /opt/devos-tools/settings.json --strict-mcp-config \
             --allowedTools "Read,Glob,Grep" --disallowedTools "Bash,Write,Edit,WebFetch,WebSearch" \

@@ -225,12 +225,10 @@ jobs:
           DEVOS_ACCOUNT_SWITCH: ${{ vars.DEVOS_ACCOUNT_SWITCH || 'auto' }}
           DEVOS_ISSUE: ${{ inputs.issue || github.event.issue.number }}
         run: |
-          # A request marked "Small change" is planned at high effort, anything else at intake_effort (PR-20).
-          EFFORT=$(node -e '
-            const r = require("./devos.config.json").reviewer;
-            const small = /How big is it\?\s*\n+\s*Small change/i.test(require("fs").readFileSync(".devos/request.md", "utf8"));
-            console.log(small ? (r.intake_effort_small || "high") : (r.intake_effort || "xhigh"));')
-          if [ "$MODE" = "method" ]; then EFFORT=$(node -e 'console.log(require("./devos.config.json").reviewer.method_effort || "high")'); fi
+          # PR-99: every request, small or not, and a method request, is planned at the reviewer's own effort.
+          kind=intake; [ "$MODE" = "method" ] && kind=method
+          eff_line=$(GITHUB_OUTPUT=/dev/null node scripts/devos/agents.mjs effort --kind "$kind") || exit 1
+          EFFORT=$(printf '%s\n' "$eff_line" | sed -n 's/^effort=//p')
           echo "$MODE at effort $EFFORT (resume: $RESUME)"
           DEVOS_INTAKE_RESUME="$RESUME" node scripts/devos/render-prompt.mjs "$MODE" - - --out .devos/intake-prompt.md
           DEVOS_INTAKE_RESUME=true node scripts/devos/render-prompt.mjs "$MODE" - - --out .devos/intake-resume-prompt.md
@@ -717,7 +715,9 @@ jobs:
           DEVOS_ACCOUNT_SWITCH: ${{ vars.DEVOS_ACCOUNT_SWITCH || 'auto' }}
           ATTEMPT: ${{ steps.n.outputs.attempt }}
         run: |
-          EFFORT=$(node -e 'import("./scripts/devos/lib.mjs").then(({parsePhases,reviewerEffort})=>{const r=parsePhases().rows.find(x=>x.task===process.env.TASK);console.log(reviewerEffort(r))})')
+          # PR-99: a revision is planned at the reviewer's own effort.
+          eff_line=$(GITHUB_OUTPUT=/dev/null node scripts/devos/agents.mjs effort --kind revise) || exit 1
+          EFFORT=$(printf '%s\n' "$eff_line" | sed -n 's/^effort=//p')
           node scripts/devos/render-prompt.mjs revise "$TASK" "$ATTEMPT" --out .devos/revise-prompt.md
           # PR-53: the project's reviewer agent reissues the fence; a usage limit switches only to the other Claude account.
           bash scripts/devos/plan-agent.sh revise .devos/revise-prompt.md devos/schemas/intake.schema.json .devos/revise.json "$EFFORT" 60

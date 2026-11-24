@@ -29,12 +29,12 @@ function node(dir, code) {
 }
 
 test("chosen.test.mjs (a) a config without a light reviewer is valid, and the reviewer reviews every task", () => {
-  const agents = { reviewer: cursor, pool: [{ ...cursor, default: true, note: "default builder" }], policy: "always-default" };
+  const agents = { reviewer: cursor, pool: [{ ...cursor, default: true, note: "default builder" }], policy: "always-default", raise_on_retry: false };
   validate(agents);
   validate({ ...agents, reviewer_light: null });
   assert.deepEqual(reviewerFor("light", agents), cursor);
-  assert.throws(() => validate({ ...agents, extra: true }), /must have reviewer, pool and policy, and may have reviewer_light/);
-  assert.throws(() => validate({ reviewer: cursor, policy: "always-default" }), /must have reviewer, pool and policy/);
+  assert.throws(() => validate({ ...agents, extra: true }), /must have reviewer, pool, policy and raise_on_retry, and may have reviewer_light and fallback_builder/);
+  assert.throws(() => validate({ reviewer: cursor, policy: "always-default" }), /must have reviewer, pool, policy and raise_on_retry/);
 });
 
 test("chosen.test.mjs (b) a module the project did not choose is never started, whatever a fence says", () => {
@@ -74,7 +74,7 @@ function cursorProject() {
   const dir = project({ type: "cli", stack: "node-cli", modules: {}, deploy: "none" });
   const configPath = path.join(dir, "devos.config.json");
   const cfg = JSON.parse(readFileSync(configPath, "utf8"));
-  cfg.agents = { reviewer: cursor, pool: [{ ...cursor, default: true, note: "default builder" }], policy: "always-default" };
+  cfg.agents = { reviewer: cursor, pool: [{ ...cursor, default: true, note: "default builder" }], policy: "always-default", raise_on_retry: false };
   writeFileSync(configPath, `${JSON.stringify(cfg, null, 2)}\n`);
   const bin = path.join(dir, "bin");
   mkdirSync(bin);

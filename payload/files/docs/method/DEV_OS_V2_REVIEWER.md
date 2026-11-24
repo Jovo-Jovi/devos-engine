@@ -516,6 +516,9 @@ not from barring the builder from any path.
 | Heavyweight reviewer (risk 3, gates, audits, ODs) | Claude Fable 5.1, Claude Opus 5.5 |
 | Standard reviewer | Claude Sonnet 5 |
 
+**These are examples, not settings.** DEV_OS never picks a model or an effort: the developer chooses each role's
+tool, model and effort, and a choice that is missing stops the run (PR-99).
+
 **Model-agnostic rules.** Clinical, legal or domain terminology is signed by the client's
 qualified staff whichever model drafts it. A risk-3 merge without its heavyweight review is a
 FAIL, not a warning. Skills and rule files make the builder faster but never outrank a document.

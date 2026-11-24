@@ -19,12 +19,13 @@ function validPlan() {
     contract_version: CONTRACT_VERSION,
     link: false,
     agents: {
-      reviewer: { id: "claude-deep", tool: "claude", model: "claude-opus-5-5" },
-      reviewer_light: { id: "claude-light", tool: "claude", model: "claude-sonnet-5-5" },
-      pool: [{ id: "cursor-grok", tool: "cursor", model: "grok-4.7", default: true, note: "default builder" }],
+      reviewer: { id: "claude-deep", tool: "claude", model: "claude-opus-5-5", effort: "high", gate_effort: "high" },
+      reviewer_light: { id: "claude-light", tool: "claude", model: "claude-sonnet-5-5", effort: "medium" },
+      pool: [{ id: "cursor-grok", tool: "cursor", model: "grok-4.7", default: true, note: "default builder", effort: "fence" }],
       policy: "reviewer-picks",
+      raise_on_retry: true,
     },
-    blueprint: { tool: "claude", model: "claude-opus-5-5" },
+    blueprint: { tool: "claude", model: "claude-opus-5-5", effort: "high" },
     project: {
       type: "saas",
       stack: "next",

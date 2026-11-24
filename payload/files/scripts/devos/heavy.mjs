@@ -29,7 +29,8 @@ export function heavyReasons(row, cfg = config()) {
   const reasons = [];
   const model = reviewerModel(row, cfg);
   const effort = reviewerEffort(row, cfg);
-  if (model === cfg.reviewer.gate_model) reasons.push(`review by ${model}`);
+  // PR-99: a risk-3 review is the reviewer's deep review, at the effort the developer chose.
+  if (row.risk >= 3) reasons.push(`deep review by ${model}`);
   if (effort === "xhigh") reasons.push("review at extra-high effort");
   if (effort === "max") reasons.push("review at max effort");
   const fence = P(`docs/fences/${row.task}.md`);

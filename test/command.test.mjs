@@ -70,10 +70,17 @@ test("command.test.mjs roster import, same-model doctor, detect and status", () 
     const roster = {
       reviewer: { id: "cursor", tool: "cursor", model: "claude-opus-5-5" },
       reviewer_light: null,
-      pool: [{ id: "cursor-grok", tool: "cursor", model: "grok-4.7", default: true, note: "" }],
+      pool: [{ id: "cursor-grok", tool: "cursor", model: "grok-4.7", default: true, note: "", effort: "fence" }],
       policy: "reviewer-picks",
+      raise_on_retry: false,
     };
     const file = path.join(home, "in.json");
+    // E79 (PR-99): a roster names every effort its tools take; one without them is refused, and none is filled in.
+    const { effort: _effort, ...bare } = roster.pool[0];
+    writeFileSync(file, JSON.stringify({ ...roster, pool: [bare] }));
+    const refused = devos(["agents", "import", file], { DEVOS_HOME: home });
+    assert.equal(refused.status, 1);
+    assert.equal(refused.stdout.trim(), "devos: roster has no agents.pool[cursor-grok].effort");
     writeFileSync(file, JSON.stringify(roster));
     const imported = devos(["agents", "import", file], { DEVOS_HOME: home });
     assert.equal(imported.status, 0, imported.stderr);

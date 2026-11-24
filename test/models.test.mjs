@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { neededKeys } from "../lib/keys.mjs";
 import { slugFromRemote } from "../lib/models.mjs";
 import { withModelOverrides } from "../payload/files/scripts/devos/lib.mjs";
+import { chosenAgents } from "./chosen-agents.mjs";
 import { cleanup, stage } from "./harness.mjs";
 
 // E25a (PR-63): a project's models change without a commit, and setup offers each agent tool's second account.
@@ -80,6 +81,10 @@ test("models.test.mjs (b) the runner's agents.mjs reports the model a variable c
   try {
     const installed = spawnSync(process.execPath, [bin, "install", staged.project, "--key", "DEMO"], { encoding: "utf8", env: staged.env, windowsHide: true });
     assert.equal(installed.status, 0, installed.stdout + installed.stderr);
+    // E79 (PR-99): the project's own agents; devos install alone chooses none.
+    const projectFile = path.join(staged.project, "devos", "project.json");
+    writeFileSync(projectFile, `${JSON.stringify({ ...JSON.parse(readFileSync(projectFile, "utf8")), agents: chosenAgents() }, null, 2)}\n`);
+    assert.equal(spawnSync(process.execPath, ["scripts/devos/config.mjs", "--write"], { cwd: staged.project, encoding: "utf8", windowsHide: true }).status, 0);
     const agents = (args, extra = {}) => spawnSync(process.execPath, [path.join(staged.project, "scripts", "devos", "agents.mjs"), ...args], {
       encoding: "utf8",
       cwd: staged.project,

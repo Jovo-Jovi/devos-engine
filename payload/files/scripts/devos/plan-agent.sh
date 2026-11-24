@@ -11,7 +11,7 @@ stage="${1:-}"
 prompt="${2:-}"
 schema="${3:-}"
 out="${4:-}"
-effort="${5:-high}"
+effort="${5:-}"
 turns="${6:-120}"
 again="${7:-$2}"
 if [ -z "$stage" ] || [ ! -f "$prompt" ] || [ ! -f "$schema" ] || [ -z "$out" ]; then
@@ -37,7 +37,12 @@ limited=""
 if [ -z "$accounts" ]; then
   echo "::error::no $tool credential for the project's reviewer agent: add it (SETUP.md), then run this again"
 fi
-echo "$stage: the reviewer agent, $tool $model, effort $effort"
+# PR-99: a tool that takes an effort runs at the developer's; agents.mjs effort --kind gives it, and none stops here.
+if [ -z "$effort" ] && { [ "$tool" = "claude" ] || [ "$tool" = "codex" ]; }; then
+  echo "::error title=Dev OS::no effort for the reviewer agent ($tool $model); set it in devos/project.json (devos upgrade asks for it, PR-99)"
+  exit 1
+fi
+echo "$stage: the reviewer agent, $tool $model, effort ${effort:-none (the tool takes none)}"
 
 ARGS=()
 case "$tool" in

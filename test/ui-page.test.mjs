@@ -205,11 +205,29 @@ test("ui-page.test.mjs (j) the first screen offers automated or local developmen
   }
 });
 
-test("ui-page.test.mjs (h) a new start offers the last choices, and a continued project shows its own", () => {
+test("ui-page.test.mjs (h) a new start offers the last choices but never an agent, a model or an effort, and a continued project shows its own (PR-99)", () => {
   const js = readFileSync(path.join(ui, "app.js"), "utf8");
-  for (const text of ["return withRemembered(draft, st.choices);", "app.draft = withChoices(app.draft, found.choices, found.folder);", 'readiness(blueprint.tool) === "ready"']) {
+  for (const text of [
+    "return withRemembered(draft, st.choices);",
+    "app.draft = withChoices(app.draft, found.choices, found.folder);",
+    "...emptyAgents(),",
+    "if (draft.agentsShape !== AGENTS_SHAPE) Object.assign(draft, emptyAgents());",
+    "reviewer: { tool: \"\", model: \"\" },",
+    "lightMode: \"\",",
+    "policy: \"\",",
+    "raise: null,",
+    "blueprint: { tool: \"\", model: \"\" },",
+    "d.pool.push({ tool: \"\", model: \"\", strengths: [], isDefault: false });",
+    "select.replaceChildren(el(\"option\", { value: \"\", text: value.tool ? \"Choose a model\" : \"Choose a tool first\" }));",
+    "if (keep && keep.accepted !== undefined) app.draft.accepted = keep.accepted;",
+  ]) {
     assert.equal(js.includes(text), true, text);
   }
+  const remembered = js.slice(js.indexOf("function withRemembered("), js.indexOf("// While a started project continues"));
+  for (const text of ["agents", "reviewer", "pool", "policy", "blueprint", "effort"]) assert.equal(remembered.includes(`saved.${text}`), false, text);
+  for (const text of ["st.defaults", "state.defaults", "firstModel(", "defaultBlueprint(", "devos's choice"]) assert.equal(js.includes(text), false, text);
+  const server = readFileSync(path.join(root, "lib", "ui-server.mjs"), "utf8");
+  assert.equal(server.includes("engine.defaults.json\"), \"utf8\")).agents"), false);
 });
 
 test("ui-page.test.mjs (k) E71: an adoption has its own steps, one screen per question with every option, a Keys step, a finish screen and its whole output", () => {

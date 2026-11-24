@@ -120,7 +120,7 @@ Work in this order.
    `stack.commands` exiting 0, and the developer ticks `docs/PHASES.md`.
    Every fence carries `- Layers: <layer> · <layer>` in its header: the layers of `devos/skills/INDEX.md` the task touches (`design`, `motion`, `frontend`, `accessibility`, `architecture`, `backend`, `api`, `database`, `security`, `reliability`, `testing`, `ops`); T01's are usually `ops · testing`. The runner gives the builder and the reviewer the skills of those layers, and a server-side or deep task always the security layer and a code task the testing layer (PR-55, PR-56, PR-57).
    Every fence also carries the builder line `- Builder: <an id of devos.config.json agents.pool> · Effort:
-   <low|medium|high|xhigh> · Fast: <yes|no>` (T01: `high`, `no`, or the builder's fixed `effort` and `fast` when `devos.config.json` gives it one, PR-78) and `- Paths: \`<glob>\` · …`: every file and
+   <low|medium|high|xhigh> · Fast: <yes|no>` (T01: the effort and speed its work needs, or the builder's fixed `effort` and `fast` when `devos.config.json` gives it one, PR-78; when the builder's effort is `fence`, the effort is yours to choose for each fence, PR-99) and `- Paths: \`<glob>\` · …`: every file and
    folder the task may change, each in backticks (T01's are the scaffold's: `*` for the files at the root, and its
    folders such as `src/**`, `public/**` and the test folders). `guard:scope` fails a change outside them; the report,
    `docs/SESSION_CONTEXT.md`, `docs/DEVELOPMENT_JOURNAL.md` and a lockfile beside a listed manifest are always

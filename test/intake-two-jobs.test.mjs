@@ -8,6 +8,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { cleanup } from "./harness.mjs";
+import { configWithAgents } from "./chosen-agents.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const PAYLOAD = path.join(root, "payload", "files");
@@ -197,7 +198,7 @@ function fixture() {
   cpSync(SCRIPTS, path.join(seed, "scripts", "devos"), { recursive: true });
   cpSync(path.join(PAYLOAD, "scripts", "guards"), path.join(seed, "scripts", "guards"), { recursive: true });
   cpSync(path.join(PAYLOAD, "devos"), path.join(seed, "devos"), { recursive: true });
-  write(seed, "devos.config.json", read(path.join(PAYLOAD, "devos", "engine.defaults.json")));
+  write(seed, "devos.config.json", configWithAgents(read(path.join(PAYLOAD, "devos", "engine.defaults.json"))));
   write(seed, "docs/PHASES.md", TABLE([["T01", "P1", 1, "—", true], ["T02", "P1", 2, "G-Foundation", false]]));
   write(seed, "docs/fences/T02.md", "## T02\n\n- Paths: `src/**`\n\n### Prompt\n\nBuild.\n");
   write(seed, "src/a.ts", "export const a = 1;\n");
@@ -420,7 +421,7 @@ test("intake-two-jobs.test.mjs U10 the revise prompt says when the revision was 
   const dir = mkdtempSync(path.join(tmpdir(), "devos-prompt-"));
   try {
     cpSync(path.join(PAYLOAD, "devos"), path.join(dir, "devos"), { recursive: true });
-    write(dir, "devos.config.json", read(path.join(PAYLOAD, "devos", "engine.defaults.json")));
+    write(dir, "devos.config.json", configWithAgents(read(path.join(PAYLOAD, "devos", "engine.defaults.json"))));
     write(dir, "docs/PHASES.md", TABLE([["T05", "P2", 2, "—", true], ["T06", "P2", 2, "G-Feature", false]]));
     const render = (env) => spawnSync(process.execPath, [path.join(SCRIPTS, "render-prompt.mjs"), "revise", "T06", "2"], { cwd: dir, encoding: "utf8", env: { ...process.env, DEVOS_ROOT: dir, DEVOS_REVISE_UNIT: "", ...env } });
     const task = render({});
@@ -455,7 +456,7 @@ test("intake-two-jobs.test.mjs U11 /devos accept keeps your note when publish pa
 test("intake-two-jobs.test.mjs U12 a revised unit task is built at its attempt by any run, past the cap, and reviewed deep", async () => {
   const dir = mkdtempSync(path.join(tmpdir(), "devos-revise-unit-"));
   try {
-    write(dir, "devos.config.json", read(path.join(PAYLOAD, "devos", "engine.defaults.json")));
+    write(dir, "devos.config.json", configWithAgents(read(path.join(PAYLOAD, "devos", "engine.defaults.json"))));
     write(dir, "docs/PHASES.md", TABLE([["T05", "P2", 2, "—", false], ["T06", "P2", 2, "—", false], ["T07", "P2", 1, "—", false]]));
     const unit = TABLE([["T05", "P2", 2, "—", true], ["T06", "P2", 2, "—", true], ["T07", "P2", 1, "—", false]])
       .replace("| [x] | PASS a1 — docs/reviews/T06-a1.md |", "| [ ] | REVISE a5 — your revision on the acceptance PR (PR-92) |");
@@ -472,7 +473,7 @@ test("intake-two-jobs.test.mjs U12 a revised unit task is built at its attempt b
     assert.match(next(["--task", "T06", "--attempt", "6"]).stderr, /attempt 6 exceeds max_attempts 3/);
     // The review of a revised unit task is deep, whatever the task's risk.
     const { reviewPlan } = await load("review-mode.mjs");
-    const cfg = JSON.parse(read(path.join(PAYLOAD, "devos", "engine.defaults.json")));
+    const cfg = JSON.parse(configWithAgents(read(path.join(PAYLOAD, "devos", "engine.defaults.json"))));
     const row = parsePhases(unit).rows.find((r) => r.task === "T06");
     const plan5 = reviewPlan(row, [], 5, cfg);
     assert.equal(plan5.mode, "deep");

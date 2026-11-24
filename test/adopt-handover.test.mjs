@@ -5,7 +5,7 @@ import path from "node:path";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
-import { cleanup, stage } from "./harness.mjs";
+import { agentLines, cleanup, stage } from "./harness.mjs";
 import { AGENT_START, adoptPullBody, handoverAnswers, ownRulings, readmeAdopted } from "../lib/adopt.mjs";
 import { CONTRACT_VERSION } from "../lib/contract.mjs";
 import { handoverTasks, phasesAccepted } from "../lib/handover.mjs";
@@ -18,7 +18,8 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const bin = path.join(root, "bin", "devos.mjs");
 const ENGINE = JSON.parse(readFileSync(path.join(root, "package.json"), "utf8")).version;
 // The answers of a default devos init --local (handover.test.mjs keeps the same list).
-const LOCAL_FLOW = ["accept", "", "", "", "", "", "", "", "", "", "database none", "", "auth none", "", "email none", "", "", "", "", "Demo Shop", "A small shop.", "Customers", "", "", "", "", "approve", ""].join("\n") + "\n";
+// E79 (PR-99): the agents, every one answered, then the type and the stack.
+const LOCAL_FLOW = ["accept", ...agentLines(), "", "", "database none", "", "auth none", "", "email none", "", "", "", "", "Demo Shop", "A small shop.", "Customers", "", "", "", "", "approve", ""].join("\n") + "\n";
 const HEAD = "| Task | Phase | Station | Name | Risk | Gate | Done | Verdict |\n| --- | --- | --- | --- | --- | --- | --- | --- |\n";
 const row = (task, name, done, phase = "P1") => `| ${task} | ${phase} | S1 | ${name} | 1 | — | ${done ? "[x]" : "[ ]"} | — |\n`;
 const OWN_PR01 = "| PR-01 | **Environment profile.** The shop builds on Linux with pnpm. | the shop |";
@@ -276,7 +277,7 @@ test("adopt-handover.test.mjs (d) a first open task without a committed fence st
 });
 
 test("adopt-handover.test.mjs (e) the pull request says the cycle resumes from the first open task and lists the tasks accepted as built; a ruling of the project's own is kept beside the engine's", () => {
-  const ruling = "| PR-99 | **The shop's own ruling.** | the shop |\n";
+  const ruling = "| PR-900 | **The shop's own ruling.** | the shop |\n";
   const t = handedOverProject(`${HEAD}${row("T01", "First task", true)}${row("T02", "Second task", false)}`, { rulings: ruling });
   try {
     const remote = bareOrigin(t);
@@ -302,7 +303,7 @@ test("adopt-handover.test.mjs (e) the pull request says the cycle resumes from t
     // The project's own ruling stays beside the engine's precedents, which bind from now on.
     assert.equal(t.show("docs/method/before-adopt/PRECEDENTS.md"), t.git(["show", "HEAD:docs/method/PRECEDENTS.md"]).out);
     const precedents = t.show("docs/method/PRECEDENTS.md");
-    assert.equal(precedents.includes("PR-99"), false);
+    assert.equal(precedents.includes("PR-900"), false);
     assert.equal(precedents.includes(`${OWN_PR01}\n`), true);
     assert.equal(t.show("CLAUDE.md").startsWith("# DEMO-SHOP — reviewer rules\n"), true);
   } finally {

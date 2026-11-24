@@ -210,20 +210,17 @@ jobs:
           if [ "$DEVOS_BUILDER_TOOL" != "cursor" ]; then
             node --input-type=module - >> "$GITHUB_OUTPUT" <<'EOF'
           import { existsSync, readFileSync } from "node:fs";
-          import { parsePhases } from "./scripts/devos/lib.mjs";
           const task = process.env.TASK;
-          const cfg = JSON.parse(readFileSync("devos.config.json", "utf8"));
-          let risk = 2;
-          try {
-            const row = parsePhases().rows.find((item) => item.task === task);
-            if (row) risk = row.risk;
-          } catch { /* a missing table uses the risk default */ }
           const fence = existsSync(`docs/fences/${task}.md`) ? readFileSync(`docs/fences/${task}.md`, "utf8").split(/\r?\n/).slice(0, 30).join("\n") : "";
           const raw = (/Effort:\s*([A-Za-z -]+?)(?:\s*[·|,]|\s*$|\s*\()/m.exec(fence)?.[1] || "").toLowerCase().replace(/[\s_-]+/g, "");
           let effort = raw === "extrahigh" || raw === "xhigh" ? "xhigh" : ["low", "medium", "high", "xhigh"].includes(raw) ? raw : "";
           const input = (process.env.EFFORT_IN || "").toLowerCase();
           if (["low", "medium", "high", "xhigh"].includes(input)) effort = input;
-          if (!effort) effort = cfg.builder?.effort_by_risk?.[String(risk)] ?? cfg.builder?.default_effort ?? "high";
+          // PR-99: Claude Code and Codex build at the fence's effort (the builder's fixed one is written there); none stops.
+          if (!effort && ["claude", "codex"].includes(process.env.DEVOS_BUILDER_TOOL)) {
+            console.log(`::error title=Dev OS::the fence of ${task} names no builder effort; the reviewer writes "- Builder: <pool id> · Effort: <low|medium|high|xhigh> · Fast: <yes|no>" (PR-99)`);
+            process.exit(1);
+          }
           process.stdout.write(`model=${process.env.POOL_MODEL}\neffort=${effort}\nfast=no\nsource=pool\nnote=\n`);
           EOF
           else

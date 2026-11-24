@@ -55,7 +55,7 @@ devos init --plan <file> [folder]
 devos init --help
 devos ui [folder] [--no-open]
 devos continue [folder]
-devos adopt [folder] [--install | --publish] [--move-aside] [--agent <tool>[:<model>]]
+devos adopt [folder] [--install | --publish] [--move-aside] [--agent <tool>:<model>] [--effort <level>]
 devos adopt --check [folder] [--json]
 devos verify [folder]
 devos watch [folder] [--interval <seconds>] [--once]
@@ -80,7 +80,7 @@ else if (args[0] === "profile") code = profileCommand(args.slice(1));
 else if (args[0] === "agents" && args[1] === "detect" && args.length === 2) code = detectCommand();
 else if (args[0] === "agents") code = rosterCommand(args.slice(1));
 else if (args[0] === "install") code = installCommand(args.slice(1));
-else if (args[0] === "upgrade") code = upgradeCommand(args.slice(1));
+else if (args[0] === "upgrade") code = await upgradeCommand(args.slice(1));
 else if (args[0] === "remove") code = await removeCommand(args.slice(1));
 else if (args[0] === "init") code = await initCommand(args.slice(1));
 else if (args[0] === "ui") code = await uiCommand(args.slice(1));
