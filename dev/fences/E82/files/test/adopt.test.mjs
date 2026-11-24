@@ -800,7 +800,8 @@ test("adopt.test.mjs (v) E81: names that differ from DEV_OS's only in letter cas
 
 test("adopt.test.mjs (w) E82: the survey fetches GitHub's main first; a checkout behind it or apart from it stops, one ahead of it is a note, and a failed fetch stops", () => {
   const folder = project({ "README.md": "# Shop\n" });
-  const run = (args) => spawnSync("git", args, { cwd: folder, encoding: "utf8", windowsHide: true });
+  // The identity every commit here takes: GitHub's runner has no git user of its own.
+  const run = (args) => spawnSync("git", [...IDENTITY, ...args], { cwd: folder, encoding: "utf8", windowsHide: true });
   const sha = /[0-9a-f]{7,}/.source;
   try {
     const base = `${path.join(folder, ".git", "devos-github").replaceAll("\\", "/")}/`;
