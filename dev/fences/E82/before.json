@@ -1,0 +1,18 @@
+{
+  "CHANGELOG.md": "2f8d32b12722177474772c3cb8e5bed042d8d0ddffdf567a589b78a048fa42cd",
+  "README.md": "c18bf404975bd98416b9351991866d7322932a2acc15e108ec865cb48320922a",
+  "lib/adopt.mjs": "7f40653fbc2b42284bfb1fb9a6458b6d233b9515dec131a9076da9e93a0f079d",
+  "lib/hub.mjs": "3a98e3fbe340398c25401d0cb494d6b63b3e684c572e6f2d7b786de3f8f2c17c",
+  "package.json": "1df172840cbbadb89538c197a10df726509bb0fbd610e8b27aba18407f414cf2",
+  "payload/manifest.json": "616c9cb43f6dfd1e98f1dc6c956a117592336104e90b976730076901bf45e90d",
+  "test/adopt-files.test.mjs": "5dcd767af6b27c544851528a37349b802eb0cb8f6f6e4cf0a7493d524750f400",
+  "test/adopt-handover.test.mjs": "dbc7d590238ea72568fa5ebdcab336c2088cd750cf7e8cd3deec3aa6baeca8a0",
+  "test/adopt-install.test.mjs": "62498357a17ab3d7d143be94d3768d187e35b7db5230cb064a2e6c5c60e95723",
+  "test/adopt.test.mjs": "e02a11bf016c62390e5c2cedea24424e9520ef618984f7fa9d5c554fe7cfc931",
+  "test/harness.mjs": "50a716a17c384ec2f9bb8787731c6415c3819be631108e672730321b4085e0a0",
+  "test/install.test.mjs": "2a3bfae1c5276f29c5613c6444249bc4070032851bd65144127bcfa498f81ef3",
+  "test/remove.test.mjs": "4fc718b7317584037b2ab5d643ac27afc64be4d57535dee1bdf874ddc766b7ec",
+  "test/ui-server.test.mjs": "22e097bc8bdfe117f1a48e4b9272b47a6dfa8764d0b10f350fa67f857726ab0a",
+  "test/upgrade.test.mjs": "be86fc36a5e9391dc9ed560551916f09a68841d6511f47ed810bb224fe99688b",
+  "test/version.test.mjs": "dafddb47c59b79ad9dba9a4c79d38c35a505066fe7b26d5fcde66c98ef4151de"
+}
