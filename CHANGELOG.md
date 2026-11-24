@@ -2,7 +2,7 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
-## 1.13.11 — Unreleased
+## 1.13.11 — 2026-11-24
 
 - **DEV_OS never picks a model or an effort for you.** Every role starts empty, in the terminal and on the guided page: the reviewer, the light reviewer, each builder, the default builder when there are several, who picks the builder for each task, the blueprint agent and the agent that writes an adoption. Nothing is filled in from the choices of an earlier project, and `devos init` no longer offers to save them as defaults.
 - **Each role's effort is your choice too.** For Claude Code and Codex you choose the reviewer's effort (deep reviews, method changes, intake, the supervisor and the doctor), its effort on a gate, and the effort of light reviews (the light reviewer's own, or the reviewer's when it does them). A builder's effort is one for every task, or `fence`: the reviewer chooses it in each fence. The blueprint agent and the adoption agent (`devos adopt --effort <level>`) have one as well. Whether a retry raises the reviewer's effort one step is your yes or no (`agents.raise_on_retry`).
