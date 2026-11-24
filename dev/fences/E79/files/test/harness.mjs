@@ -471,7 +471,9 @@ export function stage(options = {}) {
   const project = path.join(parent, "project");
   const stubs = path.join(parent, "bin");
   const home = path.join(parent, "home");
-  writeStubs(stubs, options.tools ?? []);
+  // E79 (PR-99): the agent questions are answered by model, so Cursor's CLI is always the stand-in: the computer's own
+  // `agent models` list (which may leave out grok-4.7) never decides what a test can choose.
+  writeStubs(stubs, [...new Set(["agent", ...(options.tools ?? [])])]);
   mkdirSync(path.join(home, ".devos"), { recursive: true });
   if (options.visibility) {
     writeFileSync(path.join(home, ".devos", "profile.json"), `${JSON.stringify({ visibility: options.visibility }, null, 2)}\n`);
