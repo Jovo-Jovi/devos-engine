@@ -323,11 +323,29 @@ test("ui-page.test.mjs (m) E80: the adopt screen asks the tool, the model and th
     "agentPicker({ name: \"adopt\", value: pick, tools, onChange: drawEffort })",
     "effortField({ id: \"adopt-effort\", label: \"Effort\", agent: pick, key: \"effort\",",
     "disabled: adopt.busy || !ready || !adoptPicked(pick)",
-    "const body = { folder: adopt.folder.trim(), agent: `${pick.tool}:${pick.model}`, ...(takesEffortFlag(pick.tool) ? { effort: pick.effort } : {}) };",
+    "...(adoptPicked(pick) ? { agent: `${pick.tool}:${pick.model}`, ...(takesEffortFlag(pick.tool) ? { effort: pick.effort } : {}) } : {}),",
     "\"Ready. Choose the tool, the model and the effort that write the brief, then write it.\"",
     "(not in git: DEV_OS commits a copy, and keeps yours outside the project)",
   ]) {
     assert.equal(js.includes(text), true, text);
   }
   assert.equal(js.includes("Next you choose its tool, model and effort"), false);
+});
+
+test("ui-page.test.mjs (n) E81: a stop with the brief kept offers a try again from it, a model's marks are badges, and a name in other letter case is a move", async () => {
+  const js = readFileSync(path.join(ui, "app.js"), "utf8");
+  for (const text of [
+    "const retry = run.adopt?.stopped?.retry === true;",
+    "text: \"Try again from the brief\"",
+    "onclick: () => startAdopt({ install: true })",
+    "text: \"Start over with a new brief\"",
+    "...(install ? { install: true } : {}),",
+    "only in letter case, and Windows and macOS read the two as one file)",
+  ]) {
+    assert.equal(js.includes(text), true, text);
+  }
+  const { MODEL_MARKS } = await import("../lib/init.mjs");
+  assert.equal(js.includes(`const MODEL_BADGES = [${Object.values(MODEL_MARKS).map((mark) => JSON.stringify(mark)).join(", ")}];`), true);
+  assert.equal(js.includes("On your account"), false);
+  assert.equal(js.includes("(on your account)"), false);
 });

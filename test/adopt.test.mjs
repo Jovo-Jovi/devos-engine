@@ -6,10 +6,11 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
 import { cleanup, stage } from "./harness.mjs";
-import { ADOPT_IGNORE, AREA_IMPORTS, GATE_IMPORTS, adoptBlocks, adoptStops, asidePath, chooseAgent, copyPrecedents, copyStops, criticalList, ownSettings, projectFromConfig, sourceRoots, surveyLines, surveyProject, uiReader } from "../lib/adopt.mjs";
+import { ADOPT_IGNORE, AREA_IMPORTS, GATE_IMPORTS, adoptBlocks, adoptStops, asidePath, caseClashes, documentCrashes, moveNote, chooseAgent, copyPrecedents, copyStops, criticalList, ownSettings, projectFromConfig, sourceRoots, surveyLines, surveyProject, uiReader } from "../lib/adopt.mjs";
 import { merge } from "../payload/files/scripts/devos/config.mjs";
 import { hubExec } from "../lib/hub.mjs";
 import { confirm, multiSelect, select } from "../lib/menu.mjs";
+import { agentListNote, MODEL_MARKS, modelOptions } from "../lib/init.mjs";
 import { matchesAny } from "../payload/files/scripts/devos/lib.mjs";
 
 // E33 (D-E13): devos adopt --check surveys an existing project and changes nothing. E34: devos adopt has the
@@ -750,4 +751,46 @@ test("adopt.test.mjs (u) files with DEV_OS's names: where each goes, what the su
   } finally {
     cleanup(folder);
   }
+});
+
+test("adopt.test.mjs (v) E81: names that differ from DEV_OS's only in letter case, found on every system; a guard that crashes on a document; and what each model's line says", () => {
+  // From git's own list, so a system that tells the two names apart finds them too.
+  const clash = caseClashes(["docs/decisions.md", "docs/glossary.md", "claude.md", "Scripts/devos/x.mjs", "src/app.ts"], ["docs/DECISIONS.md", "docs/GLOSSARY.md", "CLAUDE.md", "scripts/devos/lib.mjs", "docs/PHASES.md"], "/work/shop");
+  assert.deepEqual(clash.moves, [{ from: "docs/decisions.md", devos: "docs/DECISIONS.md" }, { from: "docs/glossary.md", devos: "docs/GLOSSARY.md" }]);
+  assert.deepEqual(clash.stops, [
+    "devos: your folder Scripts/ and DEV_OS's scripts/ differ only in letter case, and Windows and macOS read them as one folder. In /work/shop, git mv Scripts scripts.devos-case, then git mv scripts.devos-case scripts, then git commit -m \"Rename Scripts to scripts\", and run devos adopt again.",
+    "devos: your claude.md and DEV_OS's CLAUDE.md differ only in letter case, and DEV_OS adds its rules to that file. In /work/shop, git mv claude.md CLAUDE.md.devos-case, then git mv CLAUDE.md.devos-case CLAUDE.md, then git commit -m \"Rename claude.md to CLAUDE.md\", and run devos adopt again.",
+  ]);
+  const both = caseClashes(["docs/GLOSSARY.md", "docs/glossary.md"], ["docs/GLOSSARY.md"], "/work/shop");
+  assert.deepEqual(both.moves, []);
+  assert.deepEqual(both.stops, ["devos: git tracks docs/GLOSSARY.md and docs/glossary.md, names that differ only in letter case, and Windows and macOS read them as one file. Keep one: git rm --cached docs/glossary.md (or rename it), git commit -m \"Keep one docs/GLOSSARY.md\", then run devos adopt again."]);
+  assert.equal(moveNote({ from: "docs/decisions.md", to: "docs/before-adopt/decisions.md", case: "docs/DECISIONS.md" }), " (its name differs from DEV_OS's docs/DECISIONS.md only in letter case, and Windows and macOS read the two as one file)");
+  assert.equal(moveNote({ from: "docs/DECISIONS.md", to: "docs/before-adopt/DECISIONS.md", untracked: true }, "DEV_OS"), " (not in git: DEV_OS commits a copy, and keeps yours outside the project)");
+  assert.equal(moveNote({ from: "docs/DECISIONS.md", to: "docs/before-adopt/DECISIONS.md" }), "");
+  // A project with DEV_OS's documents in lower case: each goes aside under its own name, after the same yes.
+  const folder = project({ "README.md": "# Shop\n", "docs/decisions.md": "# Ours\n", "docs/glossary.md": "# Terms\n" });
+  try {
+    const survey = surveyProject(folder, { exec: fakeGh() });
+    assert.equal(survey.ready, true, survey.blockers.join("; "));
+    const blocks = adoptBlocks(folder, survey, root, fakeGh());
+    assert.deepEqual(blocks.moves, [
+      { from: "docs/decisions.md", to: "docs/before-adopt/decisions.md", case: "docs/DECISIONS.md" },
+      { from: "docs/glossary.md", to: "docs/before-adopt/glossary.md", case: "docs/GLOSSARY.md" },
+    ]);
+    assert.deepEqual(blocks.stops, []);
+    assert.equal(surveyLines(survey, blocks).includes("Move aside: 2 files with DEV_OS's names, to docs/before-adopt/ on the adopt branch after your yes (docs/decisions.md → docs/before-adopt/decisions.md (its name differs from DEV_OS's docs/DECISIONS.md only in letter case, and Windows and macOS read the two as one file), docs/glossary.md → docs/before-adopt/glossary.md (its name differs from DEV_OS's docs/GLOSSARY.md only in letter case, and Windows and macOS read the two as one file))"), true);
+  } finally {
+    rmSync(folder, { recursive: true, force: true });
+  }
+  // A guard that cannot read one of DEV_OS's documents goes back to the tool; a finding in the project's code does not.
+  const results = { naming: { status: "FAIL", findings: ["guard crashed: docs/GLOSSARY.md §3 has no fenced list of forbidden nouns"] }, secrets: { status: "FAIL", findings: ["src/a.ts:1 a key"] }, imports: { status: "FAIL", findings: ["guard crashed: cannot read src/x.ts"] } };
+  assert.deepEqual(documentCrashes(JSON.stringify(results)), ["guard:naming guard crashed: docs/GLOSSARY.md §3 has no fenced list of forbidden nouns"]);
+  assert.deepEqual(documentCrashes("not json"), []);
+  // Each model's line says where its id comes from and whether an effort follows; the note names each tool's key.
+  const detected = [{ toolId: "cursor", status: "installed", signedIn: true, groups: [{ models: [{ id: "grok-4.7-high", available: true, reported: true }] }] }];
+  const labels = modelOptions(detected, false, true).map((option) => option.label);
+  assert.equal(labels.includes(`Cursor CLI · grok-4.7-high — ${MODEL_MARKS.listed}`), true);
+  assert.equal(labels.includes(`Claude Code · claude-opus-5-5 — ${MODEL_MARKS.effort}`), true);
+  assert.equal(labels.includes("Gemini CLI · gemini-2.5-pro"), true);
+  assert.equal(agentListNote(), "Cursor CLI lists the models of your account (\"listed by your account\"); Claude Code, Codex CLI and Gemini CLI do not, so their lists are DEV_OS's. Claude Code and Codex CLI ask the effort after the model (\"effort asked next\"); Cursor CLI's model id carries its effort. On GitHub each tool runs with a key of its own: devos asks for the keys of the tools you choose (and of your modules, a database's among them) at the Keys step, before anything reaches GitHub.");
 });

@@ -835,6 +835,9 @@ async function workerAb() {
     if (loose.status !== 400 || loose.body?.errors?.[0] !== "An effort is low, medium, high, xhigh or max, and goes with the AI tool and its model.") {
       throw new Error(`effort alone: ${loose.status} ${JSON.stringify(loose.body)}`);
     }
+    // E81: a try again from the kept brief is install: true, and nothing else.
+    const odd = await post("/api/adopt/start", { folder, install: "yes" });
+    if (odd.status !== 400 || odd.body?.errors?.[0] !== "install is true or false.") throw new Error(`install: ${odd.status} ${JSON.stringify(odd.body)}`);
     const started = await post("/api/adopt/start", { folder });
     if (started.status !== 202) throw new Error(`start: ${started.status} ${JSON.stringify(started.body)}`);
     const state = await fetch(`${origin}/api/state`, { headers: { "X-DEVOS-Token": server.token } });

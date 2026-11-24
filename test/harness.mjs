@@ -154,6 +154,8 @@ process.stdin.on("end", () => {
   const firstRound = mode === "refs-unnamed-then-good" && !args.includes("--continue");
   writeFileSync(path.join(docs, "design", "REFERENCES.md"), ["| Ref | Source | What we take | What we leave |", "|---|---|---|---|", ...(firstRound ? [] : refNames).map((name, i) => "| R" + (i + 1) + " | " + name + " | the spacing | the colours |")].join("\\n") + "\\n");
   if (mode === "bad-fence-then-good" && !args.includes("--continue")) writeFileSync(path.join(docs, "fences", "T01.md"), "# T01\\n");
+  // E81: a glossary the naming guard cannot read (its §3 has no fenced list), repaired in the next round.
+  if (mode === "bad-glossary-then-good" && !args.includes("--continue")) writeFileSync(path.join(docs, "GLOSSARY.md"), "# Glossary\\n\\n## 3.\\n\\nnone yet\\n");
   if (mode === "omit-questions" && args.includes("--continue")) {
     writeFileSync(path.join(docs, "OPEN_QUESTIONS.md"), "# Open questions\\n");
   }
