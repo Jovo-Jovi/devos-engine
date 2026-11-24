@@ -2,6 +2,16 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
+## 1.13.12 — Unreleased
+
+- **Adopting no longer stops on files with DEV_OS's names that git ignores.** When your `.gitignore` leaves out a file such as `docs/DECISIONS.md` or `docs/GLOSSARY.md`, `devos adopt` no longer asks you to commit it first. It joins the same plan and the same single yes as the committed ones (the terminal, the guided page's **Move them aside and continue**, or `--move-aside`):
+  - devos commits a copy of it in `docs/before-adopt/` in the first commit of `devos/adopt`, and the AI tool that writes DEV_OS's documents carries over what still holds;
+  - once DEV_OS is committed on the branch, it moves your own copy out of the project into `~/.devos/adopt/<owner>__<repo>/before-adopt/`. Git treats an ignored file as disposable, so pulling the merge would otherwise overwrite it with DEV_OS's file. A file already kept there is never overwritten, and a new brief never clears that folder;
+  - the survey, the question, the pull request and `devos/answers.json` say which files were not in git.
+
+  An ignored folder or link with one of DEV_OS's names still stops the adoption, and says to move it out of the project.
+- **The guided page asks the adoption's tool, model and effort on its first screen.** After the survey, you choose the tool, the model and (for Claude Code and Codex) the effort that write the brief and DEV_OS's documents, with nothing picked; **Write the brief** waits for all three. Before, the screen said to choose but showed nothing until the brief had started.
+
 ## 1.13.11 — 2026-11-24
 
 - **DEV_OS never picks a model or an effort for you.** Every role starts empty, in the terminal and on the guided page: the reviewer, the light reviewer, each builder, the default builder when there are several, who picks the builder for each task, the blueprint agent and the agent that writes an adoption. Nothing is filled in from the choices of an earlier project, and `devos init` no longer offers to save them as defaults.

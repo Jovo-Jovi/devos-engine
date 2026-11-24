@@ -43,7 +43,7 @@ task is then built from a written fence, checked, reviewed, and merged by you.
   <img alt="The DEV_OS Engine at the centre sends the work through each step in turn: brief, blueprint, fence, builder, guards, CI and review, and you approve the merge" src="docs/assets/devos-flow.svg" width="900">
 </p>
 
-Version `1.13.11`. The engine is under PolyForm Shield 1.0.0 and the files it installs into your project under MIT
+Version `1.13.12`. The engine is under PolyForm Shield 1.0.0 and the files it installs into your project under MIT
 (see [Licence](#licence)).
 
 ## Contents
@@ -356,12 +356,15 @@ or another file named like one of DEV_OS's, the survey lists where each would go
 brief: **yes** moves them to `docs/before-adopt/` (for example `.cursor/rules/00-project.mdc` to
 `docs/before-adopt/cursor-rules/00-project.mdc`), in a first commit of their own on `devos/adopt`, so your checkout
 stays as it is. The AI tool that writes DEV_OS's documents carries over every decision, term and convention that still
-holds, and the pull request lists each move. `--move-aside` says yes without asking. Anything else that stops the
-adoption says the commands that fix it.
+holds, and the pull request lists each move. `--move-aside` says yes without asking. A file your `.gitignore` leaves
+out goes aside after the same yes: devos commits a copy of it there, and once DEV_OS is committed it moves your own
+copy out of the project into `~/.devos/adopt/<owner>__<repo>/before-adopt/`, since git would otherwise overwrite it
+when you pull the merge. Anything else that stops the adoption says the commands that fix it.
 
-On the guided page (`devos ui`, then **Existing project**) the same steps are screens: the survey as facts, the brief
-to keep or change, the contract and the Control Tower link, the cycle's agents from their whole model lists, a Keys step
-that shows which keys GitHub already has and what to set in Vercel, and the pull request with what happens next.
+On the guided page (`devos ui`, then **Existing project**) the same steps are screens: the survey as facts, the tool,
+model and effort that write the brief (nothing is picked for you), the brief to keep or change, the contract and the
+Control Tower link, the cycle's agents from their whole model lists, a Keys step that shows which keys GitHub already
+has and what to set in Vercel, and the pull request with what happens next.
 
 An older hand-copied DEV_OS keeps its documents and settings; its method files become the engine's. It is adopted only
 while no task branch is open and no cycle runs.
