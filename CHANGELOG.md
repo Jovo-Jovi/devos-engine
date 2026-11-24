@@ -2,7 +2,7 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
-## 1.13.12 — Unreleased
+## 1.13.12 — 2026-11-24
 
 - **Adopting no longer stops on files with DEV_OS's names that git ignores.** When your `.gitignore` leaves out a file such as `docs/DECISIONS.md` or `docs/GLOSSARY.md`, `devos adopt` no longer asks you to commit it first. It joins the same plan and the same single yes as the committed ones (the terminal, the guided page's **Move them aside and continue**, or `--move-aside`):
   - devos commits a copy of it in `docs/before-adopt/` in the first commit of `devos/adopt`, and the AI tool that writes DEV_OS's documents carries over what still holds;
