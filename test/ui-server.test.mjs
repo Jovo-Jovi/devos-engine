@@ -10,7 +10,7 @@ import { fileURLToPath } from "node:url";
 import { CONTRACT_VERSION } from "../lib/contract.mjs";
 import { engineRoot } from "../lib/engine.mjs";
 import { readChoices, rememberChoices, savedChoices, startUiServer } from "../lib/ui-server.mjs";
-import { cleanup, flow, init, processGone, stage } from "./harness.mjs";
+import { cleanup, flow, githubCopy, init, processGone, stage } from "./harness.mjs";
 
 const here = fileURLToPath(import.meta.url);
 const CSP = "default-src 'self'; connect-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; frame-ancestors 'none'";
@@ -814,6 +814,7 @@ async function workerAb() {
     const result = git(args);
     if (result.status !== 0) throw new Error(`git ${args.join(" ")}: ${result.stderr}`);
   }
+  githubCopy(folder, "devtest/demo-app", staged.env);
   let server;
   try {
     server = await startUiServer({ folder: null, port: 0 });
@@ -1173,6 +1174,7 @@ if (workers[workerName]) {
     for (const args of [["init", "-q", "-b", "main"], ["config", "core.autocrlf", "false"], ["add", "-A"], ["commit", "-q", "-m", "the project"], ["remote", "add", "origin", "https://github.com/devtest/demo-app.git"]]) {
       assert.equal(git(args).status, 0, args.join(" "));
     }
+    githubCopy(folder, "devtest/demo-app", staged.env);
     const saved = { PATH: process.env.PATH, STUB_REPO: process.env.STUB_REPO, DEVOS_GH_LOG: process.env.DEVOS_GH_LOG };
     process.env.PATH = staged.env.PATH;
     process.env.STUB_REPO = "full";
