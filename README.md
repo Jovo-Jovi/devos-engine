@@ -43,7 +43,7 @@ task is then built from a written fence, checked, reviewed, and merged by you.
   <img alt="The DEV_OS Engine at the centre sends the work through each step in turn: brief, blueprint, fence, builder, guards, CI and review, and you approve the merge" src="docs/assets/devos-flow.svg" width="900">
 </p>
 
-Version `1.13.14`. The engine is under PolyForm Shield 1.0.0 and the files it installs into your project under MIT
+Version `1.13.15`. The engine is under PolyForm Shield 1.0.0 and the files it installs into your project under MIT
 (see [Licence](#licence)).
 
 ## Contents
@@ -423,7 +423,7 @@ must be committed.
 | `devos models set <role> <model>` · `reset <role>` | Sets or clears the role's model variable for the next run. Roles: `reviewer`, `light`, `builder`. |
 | `devos models check [folder] [--apply]` | Each role's model against what its tool offers now: the tool's own list (Cursor), its provider's models API with a key already in your shell (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`), else the engine's list. `--apply` switches each role that has a newer model of its line, through its model variable. |
 | `devos models fallback <role> <model,…\|none>` | Opens a pull request with the role's next models (up to 4). |
-| `devos models tool <role> <tool> <model>` | Opens a pull request that moves the role to another tool (`cursor`, `claude`, `codex`, `gemini`) and model, once the repository has its key. |
+| `devos models tool <role> <tool> <model>` | Opens a pull request that moves the role to another tool (`cursor`, `claude`, `codex`, `gemini`) and model, once the repository has its key. It asks each effort the new tool takes, or takes `--effort`, `--gate-effort` and `--light-effort`. |
 | `devos agents detect` | Lists the AI CLIs here, their versions, and whether each is signed in. |
 | `devos agents show` · `import <file>` | Shows or saves a roster (`~/.devos/roster.json`); setup never fills a choice from it. |
 | `devos profile show` · `set <key> <value>` | Your defaults (`~/.devos/profile.json`). It refuses anything that looks like a key. |

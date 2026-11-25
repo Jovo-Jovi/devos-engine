@@ -355,6 +355,16 @@ test("agents-kit.test.mjs (v) neededKeys follows the tools and vercel", () => {
       ["VERCEL_PROJECT_ID", true],
     ],
   );
+  // E83 (PR-100): the reviewer and the light reviewer may be any cycle tool; the Keys step asks for each one's key.
+  const anyTool = { reviewer: { tool: "gemini" }, reviewer_light: { tool: "codex" }, pool: [{ tool: "cursor" }] };
+  assert.deepEqual(neededKeys(setup, { deploy: "none" }, anyTool).map((key) => [key.name, key.optional]), [
+    ["CURSOR_API_KEY", false],
+    ["CURSOR_API_KEY_2", true],
+    ["OPENAI_API_KEY", false],
+    ["OPENAI_API_KEY_2", true],
+    ["GEMINI_API_KEY", false],
+    ["GEMINI_API_KEY_2", true],
+  ]);
 });
 
 test("agents-kit.test.mjs codex and gemini put the prompt on stdin", () => {

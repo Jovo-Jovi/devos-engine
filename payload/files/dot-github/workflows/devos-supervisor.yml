@@ -163,11 +163,13 @@ jobs:
           # PR-52: nothing here is committed, so this run's usage goes on its summary page only.
           node scripts/devos/usage.mjs record --stage supervisor --command claude --model "$MODEL" --out .devos/supervisor/claude.json --summary || true
 
+      # PR-100: the issue the scan found or made, so one run never makes two.
       - name: Act and report
         if: github.event_name != 'issue_comment' && steps.scan.outputs.incidents != '0'
         env:
           OWNER_TOKEN: ${{ secrets.DEVOS_PAT || github.token }}
-        run: node scripts/devos/supervisor.mjs act $DRY --claude .devos/supervisor/claude.json
+          ISSUE: ${{ steps.scan.outputs.issue }}
+        run: node scripts/devos/supervisor.mjs act $DRY --claude .devos/supervisor/claude.json --issue "$ISSUE"
 
       # D9: what the supervisor found and did; never the model's own output (claude.json, claude.err).
       - if: always()

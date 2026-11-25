@@ -345,7 +345,9 @@ function detect(facts) {
   const lastRun = facts.runs[0];
   const waitingForOwner = facts.task_prs.some((p) => p.labels.some((l) => ["devos:human-gate", "devos:quota-wait", "devos:halted", "devos:needs-you"].includes(l))) ||
     (facts.acceptance_prs ?? []).length > 0 || facts.unit_complete === true;
-  if (!busy && !waitingForOwner && !inc.length && facts.next_task && facts.intake_prs.length === 0 &&
+  // PR-100: red checks on main do not hold the next task back: a task is how main gets fixed (an adopted project's
+  // checks stay red until its first task, T01, adds what they need).
+  if (!busy && !waitingForOwner && !inc.some((i) => i.kind !== "main-failure") && facts.next_task && facts.intake_prs.length === 0 &&
       (!lastRun || minutesSince(lastRun.updated) > S.idle_minutes) &&
       !facts.task_prs.some((p) => p.head === `task/${facts.next_task.task}`)) {
     add({ kind: "idle", task: facts.next_task.task, attempt: 1, key: `${facts.next_task.task}:idle`,
@@ -386,14 +388,33 @@ function plannedTasks(issue) {
 }
 
 // ---------- the supervisor issue: one comment per incident, with a machine-readable marker ----------
-function supervisorIssue() {
-  const found = api(`repos/${REPO}/issues?labels=${encodeURIComponent(S.issue_label)}&state=open&per_page=1`);
-  if (Array.isArray(found) && found[0]) return found[0].number;
+// PR-100: one issue. The scan's issue is the act's (--issue): GitHub's list by label can miss an issue made seconds
+// before, so the act no longer asks it again (learn-coptic got #6 from the scan and #7 from the act of one run). The
+// oldest open one is the issue; a later one is closed with a line that names it.
+let knownIssue = 0;
+function supervisorIssue(given = 0) {
+  if (knownIssue) return knownIssue;
+  if (Number.isInteger(given) && given > 0) {
+    const one = api(`repos/${REPO}/issues/${given}`);
+    if (one && one.state === "open" && !one.pull_request && (one.labels ?? []).some((l) => (l?.name ?? l) === S.issue_label)) return (knownIssue = given);
+  }
+  const listed = api(`repos/${REPO}/issues?labels=${encodeURIComponent(S.issue_label)}&state=open&sort=created&direction=asc&per_page=20`);
+  const found = Array.isArray(listed) ? listed.filter((i) => i && !i.pull_request && Number.isInteger(i.number)) : [];
+  if (found[0]) {
+    knownIssue = found[0].number;
+    if (!DRY) {
+      for (const extra of found.slice(1)) {
+        gh(["api", `repos/${REPO}/issues/${extra.number}/comments`, "-f", `body=The Dev OS supervisor reports on #${knownIssue}; this second issue is closed.`], { allowFail: true });
+        gh(["api", "-X", "PATCH", `repos/${REPO}/issues/${extra.number}`, "-f", "state=closed", "-f", "state_reason=not_planned"], { allowFail: true });
+      }
+    }
+    return knownIssue;
+  }
   if (DRY) return 0;
   gh(["api", `repos/${REPO}/labels`, "-f", `name=${S.issue_label}`, "-f", "color=5319e7", "-f", "description=Dev OS supervisor reports"], { allowFail: true });
   const body = "The Dev OS supervisor reports here: one comment per incident, with what happened, what it did, and what needs you.\n\nApprove a proposal by replying `/devos approve <id>`, or decline it with `/devos reject <id>`. Turn the supervisor off with the repository variable `DEVOS_SUPERVISOR=off`.";
   const created = JSON.parse(gh(["api", `repos/${REPO}/issues`, "-f", `title=${S.issue_title}`, "-f", `body=${body}`, "-f", `labels[]=${S.issue_label}`], { report: true }));
-  return created.number;
+  return (knownIssue = created.number);
 }
 // Every page of the issue's comments: the counts per cause (`max_auto_per_key`) must see them all (PR-70).
 function allComments(issue) {
@@ -544,7 +565,7 @@ if (cmd === "scan") {
   const incidents = existsSync(`${DIR}/incidents.json`) ? JSON.parse(readFileSync(`${DIR}/incidents.json`, "utf8")) : detect(facts);
   const cl = opt("claude") && existsSync(opt("claude")) ? JSON.parse(readFileSync(opt("claude"), "utf8")) : null;
   const ai = cl?.structured_output?.incidents || cl?.incidents || [];
-  const issue = supervisorIssue();
+  const issue = supervisorIssue(Number(opt("issue")) || 0);
   const hist = history(issue);
   const old = reportedKeys(hist);
   for (const i of incidents) {

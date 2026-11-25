@@ -585,3 +585,69 @@ test("hardening.test.mjs (o) PR-98: the setup check advises VERCEL_AUTOMATION_BY
     cleanup(dir);
   }
 });
+
+// ---------- PR-100: red checks on main do not hold the next task back; one supervisor issue
+
+test("hardening.test.mjs (n) the checks failing on main are reported, and the next open task still starts when nothing runs", { skip: windows && "a stand-in gh cannot run without a shell on Windows" }, () => {
+  const dir = mkdtempSync(path.join(tmpdir(), "devos-sup-"));
+  const bin = mkdtempSync(path.join(tmpdir(), "devos-gh-"));
+  try {
+    stagedAt(dir);
+    mkdirSync(path.join(dir, "docs"), { recursive: true });
+    writeFileSync(path.join(dir, "docs", "PHASES.md"), "# Phases\n\n| Task | Phase | Station | Name | Risk | Gate | Done | Verdict |\n|---|---|---|---|---|---|---|---|\n| T01 | P0 | setup | The lockfile and the scripts | 3 | — | [ ] | — |\n");
+    const log = ["ci\tInstall\t2026-11-24T22:45:00Z ERR_PNPM_NO_LOCKFILE  Cannot install with \"frozen-lockfile\" because pnpm-lock.yaml is absent", "ci\tInstall\t2026-11-24T22:45:01Z ##[error]Process completed with exit code 1."].join("\n");
+    ruleGh(bin, [
+      ["^run view 901 --repo devtest/demo --log-failed$", log],
+      ["actions/runs/901/jobs", JSON.stringify({ jobs: [{ id: 78, name: "checks", conclusion: "failure", steps: [{ name: "Install", conclusion: "failure" }] }] })],
+      ["issues\\?labels=", '[{"number":50}]'],
+      ["--paginate", "[[]]"],
+    ]);
+    const env = { ...process.env, PATH: `${bin}${path.delimiter}${process.env.PATH}`, REPO: "devtest/demo", GH_TOKEN: "builtin-token", REPORT_TOKEN: "builtin-token", EVENT_NAME: "workflow_run", WF_NAME: "ci", WF_PATH: ".github/workflows/ci.yml", WF_RUN_ID: "901", WF_CONCLUSION: "failure" };
+    const r = spawnSync(process.execPath, ["scripts/devos/supervisor.mjs", "scan"], { cwd: dir, encoding: "utf8", env, windowsHide: true });
+    assert.equal(r.status, 0, r.stderr || r.stdout);
+    const incidents = JSON.parse(read(path.join(dir, ".devos", "supervisor", "incidents.json")));
+    assert.deepEqual(incidents.map((i) => [i.kind, i.task, i.action]), [["main-failure", "", "ask-claude"], ["idle", "T01", "dispatch-next"]]);
+    assert.ok(r.stdout.includes("  - idle T01 → dispatch-next"), r.stdout);
+  } finally {
+    cleanup(dir);
+    cleanup(bin);
+  }
+});
+
+test("hardening.test.mjs (o) the act reports on the issue the scan found, never makes a second one, and closes a later one", { skip: windows && "a stand-in gh cannot run without a shell on Windows" }, () => {
+  const dir = mkdtempSync(path.join(tmpdir(), "devos-sup-"));
+  const bin = mkdtempSync(path.join(tmpdir(), "devos-gh-"));
+  try {
+    stagedAt(dir);
+    // GitHub's list by label does not show the issue yet (it was made seconds ago); the issue itself is there.
+    ruleGh(bin, [["repos/devtest/demo/issues/6$", '{"number":6,"state":"open","labels":[{"name":"devos:supervisor"}]}'], ["issues\\?labels=", "[]"], ["--paginate", "[[]]"], ["issues/6/comments -f", "{}"]]);
+    const sup = path.join(dir, ".devos", "supervisor");
+    mkdirSync(sup, { recursive: true });
+    writeFileSync(path.join(sup, "facts.json"), JSON.stringify({ task_prs: [], active: [] }));
+    writeFileSync(path.join(sup, "incidents.json"), JSON.stringify([{ id: "main-failure-x-k2-0", kind: "main-failure", task: "", attempt: 0, key: "main:ci:901", action: "report", cause: "the checks on main failed" }]));
+    const env = { ...process.env, PATH: `${bin}${path.delimiter}${process.env.PATH}`, REPO: "devtest/demo", GH_TOKEN: "builtin-token", REPORT_TOKEN: "builtin-token" };
+    const r = spawnSync(process.execPath, ["scripts/devos/supervisor.mjs", "act", "--claude", path.join(sup, "claude.json"), "--issue", "6"], { cwd: dir, encoding: "utf8", env, windowsHide: true });
+    assert.equal(r.status, 0, r.stderr || r.stdout);
+    const calls = read(path.join(bin, "calls.jsonl")).trim().split("\n").map((line) => JSON.parse(line).args.join(" "));
+    assert.equal(calls.some((call) => call.includes("repos/devtest/demo/issues/6/comments -f")), true, calls.join("\n"));
+    assert.equal(calls.some((call) => /repos\/devtest\/demo\/issues -f title=/.test(call)), false, calls.join("\n"));
+    assert.equal(calls.some((call) => call.includes("issues?labels=")), false, calls.join("\n"));
+
+    // Two open issues from before: the oldest is the issue, and the later one is closed with a line naming it.
+    writeFileSync(path.join(bin, "calls.jsonl"), "");
+    ruleGh(bin, [["issues\\?labels=", '[{"number":6},{"number":7},{"number":8,"pull_request":{}}]'], ["--paginate", "[[]]"], ["issues/6/comments -f", "{}"], ["issues/7", "{}"]]);
+    const two = spawnSync(process.execPath, ["scripts/devos/supervisor.mjs", "act", "--claude", path.join(sup, "claude.json")], { cwd: dir, encoding: "utf8", env, windowsHide: true });
+    assert.equal(two.status, 0, two.stderr || two.stdout);
+    const later = read(path.join(bin, "calls.jsonl")).trim().split("\n").map((line) => JSON.parse(line).args.join(" "));
+    assert.equal(later.some((call) => call.includes("issues?labels=devos%3Asupervisor&state=open&sort=created&direction=asc&per_page=20")), true, later.join("\n"));
+    assert.equal(later.some((call) => call.includes("repos/devtest/demo/issues/7/comments -f body=The Dev OS supervisor reports on #6; this second issue is closed.")), true, later.join("\n"));
+    assert.equal(later.some((call) => call.includes("-X PATCH repos/devtest/demo/issues/7 -f state=closed -f state_reason=not_planned")), true, later.join("\n"));
+    assert.equal(later.some((call) => call.includes("issues/8")), false, later.join("\n"));
+    assert.equal(later.some((call) => call.includes("repos/devtest/demo/issues/6/comments -f")), true, later.join("\n"));
+  } finally {
+    cleanup(dir);
+    cleanup(bin);
+  }
+  const workflow = read(path.join(workflows, "devos-supervisor.yml"));
+  assert.ok(workflow.includes("          ISSUE: ${{ steps.scan.outputs.issue }}\n        run: node scripts/devos/supervisor.mjs act $DRY --claude .devos/supervisor/claude.json --issue \"$ISSUE\""));
+});

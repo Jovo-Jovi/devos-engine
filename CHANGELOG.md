@@ -2,6 +2,13 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
+## 1.13.15 — Unreleased
+
+- **The next task starts while main's checks are red (PR-100).** A failing `ci` on main no longer holds the next open task back: when no task or cycle is running and nothing waits for you, the supervisor starts it, since a task is how main gets fixed. It still reports the failure.
+- **One "Dev OS: supervisor" issue (PR-100).** The supervisor's act step reports on the issue its scan found or made, so one run never opens two. When two are open from before, the oldest is the issue, and the later one is closed with a line that names it.
+- **`devos models tool` asks the new tool's efforts (PR-100).** Moving a role to a tool that takes an effort asks each one it needs, with nothing chosen for you, or takes `--effort`, `--gate-effort` and `--light-effort`. The Models panel's **Another tool** asks them the same way. An effort the tool does not take is refused.
+- **Any tool may review, once it is checked to run with no shell (PR-100).** The review runs as its own user with no shell (PR-90). `node tools/review-probe.mjs <tool> --model <id>`, for the engine's maintainer, checks whether Cursor, Codex, Gemini or Claude Code runs a command when its shell is off: it says holds, fails or inconclusive. Until the cycle runs a checked tool that way, it still asks for Claude Code as the reviewer. The Keys step already asks for the chosen reviewer's key.
+
 ## 1.13.14 — 2026-11-25
 
 - **Adopted from GitHub's `main` as it is now.** `devos adopt` fetches GitHub's `main` first. A checkout whose `main` is behind it, or has diverged from it, stops the survey: it names GitHub's commits the checkout lacks and says to `git pull`. Before, a project could be adopted from an old `main`, and its pull request then showed conflicts. A `main` ahead of GitHub's is a note: the pull request carries those commits. A fetch that fails stops too, with git's reason, since the adoption pushes to GitHub at its end.
