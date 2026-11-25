@@ -2,7 +2,7 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
-## 1.13.14 — Unreleased
+## 1.13.14 — 2026-11-25
 
 - **Adopted from GitHub's `main` as it is now.** `devos adopt` fetches GitHub's `main` first. A checkout whose `main` is behind it, or has diverged from it, stops the survey: it names GitHub's commits the checkout lacks and says to `git pull`. Before, a project could be adopted from an old `main`, and its pull request then showed conflicts. A `main` ahead of GitHub's is a note: the pull request carries those commits. A fetch that fails stops too, with git's reason, since the adoption pushes to GitHub at its end.
 - **GitHub's new commits before the push.** When GitHub's `main` moved since the brief, the push waits. If git merges the new commits into `devos/adopt` cleanly, devos asks, merges them after your yes, writes the baseline again with their findings, and runs DEV_OS's checks again; then the pull request opens without conflicts. If git cannot, or you say no, nothing is pushed, and the last lines give the merge by hand and the way to start again. `devos adopt --publish` takes a branch with such a merge, or with your own fix, after devos's commits.
