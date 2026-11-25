@@ -246,8 +246,20 @@ test("models-tool.test.mjs (d) a move is refused without the new tool's key, wit
     cursorReviewer.agents.reviewer = { id: "claude-deep", tool: "cursor", model: "grok-4.7-high" };
     onGitHub(cursorReviewer);
     const noEffort = setAgent(staged.project, "reviewer", "claude", "fable-x");
-    assert.equal(noEffort.ok, false);
-    assert.equal(noEffort.error.startsWith("the change would leave agents the runner refuses: devos: devos/project.json has no agents.reviewer.effort, agents.reviewer.gate_effort ("), true, noEffort.error);
+    assert.deepEqual(noEffort, {
+      ok: false,
+      missing: ["effort", "gate_effort"],
+      levels: ["low", "medium", "high", "xhigh", "max"],
+      error: "Claude Code takes an effort and DEV_OS never picks one: give --effort <low|medium|high|xhigh|max> --gate-effort <low|medium|high|xhigh|max>",
+    });
+    // E83: the efforts given with the move are the ones it carries; one the tool does not take is refused.
+    assert.deepEqual(setAgent(staged.project, "reviewer", "claude", "fable-x", undefined, { efforts: { effort: "huge" } }), { ok: false, usage: true, error: "\"huge\" is not an effort of Claude Code: use low, medium, high, xhigh, max" });
+    assert.deepEqual(setAgent(staged.project, "reviewer", "cursor", "grok-4.7-xhigh", undefined, { efforts: { effort: "high" } }), { ok: false, usage: true, error: "Cursor takes no --effort for the reviewer" });
+    writeFileSync(staged.env.DEVOS_GH_LOG, "");
+    const given = setAgent(staged.project, "reviewer", "claude", "fable-x", undefined, { efforts: { effort: "high", gate_effort: "xhigh" } });
+    assert.equal(given.ok, true, given.error);
+    const moved = JSON.parse(puts(staged)[0].text).agents.reviewer;
+    assert.deepEqual([moved.tool, moved.model, moved.effort, moved.gate_effort], ["claude", "fable-x", "high", "xhigh"]);
     onGitHub(before);
 
     const twoTools = JSON.parse(JSON.stringify(before));
@@ -380,5 +392,71 @@ test("models-tool.test.mjs (f) Max is Claude Code's: the page offers it, a max r
   const changes = read("CHANGELOG.md");
   for (const line of ["- **A role can move to another tool (PR-86).**", "- **Max effort for Claude Code.**", "- **The builder's effort is never lowered quietly.**", "- **Cursor's `cursor-grok-*` models are listed under Grok,**"]) {
     assert.equal(changes.includes(line), true, line);
+  }
+});
+
+test("models-tool.test.mjs (g) devos models tool and the Models panel ask the efforts the new tool takes, and choose none (PR-100)", async () => {
+  const staged = stage();
+  const restore = useStubs(staged);
+  const before = setUp(staged);
+  const cursorReviewer = JSON.parse(JSON.stringify(before));
+  cursorReviewer.agents.reviewer = { id: "claude-deep", tool: "cursor", model: "grok-4.7-high" };
+  onGitHub(cursorReviewer);
+  const devos = (args, input = "") => spawnSync(process.execPath, [bin, "models", ...args], { cwd: staged.project, encoding: "utf8", windowsHide: true, env: process.env, input });
+  const server = await startUiServer({ folder: staged.project, port: 0 });
+  const address = `http://127.0.0.1:${server.port}`;
+  const call = async (body) => {
+    const response = await fetch(`${address}/api/agent`, { method: "POST", headers: { "X-DEVOS-Token": server.token, Origin: address, "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    return { status: response.status, body: await response.json() };
+  };
+  const reviewerOf = () => JSON.parse(puts(staged)[0].text).agents.reviewer;
+  try {
+    const moved = `devos: the pull request ${PULL} moves the reviewer from cursor · grok-4.7-high to claude · fable-x; merge it on GitHub to use it from the next cycle run, then pull this folder\n`;
+    writeFileSync(staged.env.DEVOS_GH_LOG, "");
+    const flags = devos(["tool", "reviewer", "claude", "fable-x", "--effort", "high", "--gate-effort", "xhigh"]);
+    assert.deepEqual([flags.status, flags.stdout], [0, moved]);
+    assert.deepEqual([reviewerOf().effort, reviewerOf().gate_effort], ["high", "xhigh"]);
+
+    writeFileSync(staged.env.DEVOS_GH_LOG, "");
+    const asked = devos(["tool", "reviewer", "claude", "fable-x"], "\n2\nmax\n");
+    assert.equal(asked.status, 0, asked.stdout + asked.stderr);
+    assert.match(asked.stdout, /^Its effort — claude · fable-x$/m);
+    assert.match(asked.stdout, /^Its effort on a gate \(a Gate task's review\) — claude · fable-x$/m);
+    assert.equal(asked.stdout.split("(type a number; nothing is chosen for you)").length - 1, 2);
+    assert.equal(asked.stdout.endsWith(moved), true, asked.stdout);
+    assert.deepEqual([reviewerOf().effort, reviewerOf().gate_effort], ["medium", "max"]);
+
+    writeFileSync(staged.env.DEVOS_GH_LOG, "");
+    const ended = devos(["tool", "reviewer", "claude", "fable-x", "--effort", "low"]);
+    assert.equal(ended.status, 1);
+    assert.equal(ended.stdout.endsWith("devos: input ended before setup finished\ndevos: models: Claude Code takes an effort and DEV_OS never picks one: give --gate-effort <low|medium|high|xhigh|max>\n"), true, ended.stdout);
+    assert.deepEqual(writes(staged), []);
+    const wrong = devos(["tool", "reviewer", "claude", "fable-x", "--effort", "huge"]);
+    assert.deepEqual([wrong.status, wrong.stdout], [2, "devos: models: \"huge\" is not an effort of Claude Code: use low, medium, high, xhigh, max\n"]);
+    const none = devos(["tool", "reviewer", "cursor", "grok-4.7-xhigh", "--effort", "high"]);
+    assert.deepEqual([none.status, none.stdout], [2, "devos: models: Cursor takes no --effort for the reviewer\n"]);
+    assert.deepEqual(writes(staged), []);
+
+    assert.deepEqual(await call({ role: "reviewer", tool: "claude", model: "fable-x" }), {
+      status: 400,
+      body: { ok: false, errors: ["This tool takes an effort and DEV_OS never picks one: choose each effort below."], missing: ["effort", "gate_effort"], levels: ["low", "medium", "high", "xhigh", "max"] },
+    });
+    assert.deepEqual(await call({ role: "reviewer", tool: "claude", model: "fable-x", efforts: { effort: 3 } }), { status: 400, body: { ok: false, errors: ["Send each effort as a word."] } });
+    assert.deepEqual(writes(staged), []);
+    const page = await call({ role: "reviewer", tool: "claude", model: "fable-x", efforts: { effort: "xhigh", gate_effort: "max" } });
+    assert.equal(page.status, 200, JSON.stringify(page.body));
+    assert.deepEqual([reviewerOf().effort, reviewerOf().gate_effort], ["xhigh", "max"]);
+  } finally {
+    await server.close();
+    restore();
+    cleanup(staged.parent);
+  }
+  const js = readFileSync(path.join(root, "lib", "ui", "app.js"), "utf8");
+  for (const text of [
+    "if (status === 400 && Array.isArray(data?.missing) && Array.isArray(data?.levels)) {",
+    "pick.append(el(\"option\", { value: \"\", text: `Choose ${names[key] ?? key}` }));",
+    "if (efforts.length > 0) body.efforts = Object.fromEntries(efforts.map((item) => [item.key, item.select.value]));",
+  ]) {
+    assert.equal(js.includes(text), true, text);
   }
 });

@@ -89,7 +89,7 @@ else if (args[0] === "adopt") code = await adoptCommand(args.slice(1));
 else if (args[0] === "verify") code = verifyCommand(args.slice(1));
 else if (args[0] === "watch") code = await watchCommand(args.slice(1));
 else if (args[0] === "models" && args[1] === "check") code = await modelsCheckCommand(args.slice(2));
-else if (args[0] === "models") code = modelsCommand(args.slice(1));
+else if (args[0] === "models") code = await modelsCommand(args.slice(1));
 else if (args[0] === "media") code = await mediaCommand(args.slice(1));
 else {
   console.log(`devos: unknown command ${args[0]}`);

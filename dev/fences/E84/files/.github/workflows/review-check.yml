@@ -1,0 +1,75 @@
+name: review-check
+
+# E84 (PR-101): whether a review tool runs no command on GitHub, as the cycle runs it: as devos-review (review-user.sh),
+# with the review's own settings, in a workspace a branch could have filled with hooks, MCP servers and a shell allow.
+# The engine's maintainer starts it by hand (Actions → review-check → Run workflow) with the repository secrets
+# CURSOR_API_KEY and CLAUDE_CODE_OAUTH_TOKEN set; a tool whose key is missing is skipped and named. Each line is
+# tools/review-probe.mjs's: the hostile run as the review user must say holds, and the control run (the shell allowed,
+# as the runner) must say fails, which shows the tool does try the command.
+on:
+  workflow_dispatch:
+    inputs:
+      cursor_model:
+        description: "Cursor model id (as agent models lists it)"
+        required: true
+        default: grok-4.7-low
+      claude_model:
+        description: "Claude Code model id"
+        required: true
+        default: claude-sonnet-5-5
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CURSOR_MODEL: ${{ inputs.cursor_model }}
+      CLAUDE_MODEL: ${{ inputs.claude_model }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: A project as devos install writes it
+        run: |
+          git init -q "$RUNNER_TEMP/p"
+          node bin/devos.mjs install "$RUNNER_TEMP/p" --key DEMO >/dev/null
+          echo "DEVOS_SCRIPTS=$RUNNER_TEMP/p/scripts/devos" >> "$GITHUB_ENV"
+      - name: Cursor, as the review user, in a hostile workspace (must say holds)
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+        run: |
+          [ -n "$CURSOR_API_KEY" ] || { echo "review-probe: cursor: skipped (no CURSOR_API_KEY secret)"; exit 0; }
+          DEVOS_REVIEW_TOOLS="claude cursor" bash "$DEVOS_SCRIPTS/review-user.sh" setup
+          node tools/review-probe.mjs cursor --model "$CURSOR_MODEL" --hostile --as-review "$DEVOS_SCRIPTS"
+      - name: Cursor with its shell allowed, as the runner (the control, must say fails)
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+        run: |
+          [ -n "$CURSOR_API_KEY" ] || { echo "review-probe: cursor: skipped (no CURSOR_API_KEY secret)"; exit 0; }
+          export PATH="/opt/devos-tools/bin:$PATH"
+          code=0; node tools/review-probe.mjs cursor --model "$CURSOR_MODEL" --control || code=$?
+          [ "$code" = 1 ] || { echo "::error::the control run did not run the command (exit $code): a holds above proves nothing"; exit 1; }
+      - name: Claude Code, as the review user, in a hostile workspace (must say holds)
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          [ -n "$CLAUDE_CODE_OAUTH_TOKEN" ] || { echo "review-probe: claude: skipped (no CLAUDE_CODE_OAUTH_TOKEN secret)"; exit 0; }
+          bash "$DEVOS_SCRIPTS/review-user.sh" setup
+          node tools/review-probe.mjs claude --model "$CLAUDE_MODEL" --effort low --hostile --as-review "$DEVOS_SCRIPTS"
+      - name: Claude Code with its shell allowed, as the runner (the control, must say fails)
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          [ -n "$CLAUDE_CODE_OAUTH_TOKEN" ] || { echo "review-probe: claude: skipped (no CLAUDE_CODE_OAUTH_TOKEN secret)"; exit 0; }
+          npm install -g --no-fund --no-audit --loglevel=error "$(node "$DEVOS_SCRIPTS/pins.mjs" claude)"
+          code=0; node tools/review-probe.mjs claude --model "$CLAUDE_MODEL" --effort low --control || code=$?
+          [ "$code" = 1 ] || { echo "::error::the control run did not run the command (exit $code): a holds above proves nothing"; exit 1; }
+      - name: End the review user's processes
+        if: always()
+        run: bash "$DEVOS_SCRIPTS/review-user.sh" stop || true
