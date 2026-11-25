@@ -127,8 +127,8 @@ test("agents.test.mjs pool choice, reviewer model, builder family and workflow l
     assert.equal(rendered.status, 0, rendered.stderr);
     assert.equal(rendered.stdout.includes("- cursor-grok — cursor · grok-4.7 · effort chosen in each fence · default — default builder"), true, rendered.stdout);
 
-    // PR-90: the cycle runs in devos-cycle.yml and the work job it calls, devos-work.yml.
-    const workflow = ["devos-cycle.yml", "devos-work.yml"].map((f) => readFileSync(path.join(root, "payload", "files", "dot-github", "workflows", f), "utf8")).join("\n");
+    // PR-90: the cycle runs in devos-cycle.yml and the jobs it calls, devos-work.yml and (E85, PR-101) devos-review.yml.
+    const workflow = ["devos-cycle.yml", "devos-work.yml", "devos-review.yml"].map((f) => readFileSync(path.join(root, "payload", "files", "dot-github", "workflows", f), "utf8")).join("\n");
     assert.equal(workflow.includes('agent -p --force --trust --approve-mcps --model "$MODEL" --output-format stream-json'), true);
     assert.equal(workflow.includes("claude -p"), true);
     assert.equal(workflow.includes("arrives in E12"), false);
@@ -138,11 +138,12 @@ test("agents.test.mjs pool choice, reviewer model, builder family and workflow l
     assert.equal(workflow.includes("--fallback-model"), false);
     assert.equal(workflow.includes("npm install -g pnpm@10 @anthropic-ai/claude-code"), false);
     assert.equal(workflow.includes('next --after "$rev_id"'), false);
-    assert.equal(workflow.includes('MODEL="$rev_model"'), true);
+    // E85 (PR-101): the review is the project's reviewer agent's run, its model and next models from agents.mjs.
+    assert.equal(workflow.includes('bash scripts/devos/plan-agent.sh reviewer .devos/reviewer-prompt.md devos/schemas/verdict.schema.json .devos/reviewer.json "$EFFORT" "${TURNS:-80}"'), true);
     const restoreAt = workflow.indexOf("role-env.mjs restore || exit 1; trap - EXIT");
     const changedAt = workflow.indexOf('echo "changed=$(git status --porcelain');
     assert.equal(restoreAt >= 0 && changedAt > restoreAt, true);
-    // PR-90 (D11): the cycle's review is Claude Code's, as its own user with no shell; no other tool's kit is swapped in.
+    // PR-101: the review job runs the reviewer agent through plan-agent.sh, which swaps the tool's reviewer kit itself.
     assert.equal(workflow.includes("a method fix is always a deep review, by the project's own reviewer agent"), true);
     assert.equal(workflow.includes("role-env.mjs swap cursor-reviewer"), false);
     assert.equal(workflow.includes('rev_tool=claude'), false);

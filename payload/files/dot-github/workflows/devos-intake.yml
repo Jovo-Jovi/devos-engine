@@ -156,16 +156,13 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
-      # D11: the planner is the reviewer agent, Claude Code, and this job is handed only its keys.
-      - name: The planner is Claude Code
+      # E85 (PR-101): the planner is the project's reviewer agent, on its own tool, in a job with no write token.
+      - name: The planner's CLI, at its pin (PR-93)
+        id: pt
         run: |
           tool=$(node scripts/devos/agents.mjs reviewer --mode deep | sed -n 's/^reviewer_tool=//p')
-          if [ "$tool" != "claude" ]; then
-            echo "::error title=Dev OS::The reviewer is $tool. Since PR-92 the planning runs, like the review, use Claude Code and only its keys: move the reviewer to Claude Code (devos models tool reviewer claude <model>), then run this again."
-            exit 1
-          fi
-          spec=$(node scripts/devos/pins.mjs claude)
-          npm install -g "$spec"
+          echo "tool=$tool" >> "$GITHUB_OUTPUT"
+          bash scripts/devos/install-agent.sh "$tool"
       - name: The request, as it stood at the event, and the plan's branch
         id: req
         env:
@@ -217,11 +214,20 @@ jobs:
           fi
       - name: Reviewer — plan the request
         env:
-          CLAUDE_OAUTH_1: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          CLAUDE_APIKEY_1: ${{ secrets.ANTHROPIC_API_KEY }}
-          CLAUDE_OAUTH_2: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 }}
-          CLAUDE_APIKEY_2: ${{ secrets.ANTHROPIC_API_KEY_2 }}
+          PLANNER_TOOL: ${{ steps.pt.outputs.tool }}
+          # E85: the run gets only its tool's keys. The job names the AI tools' keys and no PAT or publishing secret.
+          CLAUDE_OAUTH_1: ${{ steps.pt.outputs.tool == 'claude' && secrets.CLAUDE_CODE_OAUTH_TOKEN || '' }}
+          CLAUDE_APIKEY_1: ${{ steps.pt.outputs.tool == 'claude' && secrets.ANTHROPIC_API_KEY || '' }}
+          CLAUDE_OAUTH_2: ${{ steps.pt.outputs.tool == 'claude' && secrets.CLAUDE_CODE_OAUTH_TOKEN_2 || '' }}
+          CLAUDE_APIKEY_2: ${{ steps.pt.outputs.tool == 'claude' && secrets.ANTHROPIC_API_KEY_2 || '' }}
+          CURSOR_KEY_1: ${{ steps.pt.outputs.tool == 'cursor' && secrets.CURSOR_API_KEY || '' }}
+          CURSOR_KEY_2: ${{ steps.pt.outputs.tool == 'cursor' && secrets.CURSOR_API_KEY_2 || '' }}
+          CODEX_KEY_1: ${{ steps.pt.outputs.tool == 'codex' && secrets.OPENAI_API_KEY || '' }}
+          CODEX_KEY_2: ${{ steps.pt.outputs.tool == 'codex' && secrets.OPENAI_API_KEY_2 || '' }}
+          GEMINI_KEY_1: ${{ steps.pt.outputs.tool == 'gemini' && secrets.GEMINI_API_KEY || '' }}
+          GEMINI_KEY_2: ${{ steps.pt.outputs.tool == 'gemini' && secrets.GEMINI_API_KEY_2 || '' }}
           DEVOS_CLAUDE_ACCOUNT: ${{ vars.DEVOS_CLAUDE_ACCOUNT || '1' }}
+          DEVOS_CURSOR_ACCOUNT: ${{ vars.DEVOS_CURSOR_ACCOUNT || '1' }}
           DEVOS_ACCOUNT_SWITCH: ${{ vars.DEVOS_ACCOUNT_SWITCH || 'auto' }}
           DEVOS_ISSUE: ${{ inputs.issue || github.event.issue.number }}
         run: |
@@ -265,7 +271,7 @@ jobs:
             NB=$(node --input-type=module -e '
               import { earliestNotBefore, parseResetTime, readText } from "./scripts/devos/limits.mjs";
               const text = readText(".devos/intake.raw") + "\n" + readText(".devos/intake.err");
-              console.log(parseResetTime(text, new Date()) ? earliestNotBefore("claude", text, 60) : "");')
+              console.log(parseResetTime(text, new Date()) ? earliestNotBefore(process.env.PLANNER_TOOL || "claude", text, 60) : "");')
             echo "not_before=$NB" >> "$GITHUB_OUTPUT"
           fi
           if [ -f .devos/usage/pending.jsonl ]; then cp .devos/usage/pending.jsonl "$RUNNER_TEMP/planned/usage.jsonl"; fi
@@ -412,10 +418,16 @@ jobs:
           SCRUB_C2: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 }}
           SCRUB_A1: ${{ secrets.ANTHROPIC_API_KEY }}
           SCRUB_A2: ${{ secrets.ANTHROPIC_API_KEY_2 }}
+          SCRUB_K1: ${{ secrets.CURSOR_API_KEY }}
+          SCRUB_K2: ${{ secrets.CURSOR_API_KEY_2 }}
+          SCRUB_O1: ${{ secrets.OPENAI_API_KEY }}
+          SCRUB_O2: ${{ secrets.OPENAI_API_KEY_2 }}
+          SCRUB_G1: ${{ secrets.GEMINI_API_KEY }}
+          SCRUB_G2: ${{ secrets.GEMINI_API_KEY_2 }}
         run: |
           [ -f "$W/decision.json" ] || echo '{"decision":"error"}' > "$W/decision.json"
-          node "$T/scrub.mjs" --names SCRUB_PAT,SCRUB_TOKEN,SCRUB_C1,SCRUB_C2,SCRUB_A1,SCRUB_A2 "$W/decision.json"
-          say() { node "$T/scrub.mjs" --names SCRUB_PAT,SCRUB_TOKEN,SCRUB_C1,SCRUB_C2,SCRUB_A1,SCRUB_A2 "$RUNNER_TEMP/comment.md"; }
+          node "$T/scrub.mjs" --names SCRUB_PAT,SCRUB_TOKEN,SCRUB_C1,SCRUB_C2,SCRUB_A1,SCRUB_A2,SCRUB_K1,SCRUB_K2,SCRUB_O1,SCRUB_O2,SCRUB_G1,SCRUB_G2 "$W/decision.json"
+          say() { node "$T/scrub.mjs" --names SCRUB_PAT,SCRUB_TOKEN,SCRUB_C1,SCRUB_C2,SCRUB_A1,SCRUB_A2,SCRUB_K1,SCRUB_K2,SCRUB_O1,SCRUB_O2,SCRUB_G1,SCRUB_G2 "$RUNNER_TEMP/comment.md"; }
           write() {
             node -e '
               const fs = require("fs");
@@ -684,16 +696,13 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
-      # D11: the planner is the reviewer agent, Claude Code, and this job is handed only its keys.
-      - name: The planner is Claude Code
+      # E85 (PR-101): the planner is the project's reviewer agent, on its own tool, in a job with no write token.
+      - name: The planner's CLI, at its pin (PR-93)
+        id: pt
         run: |
           tool=$(node scripts/devos/agents.mjs reviewer --mode deep | sed -n 's/^reviewer_tool=//p')
-          if [ "$tool" != "claude" ]; then
-            echo "::error title=Dev OS::The reviewer is $tool. Since PR-92 the planning runs, like the review, use Claude Code and only its keys: move the reviewer to Claude Code (devos models tool reviewer claude <model>), then run this again."
-            exit 1
-          fi
-          spec=$(node scripts/devos/pins.mjs claude)
-          npm install -g "$spec"
+          echo "tool=$tool" >> "$GITHUB_OUTPUT"
+          bash scripts/devos/install-agent.sh "$tool"
       - name: Work out the next attempt and save the note
         id: n
         env:
@@ -707,11 +716,19 @@ jobs:
           printf '%s\n' "${NOTE#/devos revise}" > .devos/revision.md
       - name: Reviewer — reissue the fence with the revision
         env:
-          CLAUDE_OAUTH_1: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          CLAUDE_APIKEY_1: ${{ secrets.ANTHROPIC_API_KEY }}
-          CLAUDE_OAUTH_2: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 }}
-          CLAUDE_APIKEY_2: ${{ secrets.ANTHROPIC_API_KEY_2 }}
+          # E85: the run gets only its tool's keys. The job names the AI tools' keys and no PAT or publishing secret.
+          CLAUDE_OAUTH_1: ${{ steps.pt.outputs.tool == 'claude' && secrets.CLAUDE_CODE_OAUTH_TOKEN || '' }}
+          CLAUDE_APIKEY_1: ${{ steps.pt.outputs.tool == 'claude' && secrets.ANTHROPIC_API_KEY || '' }}
+          CLAUDE_OAUTH_2: ${{ steps.pt.outputs.tool == 'claude' && secrets.CLAUDE_CODE_OAUTH_TOKEN_2 || '' }}
+          CLAUDE_APIKEY_2: ${{ steps.pt.outputs.tool == 'claude' && secrets.ANTHROPIC_API_KEY_2 || '' }}
+          CURSOR_KEY_1: ${{ steps.pt.outputs.tool == 'cursor' && secrets.CURSOR_API_KEY || '' }}
+          CURSOR_KEY_2: ${{ steps.pt.outputs.tool == 'cursor' && secrets.CURSOR_API_KEY_2 || '' }}
+          CODEX_KEY_1: ${{ steps.pt.outputs.tool == 'codex' && secrets.OPENAI_API_KEY || '' }}
+          CODEX_KEY_2: ${{ steps.pt.outputs.tool == 'codex' && secrets.OPENAI_API_KEY_2 || '' }}
+          GEMINI_KEY_1: ${{ steps.pt.outputs.tool == 'gemini' && secrets.GEMINI_API_KEY || '' }}
+          GEMINI_KEY_2: ${{ steps.pt.outputs.tool == 'gemini' && secrets.GEMINI_API_KEY_2 || '' }}
           DEVOS_CLAUDE_ACCOUNT: ${{ vars.DEVOS_CLAUDE_ACCOUNT || '1' }}
+          DEVOS_CURSOR_ACCOUNT: ${{ vars.DEVOS_CURSOR_ACCOUNT || '1' }}
           DEVOS_ACCOUNT_SWITCH: ${{ vars.DEVOS_ACCOUNT_SWITCH || 'auto' }}
           ATTEMPT: ${{ steps.n.outputs.attempt }}
         run: |
@@ -799,10 +816,16 @@ jobs:
           SCRUB_C2: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 }}
           SCRUB_A1: ${{ secrets.ANTHROPIC_API_KEY }}
           SCRUB_A2: ${{ secrets.ANTHROPIC_API_KEY_2 }}
+          SCRUB_K1: ${{ secrets.CURSOR_API_KEY }}
+          SCRUB_K2: ${{ secrets.CURSOR_API_KEY_2 }}
+          SCRUB_O1: ${{ secrets.OPENAI_API_KEY }}
+          SCRUB_O2: ${{ secrets.OPENAI_API_KEY_2 }}
+          SCRUB_G1: ${{ secrets.GEMINI_API_KEY }}
+          SCRUB_G2: ${{ secrets.GEMINI_API_KEY_2 }}
         run: |
           [ -f "$W/decision.json" ] || echo '{"decision":"error"}' > "$W/decision.json"
-          node "$T/scrub.mjs" --names SCRUB_PAT,SCRUB_TOKEN,SCRUB_C1,SCRUB_C2,SCRUB_A1,SCRUB_A2 "$W/decision.json"
-          say() { printf '%s\n' "$1" > "$RUNNER_TEMP/comment.md"; node "$T/scrub.mjs" --names SCRUB_PAT,SCRUB_TOKEN,SCRUB_C1,SCRUB_C2,SCRUB_A1,SCRUB_A2 "$RUNNER_TEMP/comment.md"; gh pr comment "$PR" --repo "$REPO" --body-file "$RUNNER_TEMP/comment.md"; }
+          node "$T/scrub.mjs" --names SCRUB_PAT,SCRUB_TOKEN,SCRUB_C1,SCRUB_C2,SCRUB_A1,SCRUB_A2,SCRUB_K1,SCRUB_K2,SCRUB_O1,SCRUB_O2,SCRUB_G1,SCRUB_G2 "$W/decision.json"
+          say() { printf '%s\n' "$1" > "$RUNNER_TEMP/comment.md"; node "$T/scrub.mjs" --names SCRUB_PAT,SCRUB_TOKEN,SCRUB_C1,SCRUB_C2,SCRUB_A1,SCRUB_A2,SCRUB_K1,SCRUB_K2,SCRUB_O1,SCRUB_O2,SCRUB_G1,SCRUB_G2 "$RUNNER_TEMP/comment.md"; gh pr comment "$PR" --repo "$REPO" --body-file "$RUNNER_TEMP/comment.md"; }
           S=$(node -e 'try{console.log(String(require(process.argv[1]).summary||"").slice(0,2000).replace(/\n/g," "))}catch{console.log("")}' "$W/decision.json")
           DEC=$(node -e 'try{console.log(String(require(process.argv[1]).decision||"error").replace(/[^a-z-]/g,"").slice(0,40))}catch{console.log("error")}' "$W/decision.json")
           count=$(gh api "repos/$REPO/actions/runs/$RUN_ID/artifacts?name=devos-revise-$PR-$ATTEMPT_N-plan" --jq '.total_count' 2>/dev/null || echo "unknown")

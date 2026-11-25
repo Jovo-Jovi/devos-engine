@@ -71,15 +71,19 @@ function hasKeys(value, names, optional = ["fallback_models"]) {
   return keys.length === names.length && names.every((key) => keys.includes(key));
 }
 
+const PROVIDER = /^[a-z0-9][a-z0-9_-]{0,39}$/;
+
 function isAgent(value, label, efforts = []) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return `${label} must be an object`;
   if (typeof value.id !== "string" || typeof value.tool !== "string" || typeof value.model !== "string") {
     return `${label} must have id, tool and model`;
   }
   if (!TOOLS.has(value.tool)) return `${label}.tool must be cursor, claude, codex or gemini`;
-  if (!hasKeys(value, ["id", "tool", "model"], ["fallback_models", ...efforts])) {
-    return `${label} must have id, tool and model, and may have fallback_models${efforts.length ? ` and ${efforts.join(", ")}` : ""}`;
+  if (!hasKeys(value, ["id", "tool", "model"], ["fallback_models", "provider", ...efforts])) {
+    return `${label} must have id, tool and model, and may have fallback_models${efforts.length ? `, ${efforts.join(", ")}` : ""} and provider`;
   }
+  // E85 (PR-101): the AI service the tool uses, when it serves several (a word: anthropic, openai, google, openrouter…).
+  if (Object.hasOwn(value, "provider") && !PROVIDER.test(String(value.provider))) return `${label}.provider must be a provider id (letters, digits, - and _)`;
   // PR-99: an effort is one the agent's tool takes; a tool that takes none has none.
   for (const key of efforts) {
     if (Object.hasOwn(value, key) && !effortsFor(value.tool).includes(value[key])) {
@@ -113,13 +117,14 @@ export function validate(agents) {
   let defaults = 0;
   for (const item of agents.pool) {
     if (!item || typeof item !== "object" || Array.isArray(item)) bad("pool item must be an object");
-    if (!hasKeys(item, ["id", "tool", "model", "default", "note"], ["fallback_models", "effort", "fast"])) {
+    if (!hasKeys(item, ["id", "tool", "model", "default", "note"], ["fallback_models", "effort", "fast", "provider"])) {
       bad("pool item must have id, tool, model, default and note, and may have fallback_models");
     }
     if (typeof item.id !== "string" || typeof item.model !== "string" || typeof item.note !== "string") {
       bad("pool item must have id, tool, model, default and note");
     }
     if (!TOOLS.has(item.tool)) bad("pool item tool must be cursor, claude, codex or gemini");
+    if (Object.hasOwn(item, "provider") && !PROVIDER.test(String(item.provider))) bad("pool item provider must be a provider id (letters, digits, - and _)");
     if (typeof item.default !== "boolean") bad("pool item default must be boolean");
     if (Object.hasOwn(item, "effort") && !EFFORTS.includes(item.effort) && item.effort !== "fence") bad("pool item effort must be low, medium, high, xhigh or fence");
     if (Object.hasOwn(item, "fast") && (item.fast !== true || !EFFORTS.includes(item.effort) || item.tool !== "cursor")) {
@@ -237,7 +242,8 @@ if (process.argv[1]?.endsWith("agents.mjs")) {
     } else if (command === "reviewer") {
       const item = reviewerFor(arg("mode"));
       const notes = overrideNotes(item.id === config().agents.reviewer.id ? "reviewer" : "light");
-      emit({ reviewer_id: item.id, reviewer_tool: item.tool, reviewer_model: item.model, reviewer_fallbacks: fallbacks(item).join(" "), reviewer_note: notes.join("; ") });
+      // E85 (PR-101): the AI service, when the project names one apart from the tool (agents.*.provider).
+      emit({ reviewer_id: item.id, reviewer_tool: item.tool, reviewer_model: item.model, reviewer_fallbacks: fallbacks(item).join(" "), reviewer_note: notes.join("; "), ...(item.provider ? { reviewer_provider: item.provider } : {}) });
     } else if (command === "effort") {
       // PR-99: the effort of a run of the reviewer agent ("" for a tool that takes none), checked with every choice.
       const cfg = config();

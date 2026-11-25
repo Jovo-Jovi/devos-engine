@@ -153,6 +153,10 @@ test("time-limits.test.mjs (d) the supervisor resumes a run GitHub stopped at it
       [`api ${R}/actions/runs/108`]: run(108, "devos T27 · attempt 1"),
       [`api ${R}/actions/runs/108/jobs`]: { jobs: [{ id: 9008, name: "work / work", conclusion: "cancelled", steps: [{ name: "Checks (evidence for the reviewer)", conclusion: "cancelled" }] }] },
       [`api ${R}/check-runs/9008/annotations`]: limit,
+      // E85 (PR-101): the review job stopped (here at its limit); publish pushed the builder's work and stopped too.
+      [`api ${R}/actions/runs/109`]: { ...run(109, "devos T28 · attempt 1"), conclusion: "failure" },
+      [`api ${R}/actions/runs/109/jobs`]: { jobs: [{ id: 9009, name: "review / review", conclusion: "cancelled", steps: [] }, { id: 9010, name: "publish", conclusion: "failure", steps: [{ name: "Push the builder's work", conclusion: "success" }, { name: "Reviewer (the review job's run, in the agent output contract)", conclusion: "failure" }] }] },
+      [`run view 109 --repo devtest/demo --log-failed`]: "publish\tReviewer\t##[error]the review job ended cancelled with no review of this attempt; the builder's work is on the branch, so the review runs again (review only)\n",
     };
     writeFileSync(path.join(bin, "map.json"), JSON.stringify(map));
     writeFileSync(path.join(bin, "gh"), `#!/usr/bin/env node\nconst map = require(${JSON.stringify(path.join(bin, "map.json"))});\nconst key = process.argv.slice(2).join(" ");\nif (key.endsWith("/logs")) { process.stdout.write("##[error]The operation was canceled.\\n"); process.exit(0); }\nif (!(key in map)) process.exit(1);\nprocess.stdout.write(JSON.stringify(map[key]));\n`);
@@ -172,6 +176,7 @@ test("time-limits.test.mjs (d) the supervisor resumes a run GitHub stopped at it
     assert.deepEqual(classify(106), []);
     assert.deepEqual(classify(107).map((i) => [i.key, i.review_only]), [["T26:a1:time-limit", true]]);
     assert.deepEqual(classify(108).map((i) => [i.key, i.review_only]), [["T27:a1:time-limit", false]]);
+    assert.deepEqual(classify(109).map((i) => [i.key, i.action, i.review_only, i.step]), [["T28:a1:review-job", "redispatch", true, "Reviewer (the review job's run, in the agent output contract)"]]);
   } finally {
     rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     rmSync(bin, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });

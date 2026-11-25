@@ -390,6 +390,9 @@ export const LOCAL = {
     "devos/tools/vercel/package-lock.json": "E69",
     "devos/tools/firebase/package.json": "E69",
     "devos/tools/firebase/package-lock.json": "E69",
+    ".github/workflows/devos-review.yml": "E85",
+    "scripts/devos/install-agent.sh": "E85",
+    "scripts/devos/agent-result.mjs": "E85",
   },
   removed: {
     ".cursor/rules/10-security-data.mdc": "E03",

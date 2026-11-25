@@ -220,3 +220,34 @@ test("reviewer-output.test.mjs (f) a changed file that imports a gated package s
     }
   }
 });
+
+test("reviewer-output.test.mjs (g) E85 (PR-101): the verdict reads the review job's contract, for any tool: its answer, or its limit and when it resets", async () => {
+  const { agentResult } = await import("../payload/files/scripts/devos/agent-result.mjs");
+  const answer = { verdict: "PASS", task: "T01", attempt: 1, summary: "s", fence_written: null, classification: [], human_attention: null };
+  for (const tool of ["claude", "cursor", "codex", "gemini"]) {
+    const dir = project();
+    try {
+      const contract = agentResult({ role: "reviewer", tool, model: "m", rawText: tool === "claude" ? JSON.stringify({ type: "result", is_error: false, structured_output: answer }) : "", answerText: tool === "claude" ? null : JSON.stringify(answer), code: "0" });
+      writeFileSync(path.join(dir, ".devos", "reviewer.json"), `${JSON.stringify(contract)}\n`);
+      writeFileSync(path.join(dir, ".devos", "reviewer-run.env"), `code=0\nused=1\naccounts="1"\ntool=${tool}\nmodel=m\n`);
+      const { run, fields, summary } = verdict(dir);
+      assert.equal(run.status, 0, run.stderr);
+      assert.deepEqual([fields.verdict, fields.action], ["PASS", "merge"], `${tool}: ${summary}`);
+    } finally {
+      rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+    }
+  }
+  // Every account of the tool at its limit: the review job's contract says so and until when; no words are read for it.
+  const dir = project();
+  try {
+    rmSync(path.join(dir, "docs", "reviews", "T01-a1.md"));
+    writeFileSync(path.join(dir, ".devos", "reviewer.json"), `${JSON.stringify({ ...agentResult({ role: "reviewer", tool: "codex", model: "m", code: "1" }), limited: true, not_before: "2026-11-26T03:00:00Z" })}\n`);
+    writeFileSync(path.join(dir, ".devos", "reviewer-run.env"), 'code=1\nused=1\naccounts="1"\ntool=codex\nmodel=m\n');
+    const { run, fields, summary } = verdict(dir);
+    assert.equal(run.status, 0, run.stderr);
+    assert.deepEqual([fields.verdict, fields.action, fields.not_before], ["WAIT", "quota_wait", "2026-11-26T03:00:00Z"], summary);
+    assert.match(summary, /the reviewer \(codex\) stopped on a usage or rate limit/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+  }
+});

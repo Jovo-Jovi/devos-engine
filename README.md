@@ -43,7 +43,7 @@ task is then built from a written fence, checked, reviewed, and merged by you.
   <img alt="The DEV_OS Engine at the centre sends the work through each step in turn: brief, blueprint, fence, builder, guards, CI and review, and you approve the merge" src="docs/assets/devos-flow.svg" width="900">
 </p>
 
-Version `1.13.15`. The engine is under PolyForm Shield 1.0.0 and the files it installs into your project under MIT
+Version `1.13.16`. The engine is under PolyForm Shield 1.0.0 and the files it installs into your project under MIT
 (see [Licence](#licence)).
 
 ## Contents
@@ -255,7 +255,7 @@ commas, or a name; Enter takes the default.
 
 | Role | Runs | What it does |
 |---|---|---|
-| **Reviewer** | on GitHub (automated) | Reviews every task against its fence, deeply for risk 3 and gates. |
+| **Reviewer** | on GitHub (automated) | Reviews every task against its fence, deeply for risk 3 and gates, and plans requests and revisions. Any of the four tools, in a job of its own with its shell and its keys, and never a write token. |
 | **Light reviewer** | on GitHub (automated) | Reviews low-risk tasks. |
 | **Builder pool** | on GitHub (automated) | Builds each task. Each builder has strengths (UI, motion, accessibility, i18n, backend, data, security, devops, tests, docs, fast and cheap, deep reasoning) and one is the default; you choose who picks the builder for each task. |
 | **Blueprint agent** | on this computer | Writes the blueprint. Any signed-in tool. |

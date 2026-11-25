@@ -150,20 +150,78 @@ test("two-jobs.test.mjs S5 only publish may post statuses; devos/verdict and dev
   assert.ok(/context=devos\/verdict/.test(publish) && /checks-status\.sh/.test(publish));
 });
 
-test("two-jobs.test.mjs S6 one AI review call per attempt, in publish, and none in the check-only run", () => {
-  const all = `${cycle}\n${work}`;
-  assert.equal((cycle.match(/\bclaude -p\b/g) ?? []).length, 1);
-  assert.equal((publish.match(/\bclaude -p\b/g) ?? []).length, 1);
-  assert.equal(/run-agent\.sh reviewer|agent -p .*reviewer|role-env\.mjs swap cursor-reviewer/.test(all), false);
-  const reviewer = steps(publish).find((s) => s.startsWith("name: Reviewer"));
-  assert.match(reviewer, /if: steps\.bs\.outputs\.state == 'ok' && steps\.rp\.outputs\.reuse != 'true'/);
-  assert.match(reviewer, /review-user\.sh" run "\$RW" -- claude -p/);
-  assert.match(reviewer, /--disallowedTools "Bash"/);
-  assert.match(reviewer, /--setting-sources user/);
-  assert.match(reviewer, /--strict-mcp-config/);
-  assert.equal(/Bash/.test(reviewer.match(/--allowedTools "([^"]+)"/)[1]), false);
-  // The check-only run (PR-25) is review_only with the review kept: no builder, and the reviewer step is skipped.
+test("two-jobs.test.mjs S6 one AI review call per attempt, in the review job, and none in publish or the check-only run", () => {
+  // E85 (PR-101): the review is the project's reviewer agent's run, in devos-review.yml; no cycle job runs an AI CLI.
+  const review = code(read(path.join(WF, "devos-review.yml")));
+  const ai = /\b(?:claude|agent|gemini) -p\b|\bcodex exec\b|plan-agent\.sh|run-agent\.sh|agent-watchdog\.sh|review-user\.sh/;
+  for (const name of ["resolve", "publish", "report", "wait-and-resume", "notify-supervisor"]) {
+    for (const script of runBlocks(job(cycle, name))) assert.equal(ai.test(script), false, `${name}: ${script.slice(0, 120)}`);
+  }
+  assert.equal((review.match(/bash scripts\/devos\/plan-agent\.sh reviewer /g) ?? []).length, 1);
+  assert.equal(/run-agent\.sh reviewer|role-env\.mjs swap cursor-reviewer|review-user\.sh/.test(`${cycle}\n${work}\n${review}`), false);
+  const reviewer = steps(job(review, "review")).find((s) => s.startsWith("name: Reviewer"));
+  assert.match(reviewer, /if: steps\.prep\.outputs\.reviewed == 'true'/);
+  assert.match(reviewer, /working-directory: \$\{\{ github\.workspace \}\}\/review/);
+  // The check-only run (PR-25) is review_only with the review kept: the review job runs no agent for it.
+  assert.match(review, /if \[ "\$REUSE" = "true" \] && \[ -f "docs\/reviews\/\$TASK-a\$ATTEMPT\.md" \]; then skip "the review of this attempt is kept \(PR-21\)"; fi/);
   assert.match(publish, /-f review_only=true -f reuse_review=true/);
+});
+
+test("two-jobs.test.mjs S6b the review job reads only, holds only the reviewer tools' keys, and hands publish one artifact of data", () => {
+  // E85 (PR-101): no write token, no PAT, no OIDC token, no publishing secret; only what the caller passes.
+  const call = job(cycle, "review");
+  assert.match(call, /^ {4}needs: \[resolve, work\]$/m);
+  assert.match(call, /^ {4}permissions:\n {6}contents: read\n {4}uses: \.\/\.github\/workflows\/devos-review\.yml$/m);
+  assert.deepEqual([...call.matchAll(/^ {6}([A-Z0-9_]+): \$\{\{/gm)].map((m) => m[1]).filter((n) => /KEY|ALT/.test(n)), ["KEY_1", "KEY_2", "ALT_1", "ALT_2", "LKEY_1", "LKEY_2", "LALT_1", "LALT_2"]);
+  const names = [...new Set(call.match(/secrets\.[A-Z0-9_]+/g))].sort();
+  assert.deepEqual(names, ["secrets.ANTHROPIC_API_KEY", "secrets.ANTHROPIC_API_KEY_2", "secrets.CLAUDE_CODE_OAUTH_TOKEN", "secrets.CLAUDE_CODE_OAUTH_TOKEN_2", "secrets.CURSOR_API_KEY", "secrets.CURSOR_API_KEY_2", "secrets.GEMINI_API_KEY", "secrets.GEMINI_API_KEY_2", "secrets.OPENAI_API_KEY", "secrets.OPENAI_API_KEY_2"]);
+  const review = code(read(path.join(WF, "devos-review.yml")));
+  assert.match(review, /^permissions:\n {2}contents: read\n/m);
+  assert.match(job(review, "review"), /^ {4}permissions:\n {6}contents: read\n {4}outputs:/m);
+  assert.equal(/: write|id-token|DEVOS_PAT|OWNER_TOKEN|VERCEL|SUPABASE|FIREBASE|toJSON\(secrets\)|secrets\[/.test(review), false);
+  assert.deepEqual([...new Set(review.match(/secrets\.[A-Z0-9_]+/g))].sort(), ["secrets.ALT_1", "secrets.ALT_2", "secrets.KEY_1", "secrets.KEY_2", "secrets.LALT_1", "secrets.LALT_2", "secrets.LKEY_1", "secrets.LKEY_2"]);
+  for (const line of review.split("\n")) assert.equal(/\bgh (pr|issue|api|workflow|run)\b|git push|statuses\//.test(line), false, line.trim());
+  // Checkouts keep no credential; the artifact holds the review's files, scrubbed, never the agent's raw output (D9).
+  for (const m of review.matchAll(/uses: actions\/checkout@[0-9a-f]{40} # v6\.0\.2\n\s+with:\n(?:\s+\w[\w-]*: .*\n)*/g)) assert.match(m[0], /persist-credentials: false/);
+  const hand = steps(job(review, "review")).find((s) => s.startsWith("name: Hand the review to publish"));
+  assert.match(hand, /find docs\/reviews docs\/fences -maxdepth 1 -type f -size -1M -print0/);
+  assert.match(hand, /for f in reviewer\.json reviewer-run\.env accounts\.md; do/);
+  assert.match(hand, /node "\$T\/scrub\.mjs" --names SCRUB_K1,SCRUB_K2,SCRUB_A1,SCRUB_A2,SCRUB_L1,SCRUB_L2,SCRUB_M1,SCRUB_M2/);
+  assert.equal(/reviewer\.raw|reviewer\.err|stream\.jsonl|limits\//.test(hand.replace(/tail -c 2000 \.devos\/reviewer\.err[^\n]*/g, "")), false, hand);
+  // Publish runs nothing of it: it copies the contract and the run record, checks the reviewed head, takes only the
+  // review file and fences, and scrubs every reviewer tool's keys.
+  const taken = steps(publish).find((s) => s.startsWith("name: Reviewer (the review job's run"));
+  assert.match(taken, /if \[ "\$reviewed" != "\$head" \]; then/);
+  assert.match(taken, /the review job ended \$\{REVIEW_RESULT:-unknown\} with no review of this attempt; the builder's work is on the branch, so the review runs again \(review only\)/);
+  assert.match(taken, /grep -E '\^\(code\|used\|tool\|model\)=\[A-Za-z0-9\._:\/@\+-\]\*\$\|\^accounts="\[0-9 \]\*"\$'/);
+  for (const script of runBlocks(taken)) assert.equal(/(?:bash|sh|node) "?\$(?:got|GITHUB_WORKSPACE\/review-out)/.test(script), false, script);
+  const take = steps(publish).find((s) => s.startsWith("name: Take the review's outputs"));
+  assert.match(take, /take-review --out "\$OUT" --from "\$GITHUB_WORKSPACE\/review-out"/);
+  assert.match(take, /--names SCRUB_PAT,SCRUB_TOKEN,SCRUB_C1,SCRUB_C2,SCRUB_A1,SCRUB_A2,SCRUB_K1,SCRUB_K2,SCRUB_O1,SCRUB_O2,SCRUB_G1,SCRUB_G2 /);
+});
+
+test("two-jobs.test.mjs S6c no AI call runs in a job that holds a write token, the PAT or a publishing secret, in any workflow DEV_OS installs", () => {
+  // E85 (PR-101). Deferred and named: the supervisor's and the doctor's optional Claude Code second opinion, which runs
+  // as devos-review with no shell (review-user.sh, PR-90).
+  const DEFERRED = new Set(["devos-supervisor.yml:supervise", "devos-doctor.yml:doctor"]);
+  const ai = /\b(?:claude|agent|gemini) -p\b|\bcodex exec\b|plan-agent\.sh|run-agent\.sh|agent-watchdog\.sh/;
+  const checked = [];
+  for (const file of readdirSync(WF).filter((f) => f.endsWith(".yml"))) {
+    const text = code(read(path.join(WF, file)));
+    const top = /^permissions:\n((?: {2}.*\n)*)/m.exec(text)?.[1] ?? "";
+    const body = text.slice(text.search(/^jobs:\s*$/m));
+    for (const [, name] of body.matchAll(/^ {2}([a-z][a-z0-9-]*):\s*$/gm)) {
+      const j = job(body, name);
+      const own = /^ {4}permissions:\n((?: {6}.*\n)*)/m.exec(j)?.[1];
+      const perms = own ?? top;
+      const privileged = /: write/.test(perms) || /DEVOS_PAT|OWNER_TOKEN|VERCEL_TOKEN|SUPABASE_ACCESS_TOKEN|FIREBASE_TOKEN/.test(j);
+      const runsAi = runBlocks(j).some((script) => ai.test(script));
+      if (privileged && runsAi) assert.ok(DEFERRED.has(`${file}:${name}`), `${file}: job ${name} holds a write token or a publishing secret and runs an AI call`);
+      if (runsAi) checked.push(`${file}:${name}`);
+    }
+  }
+  // The AI jobs: the builder, the review, the two planners, and the two deferred second opinions.
+  assert.deepEqual(checked.sort(), ["devos-doctor.yml:doctor", "devos-intake.yml:intake", "devos-intake.yml:revise", "devos-review.yml:review", "devos-supervisor.yml:supervise", "devos-work.yml:work"]);
 });
 
 test("two-jobs.test.mjs S7 production: nothing dispatches devos-deploy from a workflow, publish merges the reviewed commit with its own token, the cycle holds no Vercel credential", () => {
@@ -652,7 +710,9 @@ test("two-jobs.test.mjs scrub.mjs removes secret values and their base64; mcp-de
 
 test("two-jobs.test.mjs the manual, the precedent and the changelog name the two jobs", () => {
   const manual = read(path.join(PAYLOAD, "docs", "method", "AUTOMATION.md"));
-  for (const part of ["`devos-work.yml`", "`publish-verify.mjs`", "`review-user.sh`", "`scrub.mjs`", "`mcp-devos.mjs`", "`resolve`, `work`, `publish`, `report`, `wait-and-resume`", "branch code never runs in a job that holds a write token"]) assert.ok(manual.includes(part), part);
+  for (const part of ["`devos-work.yml`", "`devos-review.yml`", "`publish-verify.mjs`", "`review-user.sh`", "`scrub.mjs`", "`mcp-devos.mjs`", "`install-agent.sh`", "`agent-result.mjs`", "`resolve`, `work`, `review`, `publish`, `report`, `wait-and-resume`", "branch code never runs in a job that holds a write token"]) assert.ok(manual.includes(part), part);
+  assert.ok(read(path.join(PAYLOAD, "docs", "method", "PRECEDENTS.md")).includes("| PR-101 | **No AI call runs in a job that holds a write token: the review and the planning run in jobs of their own, on the reviewer's tool, with a shell.**"));
+  assert.ok(read(path.join(root, "dev", "DECISIONS.md")).includes("| D-E18 | **Any AI tool reviews and plans, in its own job at the builder's trust level (2026-11-25):**"));
   const precedents = read(path.join(PAYLOAD, "docs", "method", "PRECEDENTS.md"));
   assert.ok(precedents.includes("| PR-90 | **Branch code never shares a job with a write token, and every decision is recomputed from main.**"));
   const changelog = read(path.join(root, "CHANGELOG.md"));

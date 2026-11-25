@@ -290,9 +290,13 @@ test("hardening.test.mjs (g) the work job's model reaches a commit or a prompt o
   assert.equal(builderMessage({ task: "T01", attempt: 1, model: allowedModel("evil", trusted), effort: "high", fast: "no", exit: 0, slice: 1, stage: 1, stages: 1 }), "T01 a1: builder (unknown, effort high, fast no)");
   assert.deepEqual(["- Fence version: 3\n", "- Fence version: **v2 · 2026-11-09.**\n", "## T\n\n### Prompt\n- Fence version: 9\n", "no line\n"].map(fenceVersion), [3, 2, 0, 0]);
   const cycle = read(path.join(workflows, "devos-cycle.yml"));
-  for (const line of ["DEVOS_BUILDER_MODEL: ${{ steps.vb.outputs.builder_model }}", "DEVOS_BUILDER_EFFORT: ${{ steps.vb.outputs.builder_effort }}", "DEVOS_BUILDER_FAST: ${{ steps.vb.outputs.builder_fast }}", '--trusted-models "$TRUSTED_MODELS"']) {
-    assert.ok(cycle.includes(line), line);
+  // E85 (PR-101): the review job's prompt gets the builder as its own verify kept it, as publish's did.
+  const review = read(path.join(workflows, "devos-review.yml"));
+  for (const line of ["DEVOS_BUILDER_MODEL: ${{ steps.prep.outputs.builder_model }}", "DEVOS_BUILDER_EFFORT: ${{ steps.prep.outputs.builder_effort }}", "DEVOS_BUILDER_FAST: ${{ steps.prep.outputs.builder_fast }}", '--trusted-models "$TRUSTED_MODELS"']) {
+    assert.ok(review.includes(line), line);
   }
+  assert.ok(cycle.includes('--trusted-models "$TRUSTED_MODELS"'));
+  for (const name of ["model", "effort", "fast"]) assert.equal(review.includes(`DEVOS_BUILDER_${name.toUpperCase()}: \${{ needs.work.outputs.${name} }}`), false, name);
   for (const name of ["model", "effort", "fast"]) assert.equal(cycle.includes(`DEVOS_BUILDER_${name.toUpperCase()}: \${{ needs.work.outputs.${name} }}`), false, name);
   // Publish's guards run before the push, and a failure of either step is the same rejection.
   const at = (s) => cycle.indexOf(s);
@@ -588,7 +592,7 @@ test("hardening.test.mjs (o) PR-98: the setup check advises VERCEL_AUTOMATION_BY
 
 // ---------- PR-100: red checks on main do not hold the next task back; one supervisor issue
 
-test("hardening.test.mjs (n) the checks failing on main are reported, and the next open task still starts when nothing runs", { skip: windows && "a stand-in gh cannot run without a shell on Windows" }, () => {
+test("hardening.test.mjs (p) the checks failing on main are reported, and the next open task still starts when nothing runs", { skip: windows && "a stand-in gh cannot run without a shell on Windows" }, () => {
   const dir = mkdtempSync(path.join(tmpdir(), "devos-sup-"));
   const bin = mkdtempSync(path.join(tmpdir(), "devos-gh-"));
   try {
@@ -614,7 +618,7 @@ test("hardening.test.mjs (n) the checks failing on main are reported, and the ne
   }
 });
 
-test("hardening.test.mjs (o) the act reports on the issue the scan found, never makes a second one, and closes a later one", { skip: windows && "a stand-in gh cannot run without a shell on Windows" }, () => {
+test("hardening.test.mjs (q) the act reports on the issue the scan found, never makes a second one, and closes a later one", { skip: windows && "a stand-in gh cannot run without a shell on Windows" }, () => {
   const dir = mkdtempSync(path.join(tmpdir(), "devos-sup-"));
   const bin = mkdtempSync(path.join(tmpdir(), "devos-gh-"));
   try {

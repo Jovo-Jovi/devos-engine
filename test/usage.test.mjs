@@ -244,10 +244,13 @@ test("usage.test.mjs (g) every agent call in the workflows is recorded", () => {
   const read = (rel) => readFileSync(path.join(root, "payload", "files", ...rel.split("/")), "utf8");
   const count = (text, needle) => text.split(needle).length - 1;
   // PR-90: the builder's runs are recorded in the work job (devos-work.yml) and committed by publish, with the review's.
+  // E85 (PR-101): the review's run is recorded in the review job by plan-agent.sh, and publish keeps its well-formed records.
   const cycle = `${read("dot-github/workflows/devos-cycle.yml")}\n${read("dot-github/workflows/devos-work.yml")}`;
   assert.equal(count(cycle, "DEVOS_USAGE_STAGE: builder"), 1);
   assert.equal(count(cycle, "usage.mjs record --stage reviewer --command agent"), 0);
-  assert.equal(count(cycle, "node \"$T/usage.mjs\" record --stage reviewer --command claude"), 1);
+  assert.equal(count(cycle, "node \"$T/usage.mjs\" record --stage reviewer --command claude"), 0);
+  assert.equal(count(read("dot-github/workflows/devos-review.yml"), "bash scripts/devos/plan-agent.sh reviewer "), 1);
+  assert.equal(count(cycle, "node \"$T/publish-verify.mjs\" usage --in \"$got/.devos/usage/pending.jsonl\" --dest .devos/usage/pending.jsonl"), 1);
   assert.equal(count(cycle, "node \"$T/usage.mjs\" flush --task \"$TASK\""), 2);
   assert.equal(count(cycle, "node \"$T/usage.mjs\" report --write"), 1);
   assert.equal(count(cycle, "publish-verify.mjs\" usage --in \"$W/evidence/usage/pending.jsonl\""), 1);

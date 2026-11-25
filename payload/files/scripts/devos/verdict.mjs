@@ -135,7 +135,8 @@ try {
 // review cut short by a limit may be unfinished. A run that exited 0 with a finished result, or gave its
 // structured answer, never hit a limit (PR-54), whatever words its transcript holds.
 const finished = Boolean(structured) || (run.code === "0" && finishedRun(finalResult));
-const limitHit = !finished && looksLikeLimit(readText(reviewerJson), readText(".devos/reviewer.err"));
+// E85 (PR-101): the review job says it in the agent output contract (limited, not_before); a run before it, in its words.
+const limitHit = !finished && (finalResult?.limited === true || looksLikeLimit(readText(reviewerJson), readText(".devos/reviewer.err")));
 if ((!structured || !["PASS", "FAIL"].includes(structured.verdict)) && !limitHit) {
   const fromFile = verdictFromFile();
   if (fromFile) {
@@ -148,7 +149,8 @@ if ((!structured || !["PASS", "FAIL"].includes(structured.verdict)) && !limitHit
 if (!structured || !["PASS", "FAIL"].includes(structured.verdict)) {
   if (limitHit) {
     notes.push(`the reviewer (${reviewerTool}) stopped on a usage or rate limit`);
-    const nb = earliestNotBefore(run.tool || "claude", `${readText(reviewerJson).slice(-4000)}\n${readText(".devos/reviewer.err")}`, config().resume?.default_wait_minutes ?? 60);
+    const stated = typeof finalResult?.not_before === "string" && /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$/.test(finalResult.not_before) ? finalResult.not_before : "";
+    const nb = stated || earliestNotBefore(run.tool || "claude", `${readText(reviewerJson).slice(-4000)}\n${readText(".devos/reviewer.err")}`, config().resume?.default_wait_minutes ?? 60);
     finish("WAIT", "quota_wait", {
       notBefore: nb,
       human: `The reviewer agent (${reviewerTool}) is out of usage on every account it has. Nothing was recorded and the attempt was not used up. The runner re-runs this review (review_only) after ${nb} (UTC); remove the devos:quota-wait label to cancel that.`,

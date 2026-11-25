@@ -115,25 +115,9 @@ jobs:
           echo "firebase=$spec" >> "$GITHUB_OUTPUT"
           echo "$HOME/.cursor/bin" >> "$GITHUB_PATH"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-          # PR-53: only the builder's own CLI; the review runs in publish.
-          if [ "$REVIEW_ONLY" != "true" ]; then
-            case "$DEVOS_BUILDER_TOOL" in
-              claude|codex|gemini)
-                spec=$(node scripts/devos/pins.mjs "$DEVOS_BUILDER_TOOL")
-                npm install -g "$spec" ;;
-              cursor)
-                spec=$(node scripts/devos/pins.mjs cursor)
-                version=${spec% *}
-                pkg="$RUNNER_TEMP/cursor-agent.tar.gz"
-                curl -fsSL --retry 3 --retry-delay 2 -o "$pkg" "https://downloads.cursor.com/lab/$version/linux/x64/agent-cli-package.tar.gz"
-                echo "${spec#* }  $pkg" | sha256sum -c -
-                dir="$HOME/.local/share/cursor-agent/versions/$version"
-                mkdir -p "$dir" "$HOME/.local/bin"
-                tar --strip-components=1 -xzf "$pkg" -C "$dir"
-                ln -sf "$dir/cursor-agent" "$HOME/.local/bin/agent"
-                ln -sf "$dir/cursor-agent" "$HOME/.local/bin/cursor-agent" ;;
-            esac
-          fi
+          # PR-53: only the builder's own CLI; the review runs in its own job (E85). install-agent.sh is the one place a
+          # tool's CLI is installed, at its pin, for the builder, the reviewer and the planner.
+          if [ "$REVIEW_ONLY" != "true" ]; then bash scripts/devos/install-agent.sh "$DEVOS_BUILDER_TOOL"; fi
 
       - name: Stack toolchain (PR-48)
         id: tc
@@ -499,6 +483,18 @@ jobs:
           git add -A
           git commit --allow-empty -q -m "$TASK a$ATTEMPT: builder (work job)"
 
+      # E85 (PR-101): the builder's run in the agent output contract, beside its own output, for the evidence.
+      - name: The builder's run, in the agent output contract
+        if: always() && steps.builder.outcome != 'skipped'
+        continue-on-error: true
+        env:
+          B_EXIT: ${{ steps.builder.outputs.exit }}
+          B_MODEL: ${{ steps.builder.outputs.model }}
+          B_PICKED: ${{ steps.bm.outputs.model }}
+        run: |
+          [ -f .devos/builder.json ] || exit 0
+          node scripts/devos/agent-result.mjs --role builder --tool "$DEVOS_BUILDER_TOOL" --model "${B_MODEL:-$B_PICKED}" --raw .devos/builder.json \
+            --err .devos/builder.err --last .devos/builder-last.md --code "$B_EXIT" --out .devos/builder-result.json
       - name: Builder outcome (PR-12)
         id: bs
         env:

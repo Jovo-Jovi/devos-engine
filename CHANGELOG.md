@@ -2,6 +2,13 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
+## 1.13.16 — Unreleased
+
+- **Any of the four tools reviews and plans (PR-101).** The reviewer and the light reviewer can be Cursor, Claude Code, Codex or Gemini, and so can the planner of `/devos intake`, method fixes and `/devos revise`. The review runs in a job of its own, `review`, between the builder's job and publish, at the builder's trust level: the reviewer has its shell and its own keys, and the job holds no write token, no PAT, no publishing secret and no OIDC token. Publish takes only the review file and fences from it, as data, and decides from main's rules as before.
+- **One output contract for every agent run.** Each run of the builder, the reviewer and the planner leaves one JSON object with the tool, an optional provider and the model kept apart, its exit code, final text, token counts, structured answer and usage limit. A job that decides reads only that object. `provider` may be set on any agent in `devos/project.json`; projects without it work as before.
+- **A review job that stops is run again.** When the review job ends with no review of the attempt, publish pushes the builder's work and stops, and the supervisor runs the review again (review only).
+- The check that a review tool runs no shell (`tools/review-probe.mjs`) is gone: no review runs in a job that holds a write token.
+
 ## 1.13.15 — 2026-11-25
 
 - **The next task starts while main's checks are red (PR-100).** A failing `ci` on main no longer holds the next open task back: when no task or cycle is running and nothing waits for you, the supervisor starts it, since a task is how main gets fixed. It still reports the failure.

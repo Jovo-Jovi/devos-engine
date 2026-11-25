@@ -167,12 +167,15 @@ function answeredAfter(pr, since) {
 // they cannot be read, a job that ran its whole limit (its `timeout-minutes`) counts as stopped.
 // PR-90: an attempt runs in two jobs, `work` (devos-work.yml, listed as "work / work") and `publish`; a run from before
 // has one job, `cycle`. The builder's work is pushed by publish's "Push the builder's work" (before: "Commit and push
-// the builder's work"), so a `work` job stopped at its limit has saved nothing.
+// the builder's work"), so a `work` job stopped at its limit has saved nothing. E85 (PR-101): the review runs in its
+// own job, `review` (devos-review.yml, "review / review"), before publish.
 const LIMITED = {
   cycle: ["devos-cycle.yml", "cycle", 150],
   work: ["devos-work.yml", "work", 150],
   "work / work": ["devos-work.yml", "work", 150],
   publish: ["devos-cycle.yml", "publish", 120],
+  review: ["devos-review.yml", "review", 90],
+  "review / review": ["devos-review.yml", "review", 90],
 };
 function jobMinutes(name) {
   const [file, job, fallback] = LIMITED[name];
@@ -284,6 +287,9 @@ function detect(facts) {
     const rescue = (f.tail.match(/saved on branch (rescue\/\S+?)[ .(]/) || [])[1];
     if (/conflicts with this task's work/.test(f.tail)) {
       add({ ...base, key: `${task}:a${attempt}:push-conflict`, cause: "main changed during the run and the push conflicted", action: rescue ? "recover-rescue" : "redispatch", rescue });
+    } else if (/the review job ended .* the review runs again \(review only\)/.test(f.tail)) {
+      // E85 (PR-101): publish pushed the builder's work and stopped, as the review job gave no review of it.
+      add({ ...base, key: `${task}:a${attempt}:review-job`, review_only: true, action: "redispatch", cause: "the review job ended with no review of this attempt; the builder's work is on the branch, so only the checks and the review run again" });
     } else if (/has timed out/.test(f.tail)) {
       add({ ...base, key: `${task}:a${attempt}:step-timeout`, cause: `step "${f.step}" timed out`, action: "redispatch" });
     } else if (ENV_RE.test(f.tail) || /^(Install|Set up|Run actions\/|Supabase CLI|Firebase CLI|Local module services|Check out)/.test(f.step)) {

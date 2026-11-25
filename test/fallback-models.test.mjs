@@ -53,7 +53,7 @@ test("fallback-models.test.mjs (a) an agent may list fallback_models of its own 
     assert.throws(() => validate({ ...agents, reviewer: { ...reviewer, fallback_models: list } }), { message });
   }
   assert.throws(() => validate({ ...agents, pool: [{ ...builder, fallback_models: ["B2", "B2"] }] }), { message: wrong("pool item b") });
-  assert.throws(() => validate({ ...agents, reviewer: { ...reviewer, extra: 1 } }), { message: "agents: reviewer must have id, tool and model, and may have fallback_models and effort, gate_effort, light_effort" });
+  assert.throws(() => validate({ ...agents, reviewer: { ...reviewer, extra: 1 } }), { message: "agents: reviewer must have id, tool and model, and may have fallback_models, effort, gate_effort, light_effort and provider" });
   assert.throws(() => validate({ ...agents, pool: [{ ...builder, extra: 1 }] }), { message: "agents: pool item must have id, tool, model, default and note, and may have fallback_models" });
 
   const dir = staged("devos-fallback-");
@@ -322,15 +322,16 @@ test("fallback-models.test.mjs (h) every builder and reviewer run of the cycle t
   const count = (needle) => workflow.split(needle).length - 1;
   assert.equal(count("FALLBACKS: ${{ inputs.builder_fallbacks }}"), 1);
   assert.equal(count("models=\"$MODEL $FALLBACKS\""), 1);
-  assert.equal(count("models=\"$MODEL $rev_fallbacks\""), 1);
-  assert.equal(count("for slot in $(devos_slots claude $models); do"), 2);
-  // PR-90 (D11): the builder's Claude and Cursor runs, and the review's Claude runs.
+  // E85 (PR-101): the review's slots are plan-agent.sh's (below), in the review job.
+  assert.equal(count("models=\"$MODEL $rev_fallbacks\""), 0);
+  assert.equal(count("for slot in $(devos_slots claude $models); do"), 1);
+  // PR-90 (D11): the builder's Claude and Cursor runs.
   assert.equal(count("for slot in $(devos_slots cursor $models); do"), 1);
-  assert.equal(count("MODEL=\"${slot%@*}\"; acc=\"${slot##*@}\""), 3);
-  assert.equal(count("$(devos_limit_file "), 3);
-  assert.equal(count("devos_unavailable .devos/"), 3);
+  assert.equal(count("MODEL=\"${slot%@*}\"; acc=\"${slot##*@}\""), 2);
+  assert.equal(count("$(devos_limit_file "), 2);
+  assert.equal(count("devos_unavailable .devos/"), 2);
   assert.equal(count("devos_settle \"$outcome\" \"$lim\" .devos/builder.err"), 1);
-  assert.equal(count("devos_settle \"$outcome\" \"$lim\" .devos/reviewer.err"), 1);
+  assert.equal(count("devos_settle \"$outcome\" \"$lim\" .devos/reviewer.err"), 0);
   assert.equal(count(".devos/builder-prompt.md $FALLBACKS || exit 1"), 1);
   assert.equal(count(".devos/reviewer-prompt.md $rev_fallbacks || exit 1"), 0);
   assert.equal(count("echo \"model=$MODEL\" >> \"$GITHUB_OUTPUT\""), 1);

@@ -69,7 +69,7 @@ test("hygiene.test.mjs (b) in an installed project, pins.mjs reads the devos.con
 
 test("hygiene.test.mjs (c) the workflows install every tool at its pin, and every action by commit (PR-94)", () => {
   const files = readdirSync(workflows).filter((file) => file.endsWith(".yml")).map((file) => path.join(workflows, file));
-  const scripts = ["review-user.sh", "vercel-deploy.sh"].map((file) => path.join(payload, "scripts", "devos", file));
+  const scripts = ["review-user.sh", "vercel-deploy.sh", "install-agent.sh"].map((file) => path.join(payload, "scripts", "devos", file));
   const all = Object.fromEntries([...files, ...scripts].map((file) => [path.basename(file), read(file)]));
   const thirdParty = [];
   for (const [file, text] of Object.entries(all)) {
@@ -97,24 +97,28 @@ test("hygiene.test.mjs (c) the workflows install every tool at its pin, and ever
   // Where each pin is read.
   const pins = (file, tool) => count(all[file], `$(node scripts/devos/pins.mjs ${tool})`);
   assert.deepEqual(["pnpm", "firebase"].map((tool) => [pins("devos-work.yml", tool), pins("ci.yml", tool), pins("devos-deploy.yml", tool)]), [[1, 1, 1], [1, 1, 1]]);
-  // PR-94: the supervisor's Claude Code is the review user's, installed by review-user.sh at its pin.
-  assert.deepEqual([pins("devos-intake.yml", "claude"), pins("devos-supervisor.yml", "claude"), pins("devos-deploy.yml", "vercel"), pins("vercel-deploy.sh", "vercel")], [2, 0, 1, 1]);
-  assert.equal(count(all["devos-work.yml"], 'spec=$(node scripts/devos/pins.mjs "$DEVOS_BUILDER_TOOL")'), 1);
+  // PR-94: the supervisor's Claude Code is the review user's, installed by review-user.sh at its pin. E85 (PR-101): the
+  // builder's, the reviewer's and the planner's CLIs by install-agent.sh, at theirs.
+  assert.deepEqual([pins("devos-intake.yml", "claude"), pins("devos-supervisor.yml", "claude"), pins("devos-deploy.yml", "vercel"), pins("vercel-deploy.sh", "vercel")], [0, 0, 1, 1]);
+  assert.equal(count(all["devos-work.yml"], 'bash scripts/devos/install-agent.sh "$DEVOS_BUILDER_TOOL"'), 1);
+  assert.equal(count(all["devos-review.yml"], 'bash scripts/devos/install-agent.sh "$TOOL"'), 1);
+  assert.equal(count(all["devos-intake.yml"], 'bash scripts/devos/install-agent.sh "$tool"'), 2);
+  assert.equal(count(all["install-agent.sh"], 'spec=$(node "$here/pins.mjs" "$tool")'), 1);
   // The work job reads every pin from main's checkout, before the task branch is checked out: firebase-tools, installed
   // after it, takes the pin read then.
   const workText = all["devos-work.yml"];
   const branch = workText.indexOf("      - name: Check out the task branch");
   for (const tool of ["pnpm", "firebase"]) assert.ok(workText.indexOf(`$(node scripts/devos/pins.mjs ${tool})`) < branch, tool);
-  assert.ok(workText.indexOf('spec=$(node scripts/devos/pins.mjs "$DEVOS_BUILDER_TOOL")') < branch);
+  assert.ok(workText.indexOf('bash scripts/devos/install-agent.sh "$DEVOS_BUILDER_TOOL"') < branch);
   assert.equal(count(workText, 'echo "firebase=$spec" >> "$GITHUB_OUTPUT"'), 1);
   assert.equal(count(workText, "PINNED_FIREBASE: ${{ steps.pins.outputs.firebase }}"), 1);
   assert.equal(count(workText, 'npm install -g "$PINNED_FIREBASE"'), 1);
   assert.equal(count(all["review-user.sh"], 'spec=$(node "$(dirname "$0")/pins.mjs" claude)'), 1);
   // Cursor's agent package: its version's download, checked against the pinned SHA-256 before it is unpacked.
-  const work = all["devos-work.yml"];
-  const cursor = work.slice(work.indexOf("              cursor)\n"), work.indexOf("            esac", work.indexOf("              cursor)\n")));
+  const installer = all["install-agent.sh"];
+  const cursor = installer.slice(installer.indexOf("  cursor)\n"), installer.indexOf("  *)\n", installer.indexOf("  cursor)\n")));
   for (const line of [
-    "spec=$(node scripts/devos/pins.mjs cursor)",
+    'spec=$(node "$here/pins.mjs" cursor)',
     'curl -fsSL --retry 3 --retry-delay 2 -o "$pkg" "https://downloads.cursor.com/lab/$version/linux/x64/agent-cli-package.tar.gz"',
     'echo "${spec#* }  $pkg" | sha256sum -c -',
     'tar --strip-components=1 -xzf "$pkg" -C "$dir"',

@@ -32,16 +32,20 @@ function job(text, name) {
 const steps = (jobText) => jobText.split(/^ {6}- /m).slice(1);
 const READ_ONLY = /^ {4}permissions:\n((?: {6}[a-z-]+: read\n)+) {4}[a-z]/m;
 const CLAUDE = ["secrets.ANTHROPIC_API_KEY", "secrets.ANTHROPIC_API_KEY_2", "secrets.CLAUDE_CODE_OAUTH_TOKEN", "secrets.CLAUDE_CODE_OAUTH_TOKEN_2"];
+const AI_KEYS = [...CLAUDE, "secrets.CURSOR_API_KEY", "secrets.CURSOR_API_KEY_2", "secrets.GEMINI_API_KEY", "secrets.GEMINI_API_KEY_2", "secrets.OPENAI_API_KEY", "secrets.OPENAI_API_KEY_2"].sort();
 
 // ---------- S: devos-intake.yml --------------------------------------------------------------------------------------
 
-test("intake-two-jobs.test.mjs S1 the planners read only, hold only Claude's keys, and write nothing to GitHub", () => {
+test("intake-two-jobs.test.mjs S1 the planners read only, hold only the AI tools' keys, run the reviewer's tool, and write nothing to GitHub", () => {
   for (const name of ["intake", "revise"]) {
     const j = job(intake, name);
     assert.match(j, READ_ONLY, `${name}: its token only reads`);
-    assert.deepEqual([...new Set(j.match(/secrets\.[A-Z0-9_]+/g))].sort(), CLAUDE, name);
+    // E85 (PR-101): the reviewer's tool plans, with its own keys; no PAT, no publishing secret, no dynamic secret.
+    assert.deepEqual([...new Set(j.match(/secrets\.[A-Z0-9_]+/g))].sort(), AI_KEYS, name);
     assert.equal(/DEVOS_PAT|toJSON\(secrets\)|secrets\[/.test(j), false, name);
-    assert.match(j, /tool=\$\(node scripts\/devos\/agents\.mjs reviewer --mode deep[^\n]*\n {10}if \[ "\$tool" != "claude" \]; then/);
+    assert.match(j, /tool=\$\(node scripts\/devos\/agents\.mjs reviewer --mode deep[^\n]*\n {10}echo "tool=\$tool" >> "\$GITHUB_OUTPUT"\n {10}bash scripts\/devos\/install-agent\.sh "\$tool"/);
+    assert.equal(j.includes('if [ "$tool" != "claude" ]; then'), false, name);
+    for (const tool of ["claude", "cursor", "codex", "gemini"]) assert.ok(j.includes(`\${{ steps.pt.outputs.tool == '${tool}' && secrets.`), `${name}: ${tool}`);
     for (const line of j.split("\n")) {
       assert.equal(/\bgh (pr|issue) (comment|create|edit|merge)|gh api -X|gh workflow run|git push|statuses\//.test(line), false, `${name}: ${line.trim()}`);
     }
@@ -122,11 +126,12 @@ test("intake-two-jobs.test.mjs S5 what a planner runs is main's; a revision comm
   // Every comment publish posts is scrubbed of the keys it holds first, and carries the runner's marker.
   assert.ok(act.lastIndexOf("\n          say\n") < act.lastIndexOf('gh api "repos/$REPO/issues/$ISSUE/comments" -F body=@"$RUNNER_TEMP/comment.md"'));
   assert.match(act, /"<!-- devos-comment -->\\n"/);
-  assert.match(job(intake, "revise-publish"), /say\(\) \{ printf '%s\\n' "\$1" > "\$RUNNER_TEMP\/comment\.md"; node "\$T\/scrub\.mjs" --names SCRUB_PAT,SCRUB_TOKEN,SCRUB_C1,SCRUB_C2,SCRUB_A1,SCRUB_A2 "\$RUNNER_TEMP\/comment\.md"; gh pr comment/);
+  assert.match(job(intake, "revise-publish"), /say\(\) \{ printf '%s\\n' "\$1" > "\$RUNNER_TEMP\/comment\.md"; node "\$T\/scrub\.mjs" --names SCRUB_PAT,SCRUB_TOKEN,SCRUB_C1,SCRUB_C2,SCRUB_A1,SCRUB_A2,SCRUB_K1,SCRUB_K2,SCRUB_O1,SCRUB_O2,SCRUB_G1,SCRUB_G2 "\$RUNNER_TEMP\/comment\.md"; gh pr comment/);
   // PR-31: a limit with no stated reset backs off (60, 120, 240 … minutes); the planner hands over only a stated time.
   assert.match(act, /const backoff = Math\.min\(base \* 2 \*\* \(Number\(process\.env\.CHECKS\) - 1\), cap\);/);
   assert.match(act, /checks=%s -->/);
-  assert.match(planner, /console\.log\(parseResetTime\(text, new Date\(\)\) \? earliestNotBefore\("claude", text, 60\) : ""\);/);
+  assert.match(planner, /console\.log\(parseResetTime\(text, new Date\(\)\) \? earliestNotBefore\(process\.env\.PLANNER_TOOL \|\| "claude", text, 60\) : ""\);/);
+  assert.match(planner, /PLANNER_TOOL: \$\{\{ steps\.pt\.outputs\.tool \}\}/);
   // The planner's commit is made even when it wrote nothing, so publish can say the plan is empty.
   assert.match(planner, /git commit -q --allow-empty -m "Intake #\$ISSUE: the planner's work"/);
   // This repository's pull requests only: a fork's PR from a branch of the same name is never the plan's.

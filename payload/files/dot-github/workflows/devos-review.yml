@@ -1,0 +1,248 @@
+# Dev OS cycle — the review job (E85, PR-101). Called by devos-cycle.yml only, between work and publish; it never runs
+# on its own.
+#
+# At the builder's trust level: the reviewer agent reads the branch and may run commands (the tests, fence-check), so
+# this job holds no GitHub write token, no DEVOS_PAT, no OIDC token and no production credential: its token can only
+# read the repository, and GitHub sends it only the secrets the caller passes in, the reviewer tools' own keys (KEY_*
+# for the deep reviewer's tool, LKEY_* for the light reviewer's when it is another). It shares nothing with publish but
+# one artifact, devos-<task>-a<attempt>-review: the review file, the fences, and the run in the agent output contract
+# (scripts/devos/agent-result.mjs), scrubbed of this job's keys. Publish takes it as data: only the review file and
+# fences, and the contract's fields, never a script.
+#
+#   main at the run's commit → the work job's bundle and evidence → the verified tree, the checks and the review plan,
+#   computed with main's publish-verify.mjs and review-mode.mjs as publish computes them (no AI when the bundle is
+#   rejected, the builder did not finish, or the review is kept) → the reviewer's CLI at its pin → the reviewer agent
+#   (plan-agent.sh reviewer: accounts, next models, server retries, the tool's kit) → the artifact.
+name: devos-review
+
+on:
+  workflow_call:
+    inputs:
+      task: { type: string, required: true }
+      risk: { type: string, required: true }
+      attempt: { type: string, required: true }
+      branch: { type: string, required: true }
+      main_sha: { type: string, required: true }
+      base: { type: string, required: false, default: main }
+      review_only: { type: boolean, required: false, default: false }
+      reuse_review: { type: boolean, required: false, default: false }
+      cursor_account: { type: string, required: false, default: "1" }
+      claude_account: { type: string, required: false, default: "1" }
+      # The work job's claims, as publish's verify takes them.
+      w_exit: { type: string, required: false, default: "" }
+      w_model: { type: string, required: false, default: "" }
+      w_effort: { type: string, required: false, default: "" }
+      w_fast: { type: string, required: false, default: "" }
+      w_state: { type: string, required: false, default: "" }
+      w_not_before: { type: string, required: false, default: "" }
+      picked: { type: string, required: false, default: "" }
+      builder_tool: { type: string, required: false, default: "" }
+      trusted_models: { type: string, required: false, default: "" }
+      # The reviewer tools (resolve's): the deep reviewer's, and the light reviewer's when it is another.
+      review_tool: { type: string, required: true }
+      light_tool: { type: string, required: false, default: "" }
+    secrets:
+      KEY_1: { required: false }
+      KEY_2: { required: false }
+      ALT_1: { required: false }
+      ALT_2: { required: false }
+      LKEY_1: { required: false }
+      LKEY_2: { required: false }
+      LALT_1: { required: false }
+      LALT_2: { required: false }
+    outputs:
+      reviewed: { value: "${{ jobs.review.outputs.reviewed }}" }
+
+permissions:
+  contents: read
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    outputs:
+      reviewed: ${{ steps.prep.outputs.reviewed }}
+    env:
+      DEVOS_AUTOMATED: "1"
+      TASK: ${{ inputs.task }}
+      RISK: ${{ inputs.risk }}
+      ATTEMPT: ${{ inputs.attempt }}
+      BR: ${{ inputs.branch }}
+      BASE: ${{ inputs.base }}
+      BASE_SHA: ${{ inputs.main_sha }}
+      REPO: ${{ github.repository }}
+      REVIEW_ONLY: ${{ inputs.review_only && 'true' || 'false' }}
+      DEVOS_CLAUDE_ACCOUNT: ${{ inputs.claude_account }}
+      DEVOS_CURSOR_ACCOUNT: ${{ inputs.cursor_account }}
+      DEVOS_CODEX_ACCOUNT: ${{ vars.DEVOS_CODEX_ACCOUNT || '1' }}
+      DEVOS_GEMINI_ACCOUNT: ${{ vars.DEVOS_GEMINI_ACCOUNT || '1' }}
+      DEVOS_ACCOUNT_SWITCH: ${{ vars.DEVOS_ACCOUNT_SWITCH || 'auto' }}
+      DEVOS_REVIEWER_MODEL: ${{ vars.DEVOS_REVIEWER_MODEL }}
+      DEVOS_REVIEWER_LIGHT_MODEL: ${{ vars.DEVOS_REVIEWER_LIGHT_MODEL }}
+      # Main's scripts (T), the verified repository (OUT, D), the work job's output (W) and the review's tree (RV).
+      T: ${{ github.workspace }}/trusted/scripts/devos
+      DEVOS_SCRIPTS: ${{ github.workspace }}/trusted/scripts/devos
+      OUT: ${{ github.workspace }}/publish
+      D: ${{ github.workspace }}/publish/decide
+      W: ${{ github.workspace }}/work-out
+      RV: ${{ github.workspace }}/review
+    steps:
+      - name: Check out main at this run's commit
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ github.sha }}
+          path: trusted
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+
+      - name: The work job's bundle and evidence
+        continue-on-error: true
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: devos-${{ inputs.task }}-a${{ inputs.attempt }}-work
+          path: ${{ github.workspace }}/work-out
+      - name: The screenshots
+        continue-on-error: true
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: devos-${{ inputs.task }}-a${{ inputs.attempt }}-screens
+          path: ${{ github.workspace }}/screens
+
+      # The tree publish will review, by main's own code; publish computes it again and compares the head. Nothing here
+      # posts a status or writes to GitHub.
+      - name: The verified tree, the checks and the review plan (main's rules)
+        id: prep
+        env:
+          DEVOS_GIT_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
+          DEVOS_CHECKS_BY: work
+          W_EXIT: ${{ inputs.w_exit }}
+          W_MODEL: ${{ inputs.w_model }}
+          W_EFFORT: ${{ inputs.w_effort }}
+          W_FAST: ${{ inputs.w_fast }}
+          CLAIMED: ${{ inputs.w_state }}
+          NOT_BEFORE: ${{ inputs.w_not_before }}
+          PICKED: ${{ inputs.picked }}
+          TRUSTED_MODELS: ${{ inputs.trusted_models }}
+          REUSE: ${{ inputs.reuse_review && 'true' || 'false' }}
+          REVIEW_TOOL: ${{ inputs.review_tool }}
+          LIGHT_TOOL: ${{ inputs.light_tool }}
+        run: |
+          skip() { echo "no review in this job: $1"; echo "reviewed=false" >> "$GITHUB_OUTPUT"; exit 0; }
+          builder=true; [ "$REVIEW_ONLY" = "true" ] && builder=false
+          bundle=""; [ -f "$W/branch.bundle" ] && bundle="$W/branch.bundle"
+          [ -n "$bundle" ] || [ "$builder" = "false" ] || skip "the work job handed over no bundle"
+          GITHUB_OUTPUT="$RUNNER_TEMP/verify.out" node "$T/publish-verify.mjs" verify --task "$TASK" --attempt "$ATTEMPT" --branch "$BR" --main-sha "$BASE_SHA" --base "$BASE" \
+            --out "$OUT" ${bundle:+--bundle "$bundle"} --builder "$builder" --exit "$W_EXIT" --model "$W_MODEL" --effort "$W_EFFORT" --fast "$W_FAST" \
+            --trusted-models "$TRUSTED_MODELS" || skip "the bundle is rejected (publish says why)"
+          GITHUB_OUTPUT=/dev/null node "$T/publish-verify.mjs" guards --out "$OUT" || skip "the guards rejected the bundle (publish says why)"
+          GITHUB_OUTPUT="$RUNNER_TEMP/state.out" node "$T/publish-verify.mjs" state --out "$OUT" --claimed "${CLAIMED:-error}" --not-before "$NOT_BEFORE" --picked "$PICKED"
+          state=$(sed -n 's/^state=//p' "$RUNNER_TEMP/state.out" | tail -1)
+          [ "$state" = "ok" ] || skip "the builder's outcome is ${state:-unknown}"
+          cd "$D"; export DEVOS_ROOT="$D"
+          node "$T/publish-verify.mjs" checks --out "$OUT" --ci "$W/evidence/ci-results.json"
+          GITHUB_OUTPUT="$RUNNER_TEMP/plan.out" node "$T/review-mode.mjs" --task "$TASK" --attempt "$ATTEMPT"
+          if [ "$REUSE" = "true" ] && [ -f "docs/reviews/$TASK-a$ATTEMPT.md" ]; then skip "the review of this attempt is kept (PR-21)"; fi
+          node "$T/publish-verify.mjs" review-tree --out "$OUT" --dest "$RV" --evidence "$W/evidence"
+          mkdir -p "$RV/.devos/screens"
+          if [ -d "$GITHUB_WORKSPACE/screens" ]; then cp -R "$GITHUB_WORKSPACE/screens/." "$RV/.devos/screens/"; fi
+          method=$(sed -n 's/^method_changed=//p' "$RUNNER_TEMP/verify.out" | tail -1)
+          mode=$(sed -n 's/^mode=//p' "$RUNNER_TEMP/plan.out" | tail -1)
+          effort=$(sed -n 's/^effort=//p' "$RUNNER_TEMP/plan.out" | tail -1)
+          turns=$(sed -n 's/^max_turns=//p' "$RUNNER_TEMP/plan.out" | tail -1)
+          # PR-28, PR-53: a method fix is always a deep review, by the project's own reviewer agent, at its own effort.
+          if [ "$method" = "true" ]; then
+            mode=deep; turns=120
+            effort=$(GITHUB_OUTPUT=/dev/null node "$T/agents.mjs" effort --kind method | sed -n 's/^effort=//p')
+          fi
+          tool=$(GITHUB_OUTPUT=/dev/null node "$T/agents.mjs" reviewer --mode "$mode" | sed -n 's/^reviewer_tool=//p')
+          light=false; [ "$tool" != "$REVIEW_TOOL" ] && [ "$tool" = "$LIGHT_TOOL" ] && light=true
+          [ "$tool" = "$REVIEW_TOOL" ] || [ "$light" = "true" ] || { echo "::error title=Dev OS::the $mode reviewer is $tool, but this job holds the keys of $REVIEW_TOOL${LIGHT_TOOL:+ and $LIGHT_TOOL}"; exit 1; }
+          printf '%s\n' "$(node -p 'require(process.argv[1]).head' "$OUT/verify.json")" > "$RUNNER_TEMP/review-head.txt"
+          {
+            echo "reviewed=true"; echo "tool=$tool"; echo "light=$light"; echo "mode=$mode"; echo "effort=$effort"; echo "turns=${turns:-80}"; echo "method=${method:-false}"
+            sed -n 's/^\(reasons\|critical\)=/plan_\1=/p' "$RUNNER_TEMP/plan.out"
+            sed -n 's/^\(builder_model\|builder_effort\|builder_fast\)=/\1=/p' "$RUNNER_TEMP/verify.out"
+          } >> "$GITHUB_OUTPUT"
+          echo "review: $tool, $mode review of $(cat "$RUNNER_TEMP/review-head.txt")"
+
+      # From main's checkout, so the pin is main's and no file of the branch (an .npmrc) takes part in the install.
+      - name: The reviewer's CLI, at its pin (PR-93)
+        if: steps.prep.outputs.reviewed == 'true'
+        working-directory: ${{ github.workspace }}/trusted
+        env:
+          TOOL: ${{ steps.prep.outputs.tool }}
+        run: bash scripts/devos/install-agent.sh "$TOOL"
+
+      # The attempt's one review (S6): the project's reviewer agent, in the review tree, with its shell and its own keys.
+      # It may write anything there; publish takes only docs/reviews/<task>-a<attempt>.md and fences.
+      - name: Reviewer (the project's reviewer agent, its own job, no write token)
+        id: reviewer
+        if: steps.prep.outputs.reviewed == 'true'
+        timeout-minutes: 75
+        working-directory: ${{ github.workspace }}/review
+        env:
+          DEVOS_ROOT: ${{ github.workspace }}/review
+          DEVOS_AGENT_MODE: ${{ steps.prep.outputs.mode }}
+          DEVOS_REVIEW_MODE: ${{ steps.prep.outputs.mode }}
+          DEVOS_REVIEW_REASONS: ${{ steps.prep.outputs.plan_reasons }}
+          DEVOS_REVIEW_CRITICAL: ${{ steps.prep.outputs.plan_critical }}
+          METHOD_CHANGE: ${{ steps.prep.outputs.method }}
+          EFFORT: ${{ steps.prep.outputs.effort }}
+          TURNS: ${{ steps.prep.outputs.turns }}
+          DEVOS_BUILDER_MODEL: ${{ steps.prep.outputs.builder_model }}
+          DEVOS_BUILDER_TOOL: ${{ inputs.builder_tool }}
+          DEVOS_BUILDER_EFFORT: ${{ steps.prep.outputs.builder_effort }}
+          DEVOS_BUILDER_FAST: ${{ steps.prep.outputs.builder_fast }}
+          # Only this review's tool's keys, as accounts.sh names them (KEY_* the deep reviewer's tool, LKEY_* the light's).
+          CURSOR_KEY_1: ${{ steps.prep.outputs.tool == 'cursor' && (steps.prep.outputs.light == 'true' && secrets.LKEY_1 || secrets.KEY_1) || '' }}
+          CURSOR_KEY_2: ${{ steps.prep.outputs.tool == 'cursor' && (steps.prep.outputs.light == 'true' && secrets.LKEY_2 || secrets.KEY_2) || '' }}
+          CLAUDE_OAUTH_1: ${{ steps.prep.outputs.tool == 'claude' && (steps.prep.outputs.light == 'true' && secrets.LKEY_1 || secrets.KEY_1) || '' }}
+          CLAUDE_OAUTH_2: ${{ steps.prep.outputs.tool == 'claude' && (steps.prep.outputs.light == 'true' && secrets.LKEY_2 || secrets.KEY_2) || '' }}
+          CLAUDE_APIKEY_1: ${{ steps.prep.outputs.tool == 'claude' && (steps.prep.outputs.light == 'true' && secrets.LALT_1 || secrets.ALT_1) || '' }}
+          CLAUDE_APIKEY_2: ${{ steps.prep.outputs.tool == 'claude' && (steps.prep.outputs.light == 'true' && secrets.LALT_2 || secrets.ALT_2) || '' }}
+          CODEX_KEY_1: ${{ steps.prep.outputs.tool == 'codex' && (steps.prep.outputs.light == 'true' && secrets.LKEY_1 || secrets.KEY_1) || '' }}
+          CODEX_KEY_2: ${{ steps.prep.outputs.tool == 'codex' && (steps.prep.outputs.light == 'true' && secrets.LKEY_2 || secrets.KEY_2) || '' }}
+          GEMINI_KEY_1: ${{ steps.prep.outputs.tool == 'gemini' && (steps.prep.outputs.light == 'true' && secrets.LKEY_1 || secrets.KEY_1) || '' }}
+          GEMINI_KEY_2: ${{ steps.prep.outputs.tool == 'gemini' && (steps.prep.outputs.light == 'true' && secrets.LKEY_2 || secrets.KEY_2) || '' }}
+        run: |
+          node scripts/devos/render-prompt.mjs reviewer "$TASK" "$ATTEMPT" --out .devos/reviewer-prompt.md
+          bash scripts/devos/plan-agent.sh reviewer .devos/reviewer-prompt.md devos/schemas/verdict.schema.json .devos/reviewer.json "$EFFORT" "${TURNS:-80}" || echo "the reviewer agent's run ended with exit $?"
+          tail -c 2000 .devos/reviewer.err 2>/dev/null || true
+          node -e 'const r = require(process.argv[1]); console.log(`reviewer: ${r.agent} ${r.model}, exit ${r.exit_code}, limited ${r.limited}, permission denials ${r.permission_denials.length}`);' "$PWD/.devos/reviewer.json" || true
+
+      # Only what publish takes, scrubbed of this job's keys; never the agent's raw output (D9).
+      - name: Hand the review to publish
+        id: hand
+        if: always() && steps.prep.outputs.reviewed == 'true'
+        env:
+          SCRUB_K1: ${{ secrets.KEY_1 }}
+          SCRUB_K2: ${{ secrets.KEY_2 }}
+          SCRUB_A1: ${{ secrets.ALT_1 }}
+          SCRUB_A2: ${{ secrets.ALT_2 }}
+          SCRUB_L1: ${{ secrets.LKEY_1 }}
+          SCRUB_L2: ${{ secrets.LKEY_2 }}
+          SCRUB_M1: ${{ secrets.LALT_1 }}
+          SCRUB_M2: ${{ secrets.LALT_2 }}
+        run: |
+          out="$RUNNER_TEMP/review-out"
+          mkdir -p "$out/.devos/usage" "$out/docs/reviews" "$out/docs/fences"
+          ( cd "$RV" && find docs/reviews docs/fences -maxdepth 1 -type f -size -1M -print0 2>/dev/null | xargs -0 -r cp --parents -t "$out" )
+          for f in reviewer.json reviewer-run.env accounts.md; do [ -f "$RV/.devos/$f" ] && cp "$RV/.devos/$f" "$out/.devos/$f"; done
+          [ -f "$RV/.devos/usage/pending.jsonl" ] && cp "$RV/.devos/usage/pending.jsonl" "$out/.devos/usage/pending.jsonl"
+          cp "$RUNNER_TEMP/review-head.txt" "$out/.devos/review-head.txt"
+          find "$out" -type f -print0 | xargs -0 node "$T/scrub.mjs" --names SCRUB_K1,SCRUB_K2,SCRUB_A1,SCRUB_A2,SCRUB_L1,SCRUB_L2,SCRUB_M1,SCRUB_M2
+          ls -la "$out/.devos"
+      - name: Keep the review for publish
+        if: always() && steps.hand.outcome == 'success'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: devos-${{ inputs.task }}-a${{ inputs.attempt }}-review
+          path: ${{ runner.temp }}/review-out/
+          include-hidden-files: true
+          retention-days: 3
+          if-no-files-found: error

@@ -5,3 +5,5 @@ paths:
   payload/files/dot-github/workflows/devos-cycle.yml:
     ignore:
       - 'could not read reusable workflow file for "\./\.github/workflows/devos-work\.yml"'
+      # E85 (PR-101): the review job's workflow, called the same way.
+      - 'could not read reusable workflow file for "\./\.github/workflows/devos-review\.yml"'

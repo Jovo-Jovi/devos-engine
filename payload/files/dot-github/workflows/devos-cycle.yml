@@ -102,6 +102,9 @@ jobs:
       pick_model: ${{ steps.ag.outputs.builder_model }}
       builder_fallbacks: ${{ steps.ag.outputs.builder_fallbacks }}
       builder_note: ${{ steps.ag.outputs.builder_note }}
+      # E85 (PR-101): the reviewer tools, so the review job is handed only their keys.
+      review_tool: ${{ steps.ag.outputs.review_tool }}
+      light_tool: ${{ steps.ag.outputs.light_tool }}
       media: ${{ steps.media.outputs.media }}
       # PR-91: where the task is built (base, base_sha, a new unit), or what the run does instead (accept, waiting).
       build: ${{ steps.place.outputs.build }}
@@ -248,9 +251,9 @@ jobs:
           T_TASK: ${{ steps.t.outputs.task }}
         run: |
           echo "::notice title=Dev OS::$T_TASK is heavy and DEVOS_HEAVY=hold. Comment /devos go in the run notices issue to start it."
-      # PR-90: the builder is chosen here, by main's code, so the work job is handed only that tool's keys. The review
-      # runs in publish with no shell, as its own user; Claude Code is the reviewer tool verified to work that way (D11).
-      - name: Choose the builder from the pool; the reviewer must be Claude Code
+      # PR-90: the builder is chosen here, by main's code, so the work job is handed only that tool's keys. E85 (PR-101):
+      # the reviewer tools too, for the review job, which runs at the builder's trust level and holds only theirs.
+      - name: Choose the builder from the pool, and name the reviewer tools
         id: ag
         if: steps.place.outputs.build == 'true' && steps.setup.outputs.blocked != 'true' && steps.heavy.outputs.held != 'true'
         env:
@@ -263,13 +266,10 @@ jobs:
           labels=$(gh pr list --repo "$REPO" --head "$BR" --state open --json labels --jq '[.[0].labels[]?.name] | join(",")' 2>/dev/null || true)
           case ",$labels," in *",devos:fallback-builder,"*) export DEVOS_FALLBACK_BUILDER=true ;; esac
           node scripts/devos/agents.mjs pick --task "$TASK"
-          for mode in deep light; do
-            tool=$(GITHUB_OUTPUT=/dev/null node scripts/devos/agents.mjs reviewer --mode "$mode" | sed -n 's/^reviewer_tool=//p')
-            if [ "$tool" != "claude" ]; then
-              echo "::error title=Dev OS::The $mode reviewer is $tool. Since PR-90 the review runs with no shell, as its own user, and only Claude Code is verified to review that way: move the reviewer to Claude Code (devos models tool reviewer claude <model>, and devos models tool light claude <model>), then run the cycle again."
-              exit 1
-            fi
-          done
+          deep=$(GITHUB_OUTPUT=/dev/null node scripts/devos/agents.mjs reviewer --mode deep | sed -n 's/^reviewer_tool=//p')
+          light=$(GITHUB_OUTPUT=/dev/null node scripts/devos/agents.mjs reviewer --mode light | sed -n 's/^reviewer_tool=//p')
+          [ "$light" = "$deep" ] && light=""
+          { echo "review_tool=$deep"; echo "light_tool=$light"; } >> "$GITHUB_OUTPUT"
       # PR-90: the media key goes to the work job only when the fence names media (PR-81): main's, or the open unit's,
       # which only the reviewer writes (PR-91). The task branch cannot ask for it.
       - name: Does the fence name media
@@ -315,11 +315,52 @@ jobs:
       ALT_2: ${{ needs.resolve.outputs.builder_tool == 'claude' && secrets.ANTHROPIC_API_KEY_2 || '' }}
       MEDIA_KEY: ${{ needs.resolve.outputs.media == 'true' && secrets.DEVOS_MEDIA_XAI_KEY || '' }}
 
+  # E85 (PR-101): the review, at the builder's trust level, in its own workflow so that GitHub hands it only the reviewer
+  # tools' keys (KEY_* the deep reviewer's, LKEY_* the light reviewer's when it is another). Its token can only read;
+  # what it makes is one artifact, data for publish. No AI call runs in a job that holds a write token.
+  review:
+    needs: [resolve, work]
+    if: needs.resolve.outputs.done == 'false' && needs.resolve.outputs.build == 'true' && needs.resolve.outputs.held != 'true' && needs.resolve.outputs.blocked != 'true' && needs.work.result == 'success'
+    permissions:
+      contents: read
+    uses: ./.github/workflows/devos-review.yml
+    with:
+      task: ${{ needs.resolve.outputs.task }}
+      risk: ${{ needs.resolve.outputs.risk }}
+      attempt: ${{ needs.resolve.outputs.attempt }}
+      branch: ${{ needs.resolve.outputs.branch }}
+      main_sha: ${{ needs.resolve.outputs.base_sha || github.sha }}
+      base: ${{ needs.resolve.outputs.base || 'main' }}
+      review_only: ${{ inputs.review_only == true }}
+      reuse_review: ${{ inputs.reuse_review == true }}
+      cursor_account: ${{ (inputs.cursor_account != 'default' && inputs.cursor_account) || vars.DEVOS_CURSOR_ACCOUNT || '1' }}
+      claude_account: ${{ (inputs.claude_account != 'default' && inputs.claude_account) || vars.DEVOS_CLAUDE_ACCOUNT || '1' }}
+      w_exit: ${{ needs.work.outputs.exit }}
+      w_model: ${{ needs.work.outputs.model }}
+      w_effort: ${{ needs.work.outputs.effort }}
+      w_fast: ${{ needs.work.outputs.fast }}
+      w_state: ${{ needs.work.outputs.state }}
+      w_not_before: ${{ needs.work.outputs.not_before }}
+      picked: ${{ needs.resolve.outputs.builder_id }}
+      builder_tool: ${{ needs.resolve.outputs.builder_tool }}
+      trusted_models: ${{ needs.resolve.outputs.pick_model }} ${{ needs.resolve.outputs.builder_model }} ${{ needs.resolve.outputs.builder_fallbacks }} ${{ vars.DEVOS_BUILDER_MODEL }}
+      review_tool: ${{ needs.resolve.outputs.review_tool }}
+      light_tool: ${{ needs.resolve.outputs.light_tool }}
+    secrets:
+      KEY_1: ${{ (needs.resolve.outputs.review_tool == 'cursor' && secrets.CURSOR_API_KEY) || (needs.resolve.outputs.review_tool == 'claude' && secrets.CLAUDE_CODE_OAUTH_TOKEN) || (needs.resolve.outputs.review_tool == 'codex' && secrets.OPENAI_API_KEY) || (needs.resolve.outputs.review_tool == 'gemini' && secrets.GEMINI_API_KEY) || '' }}
+      KEY_2: ${{ (needs.resolve.outputs.review_tool == 'cursor' && secrets.CURSOR_API_KEY_2) || (needs.resolve.outputs.review_tool == 'claude' && secrets.CLAUDE_CODE_OAUTH_TOKEN_2) || (needs.resolve.outputs.review_tool == 'codex' && secrets.OPENAI_API_KEY_2) || (needs.resolve.outputs.review_tool == 'gemini' && secrets.GEMINI_API_KEY_2) || '' }}
+      ALT_1: ${{ needs.resolve.outputs.review_tool == 'claude' && secrets.ANTHROPIC_API_KEY || '' }}
+      ALT_2: ${{ needs.resolve.outputs.review_tool == 'claude' && secrets.ANTHROPIC_API_KEY_2 || '' }}
+      LKEY_1: ${{ (needs.resolve.outputs.light_tool == 'cursor' && secrets.CURSOR_API_KEY) || (needs.resolve.outputs.light_tool == 'claude' && secrets.CLAUDE_CODE_OAUTH_TOKEN) || (needs.resolve.outputs.light_tool == 'codex' && secrets.OPENAI_API_KEY) || (needs.resolve.outputs.light_tool == 'gemini' && secrets.GEMINI_API_KEY) || '' }}
+      LKEY_2: ${{ (needs.resolve.outputs.light_tool == 'cursor' && secrets.CURSOR_API_KEY_2) || (needs.resolve.outputs.light_tool == 'claude' && secrets.CLAUDE_CODE_OAUTH_TOKEN_2) || (needs.resolve.outputs.light_tool == 'codex' && secrets.OPENAI_API_KEY_2) || (needs.resolve.outputs.light_tool == 'gemini' && secrets.GEMINI_API_KEY_2) || '' }}
+      LALT_1: ${{ needs.resolve.outputs.light_tool == 'claude' && secrets.ANTHROPIC_API_KEY || '' }}
+      LALT_2: ${{ needs.resolve.outputs.light_tool == 'claude' && secrets.ANTHROPIC_API_KEY_2 || '' }}
+
   # The trusted job (PR-90). It checks out only main, runs only main's scripts (trusted/), uses only GitHub's own actions
   # pinned by commit, and never runs the branch's code, a project script, a dependency, a hook or another action. Every
   # git operation is publish-verify.mjs's, in a repository it creates. Nothing the work job says is taken as a decision.
   publish:
-    needs: [resolve, work]
+    needs: [resolve, work, review]
     # PR-91: it also runs, with no work job, to open a complete unit's acceptance pull request.
     if: always() && needs.resolve.result == 'success' && ((needs.resolve.outputs.done == 'false' && needs.resolve.outputs.held != 'true' && needs.resolve.outputs.blocked != 'true' && needs.work.result != 'skipped' && needs.work.result != 'cancelled') || needs.resolve.outputs.accept == 'true')
     runs-on: ubuntu-latest
@@ -362,14 +403,13 @@ jobs:
       # PR-63: a role's model from a repository variable (same tool); unset = the configured model.
       DEVOS_REVIEWER_MODEL: ${{ vars.DEVOS_REVIEWER_MODEL }}
       DEVOS_REVIEWER_LIGHT_MODEL: ${{ vars.DEVOS_REVIEWER_LIGHT_MODEL }}
-      # Main's scripts (T), publish's workspace (OUT; D is the verified tree with main's method files laid over it), the
-      # work job's output (W) and the review's workspace (RW).
+      # Main's scripts (T), publish's workspace (OUT; D is the verified tree with main's method files laid over it) and
+      # the work job's output (W). The review job's artifact goes to review-out (E85).
       T: ${{ github.workspace }}/trusted/scripts/devos
       DEVOS_SCRIPTS: ${{ github.workspace }}/trusted/scripts/devos
       OUT: ${{ github.workspace }}/publish
       D: ${{ github.workspace }}/publish/decide
       W: ${{ github.workspace }}/work-out
-      RW: /opt/devos-review-work
     steps:
       - name: Check out main at this run's commit (publish's only checkout)
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -625,22 +665,13 @@ jobs:
           name: devos-${{ needs.resolve.outputs.task }}-a${{ needs.resolve.outputs.attempt }}-screens
           path: ${{ github.workspace }}/screens
 
-      - name: The review's user and workspace (the verified tree, the diff, the work job's evidence)
+      # The screenshots go in publish's record of the attempt; the review job had its own copy.
+      - name: The screenshots, in the record
         if: steps.bs.outputs.state == 'ok' && steps.rp.outputs.reuse != 'true'
         working-directory: ${{ github.workspace }}/publish/decide
-        env:
-          DEVOS_ROOT: ${{ github.workspace }}/publish/decide
         run: |
-          bash "$T/review-user.sh" setup
-          # The work job's evidence (the prompt says whose it is), then publish's own diff and checks over it.
-          node "$T/publish-verify.mjs" review-tree --out "$OUT" --dest "$RW" --evidence "$W/evidence"
-          mkdir -p .devos/screens "$RW/.devos/screens"
-          if [ -d "$GITHUB_WORKSPACE/screens" ]; then
-            cp -R "$GITHUB_WORKSPACE/screens/." "$RW/.devos/screens/"
-            cp -R "$GITHUB_WORKSPACE/screens/." .devos/screens/
-          fi
-          if [ -f "$RW/.devos/screens/motion.json" ]; then cp "$RW/.devos/screens/motion.json" .devos/screens/motion.json; fi
-          bash "$T/review-user.sh" workspace
+          mkdir -p .devos/screens
+          if [ -d "$GITHUB_WORKSPACE/screens" ]; then cp -R "$GITHUB_WORKSPACE/screens/." .devos/screens/; fi
 
       - name: devos-report review started
         if: steps.bs.outputs.state == 'ok' && steps.rp.outputs.reuse != 'true'
@@ -650,121 +681,47 @@ jobs:
           DEVOS_ROOT: ${{ github.workspace }}/publish/decide
         run: node "$T/report.mjs" note --step review --status started
 
-      # The one AI call of the attempt (SA3, S6): Claude Code as devos-review, in the review workspace, with no shell, no
-      # hooks, no project settings and only its own MCP servers. It may write only its review file and fences.
-      - name: Reviewer (Claude Code, its own user, no shell)
+      # E85 (PR-101): the review ran in the review job, with no write token. Its artifact is data: this job copies files
+      # out of it and runs none of them. A review job that ended without a review of this verified head stops this job
+      # after the builder's work is pushed, so the supervisor runs the review again (review only), as a stopped
+      # reviewer step did before.
+      - name: The review job's review
+        if: steps.bs.outputs.state == 'ok' && steps.rp.outputs.reuse != 'true'
+        continue-on-error: true
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: devos-${{ needs.resolve.outputs.task }}-a${{ needs.resolve.outputs.attempt }}-review
+          path: ${{ github.workspace }}/review-out
+      - name: Reviewer (the review job's run, in the agent output contract)
         id: reviewer
         if: steps.bs.outputs.state == 'ok' && steps.rp.outputs.reuse != 'true'
-        timeout-minutes: 75
         working-directory: ${{ github.workspace }}/publish/decide
         env:
           DEVOS_ROOT: ${{ github.workspace }}/publish/decide
-          CLAUDE_OAUTH_1: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          CLAUDE_APIKEY_1: ${{ secrets.ANTHROPIC_API_KEY }}
-          CLAUDE_OAUTH_2: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 }}
-          CLAUDE_APIKEY_2: ${{ secrets.ANTHROPIC_API_KEY_2 }}
-          DEVOS_REVIEW_PASS: CLAUDE_CODE_OAUTH_TOKEN ANTHROPIC_API_KEY
-          MODEL: ${{ steps.rp.outputs.model || needs.resolve.outputs.reviewer_model }}
-          TURNS: ${{ steps.rp.outputs.max_turns || needs.resolve.outputs.reviewer_max_turns }}
-          EFFORT: ${{ steps.rp.outputs.effort || needs.resolve.outputs.reviewer_effort }}
-          DEVOS_REVIEW_MODE: ${{ steps.rp.outputs.mode }}
-          DEVOS_REVIEW_REASONS: ${{ steps.rp.outputs.reasons }}
-          DEVOS_REVIEW_CRITICAL: ${{ steps.rp.outputs.critical }}
-          METHOD_CHANGE: ${{ steps.vb.outputs.method_changed }}
-          # PR-94 (N6): the builder as verify kept it (a configured model id, a known effort, yes or no), never the work job's text.
-          DEVOS_BUILDER_MODEL: ${{ steps.vb.outputs.builder_model }}
-          DEVOS_BUILDER_TOOL: ${{ needs.resolve.outputs.builder_tool }}
-          DEVOS_BUILDER_EFFORT: ${{ steps.vb.outputs.builder_effort }}
-          DEVOS_BUILDER_FAST: ${{ steps.vb.outputs.builder_fast }}
+          REVIEW_RESULT: ${{ needs.review.result }}
+          REVIEWED: ${{ needs.review.outputs.reviewed }}
         run: |
-          . "$T/accounts.sh"
-          # PR-28, PR-53: a method fix is always a deep review, by the project's own reviewer agent.
-          if [ "$METHOD_CHANGE" = "true" ]; then
-            export DEVOS_REVIEW_MODE=deep DEVOS_REVIEW_REASONS="method fix: it changes the automation itself (PR-28)"
+          got="$GITHUB_WORKSPACE/review-out"
+          head=$(node -p 'require(process.argv[1]).head' "$OUT/verify.json")
+          reviewed=$(head -c 64 "$got/.devos/review-head.txt" 2>/dev/null | tr -cd '0-9a-f')
+          if [ "$REVIEW_RESULT" != "success" ] || [ "$REVIEWED" != "true" ] || [ ! -f "$got/.devos/reviewer-run.env" ] || [ ! -f "$got/.devos/reviewer.json" ]; then
+            echo "::error title=Dev OS::the review job ended ${REVIEW_RESULT:-unknown} with no review of this attempt; the builder's work is on the branch, so the review runs again (review only)"
+            exit 1
           fi
-          rev_line=$(GITHUB_OUTPUT=/dev/null node "$T/agents.mjs" reviewer --mode "$DEVOS_REVIEW_MODE")
-          rev_model=$(printf '%s\n' "$rev_line" | sed -n 's/^reviewer_model=//p')
-          # PR-64: the reviewer's next models (its fallback_models), tried after its model on every account.
-          rev_fallbacks=$(printf '%s\n' "$rev_line" | sed -n 's/^reviewer_fallbacks=//p')
-          MODEL="$rev_model"; first_model="$MODEL"; models="$MODEL $rev_fallbacks"; lim=""; outcome=""
-          if [ "$METHOD_CHANGE" = "true" ]; then
-            # PR-99: at the reviewer's own effort, as the developer chose it.
-            eff_line=$(GITHUB_OUTPUT=/dev/null node "$T/agents.mjs" effort --kind method) || exit 1
-            EFFORT=$(printf '%s\n' "$eff_line" | sed -n 's/^effort=//p'); TURNS=120
-            echo "method fix: deep review (claude $MODEL, effort $EFFORT, $TURNS turns)"
+          if [ "$reviewed" != "$head" ]; then
+            echo "::error title=Dev OS::the review job ended success, but it reviewed ${reviewed:-no commit}, not the verified $head; the review runs again (review only)"
+            exit 1
           fi
-          [ -n "$EFFORT" ] || { echo "::error title=Dev OS::no reviewer effort for this review; set it in devos/project.json (devos upgrade asks for it, PR-99)"; exit 1; }
-          echo "reviewer: claude $MODEL ($DEVOS_REVIEW_MODE review)${rev_fallbacks:+ · then the models $rev_fallbacks}"
-          node "$T/render-prompt.mjs" reviewer "$TASK" "$ATTEMPT" --out .devos/reviewer-prompt.md
-          schema=$(cat "$GITHUB_WORKSPACE/trusted/devos/schemas/verdict.schema.json")
-          set +e
-          accounts=$(devos_accounts claude)
-          [ -n "$accounts" ] || { echo "::error::set secret CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY (and optionally the _2 pair)"; exit 1; }
-          ( t0=$(date +%s); while sleep 60; do
-              f="not yet"; [ -f "$RW/docs/reviews/$TASK-a$ATTEMPT.md" ] && f="written"
-              echo "Claude is reviewing $TASK: $(( ($(date +%s) - t0) / 60 )) min, verdict file $f"
-            done ) &
-          hb=$!
-          # PR-29: on a usage limit the review starts again at once on the other Claude account.
-          used=""; tries=0
-          for slot in $(devos_slots claude $models); do
-            MODEL="${slot%@*}"; acc="${slot##*@}"
-            devos_use_claude "$acc"; used="$acc"
-            while :; do
-              bash "$T/review-user.sh" run "$RW" -- claude -p \
-                --model "$MODEL" \
-                --effort "$EFFORT" \
-                --output-format json \
-                --json-schema "$schema" \
-                --permission-mode dontAsk \
-                --setting-sources user \
-                --settings /opt/devos-tools/settings.json \
-                --strict-mcp-config --mcp-config /opt/devos-tools/mcp.json \
-                --allowedTools "Read,Glob,Grep,Edit(docs/reviews/**),Edit(docs/fences/**),Task,Agent,Skill,mcp__context7,mcp__devos,WebFetch(domain:nextjs.org),WebFetch(domain:cursor.com),WebFetch(domain:code.claude.com)" \
-                --disallowedTools "Bash" \
-                --max-turns "$TURNS" < .devos/reviewer-prompt.md > .devos/reviewer.json 2> .devos/reviewer.err
-              rc=$?
-              node "$T/usage.mjs" record --stage reviewer --command claude --model "$MODEL" --out .devos/reviewer.json --code "$rc" || true
-              # PR-87: a temporary server error (a 5xx, a dropped connection, "retriable") runs the review again, three times at most.
-              if [ "$rc" != "0" ] && pause=$(devos_server_wait "$tries") && devos_server_error .devos/reviewer.json .devos/reviewer.err "$rc"; then
-                tries=$(( tries + 1 ))
-                devos_note "Reviewer: the Claude CLI stopped on a temporary server error; trying again in $pause s ($tries of 3)."
-                sleep "$pause"
-                continue
-              fi
-              break
-            done
-            if devos_limited .devos/reviewer.json .devos/reviewer.err "$rc"; then
-              lim=$(devos_limit_file claude "$acc" "$(devos_model_index "$MODEL" $models)"); outcome=limited
-              mkdir -p .devos/limits; cat .devos/reviewer.json .devos/reviewer.err > "$lim"
-              devos_note "Reviewer: Claude account $acc reached its usage limit on $MODEL."
-              continue
-            fi
-            if [ "$rc" != "0" ] && devos_unavailable .devos/reviewer.json .devos/reviewer.err "$rc"; then
-              outcome=unavailable; devos_note "Reviewer: Claude account $acc cannot use $MODEL; trying the next model."
-              continue
-            fi
-            outcome=ran
-            break
-          done
-          devos_settle "$outcome" "$lim" .devos/reviewer.err
-          kill "$hb" 2>/dev/null
-          if [ "$MODEL" != "$first_model" ]; then devos_note "Reviewer: switched to claude $MODEL (account $used)."
-          elif [ "$used" != "${accounts%% *}" ]; then devos_note "Reviewer: switched to claude account $used."; fi
-          echo "reviewer exit code: $rc (claude $MODEL, account $used)"
-          # PR-54: verdict.mjs reads which tool reviewed and how its run exited.
-          printf 'code=%s\nused=%s\naccounts="%s"\ntool=%s\nmodel=%s\n' "$rc" "$used" "$accounts" claude "$MODEL" > .devos/reviewer-run.env
-          tail -c 2000 .devos/reviewer.err || true
-          # Surface any tool calls the permission layer refused, so a denial is never silent.
-          node --input-type=module -e 'const { parseJsonLoose, readText } = await import(`${process.env.T}/limits.mjs`); const r = parseJsonLoose(readText(".devos/reviewer.json")); if (!r) { console.log("reviewer.json: no JSON result"); process.exit(0); } const d = r.permission_denials || []; console.log(`reviewer permission denials: ${d.length}`); for (const x of d.slice(0, 20)) console.log(" -", JSON.stringify(x).slice(0, 300));'
+          mkdir -p .devos
+          cp "$got/.devos/reviewer.json" .devos/reviewer.json
+          # Only the keys verdict.mjs reads, each a plain value (PR-54).
+          grep -E '^(code|used|tool|model)=[A-Za-z0-9._:/@+-]*$|^accounts="[0-9 ]*"$' "$got/.devos/reviewer-run.env" > .devos/reviewer-run.env || true
+          # Only the runner's own notes on accounts and models (plan-agent.sh's "- reviewer: …" lines), each a plain line.
+          if [ -f "$got/.devos/accounts.md" ]; then grep -E '^- reviewer: [A-Za-z0-9 .,:;()/_@+-]{1,300}$' "$got/.devos/accounts.md" | head -20 >> .devos/accounts.md || true; fi
+          # PR-52: the review run's usage records, checked one by one, go in with the review.
+          if [ -f "$got/.devos/usage/pending.jsonl" ]; then node "$T/publish-verify.mjs" usage --in "$got/.devos/usage/pending.jsonl" --dest .devos/usage/pending.jsonl; fi
+          node -e 'const r = require(process.argv[1]); console.log(`reviewer: ${r.agent} ${r.model}${r.provider ? ` (${r.provider})` : ""}, exit ${r.exit_code}, limited ${r.limited}`); const d = r.permission_denials || []; console.log(`reviewer permission denials: ${d.length}`); for (const x of d.slice(0, 20)) console.log(" -", JSON.stringify(x).slice(0, 300));' "$PWD/.devos/reviewer.json"
 
-      # Only the review file of this attempt and fences are taken (the reviewer surface, PR-07), then scrubbed of every
-      # secret value this job holds; fence-check runs on every fence taken (PR-58).
-      # A review that timed out leaves no process of the review user behind it.
-      - name: End the review user's processes
-        if: always()
-        continue-on-error: true
-        run: bash "$T/review-user.sh" stop
       - name: Take the review's outputs
         if: steps.bs.outputs.state == 'ok' && steps.rp.outputs.reuse != 'true'
         working-directory: ${{ github.workspace }}/publish/decide
@@ -776,11 +733,17 @@ jobs:
           SCRUB_C2: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 }}
           SCRUB_A1: ${{ secrets.ANTHROPIC_API_KEY }}
           SCRUB_A2: ${{ secrets.ANTHROPIC_API_KEY_2 }}
+          SCRUB_K1: ${{ secrets.CURSOR_API_KEY }}
+          SCRUB_K2: ${{ secrets.CURSOR_API_KEY_2 }}
+          SCRUB_O1: ${{ secrets.OPENAI_API_KEY }}
+          SCRUB_O2: ${{ secrets.OPENAI_API_KEY_2 }}
+          SCRUB_G1: ${{ secrets.GEMINI_API_KEY }}
+          SCRUB_G2: ${{ secrets.GEMINI_API_KEY_2 }}
         run: |
-          node "$T/publish-verify.mjs" take-review --out "$OUT" --from "$RW" --task "$TASK" --attempt "$ATTEMPT" | tee .devos/take-review.log
+          node "$T/publish-verify.mjs" take-review --out "$OUT" --from "$GITHUB_WORKSPACE/review-out" --task "$TASK" --attempt "$ATTEMPT" | tee .devos/take-review.log
           taken=$(sed -n 's/^taken=//p' .devos/take-review.log)
           # shellcheck disable=SC2086
-          node "$T/scrub.mjs" --names SCRUB_PAT,SCRUB_TOKEN,SCRUB_C1,SCRUB_C2,SCRUB_A1,SCRUB_A2 .devos/reviewer.json .devos/reviewer.err $taken
+          node "$T/scrub.mjs" --names SCRUB_PAT,SCRUB_TOKEN,SCRUB_C1,SCRUB_C2,SCRUB_A1,SCRUB_A2,SCRUB_K1,SCRUB_K2,SCRUB_O1,SCRUB_O2,SCRUB_G1,SCRUB_G2 .devos/reviewer.json .devos/accounts.md $taken
           for p in $taken; do
             case "$p" in docs/fences/*) node "$T/fence-check.mjs" "$p" >> .devos/fence-check.txt 2>&1 || true ;; esac
           done

@@ -206,7 +206,9 @@ test("stack.test.mjs (g) the workflows set up the toolchain and install it", () 
   assert.equal(countOf(cycle, "agent -p --force --trust --approve-mcps --model \"$MODEL\" --output-format stream-json \"$(devos_prompt cursor .devos/builder-prompt.md)\""), 1);
   assert.equal(countOf(cycle, "agent -p --force --trust --approve-mcps --model \"$MODEL\" --output-format stream-json \"$(devos_prompt cursor .devos/reviewer-prompt.md)\""), 0);
   assert.equal(countOf(cycle, "DEVOS_STDIN=.devos/builder-prompt.md bash scripts/devos/agent-watchdog.sh \"$left\" 10 .devos/builder.json .devos/builder.err -- \\\n                  claude -p --model \"$MODEL\" --effort \"$EFFORT\" --output-format stream-json --verbose --permission-mode dontAsk"), 1);
-  assert.equal(countOf(cycle, "--max-turns \"$TURNS\" < .devos/reviewer-prompt.md > .devos/reviewer.json"), 1);
+  // E85 (PR-101): the review is the reviewer agent's run in the review job.
+  assert.equal(countOf(cycle, "--max-turns \"$TURNS\" < .devos/reviewer-prompt.md > .devos/reviewer.json"), 0);
+  assert.equal(countOf(readFileSync(path.join(root, "payload", "files", "dot-github", "workflows", "devos-review.yml"), "utf8"), "bash scripts/devos/plan-agent.sh reviewer .devos/reviewer-prompt.md"), 1);
 });
 
 test("stack.test.mjs (h) a python build's output is restored", () => {

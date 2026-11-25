@@ -230,13 +230,14 @@ test("resilience.test.mjs (d) a builder run that meets a 502 runs again in place
 
 test("resilience.test.mjs (e) every builder, review and planning run of the cycle tries again on a server error before its other checks", () => {
   const count = (text, part) => text.split(part).length - 1;
-  // PR-90: the builder runs in the work job (devos-work.yml); the review, Claude Code only (D11), in publish.
-  const cycle = `${read(`${PAYLOAD}/dot-github/workflows/devos-cycle.yml`)}\n${read(`${PAYLOAD}/dot-github/workflows/devos-work.yml`)}`;
-  assert.equal(count(cycle, "pause=$(devos_server_wait \"$tries\")"), 3);
+  // PR-90: the builder runs in the work job (devos-work.yml); E85 (PR-101): the review in the review job, through
+  // plan-agent.sh, whose retry is counted below.
+  const cycle = `${read(`${PAYLOAD}/dot-github/workflows/devos-cycle.yml`)}\n${read(`${PAYLOAD}/dot-github/workflows/devos-work.yml`)}\n${read(`${PAYLOAD}/dot-github/workflows/devos-review.yml`)}`;
+  assert.equal(count(cycle, "pause=$(devos_server_wait \"$tries\")"), 2);
   assert.equal(count(cycle, "devos_server_error .devos/builder.json .devos/builder.err \"$code\""), 2);
-  assert.equal(count(cycle, "devos_server_error .devos/reviewer.json .devos/reviewer.err \"$rc\""), 1);
+  assert.equal(count(cycle, "devos_server_error .devos/reviewer.json .devos/reviewer.err \"$rc\""), 0);
+  assert.equal(count(cycle, "bash scripts/devos/plan-agent.sh reviewer "), 1);
   assert.ok(cycle.indexOf("devos_server_error .devos/builder.json") < cycle.indexOf("devos_limited .devos/builder.json"));
-  assert.ok(cycle.indexOf("devos_server_error .devos/reviewer.json") < cycle.indexOf("devos_limited .devos/reviewer.json"));
   assert.equal(count(read(`${PAYLOAD}/scripts/devos/run-agent.sh`), "pause=$(devos_server_wait \"$tries\")"), 2);
   assert.equal(count(read(`${PAYLOAD}/scripts/devos/plan-agent.sh`), "pause=$(devos_server_wait \"$tries\")"), 1);
   assert.equal(read(`${PAYLOAD}/scripts/devos/accounts.sh`).includes('devos_server_error() { node "${DEVOS_SCRIPTS:-scripts/devos}/limit-check.mjs" --server'), true);
