@@ -14,6 +14,22 @@ const bin = path.join(root, "bin", "devos.mjs");
 const windows = process.platform === "win32";
 const fixtures = path.join(root, "test", "fixtures", "docs");
 
+/**
+ * E82: GitHub's copy of a project, a bare repository inside the project's own .git (so it goes with the project). The
+ * project's https://github.com/ address fetches from it through the project's url.insteadOf, so no test reaches the
+ * network; `devos adopt` finds the checkout current with it. Returns the bare repository's path.
+ */
+export function githubCopy(folder, slug = "devtest/demo-app", env = process.env) {
+  const base = `${path.join(folder, ".git", "devos-github").replaceAll("\\", "/")}/`;
+  const bare = `${base}${slug}.git`;
+  mkdirSync(path.dirname(bare), { recursive: true });
+  for (const [cwd, args] of [[folder, ["init", "-q", "--bare", bare]], [folder, ["push", "-q", bare, "refs/heads/main:refs/heads/main"]], [folder, ["config", `url.${base}.insteadOf`, "https://github.com/"]]]) {
+    const result = spawnSync("git", args, { cwd, encoding: "utf8", env, windowsHide: true });
+    if (result.status !== 0) throw new Error(`git ${args.join(" ")}: ${result.stderr}`);
+  }
+  return bare;
+}
+
 export function cleanup(dir) {
   rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 }

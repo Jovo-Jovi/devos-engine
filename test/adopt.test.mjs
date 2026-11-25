@@ -5,7 +5,7 @@ import path from "node:path";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
-import { cleanup, stage } from "./harness.mjs";
+import { cleanup, githubCopy, stage } from "./harness.mjs";
 import { ADOPT_IGNORE, AREA_IMPORTS, GATE_IMPORTS, adoptBlocks, adoptStops, asidePath, caseClashes, documentCrashes, moveNote, chooseAgent, copyPrecedents, copyStops, criticalList, ownSettings, projectFromConfig, sourceRoots, surveyLines, surveyProject, uiReader } from "../lib/adopt.mjs";
 import { merge } from "../payload/files/scripts/devos/config.mjs";
 import { hubExec } from "../lib/hub.mjs";
@@ -44,6 +44,9 @@ function project(files, { dir, extra = 0, tags = [], origin = "https://github.co
   for (let i = 0; i < extra; i += 1) git(["commit", "-q", "--allow-empty", "-m", `change ${i + 1}`], folder);
   for (const tag of tags) git(["tag", tag], folder);
   if (origin) git(["remote", "add", "origin", origin], folder);
+  // E82: a GitHub address fetches from GitHub's stand-in, current with main; no test reaches the network.
+  const github = /^https:\/\/github\.com\/([^/]+\/[^/]+?)\.git$/.exec(origin ?? "");
+  if (github) githubCopy(folder, github[1]);
   return folder;
 }
 
@@ -793,4 +796,46 @@ test("adopt.test.mjs (v) E81: names that differ from DEV_OS's only in letter cas
   assert.equal(labels.includes(`Claude Code · claude-opus-5-5 — ${MODEL_MARKS.effort}`), true);
   assert.equal(labels.includes("Gemini CLI · gemini-2.5-pro"), true);
   assert.equal(agentListNote(), "Cursor CLI lists the models of your account (\"listed by your account\"); Claude Code, Codex CLI and Gemini CLI do not, so their lists are DEV_OS's. Claude Code and Codex CLI ask the effort after the model (\"effort asked next\"); Cursor CLI's model id carries its effort. On GitHub each tool runs with a key of its own: devos asks for the keys of the tools you choose (and of your modules, a database's among them) at the Keys step, before anything reaches GitHub.");
+});
+
+test("adopt.test.mjs (w) E82: the survey fetches GitHub's main first; a checkout behind it or apart from it stops, one ahead of it is a note, and a failed fetch stops", () => {
+  const folder = project({ "README.md": "# Shop\n" });
+  // The identity every commit here takes: GitHub's runner has no git user of its own.
+  const run = (args) => spawnSync("git", [...IDENTITY, ...args], { cwd: folder, encoding: "utf8", windowsHide: true });
+  const sha = /[0-9a-f]{7,}/.source;
+  try {
+    const base = `${path.join(folder, ".git", "devos-github").replaceAll("\\", "/")}/`;
+    const bare = `${base}devtest/demo-app.git`;
+    let survey = surveyProject(folder, { exec: fakeGh() });
+    assert.deepEqual(survey.repository.upstream, { state: "current", behind: 0, ahead: 0, commits: [], error: "" });
+    assert.equal(survey.ready, true, survey.blockers.join("; "));
+    // GitHub's main moves on by two commits that this checkout lacks.
+    for (const message of ["Ship pronunciation", "Fix the letter page"]) assert.equal(run(["commit", "-q", "--allow-empty", "-m", message]).status, 0);
+    assert.equal(run(["push", "-q", bare, "main"]).status, 0);
+    assert.equal(run(["reset", "-q", "--hard", "HEAD~2"]).status, 0);
+    survey = surveyProject(folder, { exec: fakeGh() });
+    assert.deepEqual([survey.repository.upstream.state, survey.repository.upstream.behind, survey.repository.upstream.ahead, survey.ready], ["behind", 2, 0, false]);
+    assert.match(survey.blockers.join("\n"), new RegExp(`^its main is 2 commits behind GitHub's \\(${sha} Fix the letter page; ${sha} Ship pronunciation\\); run git pull, then devos adopt again$`, "m"));
+    // devos adopt --publish takes GitHub's new commits into the branch, so there it is no stop.
+    assert.equal(surveyProject(folder, { exec: fakeGh(), behindStops: false }).ready, true);
+    // A commit of its own too: the two have diverged.
+    assert.equal(run(["commit", "-q", "--allow-empty", "-m", "Only here"]).status, 0);
+    survey = surveyProject(folder, { exec: fakeGh() });
+    assert.equal(survey.repository.upstream.state, "diverged");
+    assert.match(survey.blockers.join("\n"), new RegExp(`^its main and GitHub's have diverged: 1 commit only here, 2 commits only on GitHub \\(${sha} Fix the letter page; ${sha} Ship pronunciation\\); bring them together \\(git pull, then git push what is only here\\), then devos adopt again$`, "m"));
+    // Ahead only: the pull request carries what GitHub lacks.
+    assert.equal(run(["reset", "-q", "--hard", "refs/remotes/origin/main"]).status, 0);
+    assert.equal(run(["commit", "-q", "--allow-empty", "-m", "Not pushed yet"]).status, 0);
+    survey = surveyProject(folder, { exec: fakeGh() });
+    assert.equal(survey.ready, true, survey.blockers.join("; "));
+    assert.equal(survey.notes.includes("its main has 1 commit that GitHub does not have yet; the pull request carries it"), true, survey.notes.join("\n"));
+    // A fetch that fails stops, with git's own reason.
+    assert.equal(run(["config", "--unset-all", `url.${base}.insteadOf`]).status, 0);
+    assert.equal(run(["config", `url.${base}nowhere/.insteadOf`, "https://github.com/"]).status, 0);
+    survey = surveyProject(folder, { exec: fakeGh() });
+    assert.equal(survey.repository.upstream.state, "failed");
+    assert.match(survey.blockers[0], /^git could not fetch GitHub's main \(.+\); the adoption pushes to GitHub at its end, so fix this first$/);
+  } finally {
+    rmSync(folder, { recursive: true, force: true });
+  }
 });

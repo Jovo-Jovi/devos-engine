@@ -43,7 +43,7 @@ task is then built from a written fence, checked, reviewed, and merged by you.
   <img alt="The DEV_OS Engine at the centre sends the work through each step in turn: brief, blueprint, fence, builder, guards, CI and review, and you approve the merge" src="docs/assets/devos-flow.svg" width="900">
 </p>
 
-Version `1.13.13`. The engine is under PolyForm Shield 1.0.0 and the files it installs into your project under MIT
+Version `1.13.14`. The engine is under PolyForm Shield 1.0.0 and the files it installs into your project under MIT
 (see [Licence](#licence)).
 
 ## Contents
@@ -362,6 +362,12 @@ copy out of the project into `~/.devos/adopt/<owner>__<repo>/before-adopt/`, sin
 when you pull the merge. A file whose name differs from one of DEV_OS's only in letter case (`docs/decisions.md`
 beside DEV_OS's `docs/DECISIONS.md`) is the same file on Windows and macOS, so it goes aside too, under its own name.
 Anything else that stops the adoption says the commands that fix it.
+
+**Current with GitHub.** `devos adopt` fetches GitHub's `main` first. When your `main` is behind it, or the two have
+diverged, the survey names GitHub's commits you lack and stops: `git pull`, then adopt again. Before the push, devos
+fetches again: when GitHub's `main` moved since the brief, it merges the new commits into `devos/adopt` after your
+yes, when git can do it cleanly, and runs DEV_OS's checks again, so the pull request opens without conflicts. When git
+cannot, nothing is pushed, and the last lines say how to merge by hand or start again.
 
 **When an adoption stops.** The branch goes and your checkout stays as it was, but the brief and your answers (the
 contract, the Control Tower link, the cycle's agents, the deploy) are kept. Fix what the last lines name, commit it if

@@ -5,7 +5,7 @@ import path from "node:path";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
-import { agentLines, cleanup, stage } from "./harness.mjs";
+import { agentLines, cleanup, githubCopy, stage } from "./harness.mjs";
 import { AGENT_START, adoptPullBody, handoverAnswers, ownRulings, readmeAdopted } from "../lib/adopt.mjs";
 import { CONTRACT_VERSION } from "../lib/contract.mjs";
 import { handoverTasks, phasesAccepted } from "../lib/handover.mjs";
@@ -54,6 +54,7 @@ function handedOverProject(phases, { fences = ["T02"], extra = {}, rulings = "" 
   for (const args of [["config", "core.autocrlf", "false"], ["add", "-A"], ["commit", "-q", "-m", "built outside DEV_OS"], ["remote", "add", "origin", "https://github.com/devtest/demo-shop.git"]]) {
     assert.equal(git(args).status, 0, args.join(" "));
   }
+  githubCopy(folder, "devtest/demo-shop", staged.env);
   const run = (args, input, env = {}) => spawnSync(process.execPath, [bin, "adopt", ...args], {
     encoding: "utf8",
     windowsHide: true,
