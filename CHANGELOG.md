@@ -2,7 +2,7 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
-## 1.13.15 — Unreleased
+## 1.13.15 — 2026-11-25
 
 - **The next task starts while main's checks are red (PR-100).** A failing `ci` on main no longer holds the next open task back: when no task or cycle is running and nothing waits for you, the supervisor starts it, since a task is how main gets fixed. It still reports the failure.
 - **One "Dev OS: supervisor" issue (PR-100).** The supervisor's act step reports on the issue its scan found or made, so one run never opens two. When two are open from before, the oldest is the issue, and the later one is closed with a line that names it.
