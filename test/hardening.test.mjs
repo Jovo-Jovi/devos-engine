@@ -613,7 +613,8 @@ test("hardening.test.mjs (p) the checks failing on main are reported, and the ne
     const r = spawnSync(process.execPath, ["scripts/devos/supervisor.mjs", "scan"], { cwd: dir, encoding: "utf8", env, windowsHide: true });
     assert.equal(r.status, 0, r.stderr || r.stdout);
     const incidents = JSON.parse(read(path.join(dir, ".devos", "supervisor", "incidents.json")));
-    assert.deepEqual(incidents.map((i) => [i.kind, i.task, i.action]), [["main-failure", "", "ask-claude"], ["idle", "T01", "dispatch-next"]]);
+    // E85e (PR-104): a missing lockfile is set-up, not code: reported with its steps, with no AI.
+    assert.deepEqual(incidents.map((i) => [i.kind, i.task, i.action]), [["main-failure", "", "report"], ["idle", "T01", "dispatch-next"]]);
     assert.ok(r.stdout.includes("  - idle T01 → dispatch-next"), r.stdout);
   } finally {
     cleanup(dir);

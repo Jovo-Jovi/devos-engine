@@ -40,6 +40,9 @@ jobs:
             docs/PHASES.md
             scripts/devos
             devos.config.json
+      # E85e (PR-104): a GitHub server error (HTTP 5xx, a dropped connection) is tried again, 3 times; a 4xx never is.
+      - name: Retry GitHub's server errors
+        run: bash scripts/devos/gh-retry.sh install
       - name: Dispatch the next task (or resume the task a method fix unblocked)
         env:
           GH_TOKEN: ${{ github.token }}

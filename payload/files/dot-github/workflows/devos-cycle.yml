@@ -420,6 +420,10 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
+      # E85e (PR-104): main's stand-in for gh, first on PATH for the later steps: a GitHub server error (HTTP 5xx, a
+      # dropped connection) is tried again, 3 times; a 4xx never is. Publish's push retries the same way (publish-verify).
+      - name: Retry GitHub's server errors
+        run: bash "$T/gh-retry.sh" install
 
       # U4: only this run's artifact, by the name bound to the task and attempt.
       - name: The work job's bundle and evidence

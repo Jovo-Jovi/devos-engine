@@ -46,7 +46,27 @@ if [ -z "$effort" ] && { [ "$tool" = "claude" ] || [ "$tool" = "codex" ]; }; the
   echo "::error title=Dev OS::no effort for the reviewer agent ($tool $model); set it in devos/project.json (devos upgrade asks for it, PR-99)"
   exit 1
 fi
-echo "$stage: the reviewer agent, $tool $model, effort ${effort:-none (the tool takes none)}"
+echo "$stage: the reviewer agent, $tool $model, effort $(bash scripts/devos/progress.sh label "$tool" "$model" "$effort")"
+
+# E85e (PR-104): one progress line a minute while the agent runs (progress.sh watch): the review file's size for a
+# review (DEVOS_PROGRESS_FILE, which the review job names), whether the answer file is written for a plan by a tool that
+# writes one, else "running".
+progress_kind=answer; progress_file="$answer"
+if [ "$stage" = reviewer ]; then
+  progress_kind=review; progress_file="${DEVOS_PROGRESS_FILE:-}"; [ -n "$progress_file" ] || progress_kind=running
+elif [ "$tool" = claude ]; then
+  progress_kind=running
+fi
+watcher=""
+watch_start() {
+  DEVOS_PROGRESS_STAGE="$stage" DEVOS_PROGRESS_TOOL="$tool" DEVOS_PROGRESS_MODEL="$1" DEVOS_PROGRESS_EFFORT="$effort" \
+    bash scripts/devos/progress.sh watch "$progress_kind" "$progress_file" &
+  watcher=$!
+}
+watch_stop() {
+  [ -n "$watcher" ] || return 0
+  kill "$watcher" 2>/dev/null; wait "$watcher" 2>/dev/null; watcher=""
+}
 
 ARGS=()
 case "$tool" in
@@ -99,6 +119,7 @@ for slot in $(devos_slots "$tool" $models); do
   fi
   # PR-87: a temporary server error (a 5xx, a dropped connection, "retriable") runs again in place, three times at most.
   while :; do
+    watch_start "$run_model"
     case "$tool" in
       claude)
         devos_use_claude "$acc"
@@ -128,6 +149,7 @@ for slot in $(devos_slots "$tool" $models); do
         "${ARGS[@]}" "$(devos_prompt gemini "$p")" < "$p" > "$raw" 2> "$err"
         code=$?; cmd=gemini ;;
     esac
+    watch_stop
     node scripts/devos/usage.mjs record --stage "$stage" --command "$cmd" --model "$run_model" --out "$raw" --code "$code" || true
     if [ "$code" != "0" ] && pause=$(devos_server_wait "$tries") && devos_server_error "$raw" "$err" "$code"; then
       tries=$(( tries + 1 ))

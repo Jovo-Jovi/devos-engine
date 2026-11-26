@@ -775,3 +775,46 @@ test("two-jobs.test.mjs the manual, the precedent and the changelog name the two
   assert.ok(/## 1\.13\.0 — (?:Unreleased|\d{4}-\d{2}-\d{2})\n\n- \*\*The cycle runs each attempt in two jobs \(PR-90\)\.\*\*/.test(changelog));
   assert.ok(read(path.join(root, "dev", "DECISIONS.md")).includes("| D-E16 | **The cycle in two jobs, and its security acceptance conditions (2026-11-09):**"));
 });
+
+test("two-jobs.test.mjs U10 publish's push tries a GitHub server error again, 3 times, and never a refusal (E85e)", { skip: windows && "a stand-in git" }, () => {
+  // PR-104: one HTTP 502 stopped learn-coptic's T01 a2 after its review passed (run 45804169238).
+  const fx = fixture();
+  const stand = path.join(fx.dir, "stand-in");
+  try {
+    const { bundle } = workBundle(fx, (c) => write(c, "src/b.ts", "export const b = 2;\n"));
+    assert.equal(verify(fx, bundle).status, 0);
+    const real = spawnSync("bash", ["-c", "command -v git"], { encoding: "utf8" }).stdout.trim();
+    mkdirSync(stand);
+    // GitHub, as git sees it: the first PUSH_FAILS pushes end with PUSH_ERROR; every other git call is the real one.
+    writeFileSync(path.join(stand, "git"), `#!/usr/bin/env bash
+for a in "$@"; do
+  if [ "$a" = push ]; then
+    n=$(( $(cat "$PUSH_COUNT" 2>/dev/null || echo 0) + 1 )); echo "$n" > "$PUSH_COUNT"
+    if [ "$n" -le "$PUSH_FAILS" ]; then echo "$PUSH_ERROR" >&2; exit 128; fi
+  fi
+done
+exec "${real}" "$@"
+`);
+    chmodSync(path.join(stand, "git"), 0o755);
+    const count = path.join(fx.dir, "pushes");
+    const push = (fails, error) => {
+      rmSync(count, { force: true });
+      const r = run(process.execPath, [path.join(fx.T, "publish-verify.mjs"), "push", "--out", path.join(fx.dir, "out"), "--remote", fx.remote], fx.dir,
+        { PATH: `${stand}${path.delimiter}${process.env.PATH}`, PUSH_COUNT: count, PUSH_FAILS: String(fails), PUSH_ERROR: error, DEVOS_PUSH_RETRY_WAIT: "0 0 0" });
+      return { ...r, pushes: Number(readFileSync(count, "utf8")) };
+    };
+    const refused = push(9, "remote: error: GH013: Repository rule violations found for refs/heads/task/T01.");
+    assert.deepEqual([refused.status, refused.pushes, remoteHead(fx)], [1, 1, ""]);
+    assert.equal(refused.out.includes("trying again"), false);
+    const down = push(9, "fatal: unable to access 'https://github.com/o/r.git/': The requested URL returned error: 503");
+    assert.deepEqual([down.status, down.pushes, remoteHead(fx)], [1, 4, ""]);
+    const flaky = push(2, "fatal: unable to access 'https://github.com/o/r.git/': The requested URL returned error: 502");
+    assert.equal(flaky.status, 0, flaky.out);
+    assert.equal(flaky.pushes, 3);
+    assert.match(flaky.out, /push: GitHub answered with a server error; trying again in 0 s \(1 of 3\)\npush: GitHub answered with a server error; trying again in 0 s \(2 of 3\)\n/);
+    assert.match(flaky.out, /push: refs\/heads\/task\/T01 = [0-9a-f]{40} \(MATCH\)/);
+    assert.notEqual(remoteHead(fx), "");
+  } finally {
+    cleanup(fx.dir);
+  }
+});

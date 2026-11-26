@@ -231,6 +231,12 @@ const taskOfRun = (r) => {
 // ---------- incident rules (cheap first; Claude only for what no rule explains) ----------
 const ENV_RE = /ECONNRESET|ETIMEDOUT|EAI_AGAIN|Could not resolve host|50[234] (Bad Gateway|Service Unavailable|Gateway Timeout)|rate limit exceeded|toomanyrequests|failed to pull|registry\.npmjs\.org.*(timeout|ECONN)|The operation was canceled|runner has received a shutdown signal|lost communication with the server/i;
 
+// E85e (PR-104): GitHub's own server error, as gh prints it ("HTTP 502: Bad Gateway (https://api.github.com/…)"), or as
+// main's gh stand-in reports it when its retries ran out (gh-retry.sh). ENV_RE's "502 Bad Gateway" never matched it.
+const GITHUB_5XX_RE = /\bHTTP 5\d\d\b|gh-retry: GitHub answered|push: GitHub answered with a server error/;
+// E85e (PR-104): the checks stop at install because the package manager they use finds no lockfile: set-up, not code.
+const LOCKFILE_RE = /ERR_PNPM_NO_LOCKFILE|can only install with an existing package-lock\.json|The lockfile would have been created by this install, which is explicitly forbidden/;
+
 const FONTS_RE = /Google Fonts download failed|could not download the Google Fonts|next\/font\/google queries|fonts\.(googleapis|gstatic)\.com|Failed to fetch .*Google Fonts/i;
 
 function detect(facts) {
@@ -255,9 +261,13 @@ function detect(facts) {
   // deploy failure is only reported.
   if (["ci", "devos-deploy"].includes(facts.event.workflow) && facts.event.conclusion === "failure" && facts.event.run) {
     const run = Number(facts.event.run), f = failingStep(run);
-    const outside = ENV_RE.test(f.tail) || FONTS_RE.test(f.tail);
+    const outside = ENV_RE.test(f.tail) || FONTS_RE.test(f.tail) || GITHUB_5XX_RE.test(f.tail);
     const base = { kind: "main-failure", task: "", attempt: 0, run, url: `https://github.com/${REPO}/actions/runs/${run}`, step: f.step, evidence: f.tail.slice(-6000) };
-    if (facts.event.workflow === "ci") {
+    if (facts.event.workflow === "ci" && !outside && LOCKFILE_RE.test(f.tail)) {
+      add({ ...base, key: `main:ci:${run}`, action: "report",
+        cause: `the checks on main stop at install: the package manager they use finds no lockfile in the repository (${f.tail.match(LOCKFILE_RE)[0]}). This is set-up, not code`,
+        owner_steps: "- If an open task adds the lockfile, its merge makes main green: nothing to do.\n- Otherwise commit the lockfile of the package manager the checks use (for pnpm, run pnpm install and commit pnpm-lock.yaml), on a branch with a pull request." });
+    } else if (facts.event.workflow === "ci") {
       add({ ...base, key: `main:ci:${run}`, cause: outside ? `the checks on main failed on an outside service (${FONTS_RE.test(f.tail) ? "the Google Fonts download" : "the network"}), not on the code` : "", action: outside ? "rerun-failed" : "ask-claude" });
     } else {
       const untouched = /site was not deployed|the app did not move|before the app moves/i.test(f.tail);
@@ -290,6 +300,11 @@ function detect(facts) {
     } else if (/the review job ended .* the review runs again \(review only\)/.test(f.tail)) {
       // E85 (PR-101): publish pushed the builder's work and stopped, as the review job gave no review of it.
       add({ ...base, key: `${task}:a${attempt}:review-job`, review_only: true, action: "redispatch", cause: "the review job ended with no review of this attempt; the builder's work is on the branch, so only the checks and the review run again" });
+    } else if (GITHUB_5XX_RE.test(f.tail)) {
+      // E85e (PR-104): a GitHub server error that outlasted publish's retries. The failed jobs run again; the review job
+      // succeeded, and its artifact stays with the run, so no AI runs again.
+      add({ ...base, key: `${task}:a${attempt}:github-5xx:${f.step}`, action: "rerun-failed",
+        cause: `GitHub answered with a server error (${(f.tail.match(/HTTP 5\d\d/) || ["HTTP 5xx"])[0]}) in "${f.step || f.job || "?"}"; the failed jobs run again, and the review is kept` });
     } else if (/has timed out/.test(f.tail)) {
       add({ ...base, key: `${task}:a${attempt}:step-timeout`, cause: `step "${f.step}" timed out`, action: "redispatch" });
     } else if (ENV_RE.test(f.tail) || /^(Install|Set up|Run actions\/|Supabase CLI|Firebase CLI|Local module services|Check out)/.test(f.step)) {
@@ -586,6 +601,11 @@ if (cmd === "scan") {
         action: AI_ACTIONS.includes(d.action) ? d.action : "escalate", note: aiText(d.note, 1500), issue_title: aiText(d.issue_title, 120), issue_body: aiText(d.issue_body, 6000) });
     }
     const seen = hist.filter((h) => h.key === i.key && h.done).length;
+    // E85e (PR-104): a set-up cause on main is reported with its steps; nothing is re-run and no AI is asked.
+    if (i.action === "report" && i.owner_steps) {
+      report(issue, i, { done: false, note: "nothing re-run and no AI asked: this is set-up, not code (the steps below)" });
+      continue;
+    }
     if (i.action === "report") {
       report(issue, i, { done: false, escalate: true, note: "I never re-run a production deploy; the deploy doctor's comment and the run log say what failed. Re-run devos-deploy (production) once it is fixed" });
       continue;
@@ -637,12 +657,14 @@ if (cmd === "scan") {
     else console.log(`deferred: ${i.key}: ${out.note}`);
   }
 } else if (cmd === "classify") {
-  // Diagnostics: how the rules read one past cycle run (no action, nothing posted).
+  // Diagnostics: how the rules read one past run (no action, nothing posted): a cycle run, or (E85e) with --workflow ci
+  // or devos-deploy, a run of main's checks or deploy.
   const runId = opt("run");
+  const workflow = opt("workflow") || "devos-cycle";
   const r = api(`repos/${REPO}/actions/runs/${runId}`);
-  const facts = { event: { workflow: "devos-cycle", conclusion: r.conclusion, run: String(runId) }, active: [], task_prs: [], intake_prs: [], rescues: [], next_task: null,
-    runs: [{ id: r.id, title: r.display_title, status: r.status, conclusion: r.conclusion, created: r.created_at, updated: r.updated_at, url: r.html_url }] };
-  for (const i of detect(facts)) console.log(JSON.stringify({ kind: i.kind, task: i.task, attempt: i.attempt, step: i.step, key: i.key, cause: i.cause, action: i.action, rescue: i.rescue || null, review_only: Boolean(i.review_only) }));
+  const facts = { event: { workflow, conclusion: r.conclusion, run: String(runId) }, active: [], task_prs: [], intake_prs: [], rescues: [], next_task: null,
+    runs: workflow === "devos-cycle" ? [{ id: r.id, title: r.display_title, status: r.status, conclusion: r.conclusion, created: r.created_at, updated: r.updated_at, url: r.html_url }] : [] };
+  for (const i of detect(facts)) console.log(JSON.stringify({ kind: i.kind, task: i.task, attempt: i.attempt, step: i.step, key: i.key, cause: i.cause, action: i.action, rescue: i.rescue || null, review_only: Boolean(i.review_only), ...(i.owner_steps ? { owner_steps: i.owner_steps } : {}) }));
 } else if (cmd === "approve") {
   const body = opt("body"); const m = body.match(/^\/devos (approve|reject) ([A-Za-z0-9-]{1,80})(\s|$)/);
   if (!m) process.exit(0);

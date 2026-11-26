@@ -29,8 +29,9 @@ dev/                   plan, decisions, ledger, fences, reports, reviews
 Every task is built and reviewed on its own branch, and reaches `main` only after the review of record.
 
 **Until 1.14.0, read `next` for `main` below (D-E19).** Every task starts from `next` and merges into it, and
-`main` takes only stable releases. After each merge, the owner publishes the task's release candidate from `next`
-(`dev/RELEASE.md`, *Release candidates*), and the task's live check (D8) runs on it.
+`main` takes only stable releases. The owner runs no live check per task: every one runs in E91, on the first
+published candidate (`dev/RELEASE.md`, *Release candidates*). In each package, a test that runs each changed workflow
+step's own script stands in for it.
 
 1. **Fence (the reviewer).** Claude in the DEVOS project writes `dev/fences/E16.md`, with its package (below), and
    pushes it to a new branch `task/E16` from `main`.

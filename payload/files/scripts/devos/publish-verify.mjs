@@ -1009,6 +1009,10 @@ function sync(a) {
   emit({ moved: "true", code_moved: code.length ? "true" : "false", conflict: "", head: merged });
 }
 
+// E85e (PR-104): a GitHub server error during the push is tried again, 3 times (10, 30 and 60 s; DEVOS_PUSH_RETRY_WAIT);
+// a refusal (a rule, a lease, a missing permission) never is.
+export const PUSH_SERVER_ERROR = /The requested URL returned error: 5\d\d|RPC failed; HTTP 5\d\d|HTTP 5\d\d|Connection reset by peer|unexpected disconnect|early EOF|Could not resolve host/i;
+
 function push(a) {
   const out = path.resolve(String(a.out ?? ""));
   const s = readState(out);
@@ -1018,7 +1022,14 @@ function push(a) {
   const remote = remoteOf(a);
   // PR-92: a fresh intake plan replaces the old plan on its branch, and only the one this run saw there.
   const lease = !a.to && s.lease && /^[0-9a-f]{40}$/.test(String(s.lease)) && /^intake\/issue-\d+$/.test(String(s.branch)) ? [`--force-with-lease=${to}:${s.lease}`] : [];
-  const r = g(["push", "--porcelain", ...lease, remote, `${s.head}:${to}`], { cwd: repo, auth: true, allowFail: true });
+  const waits = String(process.env.DEVOS_PUSH_RETRY_WAIT ?? "10 30 60").trim().split(/\s+/).filter(Boolean).map(Number);
+  let r;
+  for (let tries = 0; ; tries += 1) {
+    r = g(["push", "--porcelain", ...lease, remote, `${s.head}:${to}`], { cwd: repo, auth: true, allowFail: true });
+    if (r.status === 0 || tries >= waits.length || !PUSH_SERVER_ERROR.test(`${r.stdout}\n${r.stderr}`)) break;
+    console.log(`push: GitHub answered with a server error; trying again in ${waits[tries]} s (${tries + 1} of ${waits.length})`);
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, Math.max(0, waits[tries]) * 1000);
+  }
   if (r.status !== 0) {
     const text = `${r.stdout}\n${r.stderr}`;
     console.log(text.trim().split(/\r?\n/).slice(-8).join("\n"));

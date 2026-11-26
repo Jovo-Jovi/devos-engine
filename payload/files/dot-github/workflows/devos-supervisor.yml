@@ -152,11 +152,15 @@ jobs:
           find "$RW" -type l -delete
           bash scripts/devos/review-user.sh workspace
           rc=0
+          # E85e (PR-104): a progress line every minute while the second opinion runs.
+          DEVOS_PROGRESS_STAGE=supervisor DEVOS_PROGRESS_TOOL=claude DEVOS_PROGRESS_MODEL="$MODEL" DEVOS_PROGRESS_EFFORT="$EFFORT" \
+            bash scripts/devos/progress.sh watch running & watcher=$!
           bash scripts/devos/review-user.sh run "$RW" -- claude -p "$prompt" --model "$MODEL" --effort "$EFFORT" --output-format json \
             --json-schema "$schema" --permission-mode dontAsk --max-turns 25 \
             --setting-sources user --settings /opt/devos-tools/settings.json --strict-mcp-config \
             --allowedTools "Read,Glob,Grep" --disallowedTools "Bash,Write,Edit,WebFetch,WebSearch" \
             > .devos/supervisor/claude.json 2> .devos/supervisor/claude.err || rc=$?
+          kill "$watcher" 2>/dev/null || true; wait "$watcher" 2>/dev/null || true
           bash scripts/devos/review-user.sh stop
           node scripts/devos/scrub.mjs --names OAUTH,APIKEY,CLAUDE_CODE_OAUTH_TOKEN,ANTHROPIC_API_KEY .devos/supervisor/claude.json .devos/supervisor/claude.err
           if [ "$rc" != "0" ]; then echo "Claude Code exited $rc"; tail -c 1500 .devos/supervisor/claude.err; fi

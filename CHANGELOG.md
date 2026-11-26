@@ -13,6 +13,16 @@ the release.
   compares versions, `1.14.0-rc.1` comes before `1.14.0-rc.2`, and both before `1.14.0`.
 - `node tools/release-check.mjs` refuses a version that is neither a release nor a release candidate, and says when it
   checked a candidate.
+- **Every agent run shows its progress (PR-104).** The builder of any tool, the reviewer, intake, revise and the
+  supervisor's and doctor's second opinions each print one line a minute in the run's log: stage, tool and model, effort,
+  minutes, and what the run has done (the files changed and the last action, or the review file's size). An effort a
+  model's name carries is shown as such (`xhigh, from the model name`), no longer as "none".
+- **A GitHub server error no longer stops a run (PR-104).** Publish and advance try an HTTP 5xx or a dropped connection
+  again, 3 times, and so does publish's push; a 4xx is never tried again. When one still stops a cycle run, the
+  supervisor re-runs its failed jobs, keeping the review, instead of calling it unknown.
+- **A red main for a missing lockfile is explained (PR-104).** The supervisor reports the cause and the steps to fix it,
+  with no re-run and no AI.
+- The live progress comment, unused since the work job lost its write token (PR-90), is gone, with `builder-report.mjs`.
 
 ## 1.13.18 — 2026-11-26
 

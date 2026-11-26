@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -86,7 +86,9 @@ test("followups.test.mjs (c) the Claude Code builder runs with stream-json --ver
   const manual = read(`${PAYLOAD}/docs/method/AUTOMATION.md`);
   assert.equal(manual.includes("| `agent-watchdog.sh` | runs the builder's CLI (Cursor's or Claude Code's) in 72-minute time slices"), true);
   assert.equal(manual.includes("Claude Code's with `--verbose` too, one line per message and tool call, so both show their last action, PR-89)"), true);
-  assert.equal(manual.includes("Claude Code's stream has no timestamps, so it gets the totals so far in place of the timeline, and its plan from TodoWrite (PR-89)"), true);
+  // E85e (PR-104): the builder's report went with the progress comment; its last action is in the progress line.
+  assert.equal(manual.includes("| `builder-report.mjs` |"), false);
+  assert.equal(manual.includes("it prints the run's progress line, whatever the tool (`progress.sh line`, PR-104)"), true);
 });
 
 test("followups.test.mjs (d) the shipped method names no client and cites no other project's SETUP.md (PR-89)", () => {
@@ -138,37 +140,25 @@ test("followups.test.mjs (f) PR-89, the live maximum and the changelog", () => {
   }
 });
 
-test("followups.test.mjs (g) the builder's report reads Claude Code's stream, and Cursor's as before (PR-89)", () => {
+test("followups.test.mjs (g) a Claude Code builder's progress line names its last action, read from its stream, as Cursor's does (PR-89, PR-104)", { skip: skipWindows && "bash" }, () => {
+  // E85e: the progress comment and builder-report.mjs are gone; the watchdog's line in the run's log carries the last action.
+  assert.equal(existsSync(path.join(root, ...PAYLOAD.split("/"), "scripts", "devos", "builder-report.mjs")), false);
   const dir = mkdtempSync(path.join(tmpdir(), "devos-report-"));
-  const report = (events) => {
-    writeFileSync(path.join(dir, "stream.jsonl"), jsonl(events));
-    rmSync(path.join(dir, "state.json"), { force: true });
-    const run = spawnSync(process.execPath, [path.join(root, ...PAYLOAD.split("/"), "scripts", "devos", "builder-report.mjs"), "stream.jsonl", "state.json"], { cwd: dir, encoding: "utf8", windowsHide: true });
-    assert.equal(run.status, 0, run.stderr);
-    return run.stdout;
-  };
+  const fakes = `${dir}-fakes`;
   try {
-    const plan = { type: "assistant", message: { id: "m0", content: [{ type: "tool_use", id: "t0", name: "TodoWrite", input: { todos: [{ content: "Copy the files", status: "completed" }, { content: "Run the tests", status: "in_progress" }, { content: "Write the report", status: "pending" }] } }] } };
+    assert.equal(spawnSync("git", ["init", "-q"], { cwd: dir }).status, 0);
+    mkdirSync(path.join(dir, ".devos"));
+    mkdirSync(fakes);
     const edit = { type: "assistant", message: { id: "m3", content: [{ type: "tool_use", id: "t3", name: "Edit", input: { file_path: "/home/runner/work/app/app/src/a.ts" } }] } };
-    assert.equal(report([init, plan, ...ran, edit, reading]), [
-      "**Plan (the builder's own to-do list): 1 of 3 done**",
-      "✅ Copy the files",
-      "🔄 Run the tests",
-      "⬜ Write the report",
-      "",
-      "**Latest note:** Running the tests.",
-      "",
-      "**So far:** 1 read · 0 searches · 1 commands · 1 edits — edited `src/a.ts` — ran `pnpm test --run`",
-      "",
-    ].join("\n"));
-    assert.equal(report([init, ran[0]]), "**Latest note:** Running the tests.\n\n**So far:** 0 read · 0 searches · 0 commands · 0 edits\n");
-    const cursor = [
-      { type: "system", subtype: "init", timestamp_ms: 1000 },
-      { type: "assistant", message: { content: [{ type: "text", text: "Reading the fence." }] }, timestamp_ms: 2000 },
-      { type: "tool_call", subtype: "started", call_id: "c1", tool_call: { readToolCall: { args: { path: "a" } } }, timestamp_ms: 3000 },
-    ];
-    assert.equal(report(cursor), "**Latest note:** Reading the fence.\n\n**Every 10 minutes:**\n- since 00:00 UTC (so far) · 1 read · 0 searches · 0 commands · 0 edits\n");
+    writeFileSync(path.join(fakes, "claude"), `#!/usr/bin/env bash\nprintf '%s\\n' '${JSON.stringify(init)}' '${JSON.stringify(edit)}'\nsleep 3\n`);
+    chmodSync(path.join(fakes, "claude"), 0o755);
+    const run = spawnSync("bash", [path.join(root, ...PAYLOAD.split("/"), "scripts", "devos", "agent-watchdog.sh"), "30", "10", ".devos/builder.json", ".devos/builder.err", "--",
+      "claude", "-p", "--model", "claude-opus-5-5", "--output-format", "stream-json"], { cwd: dir, encoding: "utf8", windowsHide: true,
+      env: { ...process.env, PATH: `${fakes}${path.delimiter}${process.env.PATH}`, DEVOS_WATCHDOG_TICK: "1", DEVOS_WATCHDOG_UNIT: "1", DEVOS_REPORT_EVERY: "1", DEVOS_USAGE_STAGE: "builder", DEVOS_BUILDER_EFFORT: "high" } });
+    assert.equal(run.status, 0, run.stdout + run.stderr);
+    assert.match(run.stdout, /^builder · claude claude-opus-5-5 · effort high · \d+ min · 1 file\(s\) changed · last action: running Edit: \/home\/runner\/work\/app\/app\/src\/a\.ts$/m);
   } finally {
     rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+    rmSync(fakes, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });

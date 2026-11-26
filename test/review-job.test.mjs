@@ -296,3 +296,38 @@ test("review-job.test.mjs (g) a review-only run reviews: the attempt's model nev
     rmSync(run.dir, { recursive: true, force: true });
   }
 });
+
+test("review-job.test.mjs (h) the review step prints its reviewer's line every minute, with the review file's size and the effort its model's name carries (E85e)", { skip: windows && "the runner is bash" }, () => {
+  // PR-104: the review job's own 5-minute loop is gone; plan-agent.sh prints the line, as every runner does.
+  const step = reviewerStep();
+  assert.equal(step.script.includes("sleep 300"), false);
+  const run = reviewProject("cursor", "grok-4.7-xhigh");
+  try {
+    mkdirSync(path.join(run.dir, "docs", "fences"), { recursive: true });
+    writeFileSync(path.join(run.dir, "docs", "PHASES.md"), readFileSync(path.join(root, "test", "fixtures", "docs", "PHASES.md")));
+    writeFileSync(path.join(run.dir, "docs", "fences", "T01.md"), "## T01 — First task\n\n- Fence version: 1\n");
+    // A reviewer that writes its review file at once, then works on for a while.
+    writeFileSync(path.join(run.fakes, "agent"), `#!/usr/bin/env node
+const fs = require("fs");
+fs.mkdirSync("docs/reviews", { recursive: true });
+fs.writeFileSync("docs/reviews/T01-a1.md", "VERDICT: PASS\\n" + "x".repeat(3000));
+fs.writeFileSync(".devos/reviewer-answer.json", ${JSON.stringify(JSON.stringify(VERDICT))});
+setTimeout(() => process.stdout.write(${JSON.stringify(RECORDED.cursor)}), 2600);
+`);
+    const env = {
+      PATH: `${run.fakes}${path.delimiter}${process.env.PATH ?? ""}`, HOME: run.dir, TASK: "T01", ATTEMPT: "1", DEVOS_ROOT: run.dir,
+      DEVOS_AGENT_MODE: "deep", DEVOS_REVIEW_MODE: "deep", METHOD_CHANGE: "false", EFFORT: "", TURNS: "120",
+      DEVOS_BUILDER_MODEL: "", DEVOS_BUILT_MODEL: "grok-4.7-low", DEVOS_BUILDER_TOOL: "cursor", DEVOS_BUILDER_EFFORT: "low", DEVOS_BUILDER_FAST: "no",
+      CURSOR_KEY_1: "cursor-key", DEVOS_PROGRESS_EVERY: "1", DEVOS_PROGRESS_UNIT: "1",
+    };
+    const result = spawnSync("bash", ["-e", "-c", step.script], { cwd: run.dir, encoding: "utf8", windowsHide: true, env });
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    assert.match(result.stdout, /^reviewer: the reviewer agent, cursor grok-4\.7-xhigh, effort xhigh, from the model name$/m);
+    const lines = result.stdout.split("\n").filter((line) => line.startsWith("reviewer · "));
+    assert.ok(lines.length >= 2, result.stdout);
+    assert.equal(lines[0], "reviewer · cursor grok-4.7-xhigh · effort xhigh, from the model name · 1 min · review file 3 KB");
+    assert.match(result.stdout, /^reviewer: cursor grok-4\.7-xhigh, exit 0, limited false, permission denials 0$/m);
+  } finally {
+    rmSync(run.dir, { recursive: true, force: true });
+  }
+});

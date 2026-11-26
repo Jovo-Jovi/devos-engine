@@ -148,11 +148,15 @@ jobs:
           rm -rf /opt/devos-review-work/.git
           mkdir -p /opt/devos-review-work/.devos && cp -r .devos/doctor /opt/devos-review-work/.devos/doctor
           bash scripts/devos/review-user.sh workspace
+          # E85e (PR-104): a progress line every minute while the second opinion runs.
+          DEVOS_PROGRESS_STAGE=doctor DEVOS_PROGRESS_TOOL=claude DEVOS_PROGRESS_MODEL="$MODEL" DEVOS_PROGRESS_EFFORT="$EFFORT" \
+            bash scripts/devos/progress.sh watch running & watcher=$!
           bash scripts/devos/review-user.sh run /opt/devos-review-work -- claude -p "$(cat devos/prompts/doctor.md)" --model "$MODEL" --effort "$EFFORT" --output-format json \
             --json-schema "$(cat devos/schemas/doctor.schema.json)" --permission-mode dontAsk --max-turns 30 \
             --setting-sources user --settings /opt/devos-tools/settings.json --strict-mcp-config \
             --allowedTools "Read,Glob,Grep" --disallowedTools "Bash,Write,Edit,WebFetch,WebSearch" \
             > .devos/doctor/claude.json 2> .devos/doctor/claude.err || tail -c 1500 .devos/doctor/claude.err
+          kill "$watcher" 2>/dev/null || true; wait "$watcher" 2>/dev/null || true
           # PR-52: nothing here is committed, so this run's usage goes on its summary page only.
           node scripts/devos/usage.mjs record --stage doctor --command claude --model "$MODEL" --out .devos/doctor/claude.json --summary || true
 

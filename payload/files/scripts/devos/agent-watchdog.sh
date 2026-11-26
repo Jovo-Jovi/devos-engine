@@ -10,8 +10,11 @@
 #             (a "devos-stall:" line is appended to the stderr file)
 #        126  nothing changed at all (tree, stdout, stderr) for DEVOS_IDLE_STOP minutes (default 30):
 #             the run is stuck (a "devos-stuck:" line is appended to the stderr file)
-# Progress: every DEVOS_REPORT_EVERY seconds (default 300) and at the end, DEVOS_WATCHDOG_REPORT (a
-# command) is called with <elapsed-min> <files-changed> <idle-min> [final text].
+# Progress (E85e, PR-104): at the start, every DEVOS_REPORT_EVERY seconds (default 60) and at the end, one line in the
+# log (progress.sh line): <stage> · <tool> <model> · effort <label> · <minutes> min · <files> file(s) changed, the last
+# action, and how long the run has been quiet. The stage is DEVOS_PROGRESS_STAGE or DEVOS_USAGE_STAGE, the tool and the
+# model are read from the command line, the effort is DEVOS_PROGRESS_EFFORT or DEVOS_BUILDER_EFFORT. DEVOS_WATCHDOG_REPORT
+# (a command), when set, is also called with <elapsed-min> <files-changed> <idle-min> [final text].
 # Activity is any of: the tree changing, the CLI writing output, or the run's processes using CPU
 # (DEVOS_CPU_ACTIVE seconds or more per check: a build or a test suite is work, a hung server is not).
 # With `--output-format stream-json` the CLI prints one line per message and tool call: the last
@@ -31,12 +34,15 @@
 set -u
 budget=$1; stall=$2; out=$3; err=$4; shift 4
 tick=${DEVOS_WATCHDOG_TICK:-20}; unit=${DEVOS_WATCHDOG_UNIT:-60}   # tests shrink these
-idle_stop=${DEVOS_IDLE_STOP:-30}; report_every=${DEVOS_REPORT_EVERY:-300}; cpu_active=${DEVOS_CPU_ACTIVE:-5}
+idle_stop=${DEVOS_IDLE_STOP:-30}; report_every=${DEVOS_REPORT_EVERY:-60}; cpu_active=${DEVOS_CPU_ACTIVE:-5}
 last_file="$(dirname "$out")/builder-last-action"
 report=${DEVOS_WATCHDOG_REPORT:-}
 [ "${1:-}" = "--" ] && shift
 usage_command=${1:-}; usage_model=auto; prev=""
 for a in "$@"; do [ "$prev" = "--model" ] && usage_model=$a; prev=$a; done
+# E85e (PR-104): the progress line names the tool, not its command (Cursor's CLI is `agent`).
+case "$(basename "${usage_command:-}")" in agent) progress_tool=cursor ;; *) progress_tool=$(basename "${usage_command:-agent}") ;; esac
+progress="$(cd "$(dirname "$0")" && pwd)/progress.sh"
 
 # A stream kept from an earlier run (another tool) never stands for this one.
 rm -f "$out.stream.jsonl"
@@ -96,6 +102,15 @@ unstream() {
   if [ -n "$r" ]; then printf '%s\n' "$r" > "$out"; else tail -n 200 "$out.stream.jsonl" > "$out"; fi
 }
 say() {  # elapsed files idle [final]
+  local what act
+  what="$2 file(s) changed"
+  act=$({ tr -d '`' < "$last_file"; } 2>/dev/null | head -c 160)
+  [ -n "$act" ] && what="$what · last action: $act"
+  [ "${3:-0}" -ge 5 ] && what="$what · quiet for $3 min"
+  [ -n "${4:-}" ] && what="$(printf '%s' "$4" | sed 's/\*\*//g') · $what"
+  DEVOS_PROGRESS_STAGE="${DEVOS_PROGRESS_STAGE:-${DEVOS_USAGE_STAGE:-agent}}" DEVOS_PROGRESS_TOOL="$progress_tool" \
+    DEVOS_PROGRESS_MODEL="$usage_model" DEVOS_PROGRESS_EFFORT="${DEVOS_PROGRESS_EFFORT:-${DEVOS_BUILDER_EFFORT:-}}" \
+    timeout 20 bash "$progress" line "$1" "$what" 2>/dev/null || true
   [ -n "$report" ] || return 0
   timeout 30 $report "$@" >/dev/null 2>&1 || true
 }

@@ -39,8 +39,11 @@ never into this one.
 
 ## Release candidates (D-E19)
 
-Until 1.14.0, tasks merge into `next`, and `main` keeps the last stable release. Each task's package sets the next
-release candidate, `X.Y.Z-rc.N`, in `package.json`, `README.md`, the manifest and the changelog's first heading.
+Until 1.14.0, tasks merge into `next`, and `main` keeps the last stable release. `next` names the first candidate,
+`1.14.0-rc.1`, and each task adds its changelog lines under that heading. The owner runs no live check per task
+(D-E19, amended): the first candidate is published for E91, the acceptance task, which runs every live check. A later
+candidate, when E91 needs one, sets `X.Y.Z-rc.N` in `package.json`, `README.md`, the manifest and the changelog's first
+heading.
 
 1. **Date it, on `next`.** Set the date of the candidate's heading in `CHANGELOG.md` (`## X.Y.Z-rc.N — YYYY-MM-DD`),
    then commit `Release vX.Y.Z-rc.N` on `next`.
@@ -54,7 +57,7 @@ release candidate, `X.Y.Z-rc.N`, in `package.json`, `README.md`, the manifest an
 
    GitHub's latest release stays the last stable one, so the project page never offers the candidate.
 4. **A test project takes it.** With the engine folder at the tag (right after step 3, `next` is that commit), run
-   `devos upgrade --pre` in the test project and merge its pull request. The task's D8 runs there.
+   `devos upgrade --pre` in the test project and merge its pull request. E91's live checks run there.
 
 - **A plain `devos upgrade` refuses a candidate**, and a project on a candidate takes the release with a plain
   `devos upgrade`.

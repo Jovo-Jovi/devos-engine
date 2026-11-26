@@ -53,6 +53,19 @@ export function idEffort(id) {
   return named ? { effort: named[1] || named[2] || "", fast: named[0].includes("fast") } : { effort: "", fast: false };
 }
 
+/**
+ * E85e (PR-104): an agent run's effort as its progress line shows it. A model id that names its effort (Cursor's
+ * grok-4.7-xhigh) is labelled so, since the run takes no other; then the developer's effort; then none, and why.
+ */
+export function effortLabel(tool, model, effort) {
+  const named = idEffort(model).effort;
+  if (named) return `${named}, from the model name`;
+  const given = String(effort ?? "").trim();
+  if (given) return given;
+  if (tool === "cursor") return "none: the model name names none";
+  return tool ? `none: ${tool} takes no effort` : "none";
+}
+
 export function resolve({ task, effortIn = "fence", fastIn = "fence", modelsText = "" }) {
   const family = familyId();
   const named = NAMED_EFFORT.exec(family);

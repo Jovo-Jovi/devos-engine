@@ -674,7 +674,8 @@ test("cycle-tools.test.mjs (u) the watchdog feeds the prompt file, ends the agen
       "echo \"self=$?\"",
     ].join("\n");
     const run = spawnSync("bash", ["-c", script], { cwd: dir, encoding: "utf8", windowsHide: true, timeout: 60000 });
-    assert.deepEqual(run.stdout.split("\n").filter(Boolean), ["watchdog=143", "agent=gone", "finished=0", "left=gone", "kept=alive", "kept=gone", "self=0"], run.stdout + run.stderr);
+    // E85e (PR-104): the watchdog's progress lines are left out here.
+    assert.deepEqual(run.stdout.split("\n").filter((line) => Boolean(line) && !line.includes(" · effort ")), ["watchdog=143", "agent=gone", "finished=0", "left=gone", "kept=alive", "kept=gone", "self=0"], run.stdout + run.stderr);
     assert.equal(readFileSync(path.join(dir, "got.txt"), "utf8"), "the prompt\n");
   } finally {
     rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });

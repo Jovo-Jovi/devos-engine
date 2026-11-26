@@ -341,11 +341,7 @@ jobs:
             printf '\n\n**This is time slice %s of this attempt.** The earlier slice ran out of time while working; everything it did is committed on this branch (`git diff --stat origin/'"$DEVOS_BASE"'...HEAD`, `git log`). Read it, verify it against the fence, and finish only what is still missing or failing. Do not start over, redo or duplicate anything.\n' "$DEVOS_SLICE" >> .devos/builder-prompt.md
           fi
           set +e
-          # Heartbeat: Cursor's output goes to a file, so print progress every minute.
-          ( t0=$(date +%s); while sleep 60; do
-              echo "Cursor is working on $TASK: $(( ($(date +%s) - t0) / 60 )) min, $(git status --porcelain | wc -l) file(s) changed so far"
-            done ) &
-          hb=$!
+          # E85e (PR-104): the watchdog prints the builder's progress line every minute, whatever the tool.
           ran_tool="$builder_tool"
           # PR-64: each model on every account, then the next model (accounts.sh devos_slots). A limit moves to the next
           # slot; a model the account cannot use moves on at once; with no slot left the attempt is parked until the
@@ -450,7 +446,6 @@ jobs:
           # PR-53, PR-64: a usage limit moves only to the same tool's other account or next model (above); with none
           # left the attempt is parked until the earliest reset (builder-status.mjs → quota). No other agent is used.
           node scripts/devos/role-env.mjs restore || exit 1; trap - EXIT
-          kill "$hb" 2>/dev/null
           if [ "$MODEL" != "$first_model" ]; then devos_note "Builder: switched to $ran_tool $MODEL (account $used)."
           elif [ "$used" != "${accounts%% *}" ]; then devos_note "Builder: switched to $ran_tool account $used."; fi
           echo "model=$MODEL" >> "$GITHUB_OUTPUT"

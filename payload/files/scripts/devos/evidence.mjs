@@ -10,6 +10,7 @@ import { spawnSync } from "node:child_process";
 import { join } from "node:path";
 import { P, config, parsePhases } from "./lib.mjs";
 import { reviewPlan, branchChanges } from "./review-mode.mjs";
+import { effortLabel } from "./builder-model.mjs";
 import { isActive, readEnvFile } from "./supabase.mjs";
 import { motionSummary } from "./screens.mjs";
 import * as r2 from "./r2.mjs";
@@ -34,7 +35,7 @@ out.push(`# Evidence pack — ${task} attempt ${attempt}`, "",
 const row = parsePhases().rows.find((r) => r.task === task);
 if (row) {
   const plan = reviewPlan(row, branchChanges(), Number(attempt));
-  out.push("## Review plan", "", `- Mode: **${plan.mode}** (${plan.model}, effort ${plan.effort}, up to ${plan.max_turns} turns) — ${plan.reasons.join("; ")}`);
+  out.push("## Review plan", "", `- Mode: **${plan.mode}** (${plan.model}, effort ${effortLabel("", plan.model, plan.effort)}, up to ${plan.max_turns} turns) — ${plan.reasons.join("; ")}`);
   if (plan.critical.length) out.push(`- Critical paths in this diff (read every changed line): ${plan.critical.map((p) => `\`${p}\``).join(", ")}`);
   out.push("");
 }
