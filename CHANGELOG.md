@@ -2,7 +2,7 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
-## 1.13.18 — Unreleased
+## 1.13.18 — 2026-11-26
 
 - **Reviews and plans by Cursor, Codex and Gemini get their whole prompt (PR-103).** Before, the runner wrote the answer section over the prompt it was reading, so those tools got only the answer section and none of the review's or plan's instructions. Claude Code was never affected.
 - **A review-only run reviews (PR-103).** The review job no longer puts the attempt's builder model into `DEVOS_BUILDER_MODEL`, the developer's own variable. A review-only run has no builder model, so its "unknown" stopped the reviewer before it ran.
