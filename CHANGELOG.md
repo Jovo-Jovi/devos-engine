@@ -2,7 +2,7 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
-## 1.13.17 — Unreleased
+## 1.13.17 — 2026-11-26
 
 - **The review reaches publish (PR-102).** The review job now hands over its review file and any fence it reissued; before, it handed over none, so a cycle stopped after the review. Publish checks that the review job reviewed the tree it verified, not the same commit: each job writes its own commit of that tree, so the old check failed every run. The reviewer has 120 minutes, the review job 135, and the step prints a line every 5 minutes while the reviewer works.
 
