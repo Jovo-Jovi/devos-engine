@@ -290,13 +290,16 @@ test("hardening.test.mjs (g) the work job's model reaches a commit or a prompt o
   assert.equal(builderMessage({ task: "T01", attempt: 1, model: allowedModel("evil", trusted), effort: "high", fast: "no", exit: 0, slice: 1, stage: 1, stages: 1 }), "T01 a1: builder (unknown, effort high, fast no)");
   assert.deepEqual(["- Fence version: 3\n", "- Fence version: **v2 · 2026-11-09.**\n", "## T\n\n### Prompt\n- Fence version: 9\n", "no line\n"].map(fenceVersion), [3, 2, 0, 0]);
   const cycle = read(path.join(workflows, "devos-cycle.yml"));
-  // E85 (PR-101): the review job's prompt gets the builder as its own verify kept it, as publish's did.
+  // E85 (PR-101): the review job's prompt gets the builder as its own verify kept it, as publish's did; E85c (PR-103):
+  // as DEVOS_BUILT_MODEL, while DEVOS_BUILDER_MODEL stays the developer's variable.
   const review = read(path.join(workflows, "devos-review.yml"));
-  for (const line of ["DEVOS_BUILDER_MODEL: ${{ steps.prep.outputs.builder_model }}", "DEVOS_BUILDER_EFFORT: ${{ steps.prep.outputs.builder_effort }}", "DEVOS_BUILDER_FAST: ${{ steps.prep.outputs.builder_fast }}", '--trusted-models "$TRUSTED_MODELS"']) {
+  for (const line of ["DEVOS_BUILT_MODEL: ${{ steps.prep.outputs.builder_model }}", "DEVOS_BUILDER_MODEL: ${{ vars.DEVOS_BUILDER_MODEL }}", "DEVOS_BUILDER_EFFORT: ${{ steps.prep.outputs.builder_effort }}", "DEVOS_BUILDER_FAST: ${{ steps.prep.outputs.builder_fast }}", '--trusted-models "$TRUSTED_MODELS"']) {
     assert.ok(review.includes(line), line);
   }
   assert.ok(cycle.includes('--trusted-models "$TRUSTED_MODELS"'));
   for (const name of ["model", "effort", "fast"]) assert.equal(review.includes(`DEVOS_BUILDER_${name.toUpperCase()}: \${{ needs.work.outputs.${name} }}`), false, name);
+  assert.equal(review.includes("DEVOS_BUILDER_MODEL: ${{ steps.prep.outputs.builder_model }}"), false);
+  assert.equal(review.includes("DEVOS_BUILT_MODEL: ${{ needs.work.outputs.model }}"), false);
   for (const name of ["model", "effort", "fast"]) assert.equal(cycle.includes(`DEVOS_BUILDER_${name.toUpperCase()}: \${{ needs.work.outputs.${name} }}`), false, name);
   // Publish's guards run before the push, and a failure of either step is the same rejection.
   const at = (s) => cycle.indexOf(s);

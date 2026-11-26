@@ -198,7 +198,10 @@ jobs:
           METHOD_CHANGE: ${{ steps.prep.outputs.method }}
           EFFORT: ${{ steps.prep.outputs.effort }}
           TURNS: ${{ steps.prep.outputs.turns }}
-          DEVOS_BUILDER_MODEL: ${{ steps.prep.outputs.builder_model }}
+          # E85c (PR-103): DEVOS_BUILDER_MODEL is the developer's variable (PR-63), as in every other job. The model this
+          # attempt was built with goes to the prompt alone, as DEVOS_BUILT_MODEL; a review-only run has none ("unknown").
+          DEVOS_BUILDER_MODEL: ${{ vars.DEVOS_BUILDER_MODEL }}
+          DEVOS_BUILT_MODEL: ${{ steps.prep.outputs.builder_model }}
           DEVOS_BUILDER_TOOL: ${{ inputs.builder_tool }}
           DEVOS_BUILDER_EFFORT: ${{ steps.prep.outputs.builder_effort }}
           DEVOS_BUILDER_FAST: ${{ steps.prep.outputs.builder_fast }}
@@ -216,13 +219,17 @@ jobs:
         run: |
           node scripts/devos/render-prompt.mjs reviewer "$TASK" "$ATTEMPT" --out .devos/reviewer-prompt.md
           # E85b: a line every 5 minutes, so a long review shows it is running (the step's log is read only at its end).
-          ( t0=$(date +%s); while sleep 300; do
+          # E85c (PR-103): the loop ends with its sleep, which would otherwise hold the step's output open for 5 minutes.
+          ( trap 'kill "$s" 2>/dev/null; exit 0' TERM; t0=$(date +%s)
+            while :; do
+              sleep 300 & s=$!; wait "$s"
               f="not yet"; [ -f "docs/reviews/$TASK-a$ATTEMPT.md" ] && f="written"
               echo "the reviewer is reviewing $TASK: $(( ($(date +%s) - t0) / 60 )) min, review file $f"
             done ) &
           hb=$!
           bash scripts/devos/plan-agent.sh reviewer .devos/reviewer-prompt.md devos/schemas/verdict.schema.json .devos/reviewer.json "$EFFORT" "${TURNS:-80}" || echo "the reviewer agent's run ended with exit $?"
           kill "$hb" 2>/dev/null || true
+          wait "$hb" 2>/dev/null || true
           tail -c 2000 .devos/reviewer.err 2>/dev/null || true
           node -e 'const r = require(process.argv[1]); console.log(`reviewer: ${r.agent} ${r.model}, exit ${r.exit_code}, limited ${r.limited}, permission denials ${r.permission_denials.length}`);' "$PWD/.devos/reviewer.json" || true
 

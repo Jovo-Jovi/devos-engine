@@ -2,7 +2,7 @@
 // Render a prompt from devos/prompts/*.md.
 // Usage: node scripts/devos/render-prompt.mjs builder|reviewer|revise Tnn attempt [--out file]
 //        node scripts/devos/render-prompt.mjs intake - - [--out file]
-// Environment it reads when set: DEVOS_BUILDER_MODEL, DEVOS_BUILDER_EFFORT, DEVOS_BUILDER_FAST,
+// Environment it reads when set: DEVOS_BUILT_MODEL, DEVOS_BUILDER_MODEL, DEVOS_BUILDER_EFFORT, DEVOS_BUILDER_FAST,
 // DEVOS_BUILDER_TOOL, DEVOS_PREVIEW_URL, DEVOS_ISSUE, DEVOS_INTAKE_RESUME, DEVOS_REVIEW_MODE, DEVOS_REVIEW_REASONS, DEVOS_REVIEW_CRITICAL,
 // DEVOS_REVISE_UNIT (PR-92: a revision asked for on that unit's acceptance pull request).
 import { readFileSync, writeFileSync, existsSync, readdirSync } from "node:fs";
@@ -39,7 +39,9 @@ function commonVars(cfg, rows) {
     // PR-54: the builder's tool by its name (the runner passes the pool pick's tool).
     BUILDER_TOOL: { cursor: "Cursor", claude: "Claude Code", codex: "Codex", gemini: "Gemini" }[env.DEVOS_BUILDER_TOOL] || env.DEVOS_BUILDER_TOOL || "the builder agent",
     // PR-99: the builder as the run kept it; else the developer's default builder, at the fence's effort.
-    BUILDER_MODEL: env.DEVOS_BUILDER_MODEL || (cfg.agents?.pool ?? []).find((item) => item?.default)?.model || "the default builder",
+    // E85c (PR-103): the review job names the attempt's model DEVOS_BUILT_MODEL, never the developer's DEVOS_BUILDER_MODEL,
+    // which config() makes the default builder's model.
+    BUILDER_MODEL: env.DEVOS_BUILT_MODEL || env.DEVOS_BUILDER_MODEL || (cfg.agents?.pool ?? []).find((item) => item?.default)?.model || "the default builder",
     BUILDER_EFFORT: env.DEVOS_BUILDER_EFFORT || "as the fence says",
     BUILDER_FAST: env.DEVOS_BUILDER_FAST || "no",
     PROJECT_KEY: cfg.project ?? "",

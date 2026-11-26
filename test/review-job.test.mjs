@@ -117,7 +117,7 @@ test("review-job.test.mjs (c) each of the four tools reviews with the command li
       assert.deepEqual(JSON.parse(argv[argv.indexOf("--json-schema") + 1]).required.sort(), JSON.parse(readFileSync(path.join(root, "payload", "files", SCHEMA), "utf8")).required.sort());
     }],
     ["cursor", "grok-4.7-high", "", { CURSOR_KEY_1: "cursor-key" }, "cursor-key", (argv) => {
-      assert.deepEqual(argv, ["-p", "--force", "--trust", "--model", "grok-4.7-high", "--output-format", "stream-json", "Your instructions for this run are in the file .devos/reviewer-prompt.md. Read all of it first, then follow it exactly: it is your whole task."]);
+      assert.deepEqual(argv, ["-p", "--force", "--trust", "--model", "grok-4.7-high", "--output-format", "stream-json", "Your instructions for this run are in the file .devos/reviewer-answer-prompt.md. Read all of it first, then follow it exactly: it is your whole task."]);
     }],
     ["codex", "gpt-5.5", "medium", { CODEX_KEY_1: "codex-key" }, "codex-key", (argv) => {
       assert.deepEqual(argv.slice(0, 5), ["exec", "--model", "gpt-5.5", "--sandbox", "workspace-write"]);
@@ -229,6 +229,69 @@ test("review-job.test.mjs (f) a planning run keeps its own command line: the rev
     assert.equal(argv[argv.indexOf("--max-turns") + 1], "10");
     const out = JSON.parse(readFileSync(path.join(run.dir, ".devos", "intake.json"), "utf8"));
     assert.deepEqual([out.role, out.agent, out.model], ["intake", "claude", "claude-opus-5-5"]);
+  } finally {
+    rmSync(run.dir, { recursive: true, force: true });
+  }
+});
+
+// The reviewer step's own script, as devos-review.yml runs it (its comment lines are part of the bash it runs).
+function reviewerStep() {
+  const lines = readFileSync(path.join(root, "payload", "files", "dot-github", "workflows", "devos-review.yml"), "utf8").split("\n");
+  const at = lines.findIndex((line) => line.includes("- name: Reviewer (the project's reviewer agent"));
+  const env = [];
+  let i = lines.findIndex((line, n) => n > at && /^\s+env:$/.test(line));
+  for (i += 1; /^\s{10}[A-Z_0-9]+: /.test(lines[i]) || /^\s{10}#/.test(lines[i]); i += 1) if (!lines[i].trim().startsWith("#")) env.push(lines[i].trim());
+  const run = lines.findIndex((line, n) => n > at && /^\s+run: \|$/.test(line));
+  const indent = lines[run].indexOf("run:") + 2;
+  const body = [];
+  for (let n = run + 1; n < lines.length && (lines[n].trim() === "" || lines[n].search(/\S/) >= indent); n += 1) body.push(lines[n].slice(indent));
+  return { env, script: body.join("\n") };
+}
+
+test("review-job.test.mjs (g) a review-only run reviews: the attempt's model never becomes the developer's builder model, and the step ends with its reviewer (E85c)", { skip: windows && "the runner is bash" }, () => {
+  // PR-103, from learn-coptic's T01 runs 45784517935 and 45784995188: a review-only run has no builder tags, so the
+  // review job set DEVOS_BUILDER_MODEL=unknown; config() made "unknown" the default builder's model, and a pool of
+  // Cursor models whose names pin their effort then lacked an effort, so the reviewer stopped before it ran.
+  const step = reviewerStep();
+  assert.ok(step.env.includes("DEVOS_BUILDER_MODEL: ${{ vars.DEVOS_BUILDER_MODEL }}"), step.env.join("\n"));
+  assert.ok(step.env.includes("DEVOS_BUILT_MODEL: ${{ steps.prep.outputs.builder_model }}"), step.env.join("\n"));
+  assert.equal(step.env.filter((line) => line.startsWith("DEVOS_BUILDER_MODEL:")).length, 1);
+  const run = reviewProject("cursor", "grok-4.7-xhigh");
+  try {
+    const configPath = path.join(run.dir, "devos.config.json");
+    const cfg = JSON.parse(readFileSync(configPath, "utf8"));
+    cfg.agents.pool = [
+      { id: "cursor-grok-4-7-high", tool: "cursor", model: "grok-4.7-high", default: false, note: "i18n" },
+      { id: "cursor-grok-4-7-xhigh", tool: "cursor", model: "grok-4.7-xhigh", default: true, note: "deep reasoning" },
+    ];
+    writeFileSync(configPath, `${JSON.stringify(cfg, null, 2)}\n`);
+    mkdirSync(path.join(run.dir, "docs", "fences"), { recursive: true });
+    writeFileSync(path.join(run.dir, "docs", "PHASES.md"), readFileSync(path.join(root, "test", "fixtures", "docs", "PHASES.md")));
+    writeFileSync(path.join(run.dir, "docs", "fences", "T01.md"), "## T01 — First task\n\n- Fence version: 1\n");
+    const env = {
+      PATH: `${run.fakes}${path.delimiter}${process.env.PATH ?? ""}`, HOME: run.dir, TASK: "T01", ATTEMPT: "1", DEVOS_ROOT: run.dir,
+      DEVOS_AGENT_MODE: "deep", DEVOS_REVIEW_MODE: "deep", METHOD_CHANGE: "false", EFFORT: "", TURNS: "120",
+      DEVOS_BUILDER_MODEL: "", DEVOS_BUILT_MODEL: "unknown", DEVOS_BUILDER_TOOL: "cursor", DEVOS_BUILDER_EFFORT: "unknown", DEVOS_BUILDER_FAST: "unknown",
+      CURSOR_KEY_1: "cursor-key",
+    };
+    const started = Date.now();
+    const result = spawnSync("bash", ["-e", "-c", step.script], { cwd: run.dir, encoding: "utf8", windowsHide: true, env });
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    assert.ok(Date.now() - started < 60000, "the step ends with its reviewer, not with the progress loop's sleep");
+    assert.match(result.stdout, /^reviewer: cursor grok-4\.7-xhigh, exit 0, limited false, permission denials 0$/m);
+    const prompt = readFileSync(path.join(run.dir, ".devos", "reviewer-prompt.md"), "utf8");
+    assert.match(prompt, /cursor-grok-4-7-xhigh — cursor · grok-4\.7-xhigh/);
+    assert.equal(prompt.includes("cursor · unknown"), false);
+    assert.equal(prompt.includes("## Your answer"), false);
+    const told = JSON.parse(readFileSync(run.seen, "utf8")).argv.at(-1).match(/in the file (\S+)\. Read/)[1];
+    assert.equal(told, ".devos/reviewer-answer-prompt.md");
+    const given = readFileSync(path.join(run.dir, told), "utf8");
+    assert.ok(given.startsWith(prompt), "the reviewer gets the whole rendered prompt");
+    assert.match(given, /\n## Your answer\n[\s\S]*\.devos\/reviewer-answer\.json/);
+    // The cause, as the run hit it: the attempt's tag in the developer's variable stops the reviewer before it runs.
+    const before = spawnSync("bash", ["-e", "-c", step.script], { cwd: run.dir, encoding: "utf8", windowsHide: true, env: { ...env, DEVOS_BUILDER_MODEL: "unknown" } });
+    assert.notEqual(before.status, 0);
+    assert.match(before.stderr, /has no agents\.pool\[cursor-grok-4-7-xhigh\]\.effort/);
   } finally {
     rmSync(run.dir, { recursive: true, force: true });
   }

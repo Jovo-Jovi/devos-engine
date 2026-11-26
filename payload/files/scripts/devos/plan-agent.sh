@@ -92,8 +92,10 @@ for slot in $(devos_slots "$tool" $models); do
   first=""
   if [ "$tool" != "claude" ]; then
     # These CLIs take no schema: the prompt asks for the answer in a file, which is read back below.
-    { cat "$p"; printf '\n\n## Your answer\n\nWhen you have finished, write your answer to `%s` as one JSON object that matches this schema, and nothing else in that file:\n\n```json\n' "$answer"; cat "$schema"; printf '\n```\n'; } > "$base-prompt.md"
-    p="$base-prompt.md"
+    # E85c (PR-103): into a file of its own. The callers name their prompt <base>-prompt.md, and writing there emptied
+    # it before cat read it, so Cursor, Codex and Gemini got only the answer section.
+    { cat "$p"; printf '\n\n## Your answer\n\nWhen you have finished, write your answer to `%s` as one JSON object that matches this schema, and nothing else in that file:\n\n```json\n' "$answer"; cat "$schema"; printf '\n```\n'; } > "$base-answer-prompt.md"
+    p="$base-answer-prompt.md"
   fi
   # PR-87: a temporary server error (a 5xx, a dropped connection, "retriable") runs again in place, three times at most.
   while :; do
