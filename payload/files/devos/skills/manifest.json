@@ -54,7 +54,7 @@
       "covers": "secrets, keys and credentials"
     },
     "payment": {
-      "match": "\\b(payments?|checkout|billing|invoices?|subscriptions?|purchases?|bookings?|reservations?|coupons?|referrals?|refunds?)\\b",
+      "match": "\\b(payments?|checkout (pages?|sessions?|flows?|forms?|steps?)|billing|invoices?|subscriptions?|purchases?|bookings?|reservations?|coupons?|referrals?|refunds?)\\b",
       "covers": "payments and other sensitive business flows"
     },
     "idempotency": {

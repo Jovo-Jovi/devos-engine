@@ -62,6 +62,9 @@ export function renderPrompt(role, task, attempt) {
   const next = taskAfter(rows, task);
   const prevReview = `docs/reviews/${task}-a${attempt - 1}.md`;
   const hasPrev = attempt > 1 && existsSync(P(prevReview));
+  // E85f (PR-105): main's review-tree wrote what changed since the last review; this review starts from that one.
+  const since = `.devos/diff-since-a${attempt - 1}.patch`;
+  const hasSince = role === "reviewer" && hasPrev && existsSync(P(since));
 
   const vars = {
     ...commonVars(cfg, rows),
@@ -87,6 +90,18 @@ export function renderPrompt(role, task, attempt) {
     // PR-55: the skill files this role reads for the task's layers and the project's stack.
     SKILLS_BLOCK: role === "builder" || role === "reviewer" ? skillsBlock(task, role, cfg) : "",
     PREV_REVIEW_LINE: hasPrev ? `- \`${prevReview}\`: your previous verdict on this task.\n` : "",
+    LATER_ATTEMPT_BLOCK: hasSince
+      ? [
+        "",
+        `**This is attempt ${attempt}: start from your last review (PR-105).** \`${since}\` is what changed on the branch since your review of attempt ${attempt - 1} (\`${prevReview}\`), its file list first.`,
+        "",
+        `1. Judge again each FAIL line of that verdict, and each point of the fence's "Attempt ${attempt} focus", against this diff and the new evidence.`,
+        "2. A line that passed stays PASS, citing that review, unless this diff touches what proved it (its files, its test or its check's evidence); then judge it again. In a deep review, read every changed line of this diff's critical paths.",
+        "3. Every check ran again in the work job: a red or missing required check fails this attempt, whatever the last review said.",
+        "4. Read `.devos/diff.patch`, the whole branch against main, only where this diff needs its context.",
+        "",
+      ].join("\n")
+      : "",
     RISK3_LINE: row.risk >= 3
       ? "This is **risk 3**: you are the heavyweight review (Dev OS §11). Read every changed line of the critical paths, not a sample."
       : "",

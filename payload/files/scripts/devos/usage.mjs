@@ -5,6 +5,8 @@
 //       .devos/usage/pending.jsonl; --summary also writes the line to the run's summary page
 //   node scripts/devos/usage.mjs flush --task X     moves the pending lines to docs/usage/X.jsonl
 //   node scripts/devos/usage.mjs report [--write]   prints the totals; --write rebuilds docs/USAGE.md
+//   node scripts/devos/usage.mjs notice --task X --attempt N   E85f (PR-105): one line, what the attempt's runs used
+//       (stage, tool, model, minutes, tokens, and the cost where it is known), or nothing when none is recorded
 // A record never fails a run: an output with no usage in it is recorded as "not reported".
 import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -372,6 +374,53 @@ export function summary(items, prices) {
   return lines.join("\n");
 }
 
+const minutes = (seconds) => (seconds < 30 ? "under 1 min" : `${Math.round(seconds / 60)} min`);
+
+/** E85f (PR-105): one line for an attempt's runs, by stage, tool and model, from the records; "" when it has none. */
+export function attemptLine(items, task, attempt, prices = null) {
+  const runs = items.filter((item) => item.task === task && Number(item.attempt) === Number(attempt));
+  if (runs.length === 0) return "";
+  const groups = [];
+  for (const item of runs) {
+    const key = `${item.stage}\u0000${item.tool}\u0000${item.model}`;
+    let g = groups.find((other) => other.key === key);
+    if (!g) {
+      g = { key, stage: item.stage, tool: item.tool, model: item.model, runs: 0, seconds: 0, timed: 0, reported: 0, input: 0, output: 0, cache_read: 0, cache_write: 0, cost: 0, priced: 0 };
+      groups.push(g);
+    }
+    g.runs += 1;
+    if (num(item.seconds) !== null) {
+      g.seconds += item.seconds;
+      g.timed += 1;
+    }
+    if (item.reported) {
+      g.reported += 1;
+      for (const field of ["input", "output", "cache_read", "cache_write"]) g[field] += num(item[field]) ?? 0;
+    }
+    const cost = costOf(item, prices);
+    if (cost !== null) {
+      g.cost += cost;
+      g.priced += 1;
+    }
+  }
+  const order = (g) => (STAGES.includes(g.stage) ? STAGES.indexOf(g.stage) : STAGES.length);
+  const parts = groups.map((g, index) => ({ g, index })).sort((a, b) => order(a.g) - order(b.g) || a.index - b.index).map(({ g }) => {
+    const tokens = g.reported === 0
+      ? "usage not reported"
+      : [`in ${fmt(g.input)}`, `out ${fmt(g.output)}`, `cache read ${fmt(g.cache_read)}`, ...(g.cache_write > 0 ? [`cache write ${fmt(g.cache_write)}`] : []), ...(g.priced > 0 ? [`$${g.cost.toFixed(2)}`] : [])].join(" · ");
+    return `${g.stage} ${g.tool} ${g.model}${g.runs > 1 ? `, ${g.runs} runs` : ""}${g.timed > 0 ? `, ${minutes(g.seconds)}` : ""} (${tokens})`;
+  });
+  return `${task} a${attempt} used: ${parts.join(" · ")}`;
+}
+
+function notice() {
+  const task = flag("task", process.env.TASK ?? "");
+  const attempt = Number(flag("attempt", process.env.ATTEMPT ?? ""));
+  if (!FILE.test(task) || !Number.isInteger(attempt) || attempt < 1) return;
+  const line = attemptLine(readRecords(), task, attempt, readPrices());
+  if (line) console.log(line);
+}
+
 function report() {
   const text = summary(readRecords(), readPrices());
   if (process.argv.includes("--write")) {
@@ -389,12 +438,13 @@ function main() {
     if (command === "record") return record();
     if (command === "flush") return flush();
     if (command === "report") return report();
+    if (command === "notice") return notice();
   } catch (error) {
     // The record is a ledger, never a gate: a failure here is printed and the run goes on.
     console.log(`usage: ${command} failed: ${error.message}`);
     return;
   }
-  console.error("usage: usage.mjs record --stage S --command C --model M --out F | flush --task X | report [--write]");
+  console.error("usage: usage.mjs record --stage S --command C --model M --out F | flush --task X | report [--write] | notice --task X --attempt N");
   process.exitCode = 2;
 }
 

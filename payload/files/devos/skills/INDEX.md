@@ -11,8 +11,10 @@ frontend, architecture, backend, api, database or reliability layer also has the
 fence removes a gate, and a method fix is outside both. The runner gives the
 builder and the reviewer the files below for the task's layers, the project's stack (`devos.config.json` `stack`)
 and modules, in their prompts: every **required** and **recommended** file of those layers, and a **conditional**
-file only when its condition holds (a topic the fence touches, a module the project uses, or a deep task). A skill's
-`DEVOS-NOTES.md`, DEV_OS's audit notes, comes first. `node scripts/devos/skills.mjs select --task Tnn --role builder
+file only when its condition holds (a topic the fence touches, a module the project uses, or a deep task). Only the
+**required** files are read whole, a skill's `DEVOS-NOTES.md` (DEV_OS's audit notes) before them; every other file is
+listed with what it covers, and opened only when the change touches that (E85f).
+`node scripts/devos/skills.mjs select --task Tnn --role builder
 --json` prints the record of one selection: its inputs, and why each file was chosen. The blueprint chooses with the
 Blueprint column. The fence, `docs/DECISIONS.md` and `docs/DESIGN_SYSTEM.md` win over every skill.
 
@@ -35,7 +37,9 @@ Blueprint column. The fence, `docs/DECISIONS.md` and `docs/DESIGN_SYSTEM.md` win
 
 ## Topics
 
-A fence touches a topic when its `- Topics:` line names it or its text has one of the topic's words.
+A fence touches a topic when its `- Topics:` line names it, or its own words have one of the topic's words. Its own
+words leave out code, paths and file names, the header lines, a `Do NOT` section and every line that says "do not":
+a topic is what the task is about, not what it names or forbids (E85f).
 
 | Topic | What it covers |
 |---|---|

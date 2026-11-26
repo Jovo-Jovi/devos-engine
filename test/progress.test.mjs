@@ -54,22 +54,29 @@ test("progress.test.mjs (a) the line names the stage, tool, model, effort and mi
   assert.match(readFileSync(path.join(SCRIPTS, "evidence.mjs"), "utf8"), /effort \$\{effortLabel\("", plan\.model, plan\.effort\)\}/);
 });
 
+// E85f a2: a test "minute" is one second and the clock counts whole seconds, while each line also waits for node to
+// start (about half a second on a slow runner). So the test checks each line's shape, and that the minutes go up, but
+// not their exact values; with real 60-second minutes the drift is a few seconds an hour.
 test("progress.test.mjs (b) the watcher prints a line a minute, and ends at once when it is stopped", { skip: windows && "bash" }, () => {
   const dir = mkdtempSync(path.join(tmpdir(), "devos-progress-"));
   try {
     writeFileSync(path.join(dir, "T01-a1.md"), "x".repeat(1500));
     const env = { ...process.env, ...FAST, DEVOS_PROGRESS_STAGE: "reviewer", DEVOS_PROGRESS_TOOL: "codex", DEVOS_PROGRESS_MODEL: "gpt-5.5-codex", DEVOS_PROGRESS_EFFORT: "high" };
     const started = Date.now();
-    const run = spawnSync("bash", ["-c", `bash "${path.join(SCRIPTS, "progress.sh")}" watch review "${path.join(dir, "T01-a1.md")}" & w=$!; sleep 2.6; kill "$w"; wait "$w"; echo stopped`], { encoding: "utf8", env });
-    assert.ok(Date.now() - started < 6000, "the watcher's sleep ends with it, so nothing holds the output open");
-    assert.deepEqual(run.stdout.trim().split("\n"), [
-      "reviewer · codex gpt-5.5-codex · effort high · 1 min · review file 2 KB",
-      "reviewer · codex gpt-5.5-codex · effort high · 2 min · review file 2 KB",
-      "stopped",
-    ]);
+    const run = spawnSync("bash", ["-c", `bash "${path.join(SCRIPTS, "progress.sh")}" watch review "${path.join(dir, "T01-a1.md")}" & w=$!; sleep 3.5; kill "$w"; wait "$w"; echo stopped`], { encoding: "utf8", env });
+    assert.ok(Date.now() - started < 7000, "the watcher's sleep ends with it, so nothing holds the output open");
+    const lines = run.stdout.trim().split("\n");
+    assert.equal(lines.at(-1), "stopped", run.stdout);
+    const minutes = lines.slice(0, -1).map((line) => {
+      const m = /^reviewer · codex gpt-5\.5-codex · effort high · (\d+) min · review file 2 KB$/.exec(line);
+      assert.ok(m, line);
+      return Number(m[1]);
+    });
+    assert.ok(minutes.length >= 2, run.stdout);
+    assert.ok(minutes[0] >= 1 && minutes.every((n, i) => i === 0 || n > minutes[i - 1]), run.stdout);
     for (const [kind, file, expected] of [["review", path.join(dir, "none.md"), "no review file yet"], ["answer", path.join(dir, "none.json"), "no answer yet"], ["answer", path.join(dir, "T01-a1.md"), "answer written"], ["running", "", "running"]]) {
-      const one = spawnSync("bash", ["-c", `bash "${path.join(SCRIPTS, "progress.sh")}" watch ${kind} "${file}" & w=$!; sleep 1.5; kill "$w"; wait "$w"`], { encoding: "utf8", env });
-      assert.match(one.stdout, new RegExp(` · 1 min · ${expected}\\n$`), `${kind} ${file}`);
+      const one = spawnSync("bash", ["-c", `bash "${path.join(SCRIPTS, "progress.sh")}" watch ${kind} "${file}" & w=$!; sleep 2.5; kill "$w"; wait "$w"`], { encoding: "utf8", env });
+      assert.match(one.stdout, new RegExp(`^reviewer · codex gpt-5\\.5-codex · effort high · \\d+ min · ${expected}\\n$`, "m"), `${kind} ${file}`);
     }
   } finally {
     cleanup(dir);
@@ -125,7 +132,8 @@ test("progress.test.mjs (e) the supervisor's second opinion prints its line ever
     // review-user.sh's user and sandbox need root; here it runs the command in the workspace it names.
     writeFileSync(path.join(dir, "scripts", "devos", "review-user.sh"), '#!/usr/bin/env bash\ncase "$1" in run) cd "$2" && shift 3 && exec "$@" ;; *) exit 0 ;; esac\n');
     const fakes = path.join(dir, "fakes");
-    fake(fakes, "claude", 'sleep 2.5; echo \'{"type":"result","is_error":false,"structured_output":{"incidents":[]}}\'');
+    // E85f a2: long enough for two lines when each line also waits for node to start on a slow runner.
+    fake(fakes, "claude", 'sleep 4.5; echo \'{"type":"result","is_error":false,"structured_output":{"incidents":[]}}\'');
     const RW = path.join(dir, "rw");
     mkdirSync(RW);
     const started = Date.now();

@@ -306,13 +306,14 @@ test("review-job.test.mjs (h) the review step prints its reviewer's line every m
     mkdirSync(path.join(run.dir, "docs", "fences"), { recursive: true });
     writeFileSync(path.join(run.dir, "docs", "PHASES.md"), readFileSync(path.join(root, "test", "fixtures", "docs", "PHASES.md")));
     writeFileSync(path.join(run.dir, "docs", "fences", "T01.md"), "## T01 — First task\n\n- Fence version: 1\n");
-    // A reviewer that writes its review file at once, then works on for a while.
+    // A reviewer that writes its review file at once, then works on for a while: long enough for two lines when each
+    // line also waits for node to start on a slow runner (E85f a2).
     writeFileSync(path.join(run.fakes, "agent"), `#!/usr/bin/env node
 const fs = require("fs");
 fs.mkdirSync("docs/reviews", { recursive: true });
 fs.writeFileSync("docs/reviews/T01-a1.md", "VERDICT: PASS\\n" + "x".repeat(3000));
 fs.writeFileSync(".devos/reviewer-answer.json", ${JSON.stringify(JSON.stringify(VERDICT))});
-setTimeout(() => process.stdout.write(${JSON.stringify(RECORDED.cursor)}), 2600);
+setTimeout(() => process.stdout.write(${JSON.stringify(RECORDED.cursor)}), 4600);
 `);
     const env = {
       PATH: `${run.fakes}${path.delimiter}${process.env.PATH ?? ""}`, HOME: run.dir, TASK: "T01", ATTEMPT: "1", DEVOS_ROOT: run.dir,

@@ -23,6 +23,15 @@ the release.
 - **A red main for a missing lockfile is explained (PR-104).** The supervisor reports the cause and the steps to fix it,
   with no re-run and no AI.
 - The live progress comment, unused since the work job lost its write token (PR-90), is gone, with `builder-report.mjs`.
+- **Cheaper reviews and builds (PR-105).** A task's skill topics come from what its fence says it is about, never from
+  its code, paths, file names, header lines or what it forbids. The builder and the reviewer read only the **required**
+  skill files whole; every other file is listed with what it covers, to open when the change touches that. On
+  learn-coptic's T01, the deep review's reading drops from 43 files (531 KB) to 7 (37 KB), with 15 listed.
+- **A later attempt's review starts from the last one (PR-105).** The review job gets `.devos/diff-since-a<N-1>.patch`,
+  what changed since the last review, and the reviewer judges that review's FAIL lines and the attempt focus against
+  it. A line that passed stays passed unless the diff touches what proved it. Every check still runs again.
+- **Each run says what it used (PR-105).** Publish's last notice names each stage's tool, model, minutes and tokens for
+  the attempt, and the cost where it is known.
 
 ## 1.13.18 — 2026-11-26
 

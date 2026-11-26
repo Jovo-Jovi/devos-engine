@@ -1,0 +1,18 @@
+{
+  "CHANGELOG.md": "259d681a6cdfcd6f7994b2774e6c2fd3e72346099013caf8d87401ca22dc9780",
+  "payload/manifest.json": "631ca0d56785ec4480e6502c42d0127dff47e1edb70b25812eea8de19288b261",
+  "payload/files/devos/prompts/blueprint.md": "0bdb9777284d63e0e86fc722410490387cd1819ef89c5d4c46ad9a2a9934115a",
+  "payload/files/devos/prompts/intake.md": "036ed63cecc17020c994c566cf693b49536af520108897773ed2e1d531be46c8",
+  "payload/files/devos/prompts/reviewer.md": "397da7ccf445cf57817b0bcbf5c2fb00d810b3e1a4d94414db8dd65be1fb332b",
+  "payload/files/devos/skills/INDEX.md": "91c90af37c38f3d7b1a759828214764402012f986a26b571ae78a72ea8a4e4b0",
+  "payload/files/devos/skills/manifest.json": "1e7cd892d3c2184392f2159323f2a12c32f5476ce1c0fb0798928e09f6774e27",
+  "payload/files/docs/method/AUTOMATION.md": "dd59c999c94b90e3cb2479250e1da9a6f9c3ac0785d9a7d5a53aae22139a22ea",
+  "payload/files/docs/method/PRECEDENTS.md": "aee8e5c11806908eff43ce18bcc13de747f33b8ccf816b074d36b3370b8df543",
+  "payload/files/dot-github/workflows/devos-cycle.yml": "7fe20fbc0839e13eb2cefb65dff676bc4fc86a73e006c5f59f654484563fd72d",
+  "payload/files/scripts/devos/publish-verify.mjs": "c423425ddcae2648fb175239d7bf60ac0b434f89e112ec7f92c9175246160436",
+  "payload/files/scripts/devos/render-prompt.mjs": "78d840b72ff2c476c8385dacdef118d3bd0bea93ecb8c3923876ff9fb613bf38",
+  "payload/files/scripts/devos/skills.mjs": "2d7922cfd81ba7519a5231b198e2bd1a46c8cf7eae166f9c67c1f6b8aa217edc",
+  "payload/files/scripts/devos/usage.mjs": "1e76f2fd121f473e17a1401a82f523725427bf73a3266dc040319e9cdacf85dd",
+  "test/progress.test.mjs": "c1a3b119ef5bd97dac64b141185045653aac66129a66a286d53d1bf5a30d3012",
+  "test/review-job.test.mjs": "eb74fe0ae1c71783dbd844374925701fec3b9d413098ea63f25ddfb9d50870ae"
+}

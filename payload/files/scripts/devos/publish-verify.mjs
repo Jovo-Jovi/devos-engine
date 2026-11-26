@@ -25,7 +25,9 @@
 //   checks  --out <dir> [--ci <work's ci-results.json>]          the required checks from main's rules (needs DEVOS_ROOT);
 //           PR-94: "guards" is publish's own run, red also when the work job's was
 //   usage   --in <file> --dest <file>                            keeps only well-formed usage records
-//   review-tree --out <dir> --dest <dir>                         the head's files, and .devos/diff.patch, for the review
+//   review-tree --out <dir> --dest <dir>                         the head's files, and .devos/diff.patch, for the review;
+//           E85f (PR-105): on attempt N > 1, also .devos/diff-since-a<N-1>.patch, what changed since the branch's
+//           "Tnn a<N-1>: review" commit, on the files the branch changes against the base (now or at that review)
 //   take-review --out <dir> --from <dir> --task Tnn --attempt N  copies the review file and fences the reviewer wrote;
 //           PR-94: a fence the head already has changes only with a higher Fence version, and each fence taken is
 //           listed in .devos/fence-changes.txt
@@ -58,6 +60,7 @@ export const MAX_FILE = 50 * 1024 * 1024;
 export const MAX_BUNDLE = 1024 * 1024 * 1024;
 const MAX_TEXT = 1024 * 1024;
 const MAX_PATCH = 4 * 1024 * 1024;
+const MAX_SINCE_FILES = 2000;
 const EFFORTS = ["low", "medium", "high", "xhigh"];
 const STATES = ["ok", "continue", "switch", "quota", "error"];
 /** PR-28: the method files. A product task never changes them; the same list as the cycle has always used. */
@@ -853,6 +856,38 @@ function reviewTree(a) {
   writeFileSync(path.join(dest, ".devos", "diff.patch"), patch);
   writeFileSync(path.join(dest, ".devos", "diff-stat.txt"), g(["diff", "--stat=200", "--no-color", `${s.main_sha}...${s.head}`], { cwd: repo }).stdout);
   console.log(`review tree: ${s.head} in ${dest}; the diff against main in .devos/diff.patch`);
+  const since = sinceLastReview(repo, { task: s.task, attempt: Number(s.attempt), head: s.head, base: s.main_sha });
+  if (since) {
+    let text = since.patch || `No file the branch changes differs from ${s.task} a${Number(s.attempt) - 1}'s review (${since.review}).\n`;
+    if (text.length > MAX_PATCH) text = `${text.slice(0, MAX_PATCH)}\n\n[the diff is cut here at ${MAX_PATCH} bytes; its file list is at the top]\n`;
+    writeFileSync(path.join(dest, ".devos", `diff-since-a${Number(s.attempt) - 1}.patch`), text);
+    console.log(`review tree: what changed since ${s.task} a${Number(s.attempt) - 1}'s review (${since.review.slice(0, 12)}) in .devos/diff-since-a${Number(s.attempt) - 1}.patch, ${since.files} file(s)`);
+  } else if (Number(s.attempt) > 1) {
+    console.log(`review tree: no "${s.task} a${Number(s.attempt) - 1}: review" commit on the branch, so this review reads the whole diff`);
+  }
+}
+
+/**
+ * E85f (PR-105): a later attempt's review starts from the last one. The last "Tnn a<N-1>: review" commit on the
+ * branch's first-parent line, and the diff from it to the head (its file list first), on the files the branch changes
+ * against the base now or did at that review: what a base merged meanwhile brought is not the builder's. Null on a first
+ * attempt, or when the branch has no such commit.
+ */
+export function sinceLastReview(repo, { task, attempt, head, base }) {
+  if (!/^T\d{2}$/.test(String(task)) || !(attempt > 1)) return null;
+  const subject = `${task} a${attempt - 1}: review`;
+  const log = g(["log", "--first-parent", "-n", "500", "--format=%H%x09%s", head], { cwd: repo }).stdout.split(/\r?\n/);
+  const hit = log.map((line) => line.split("\t")).find(([, s]) => s === subject || String(s ?? "").startsWith(`${subject} `));
+  if (!hit) return null;
+  const review = hit[0];
+  const names = new Set();
+  for (const range of [`${base}...${head}`, `${base}...${review}`]) {
+    for (const name of g(["diff", "--name-only", "--no-renames", "-z", range], { cwd: repo }).stdout.split("\0")) if (name) names.add(name);
+  }
+  // The branch's own files that changed since that review (literal pathspecs: GIT_LITERAL_PATHSPECS).
+  const files = g(["diff", "--name-only", "--no-renames", "-z", review, head], { cwd: repo }).stdout.split("\0").filter((name) => name && names.has(name)).sort().slice(0, MAX_SINCE_FILES);
+  const patch = files.length ? g(["diff", "--stat=200", "--patch", "--no-ext-diff", "--no-textconv", "--no-color", "--no-renames", review, head, "--", ...files], { cwd: repo }).stdout : "";
+  return { review, patch, files: files.length };
 }
 
 /** A fence's `Fence version` (its head's `- Fence version: 3`, `v3` or `**v3 · date**`), or 0 when it has none. */

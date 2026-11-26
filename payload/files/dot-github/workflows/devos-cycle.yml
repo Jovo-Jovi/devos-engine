@@ -923,6 +923,17 @@ jobs:
             *) echo "::error::unknown action '$ACTION'"; exit 1 ;;
           esac
 
+      # E85f (PR-105): what the attempt used, from the usage records publish committed with the review: each stage's
+      # tool, model, minutes and tokens, beside the verdict's notice. No AI call; a record that is missing prints nothing.
+      - name: What this attempt used
+        if: always() && steps.bs.outputs.state == 'ok'
+        working-directory: ${{ github.workspace }}/publish/decide
+        env:
+          DEVOS_ROOT: ${{ github.workspace }}/publish/decide
+        run: |
+          line=$(node "$T/usage.mjs" notice --task "$TASK" --attempt "$ATTEMPT" || true)
+          if [ -n "$line" ]; then echo "::notice title=Dev OS::$line"; else echo "no usage record for $TASK attempt $ATTEMPT"; fi
+
       # PR-91: the unit's rows are all ticked on its branch: one pull request into main with the completion report and
       # devos/verdict, and the run stops. Only your merge of it reaches main; nothing else is built until then. No AI call.
       - name: Open the acceptance pull request (PR-91)
