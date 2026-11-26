@@ -7,6 +7,9 @@ import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+// E85d (D-E19): the engine's version from package.json, so a release candidate's bump changes no line here
+// (test/version.test.mjs names it).
+const VERSION = JSON.parse(readFileSync(path.join(root, "package.json"), "utf8")).version;
 const bin = path.join(root, "bin", "devos.mjs");
 
 function cleanup(dir) {
@@ -57,7 +60,7 @@ test("install.test.mjs installs into an empty folder", () => {
     const result = devos(["install", folder, "--key", "DEMO"]);
     assert.equal(result.status, 0, result.stdout + result.stderr);
     const manifest = JSON.parse(readFileSync(path.join(root, "payload", "manifest.json"), "utf8"));
-    assert.equal(result.stdout.includes(`devos install 1.13.18: ${manifest.files.length} engine files, 4 templates, devos.config.json written`), true, result.stdout);
+    assert.equal(result.stdout.includes(`devos install ${VERSION}: ${manifest.files.length} engine files, 4 templates, devos.config.json written`), true, result.stdout);
     const lock = JSON.parse(readFileSync(path.join(folder, "devos", "engine.lock.json"), "utf8"));
     assert.equal(lock.files.length, manifest.files.length);
     assert.deepEqual(
@@ -115,7 +118,7 @@ test("install.test.mjs a second install is refused", () => {
     assert.equal(first.status, 0, first.stdout + first.stderr);
     const second = devos(["install", folder, "--key", "DEMO"]);
     assert.equal(second.status, 1);
-    assert.equal(second.stdout.includes("devos: already installed (engine 1.13.18); run devos upgrade"), true, second.stdout);
+    assert.equal(second.stdout.includes(`devos: already installed (engine ${VERSION}); run devos upgrade`), true, second.stdout);
   } finally {
     cleanup(folder);
   }

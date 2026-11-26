@@ -43,7 +43,7 @@ task is then built from a written fence, checked, reviewed, and merged by you.
   <img alt="The DEV_OS Engine at the centre sends the work through each step in turn: brief, blueprint, fence, builder, guards, CI and review, and you approve the merge" src="docs/assets/devos-flow.svg" width="900">
 </p>
 
-Version `1.13.18`. The engine is under PolyForm Shield 1.0.0 and the files it installs into your project under MIT
+Version `1.14.0-rc.1`. The engine is under PolyForm Shield 1.0.0 and the files it installs into your project under MIT
 (see [Licence](#licence)).
 
 ## Contents
@@ -338,6 +338,11 @@ DEV_OS opens a pull request with every engine file that changed; merge it, and t
 file you edited yourself is listed as a conflict and never overwritten. Your code, your documents,
 `devos/project.json` and `devos/prices.json` are never touched.
 
+**Release candidates** (`1.14.0-rc.1`, a GitHub prerelease) are for trying the next version on a test project:
+check out the candidate's tag in the engine folder, then run `devos upgrade --pre` in the project. A plain
+`devos upgrade` and the project page never take one, so a project for real work stays on releases. A project on a
+candidate takes the release with a plain `devos upgrade`.
+
 </details>
 
 ## Add DEV_OS to a project you have
@@ -417,7 +422,7 @@ must be committed.
 | `devos media [folder] [--budget <usd>] [--only <id,…>] [--yes]` | Makes the project's planned media with the key in your shell (`DEVOS_MEDIA_XAI_KEY`). Without `--budget` it only estimates; with one it asks before it pays. It never commits. |
 | `devos adopt [folder] [--install \| --publish] [--move-aside] [--agent <tool>:<model>] [--effort <level>]` | Adds DEV_OS to a project you have ([steps](#add-dev_os-to-a-project-you-have)). |
 | `devos adopt --check [folder] [--json]` | The read-only survey of a project you have. |
-| `devos upgrade [--local]` | Updates the project's engine files on a new branch and opens a pull request; `--local` commits without pushing. |
+| `devos upgrade [--local] [--pre]` | Updates the project's engine files on a new branch and opens a pull request; `--local` commits without pushing; `--pre` takes a release candidate, for a test project. |
 | `devos remove [folder] [--local]` | Takes DEV_OS out of a project: removes the files it installed and still owns on a branch `devos/remove` and opens a pull request (`--local`: a commit only), keeping your documents, fences, reviews, `docs/method/` and any DEV_OS file you edited. Run again after the merge, it deletes DEV_OS's secrets, `DEVOS_*` variables and `devos:` labels on GitHub after you type yes, and a never-merged `devos/adopt` branch. |
 | `devos models [folder]` | The reviewer's, the light reviewer's and the default builder's model. |
 | `devos models set <role> <model>` · `reset <role>` | Sets or clears the role's model variable for the next run. Roles: `reviewer`, `light`, `builder`. |

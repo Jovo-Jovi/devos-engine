@@ -28,6 +28,10 @@ dev/                   plan, decisions, ledger, fences, reports, reviews
 
 Every task is built and reviewed on its own branch, and reaches `main` only after the review of record.
 
+**Until 1.14.0, read `next` for `main` below (D-E19).** Every task starts from `next` and merges into it, and
+`main` takes only stable releases. After each merge, the owner publishes the task's release candidate from `next`
+(`dev/RELEASE.md`, *Release candidates*), and the task's live check (D8) runs on it.
+
 1. **Fence (the reviewer).** Claude in the DEVOS project writes `dev/fences/E16.md`, with its package (below), and
    pushes it to a new branch `task/E16` from `main`.
 2. **Build (Cursor).** Run `git fetch`, then `git switch task/E16`. Open `devos-engine` in Cursor and start a new

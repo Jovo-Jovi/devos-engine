@@ -2,6 +2,18 @@
 
 The notable changes of each DEV_OS Engine release. Versions follow [Semantic Versioning](https://semver.org/).
 
+## 1.14.0-rc.1 — Unreleased
+
+The first release candidate of 1.14.0, for test projects only (D-E19). A project for real work stays on 1.13.18 until
+the release.
+
+- **Release candidates for test projects.** `devos upgrade --pre` takes a release candidate (`X.Y.Z-rc.N`, a GitHub
+  prerelease). A plain `devos upgrade` and the project page refuse one, so a project for real work never takes it by
+  accident, and a project on a candidate takes the release with a plain `devos upgrade`. Everywhere the engine
+  compares versions, `1.14.0-rc.1` comes before `1.14.0-rc.2`, and both before `1.14.0`.
+- `node tools/release-check.mjs` refuses a version that is neither a release nor a release candidate, and says when it
+  checked a candidate.
+
 ## 1.13.18 — 2026-11-26
 
 - **Reviews and plans by Cursor, Codex and Gemini get their whole prompt (PR-103).** Before, the runner wrote the answer section over the prompt it was reading, so those tools got only the answer section and none of the review's or plan's instructions. Claude Code was never affected.

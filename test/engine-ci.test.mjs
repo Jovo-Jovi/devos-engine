@@ -12,7 +12,10 @@ test("engine-ci.test.mjs workflow shape", () => {
   assert.equal(existsSync(file), true);
   const text = normalizeLf(readFileSync(file)).toString("utf8");
   const needles = [
-    'branches: [main, "task/**"]',
+    // D-E19 (E85d): until 1.14.0, tasks merge into next, which runs like main: each commit has its own runs.
+    'branches: [main, next, "task/**"]',
+    "  pull_request:\n    branches: [main, next]",
+    "github.ref == 'refs/heads/main' || github.ref == 'refs/heads/next'",
     "workflow_dispatch:",
     // Every push and pull request runs the Linux tests only; a manual run adds Windows (E21: Windows minutes count double).
     `os: \${{ fromJSON(github.event_name == 'workflow_dispatch' && '["ubuntu-latest", "windows-latest"]' || '["ubuntu-latest"]') }}`,

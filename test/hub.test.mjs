@@ -62,6 +62,8 @@ test("hub.test.mjs (a) a pasted GitHub address, versions and the engine's own re
     assert.equal(parseRepositoryInput(bad).error, "Paste the repository's GitHub address, such as https://github.com/you/your-app, or you/your-app.", bad);
   }
   assert.deepEqual([compareVersions("1.0.0", "1.1.0"), compareVersions("1.10.0", "1.9.9"), compareVersions("1.1.0", "1.1.0"), compareVersions("", "1.1.0")], [-1, 1, 0, null]);
+  // E85d: a release candidate comes before its release (test/versions.test.mjs has the whole order).
+  assert.deepEqual([compareVersions("1.1.0-rc.1", "1.1.0"), compareVersions("1.1.0-rc.2", "1.1.0-rc.1"), compareVersions("1.1.0-beta.1", "1.1.0")], [-1, 1, null]);
   assert.equal(engineRepository(), "Jovo-Jovi/devos-engine");
 });
 
@@ -94,6 +96,9 @@ test("hub.test.mjs (b) the page reads a project's setup, versions and Control To
     process.env.STUB_VARIABLES = JSON.stringify([{ name: "DEVOS_PAUSED", value: "True" }]);
     assert.equal(hubState(staged.project).paused, false);
     process.env.STUB_VARIABLES = "[]";
+    // E85d: GitHub's latest release is never a candidate; a tag that names one is not read as the latest release.
+    process.env.STUB_LATEST = "v9.9.10-rc.1";
+    assert.deepEqual([hubState(staged.project).versions.latest, hubState(staged.project).versions.latestError], ["", "gh could not read the latest release of Jovo-Jovi/devos-engine"]);
     delete process.env.STUB_LATEST;
     const off = hubState(staged.project);
     assert.equal(off.reporting, "off");
@@ -148,7 +153,7 @@ test("hub.test.mjs (d) the server reads a project's page and clones from GitHub 
   const home = path.join(staged.parent, "home-dir");
   const source = path.join(staged.parent, "source");
   mkdirSync(home);
-  const restore = useStubs(staged, { HOME: home, USERPROFILE: home, STUB_REPO: "full", STUB_CLONE_FROM: source, STUB_LATEST: `v${version}` });
+  const restore = useStubs(staged, { HOME: home, USERPROFILE: home, STUB_REPO: "full", STUB_CLONE_FROM: source, STUB_LATEST: "v9.9.9" });
   setUpProject(staged.project, { engine: version });
   setUpProject(source, { origin: null });
   const call = async (server, method, route, body) => {
@@ -162,7 +167,7 @@ test("hub.test.mjs (d) the server reads a project's page and clones from GitHub 
   try {
     const read = await call(one, "GET", "/api/hub");
     assert.equal(read.status, 200);
-    assert.deepEqual([read.body.ok, read.body.repository, read.body.versions], [true, "devtest/demo-shop", { project: version, engine: version, latest: version, latestError: "" }]);
+    assert.deepEqual([read.body.ok, read.body.repository, read.body.versions], [true, "devtest/demo-shop", { project: version, engine: version, latest: "9.9.9", latestError: "" }]);
     // E72: the page also gets the cycle as GitHub has it; the stand-in gh has no run, no setup issue and no pull list.
     assert.deepEqual([read.body.lastRun, read.body.setupIssue, read.body.openPulls], [null, "", null]);
     const refused = await call(one, "POST", "/api/clone", { url: "devtest/demo-shop" });

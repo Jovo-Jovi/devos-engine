@@ -8,6 +8,9 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { planRemove, settingGroups } from "../lib/remove.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+// E85d (D-E19): the engine's version from package.json, so a release candidate's bump changes no line here
+// (test/version.test.mjs names it).
+const VERSION = JSON.parse(readFileSync(path.join(root, "package.json"), "utf8")).version;
 const bin = path.join(root, "bin", "devos.mjs");
 const windows = process.platform === "win32";
 const SLUG = "acme/demo";
@@ -157,7 +160,7 @@ test("remove.test.mjs (b) devos remove --local removes DEV_OS's files on a branc
     assert.equal(result.stdout.includes(`devos remove: ${owned + 2} removed, 1 kept (edited), 8 kept (the project needs them)`), true, result.stdout);
     assert.equal(ok(["branch", "--show-current"], staged.project).trim(), "main");
     assert.equal(ok(["status", "--porcelain"], staged.project), "");
-    assert.equal(ok(["log", "-1", "--format=%s", "devos/remove"], staged.project).trim(), "DEV_OS remove (engine 1.13.18)");
+    assert.equal(ok(["log", "-1", "--format=%s", "devos/remove"], staged.project).trim(), `DEV_OS remove (engine ${VERSION})`);
     const left = ok(["ls-tree", "-r", "--name-only", "devos/remove"], staged.project).split(/\r?\n/).filter(Boolean).sort();
     assert.deepEqual(left, [
       ".cursor/rules/10-security-data.mdc",
@@ -200,7 +203,7 @@ test("remove.test.mjs (c) devos remove pushes devos/remove, opens its pull reque
     assert.equal(calls[0].startsWith("pr create --base main --head devos/remove --title Remove DEV_OS --body-file "), true, calls[0]);
     assert.equal(calls[1], `variable set DEVOS_PAUSED --body true --repo ${SLUG}`);
     const body = readFileSync(path.join(staged.project, ".git", "devos-remove-body.md"), "utf8");
-    for (const needle of ["Remove DEV_OS (engine 1.13.18)", "- scripts/devos/run-checks.mjs", "- devos/engine.lock.json", "- devos.config.json", "- docs/method/PRECEDENTS.md — your fences and reviews cite it", "run `devos remove` again"]) {
+    for (const needle of [`Remove DEV_OS (engine ${VERSION})`, "- scripts/devos/run-checks.mjs", "- devos/engine.lock.json", "- devos.config.json", "- docs/method/PRECEDENTS.md — your fences and reviews cite it", "run `devos remove` again"]) {
       assert.equal(body.includes(needle), true, needle);
     }
   } finally {
@@ -309,7 +312,7 @@ test("remove.test.mjs (e) an adoption that was never merged: its branch devos/ad
 test("remove.test.mjs (f) devos help, the README and the changelog name devos remove", () => {
   const help = spawnSync(process.execPath, [bin, "help"], { encoding: "utf8", windowsHide: true });
   assert.equal(help.status, 0);
-  assert.equal(help.stdout.includes("devos upgrade [--local]\ndevos remove [folder] [--local]\n"), true, help.stdout);
+  assert.equal(help.stdout.includes("devos upgrade [--local] [--pre]\ndevos remove [folder] [--local]\n"), true, help.stdout);
   const usage = spawnSync(process.execPath, [bin, "remove", "--nope"], { encoding: "utf8", windowsHide: true });
   assert.deepEqual([usage.status, usage.stdout], [2, "devos remove [folder] [--local]\n"]);
   const readme = readFileSync(path.join(root, "README.md"), "utf8");

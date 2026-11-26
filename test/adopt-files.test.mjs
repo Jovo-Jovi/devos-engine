@@ -11,6 +11,17 @@ import { buildManifest, manifestText } from "../tools/build-manifest.mjs";
 
 // E36a (PR-69, D-E13): DEV_OS's files beside an existing project's own; nothing of the project's is overwritten.
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+// E85d (D-E19): the engine's version from package.json, so a release candidate's bump changes no line here
+// (test/version.test.mjs names it).
+const VERSION = JSON.parse(readFileSync(path.join(root, "package.json"), "utf8")).version;
+// The release a staged engine has: X.Y.Z after X.Y.Z-rc.N, X.Y.(Z+1) after X.Y.Z.
+const NEXT = nextRelease(VERSION);
+
+function nextRelease(version) {
+  const match = /^(\d+)\.(\d+)\.(\d+)(-rc\.\d+)?$/.exec(version);
+  if (!match) throw new Error(`not a release or a release candidate: ${version}`);
+  return match[4] ? `${match[1]}.${match[2]}.${match[3]}` : `${match[1]}.${match[2]}.${Number(match[3]) + 1}`;
+}
 const bin = path.join(root, "bin", "devos.mjs");
 const IDENTITY = ["-c", "user.name=Devos Test", "-c", "user.email=devos@example.com", "-c", "commit.gpgsign=false", "-c", "core.autocrlf=false"];
 const PROJECT_CI = "name: ci\non: push\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo ${{ vars.MY_FLAG }}\n";
@@ -110,14 +121,14 @@ test("adopt-files.test.mjs (d) devos upgrade updates DEV_OS's CI where it lives 
     mkdirSync(next);
     for (const part of ["package.json", "bin", "lib", "payload"]) cpSync(path.join(root, part), path.join(next, part), { recursive: true });
     const pkg = path.join(next, "package.json");
-    writeFileSync(pkg, readFileSync(pkg, "utf8").replace("\"version\": \"1.13.18\"", "\"version\": \"1.13.19\""));
+    writeFileSync(pkg, readFileSync(pkg, "utf8").replace(`"version": "${VERSION}"`, `"version": "${NEXT}"`));
     const ci = path.join(next, "payload", "files", "dot-github", "workflows", "ci.yml");
     writeFileSync(ci, `${readFileSync(ci, "utf8").replaceAll("\r\n", "\n")}# Upgrade test line.\n`);
     writeFileSync(path.join(next, "payload", "manifest.json"), manifestText(buildManifest(next)));
     const upgraded = spawnSync(process.execPath, [path.join(next, "bin", "devos.mjs"), "upgrade", "--local"], { cwd: folder, encoding: "utf8", windowsHide: true, timeout: 180000 });
     assert.equal(upgraded.status, 0, upgraded.stdout + upgraded.stderr);
-    assert.equal(upgraded.stdout.includes("devos upgrade 1.13.18 to 1.13.19: 1 updated, 0 added, 0 removed, 0 conflicts"), true, upgraded.stdout);
-    const branch = "devos/upgrade-1.13.19";
+    assert.equal(upgraded.stdout.includes(`devos upgrade ${VERSION} to ${NEXT}: 1 updated, 0 added, 0 removed, 0 conflicts`), true, upgraded.stdout);
+    const branch = `devos/upgrade-${NEXT}`;
     const changed = git(["diff", "--name-only", `main..${branch}`], folder).split("\n").filter(Boolean).sort();
     assert.deepEqual(changed, [".github/workflows/devos-ci.yml", "devos/engine.lock.json"]);
     assert.equal(git(["show", `${branch}:.github/workflows/devos-ci.yml`], folder).endsWith("# Upgrade test line.\n"), true);

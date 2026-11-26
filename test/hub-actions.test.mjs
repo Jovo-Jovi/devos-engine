@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { CONTRACT_VERSION } from "../lib/contract.mjs";
 import { actionFacts, connectProject, decideActions, hubState, pullProject, upgradeProject } from "../lib/hub.mjs";
-import { startUiServer } from "../lib/ui-server.mjs";
+import { buildManifest, manifestText } from "../tools/build-manifest.mjs";
 import { cleanup, stage } from "./harness.mjs";
 
 // E26b: from a project's page, upgrade it by pull request, bring its folder up to date with GitHub, and connect it to
@@ -109,6 +109,10 @@ test("hub-actions.test.mjs (a) each action is allowed only by the page's facts, 
   assert.equal(decide({ versions: { project: "1.3.0", engine: "1.3.0" } }, { github: "1.3.0" }).connect.why,
     "Connecting needs the latest release, 1.2.0, in this engine and in the project on GitHub. This engine is 1.3.0 and the project is 1.3.0.");
   assert.deepEqual(decide({ ...ready }, { github: "1.2.0" }).connect, yes);
+  // E85d (D-E19): the page never upgrades a project to a release candidate, and a project on one is upgraded to the release.
+  assert.deepEqual(decide({ versions: { engine: "1.3.0-rc.1" } }, {}).upgrade,
+    no("This engine is 1.3.0-rc.1, a release candidate: the page upgrades a project only to a release. For a test project, run devos upgrade --pre in its folder."));
+  assert.deepEqual(decide({ versions: { project: "1.2.0-rc.3" } }, { github: "1.2.0-rc.3" }), { upgrade: yes, pull: no("This folder has the same version as GitHub."), connect: no(needs.replace("the project is 1.0.0", "the project is 1.2.0-rc.3")) });
 });
 
 test("hub-actions.test.mjs (b) the page's facts come from git and gh, and reading changes nothing", () => {
@@ -128,6 +132,11 @@ test("hub-actions.test.mjs (b) the page's facts come from git and gh, and readin
       `pr list --repo ${SLUG} --head devos/upgrade-${version} --state open --json url --jq .[].url`,
       `pr list --repo ${SLUG} --head devos/connect --state open --json url --jq .[].url`,
     ]);
+    // E85d: a project on GitHub may be on a release candidate; any other version is not read.
+    process.env.STUB_REMOTE_LOCK = `${JSON.stringify({ engine_version: "1.2.0-rc.3" })}\n`;
+    assert.equal(actionFacts(state).github, "1.2.0-rc.3");
+    process.env.STUB_REMOTE_LOCK = `${JSON.stringify({ engine_version: "1.2.0-beta.1" })}\n`;
+    assert.equal(actionFacts(state).github, "");
     process.env.STUB_DEFAULT_BRANCH = "missing";
     assert.deepEqual(actionFacts(state), { branch: "main", defaultBranch: "", github: "", pulls: { upgrade: "https://github.com/devtest/demo-shop/pull/3", connect: "" } });
     assert.deepEqual(actionFacts({ ...state, repository: "" }), { branch: "", defaultBranch: "", github: "", pulls: { upgrade: "", connect: "" } });
@@ -244,14 +253,33 @@ test("hub-actions.test.mjs (d) the upgrade runs devos upgrade in the project's f
   }
 });
 
+// E85d (D-E19): the page upgrades a project only to a release, and this engine may be a release candidate. (e) runs a
+// copy of it at a release: its package.json, bin, lib and payload, with its own manifest.
+const RELEASE = "9.0.0";
+
+async function releaseEngine(parent) {
+  const dir = path.join(parent, "engine-release");
+  mkdirSync(dir);
+  for (const part of ["package.json", "bin", "lib", "payload"]) cpSync(path.join(root, part), path.join(dir, part), { recursive: true });
+  const pkgPath = path.join(dir, "package.json");
+  writeFileSync(pkgPath, readFileSync(pkgPath, "utf8").replace(`"version": "${version}"`, `"version": "${RELEASE}"`));
+  writeFileSync(path.join(dir, "payload", "manifest.json"), manifestText(buildManifest(dir)));
+  const load = (rel) => import(pathToFileURL(path.join(dir, ...rel.split("/"))).href);
+  return { bin: path.join(dir, "bin", "devos.mjs"), hub: await load("lib/hub.mjs"), server: await load("lib/ui-server.mjs") };
+}
+
 test("hub-actions.test.mjs (e) the server upgrades by pull request and connects only after an explicit yes", async () => {
   const staged = stage();
   const origin = path.join(staged.parent, "origin.git");
-  const restore = useStubs(staged, { STUB_LATEST: `v${version}`, STUB_REMOTE_LOCK: `${JSON.stringify({ engine_version: "1.0.0" })}\n` });
+  mkdirSync(staged.parent, { recursive: true });
+  const engine = await releaseEngine(staged.parent);
+  const { hubState: releaseState } = engine.hub;
+  const { startUiServer } = engine.server;
+  const restore = useStubs(staged, { STUB_LATEST: `v${RELEASE}`, STUB_REMOTE_LOCK: `${JSON.stringify({ engine_version: "1.0.0" })}\n` });
   // An installed project at 1.0.0 whose pushes reach a local bare repository; its origin still names GitHub.
   mkdirSync(staged.project);
   git(staged.project, ["init", "-q", "-b", "main"]);
-  const installed = spawnSync(process.execPath, [bin, "install", staged.project, "--key", "DEMO"], { cwd: staged.project, encoding: "utf8", windowsHide: true, env: process.env });
+  const installed = spawnSync(process.execPath, [engine.bin, "install", staged.project, "--key", "DEMO"], { cwd: staged.project, encoding: "utf8", windowsHide: true, env: process.env });
   assert.equal(installed.status, 0, installed.stdout + installed.stderr);
   const lockFile = path.join(staged.project, "devos", "engine.lock.json");
   const lock = JSON.parse(readFileSync(lockFile, "utf8"));
@@ -274,7 +302,7 @@ test("hub-actions.test.mjs (e) the server upgrades by pull request and connects 
   };
   const server = await startUiServer({ folder: staged.project, port: 0 });
   try {
-    assert.equal(hubState(staged.project).versions.project, "1.0.0");
+    assert.equal(releaseState(staged.project).versions.project, "1.0.0");
     const read = await call(server, "/api/hub");
     assert.deepEqual([read.status, read.body.actions.github, read.body.actions.upgrade, read.body.actions.pull], [200, "1.0.0", yes, no("This folder has the same version as GitHub.")]);
     assert.equal(read.body.actions.connect.can, false);
@@ -291,17 +319,17 @@ test("hub-actions.test.mjs (e) the server upgrades by pull request and connects 
 
     const upgraded = await call(server, "/api/upgrade", {});
     assert.equal(upgraded.status, 200, JSON.stringify(upgraded.body));
-    assert.equal(upgraded.body.message, `The pull request that upgrades the project to ${version} is open on GitHub. Merge it there, then bring this folder up to date.`);
+    assert.equal(upgraded.body.message, `The pull request that upgrades the project to ${RELEASE} is open on GitHub. Merge it there, then bring this folder up to date.`);
     assert.equal(upgraded.body.output.includes("devos: pull request opened"), true, upgraded.body.output.join("\n"));
-    assert.equal(git(origin, ["rev-parse", "--verify", "-q", `refs/heads/devos/upgrade-${version}`]).status, 0);
-    assert.equal(ghCalls(staged).some((line) => line.startsWith(`pr create --base main --head devos/upgrade-${version} --title DEV_OS upgrade 1.0.0 to ${version}`)), true);
+    assert.equal(git(origin, ["rev-parse", "--verify", "-q", `refs/heads/devos/upgrade-${RELEASE}`]).status, 0);
+    assert.equal(ghCalls(staged).some((line) => line.startsWith(`pr create --base main --head devos/upgrade-${RELEASE} --title DEV_OS upgrade 1.0.0 to ${RELEASE}`)), true);
     assert.equal(git(staged.project, ["branch", "--show-current"]).stdout.trim(), "main");
     assert.equal(git(staged.project, ["status", "--porcelain"]).stdout, "");
 
-    process.env.STUB_REMOTE_LOCK = `${JSON.stringify({ engine_version: version })}\n`;
+    process.env.STUB_REMOTE_LOCK = `${JSON.stringify({ engine_version: RELEASE })}\n`;
     process.env.STUB_REMOTE_ANSWERS = `${JSON.stringify({ registry_link: false, contract_version: CONTRACT_VERSION }, null, 2)}\n`;
     const after = await call(server, "/api/hub");
-    assert.deepEqual([after.body.actions.upgrade, after.body.actions.connect], [no(`The project already has ${version}.`), yes]);
+    assert.deepEqual([after.body.actions.upgrade, after.body.actions.connect], [no(`The project already has ${RELEASE}.`), yes]);
     const connected = await call(server, "/api/connect", { accept: true, contract: CONTRACT_VERSION });
     assert.deepEqual([connected.status, connected.body.ok, connected.body.pull], [200, true, "https://github.com/devtest/demo-shop/pull/7"]);
     const noOrigin = await fetch(`http://127.0.0.1:${server.port}/api/upgrade`, { method: "POST", headers: { "X-DEVOS-Token": server.token, "Content-Type": "application/json" }, body: "{}" });

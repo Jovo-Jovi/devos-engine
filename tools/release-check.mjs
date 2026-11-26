@@ -9,6 +9,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { isCandidate, parseVersion } from "../lib/version.mjs";
 
 const NOTICE = "Required Notice: Copyright 2026 Jovo-Jovi (https://github.com/Jovo-Jovi)";
 const BINARY = /\.(png|jpe?g|gif|webp|ico|woff2?|ttf|otf|pdf|zip)$/i;
@@ -44,6 +45,8 @@ export function releaseCheck(root) {
 
   const pkg = JSON.parse(text("package.json") ?? "{}");
   const version = String(pkg.version ?? "");
+  // E85d (D-E19): a release, X.Y.Z, or a release candidate, X.Y.Z-rc.N, published as a GitHub prerelease.
+  if (!parseVersion(version)) problems.push(`package.json: version ${version || "(none)"} is neither a release (X.Y.Z) nor a release candidate (X.Y.Z-rc.N)`);
   const manifest = JSON.parse(text("payload/manifest.json") ?? "{}");
   if (manifest.engine_version !== version) problems.push(`payload/manifest.json: engine_version is not ${version}, the version in package.json`);
 
@@ -71,15 +74,15 @@ export function releaseCheck(root) {
       }
     });
   }
-  return { problems, scanned: files.length };
+  return { problems, scanned: files.length, candidate: isCandidate(version) ? version : "" };
 }
 
 export function main(argv = process.argv.slice(2), out = (line) => console.log(line)) {
   const at = argv.indexOf("--root");
   const root = at >= 0 ? path.resolve(argv[at + 1] ?? ".") : path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-  const { problems, scanned } = releaseCheck(root);
+  const { problems, scanned, candidate } = releaseCheck(root);
   if (problems.length === 0) {
-    out(`release check: ok (${scanned} files scanned)`);
+    out(`release check: ok (${scanned} files scanned)${candidate ? ` · ${candidate} is a release candidate: publish it as a prerelease, from next (dev/RELEASE.md)` : ""}`);
     return 0;
   }
   out(`release check: ${problems.length} problem${problems.length === 1 ? "" : "s"}`);

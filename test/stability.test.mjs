@@ -13,12 +13,12 @@ const bin = path.join(root, "bin", "devos.mjs");
 const read = (file) => readFileSync(path.join(root, file), "utf8").replaceAll("\r\n", "\n");
 const devos = (args) => spawnSync(process.execPath, [bin, ...args], { encoding: "utf8", windowsHide: true, timeout: 60000 });
 
-test("stability.test.mjs (a) on main, a push and the release's Run workflow never cancel each other", () => {
+test("stability.test.mjs (a) on main and on next (D-E19), a push and the release's Run workflow never cancel each other", () => {
   const ci = read(".github/workflows/engine-ci.yml");
   assert.equal(
     ci.includes(`concurrency:
-  group: engine-ci-\${{ github.event_name }}-\${{ github.ref == 'refs/heads/main' && github.sha || github.ref }}
-  cancel-in-progress: \${{ github.ref != 'refs/heads/main' }}
+  group: engine-ci-\${{ github.event_name }}-\${{ (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/next') && github.sha || github.ref }}
+  cancel-in-progress: \${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/next' }}
 `),
     true,
     ci,

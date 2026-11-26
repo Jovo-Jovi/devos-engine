@@ -37,6 +37,31 @@ never into this one.
    - then `gh release create vX.Y.Z --title "DEV_OS Engine vX.Y.Z" --notes "What changed: CHANGELOG.md."`. GitHub attaches
      the source ZIP.
 
+## Release candidates (D-E19)
+
+Until 1.14.0, tasks merge into `next`, and `main` keeps the last stable release. Each task's package sets the next
+release candidate, `X.Y.Z-rc.N`, in `package.json`, `README.md`, the manifest and the changelog's first heading.
+
+1. **Date it, on `next`.** Set the date of the candidate's heading in `CHANGELOG.md` (`## X.Y.Z-rc.N — YYYY-MM-DD`),
+   then commit `Release vX.Y.Z-rc.N` on `next`.
+2. **The checks.** `node tools/release-check.mjs` prints `release check: ok (N files scanned) · X.Y.Z-rc.N is a release
+   candidate: publish it as a prerelease, from next (dev/RELEASE.md)`. The history and Windows checks are as for a
+   release (steps 3 and 4 above), on `next`.
+3. **Tag and publish it as a prerelease.**
+   - `git tag vX.Y.Z-rc.N` and `git push origin vX.Y.Z-rc.N`;
+   - then `gh release create vX.Y.Z-rc.N --prerelease --title "DEV_OS Engine vX.Y.Z-rc.N" --notes "A release candidate,
+     for test projects. What changed: CHANGELOG.md."`.
+
+   GitHub's latest release stays the last stable one, so the project page never offers the candidate.
+4. **A test project takes it.** With the engine folder at the tag (right after step 3, `next` is that commit), run
+   `devos upgrade --pre` in the test project and merge its pull request. The task's D8 runs there.
+
+- **A plain `devos upgrade` refuses a candidate**, and a project on a candidate takes the release with a plain
+  `devos upgrade`.
+- **A fix developers need before 1.14.0** is a release from `main`, as above, and is merged into `next` too.
+- **The stable 1.14.0.** When the acceptance task (E91) passes on the latest candidate, `next` merges into `main`, and
+  `main` is released as above. E91 writes those steps.
+
 ## Not in a release
 
 Nothing secret, ever. No credential, admin access or source of the private DEV_OS Control Tower. The copies of the

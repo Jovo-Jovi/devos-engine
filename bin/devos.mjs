@@ -48,7 +48,7 @@ devos agents detect
 devos agents show
 devos agents import <file>
 devos install [folder] --key <KEY>
-devos upgrade [--local]
+devos upgrade [--local] [--pre]
 devos remove [folder] [--local]
 devos init [--local] [--continue] [folder]
 devos init --plan <file> [folder]

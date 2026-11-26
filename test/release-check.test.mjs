@@ -99,3 +99,23 @@ test("release-check.test.mjs (d) a secret in a shipped file is reported by file,
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test("release-check.test.mjs (e) E85d: a release candidate passes and is named; a version that is neither is reported", () => {
+  const candidate = tree({
+    "package.json": JSON.stringify({ version: "1.1.0-rc.2", license: "PolyForm-Shield-1.0.0", files: ["bin/", "lib/", "LICENSE", "CHANGELOG.md", "README.md"] }),
+    "payload/manifest.json": JSON.stringify({ engine_version: "1.1.0-rc.2" }),
+    "CHANGELOG.md": "# Changelog\n\n## 1.1.0-rc.2 — 2026-11-27\n\nA release candidate.\n",
+  });
+  const beta = tree({
+    "package.json": JSON.stringify({ version: "1.1.0-beta.1", license: "PolyForm-Shield-1.0.0", files: ["bin/", "lib/", "LICENSE", "CHANGELOG.md", "README.md"] }),
+    "payload/manifest.json": JSON.stringify({ engine_version: "1.1.0-beta.1" }),
+    "CHANGELOG.md": "# Changelog\n\n## 1.1.0-beta.1 — 2026-11-27\n",
+  });
+  try {
+    assert.deepEqual(run(candidate), { code: 0, lines: ["release check: ok (6 files scanned) · 1.1.0-rc.2 is a release candidate: publish it as a prerelease, from next (dev/RELEASE.md)"] });
+    assert.deepEqual(run(beta), { code: 1, lines: ["release check: 1 problem", "- package.json: version 1.1.0-beta.1 is neither a release (X.Y.Z) nor a release candidate (X.Y.Z-rc.N)"] });
+  } finally {
+    rmSync(candidate, { recursive: true, force: true });
+    rmSync(beta, { recursive: true, force: true });
+  }
+});
