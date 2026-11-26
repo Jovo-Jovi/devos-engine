@@ -1,0 +1,21 @@
+{
+  ".gitleaks.toml": "7b00c6adaa84e710d64b94fb8ba5985e83210906a2bfd38017d617f8bc5f097c",
+  "CHANGELOG.md": "442d5c373c852dfa5f30c82cbfbb5c3c68baa4d6d110892f53e42b9085c5d6d5",
+  "README.md": "d581bee3c029df23dbea004002c45481db10aa196474a99413dffeb18b2c143f",
+  "package.json": "9a2abec745579e29d2521391a5a625f3ca39af12cdd7e9692dfb6eb522eb4931",
+  "payload/files/docs/method/AUTOMATION.md": "4f90c9fe6ccee5a0e5397c8b9a27e55dd8e9e451e16ef63f7ea4af67bad49d6d",
+  "payload/files/docs/method/PRECEDENTS.md": "b54415b71accc0fe08f0b43d2de54eeadf5be8a83d63bf86ccf3af7ae6ac57a6",
+  "payload/files/dot-github/workflows/devos-cycle.yml": "bc4213a3ffe9ff11194370d2692375a5b291102a40053ff820fc341b9a32ad88",
+  "payload/files/dot-github/workflows/devos-review.yml": "16c2cc746d7b372e8e7d6d743097b6e62b6fd73b4935653ec1c88d0a271d3036",
+  "payload/files/scripts/devos/publish-verify.mjs": "b985fef8bef01955ba492ee9458972ee92369d7327838ddfeb86aa103abedb42",
+  "payload/files/scripts/devos/supervisor.mjs": "a024496671a3dac2c079988ccc6f4dc7a6482455b29d1727eb1cc1be57c9ff72",
+  "payload/manifest.json": "65816a5ea1e8787757e506a98d123b789ba57f19ca3738c221a4f0c10bc73a7a",
+  "test/adopt-files.test.mjs": "050549a4890a81029a53136792e68effad0bc2c68dc0452ab3ead9d42ce0ee7c",
+  "test/adopt-install.test.mjs": "0407a763a20051c86f4a189a9c97e71c8fc3ee9c61f63a953c85e551981ae10d",
+  "test/install.test.mjs": "cdccd8e5c27a299fa4ce14784453fbef9ae35dff0fa914dec19228524f61525f",
+  "test/own-images.test.mjs": "46755c09bb75346380fce1c7ec65e6c52a85b5d90d6b10f44e7a9444509f12fc",
+  "test/remove.test.mjs": "6fd9b11a1e00800c85ae92a3a9c1fa9d32806ecaa236597d814f7535ce641424",
+  "test/two-jobs.test.mjs": "df2c81b5ca13d9b7371fda3acb898eb3619e1814639e2a382a3dade6db4fbe46",
+  "test/upgrade.test.mjs": "faf7b152aa9f70dfc5a8830d2ddc62a7649e9b96530033a2ce26a2f2e945d4cc",
+  "test/version.test.mjs": "2bec3f346305a4ee0997bfe8b938f6ce2b7170a7e7639d16c3acc8a95cdfc488"
+}

@@ -329,10 +329,10 @@ if (process.env.DEVOS_OWN_WORKER === "page") {
     const pattern = /^regexes = \['''(.+)'''\]$/m.exec(toml)?.[1];
     assert.ok(pattern, "no secret-name allowlist");
     const names = new RegExp(pattern);
-    for (const name of ["ANTHROPIC_API_KEY_2", "secrets.ANTHROPIC_API_KEY_2", "CURSOR_API_KEY_2", "CLAUDE_CODE_OAUTH_TOKEN", "DEVOS_MEDIA_XAI_KEY", "BETTER_AUTH_SECRET"]) {
+    for (const name of ["ANTHROPIC_API_KEY_2", "secrets.ANTHROPIC_API_KEY_2", "CURSOR_API_KEY_2", "CLAUDE_CODE_OAUTH_TOKEN", "DEVOS_MEDIA_XAI_KEY", "BETTER_AUTH_SECRET", "secrets.LKEY_2", "KEY_1", "secrets.LALT_1", "ALT_2"]) {
       assert.equal(names.test(name), true, name);
     }
-    for (const value of ["not-a-name", "lower_case_key", "Mixed_Case_KEY", "1PASSWORD_KEY", "ANTHROPIC_API_KEY=value", "ABCDEF123456", "KEY"]) {
+    for (const value of ["not-a-name", "lower_case_key", "Mixed_Case_KEY", "1PASSWORD_KEY", "ANTHROPIC_API_KEY=value", "ABCDEF123456", "KEY", "LKEY", "KEY_12", "XKEY_1"]) {
       assert.equal(names.test(value), false, value);
     }
   });

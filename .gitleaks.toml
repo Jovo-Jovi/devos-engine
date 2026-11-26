@@ -9,6 +9,7 @@ description = "Content hashes in fence before-files, and the names of secrets"
 paths = ['''^dev/fences/[^/]+/before\.json$''']
 # The name of a secret, never its value: a workflow's `secrets.ANTHROPIC_API_KEY || secrets.ANTHROPIC_API_KEY_2`, or
 # setup's list of key names ("CURSOR_API_KEY", "CURSOR_API_KEY_2"). Upper case and underscores only, ending in KEY,
-# TOKEN, SECRET or PASSWORD with an optional number; a real value never has that shape.
+# TOKEN, SECRET or PASSWORD with an optional number; a real value never has that shape. E85b (PR-102): also the review
+# job's own key names, KEY_1 to LALT_2, which devos-review.yml takes from its caller by name.
 regexTarget = "secret"
-regexes = ['''^(secrets\.)?[A-Z][A-Z0-9]*(_[A-Z0-9]+)*_(KEY|TOKEN|SECRET|PASSWORD)(_[0-9]+)?$''']
+regexes = ['''^(secrets\.)?([A-Z][A-Z0-9]*(_[A-Z0-9]+)*_(KEY|TOKEN|SECRET|PASSWORD)(_[0-9]+)?|L?(KEY|ALT)_[0-9])$''']

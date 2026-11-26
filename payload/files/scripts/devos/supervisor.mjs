@@ -174,8 +174,8 @@ const LIMITED = {
   work: ["devos-work.yml", "work", 150],
   "work / work": ["devos-work.yml", "work", 150],
   publish: ["devos-cycle.yml", "publish", 120],
-  review: ["devos-review.yml", "review", 90],
-  "review / review": ["devos-review.yml", "review", 90],
+  review: ["devos-review.yml", "review", 135],
+  "review / review": ["devos-review.yml", "review", 135],
 };
 function jobMinutes(name) {
   const [file, job, fallback] = LIMITED[name];

@@ -1,5 +1,5 @@
 {
-  "engine_version": "1.13.16",
+  "engine_version": "1.13.17",
   "source": {
     "repo": "Jovo-Jovi/devos-control-tower",
     "commit": "a49ca6db268b98d6558077bf3e95b8ae759d91b3"
@@ -188,7 +188,7 @@
     {
       "path": ".github/workflows/devos-cycle.yml",
       "stored": "dot-github/workflows/devos-cycle.yml",
-      "sha256": "bc4213a3ffe9ff11194370d2692375a5b291102a40053ff820fc341b9a32ad88",
+      "sha256": "0f9bc8a2ab42ca07a80437668d75e8149c6f654cb0741aac580e823e8360228e",
       "owner": "engine"
     },
     {
@@ -218,7 +218,7 @@
     {
       "path": ".github/workflows/devos-review.yml",
       "stored": "dot-github/workflows/devos-review.yml",
-      "sha256": "16c2cc746d7b372e8e7d6d743097b6e62b6fd73b4935653ec1c88d0a271d3036",
+      "sha256": "d3f8ea5a91d237b93d7c7dd6c85cd0aa534b0015834022b05a30eee52dd4c0f7",
       "owner": "engine"
     },
     {
@@ -1682,7 +1682,7 @@
     {
       "path": "docs/method/AUTOMATION.md",
       "stored": "docs/method/AUTOMATION.md",
-      "sha256": "4f90c9fe6ccee5a0e5397c8b9a27e55dd8e9e451e16ef63f7ea4af67bad49d6d",
+      "sha256": "e0a306361458685f2bbf69badbdc790e7102bb21b57584116b5ff77357da82f0",
       "owner": "engine"
     },
     {
@@ -1706,7 +1706,7 @@
     {
       "path": "docs/method/PRECEDENTS.md",
       "stored": "docs/method/PRECEDENTS.md",
-      "sha256": "b54415b71accc0fe08f0b43d2de54eeadf5be8a83d63bf86ccf3af7ae6ac57a6",
+      "sha256": "8324f3b70d1a0ae991de8b1e394862b1e49cfcbac35be300992221900ed6ba7b",
       "owner": "engine"
     },
     {
@@ -1916,7 +1916,7 @@
     {
       "path": "scripts/devos/publish-verify.mjs",
       "stored": "scripts/devos/publish-verify.mjs",
-      "sha256": "b985fef8bef01955ba492ee9458972ee92369d7327838ddfeb86aa103abedb42",
+      "sha256": "18693defbf702fb10c294ff0fa98746023b882ade0cba19aced9d38f30be14cd",
       "owner": "engine"
     },
     {
@@ -2024,7 +2024,7 @@
     {
       "path": "scripts/devos/supervisor.mjs",
       "stored": "scripts/devos/supervisor.mjs",
-      "sha256": "a024496671a3dac2c079988ccc6f4dc7a6482455b29d1727eb1cc1be57c9ff72",
+      "sha256": "c132792b2ec76f4c187a2414b7b60a4d1ce45188eb62e91fe2b417ca698924e6",
       "owner": "engine"
     },
     {

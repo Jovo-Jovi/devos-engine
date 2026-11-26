@@ -59,7 +59,9 @@ permissions:
 jobs:
   review:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    # E85b (PR-102): a deep review with a shell, on a tool with no turn limit, can run past an hour (learn-coptic's T01:
+    # 74 minutes on Cursor grok-4.7-xhigh); the reviewer has 120 minutes, the job 135.
+    timeout-minutes: 135
     permissions:
       contents: read
     outputs:
@@ -162,13 +164,15 @@ jobs:
           tool=$(GITHUB_OUTPUT=/dev/null node "$T/agents.mjs" reviewer --mode "$mode" | sed -n 's/^reviewer_tool=//p')
           light=false; [ "$tool" != "$REVIEW_TOOL" ] && [ "$tool" = "$LIGHT_TOOL" ] && light=true
           [ "$tool" = "$REVIEW_TOOL" ] || [ "$light" = "true" ] || { echo "::error title=Dev OS::the $mode reviewer is $tool, but this job holds the keys of $REVIEW_TOOL${LIGHT_TOOL:+ and $LIGHT_TOOL}"; exit 1; }
-          printf '%s\n' "$(node -p 'require(process.argv[1]).head' "$OUT/verify.json")" > "$RUNNER_TEMP/review-head.txt"
+          # E85b (PR-102): the tree it reviews. Publish's verify writes another commit of the same tree, so the tree is
+          # what the two jobs compare.
+          printf '%s\n' "$(node -p 'require(process.argv[1]).head_tree' "$OUT/verify.json")" > "$RUNNER_TEMP/reviewed-tree.txt"
           {
             echo "reviewed=true"; echo "tool=$tool"; echo "light=$light"; echo "mode=$mode"; echo "effort=$effort"; echo "turns=${turns:-80}"; echo "method=${method:-false}"
             sed -n 's/^\(reasons\|critical\)=/plan_\1=/p' "$RUNNER_TEMP/plan.out"
             sed -n 's/^\(builder_model\|builder_effort\|builder_fast\)=/\1=/p' "$RUNNER_TEMP/verify.out"
           } >> "$GITHUB_OUTPUT"
-          echo "review: $tool, $mode review of $(cat "$RUNNER_TEMP/review-head.txt")"
+          echo "review: $tool, $mode review of the tree $(cat "$RUNNER_TEMP/reviewed-tree.txt") (head $(node -p 'require(process.argv[1]).head' "$OUT/verify.json"))"
 
       # From main's checkout, so the pin is main's and no file of the branch (an .npmrc) takes part in the install.
       - name: The reviewer's CLI, at its pin (PR-93)
@@ -183,7 +187,7 @@ jobs:
       - name: Reviewer (the project's reviewer agent, its own job, no write token)
         id: reviewer
         if: steps.prep.outputs.reviewed == 'true'
-        timeout-minutes: 75
+        timeout-minutes: 120
         working-directory: ${{ github.workspace }}/review
         env:
           DEVOS_ROOT: ${{ github.workspace }}/review
@@ -211,7 +215,14 @@ jobs:
           GEMINI_KEY_2: ${{ steps.prep.outputs.tool == 'gemini' && (steps.prep.outputs.light == 'true' && secrets.LKEY_2 || secrets.KEY_2) || '' }}
         run: |
           node scripts/devos/render-prompt.mjs reviewer "$TASK" "$ATTEMPT" --out .devos/reviewer-prompt.md
+          # E85b: a line every 5 minutes, so a long review shows it is running (the step's log is read only at its end).
+          ( t0=$(date +%s); while sleep 300; do
+              f="not yet"; [ -f "docs/reviews/$TASK-a$ATTEMPT.md" ] && f="written"
+              echo "the reviewer is reviewing $TASK: $(( ($(date +%s) - t0) / 60 )) min, review file $f"
+            done ) &
+          hb=$!
           bash scripts/devos/plan-agent.sh reviewer .devos/reviewer-prompt.md devos/schemas/verdict.schema.json .devos/reviewer.json "$EFFORT" "${TURNS:-80}" || echo "the reviewer agent's run ended with exit $?"
+          kill "$hb" 2>/dev/null || true
           tail -c 2000 .devos/reviewer.err 2>/dev/null || true
           node -e 'const r = require(process.argv[1]); console.log(`reviewer: ${r.agent} ${r.model}, exit ${r.exit_code}, limited ${r.limited}, permission denials ${r.permission_denials.length}`);' "$PWD/.devos/reviewer.json" || true
 
@@ -231,12 +242,13 @@ jobs:
         run: |
           out="$RUNNER_TEMP/review-out"
           mkdir -p "$out/.devos/usage" "$out/docs/reviews" "$out/docs/fences"
-          ( cd "$RV" && find docs/reviews docs/fences -maxdepth 1 -type f -size -1M -print0 2>/dev/null | xargs -0 -r cp --parents -t "$out" )
-          for f in reviewer.json reviewer-run.env accounts.md; do [ -f "$RV/.devos/$f" ] && cp "$RV/.devos/$f" "$out/.devos/$f"; done
-          [ -f "$RV/.devos/usage/pending.jsonl" ] && cp "$RV/.devos/usage/pending.jsonl" "$out/.devos/usage/pending.jsonl"
-          cp "$RUNNER_TEMP/review-head.txt" "$out/.devos/review-head.txt"
+          # E85b (PR-102): files up to 1 MiB, counted in bytes (find's -size -1M rounds up, so it took only empty files).
+          ( cd "$RV" && find docs/reviews docs/fences -maxdepth 1 -type f -size -1048577c -print0 2>/dev/null | xargs -0 -r cp --parents -t "$out" )
+          for f in reviewer.json reviewer-run.env accounts.md; do if [ -f "$RV/.devos/$f" ]; then cp "$RV/.devos/$f" "$out/.devos/$f"; fi; done
+          if [ -f "$RV/.devos/usage/pending.jsonl" ]; then cp "$RV/.devos/usage/pending.jsonl" "$out/.devos/usage/pending.jsonl"; fi
+          cp "$RUNNER_TEMP/reviewed-tree.txt" "$out/.devos/reviewed-tree.txt"
           find "$out" -type f -print0 | xargs -0 node "$T/scrub.mjs" --names SCRUB_K1,SCRUB_K2,SCRUB_A1,SCRUB_A2,SCRUB_L1,SCRUB_L2,SCRUB_M1,SCRUB_M2
-          ls -la "$out/.devos"
+          ( cd "$out" && find . -type f | sort )
       - name: Keep the review for publish
         if: always() && steps.hand.outcome == 'success'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

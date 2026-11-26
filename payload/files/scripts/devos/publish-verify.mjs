@@ -405,8 +405,11 @@ export function verify(a) {
   mkdirSync(path.join(repo, ".devos"), { recursive: true });
   // PR-28: a branch that changes the method, in any attempt, gets the deep review and stops at the human gate.
   const methodChanged = g(["diff", "--name-only", "--no-renames", "-z", `${mainSha}...${headCommit}`], { cwd: repo }).stdout.split("\0").some((p) => METHOD_RE.test(p));
+  // E85b (PR-102): the verified tree. Each job's verify writes its own commit (its time is in the SHA), so the review job
+  // and publish agree on the tree, never on the commit; `head` moves on with publish's own commits, `head_tree` stays.
+  const headTreeSha = sha(repo, `${headCommit}^{tree}`);
   const result = finish({
-    remote_head: remoteHead || null, merge, bundle_head: bundleHead || null, bundle_sha256: bundleSha256, head: headCommit,
+    remote_head: remoteHead || null, merge, bundle_head: bundleHead || null, bundle_sha256: bundleSha256, head: headCommit, head_tree: headTreeSha,
     builder, method, method_changed: methodChanged, changed, slice: tags.slice, stage: tags.stage, stages,
     max_slices: cfg.builder?.max_time_slices ?? 4, exit: String(a.exit ?? ""),
   });
@@ -415,7 +418,7 @@ export function verify(a) {
   for (const p of changed) console.log(`  ${q(p)}`);
   console.log(`diff ${mainSha.slice(0, 12)}...${headCommit.slice(0, 12)}:`);
   for (const p of vsMain) console.log(`  ${q(p)}`);
-  emit({ ok: "true", head: headCommit, method_changed: methodChanged, slice: tags.slice, stage: tags.stage, stages, bundle_sha256: bundleSha256,
+  emit({ ok: "true", head: headCommit, head_tree: headTreeSha, method_changed: methodChanged, slice: tags.slice, stage: tags.stage, stages, bundle_sha256: bundleSha256,
     builder_model: told.model, builder_effort: told.effort, builder_fast: told.fast });
   return result;
 }

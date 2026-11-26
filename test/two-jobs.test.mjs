@@ -184,14 +184,17 @@ test("two-jobs.test.mjs S6b the review job reads only, holds only the reviewer t
   // Checkouts keep no credential; the artifact holds the review's files, scrubbed, never the agent's raw output (D9).
   for (const m of review.matchAll(/uses: actions\/checkout@[0-9a-f]{40} # v6\.0\.2\n\s+with:\n(?:\s+\w[\w-]*: .*\n)*/g)) assert.match(m[0], /persist-credentials: false/);
   const hand = steps(job(review, "review")).find((s) => s.startsWith("name: Hand the review to publish"));
-  assert.match(hand, /find docs\/reviews docs\/fences -maxdepth 1 -type f -size -1M -print0/);
+  // E85b (PR-102): up to 1 MiB in bytes; `-size -1M` rounds up and took only empty files.
+  assert.match(hand, /find docs\/reviews docs\/fences -maxdepth 1 -type f -size -1048577c -print0/);
+  assert.equal(/-size -\d+[kMG]\b/.test(review), false);
   assert.match(hand, /for f in reviewer\.json reviewer-run\.env accounts\.md; do/);
   assert.match(hand, /node "\$T\/scrub\.mjs" --names SCRUB_K1,SCRUB_K2,SCRUB_A1,SCRUB_A2,SCRUB_L1,SCRUB_L2,SCRUB_M1,SCRUB_M2/);
   assert.equal(/reviewer\.raw|reviewer\.err|stream\.jsonl|limits\//.test(hand.replace(/tail -c 2000 \.devos\/reviewer\.err[^\n]*/g, "")), false, hand);
   // Publish runs nothing of it: it copies the contract and the run record, checks the reviewed head, takes only the
   // review file and fences, and scrubs every reviewer tool's keys.
   const taken = steps(publish).find((s) => s.startsWith("name: Reviewer (the review job's run"));
-  assert.match(taken, /if \[ "\$reviewed" != "\$head" \]; then/);
+  assert.match(taken, /if \[ -z "\$tree" \] \|\| \[ "\$reviewed" != "\$tree" \]; then/);
+  assert.match(taken, /tree=\$\(node -p 'require\(process\.argv\[1\]\)\.head_tree \|\| ""' "\$OUT\/verify\.json"\)/);
   assert.match(taken, /the review job ended \$\{REVIEW_RESULT:-unknown\} with no review of this attempt; the builder's work is on the branch, so the review runs again \(review only\)/);
   assert.match(taken, /grep -E '\^\(code\|used\|tool\|model\)=\[A-Za-z0-9\._:\/@\+-\]\*\$\|\^accounts="\[0-9 \]\*"\$'/);
   for (const script of runBlocks(taken)) assert.equal(/(?:bash|sh|node) "?\$(?:got|GITHUB_WORKSPACE\/review-out)/.test(script), false, script);
@@ -222,6 +225,59 @@ test("two-jobs.test.mjs S6c no AI call runs in a job that holds a write token, t
   }
   // The AI jobs: the builder, the review, the two planners, and the two deferred second opinions.
   assert.deepEqual(checked.sort(), ["devos-doctor.yml:doctor", "devos-intake.yml:intake", "devos-intake.yml:revise", "devos-review.yml:review", "devos-supervisor.yml:supervise", "devos-work.yml:work"]);
+});
+
+test("two-jobs.test.mjs S6d the review job hands publish its review file and fences, and the two jobs agree on the verified tree, never on a commit (E85b)", { skip: windows && "the steps are bash" }, () => {
+  // PR-102, from learn-coptic's T01 run 45616014308: the review file never crossed, and publish compared two commits.
+  const fx = fixture();
+  try {
+    const { bundle } = workBundle(fx, (c) => write(c, "src/b.ts", "export const b = 2;\n"));
+    // The review job's verify and publish's, of one bundle: each writes its own commit of the same tree.
+    assert.equal(verify(fx, bundle).status, 0);
+    const reviewJob = JSON.parse(read(path.join(fx.dir, "out", "verify.json")));
+    const RV = path.join(fx.dir, "review");
+    const tree = pv(fx, ["review-tree", "--out", path.join(fx.dir, "out"), "--dest", RV]);
+    assert.equal(tree.status, 0, tree.out);
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1100);
+    assert.equal(verify(fx, bundle).status, 0);
+    const publishJob = JSON.parse(read(path.join(fx.dir, "out", "verify.json")));
+    assert.notEqual(reviewJob.head, publishJob.head);
+    assert.match(reviewJob.head_tree, /^[0-9a-f]{40}$/);
+    assert.equal(reviewJob.head_tree, publishJob.head_tree);
+    assert.equal(git(["rev-parse", `${publishJob.head}^{tree}`], path.join(fx.dir, "out", "decide")), publishJob.head_tree);
+
+    // The hand-over, as the review job runs it: a review file and a reissued fence of real size reach the artifact.
+    const review = code(read(path.join(WF, "devos-review.yml")));
+    const hand = runBlocks(steps(job(review, "review")).find((s) => s.startsWith("name: Hand the review to publish")))[0];
+    write(RV, "docs/reviews/T01-a1.md", `VERDICT: FAIL\n${"a line of evidence\n".repeat(300)}`);
+    write(RV, "docs/fences/T01.md", `## T01 — First\n\n- Fence version: 2\n${"a step\n".repeat(300)}`);
+    write(RV, ".devos/reviewer.json", `${JSON.stringify({ contract: 1, type: "result", agent: "cursor", tool: "cursor", provider: null, model: "grok-4.7-xhigh", exit_code: 0, limited: false, permission_denials: [] })}\n`);
+    write(RV, ".devos/reviewer-run.env", 'code=0\nused=1\naccounts="1"\ntool=cursor\nmodel=grok-4.7-xhigh\n');
+    const temp = path.join(fx.dir, "runner-temp");
+    write(temp, "reviewed-tree.txt", `${reviewJob.head_tree}\n`);
+    const handed = run("bash", ["-e", "-c", hand], fx.dir, { RV, RUNNER_TEMP: temp, T: fx.T });
+    assert.equal(handed.status, 0, handed.out);
+    const got = path.join(temp, "review-out");
+    assert.equal(read(path.join(got, "docs", "reviews", "T01-a1.md")), read(path.join(RV, "docs", "reviews", "T01-a1.md")));
+    assert.equal(read(path.join(got, "docs", "fences", "T01.md")), read(path.join(RV, "docs", "fences", "T01.md")));
+    assert.equal(read(path.join(got, ".devos", "reviewed-tree.txt")).trim(), reviewJob.head_tree);
+    assert.match(handed.out, /^\.\/docs\/reviews\/T01-a1\.md$/m);
+
+    // Publish's step: the verified tree passes and prints the contract's line; any other tree stops it, review only.
+    const taken = runBlocks(steps(publish).find((s) => s.startsWith("name: Reviewer (the review job's run")))[0];
+    const D = path.join(fx.dir, "out", "decide");
+    const env = { GITHUB_WORKSPACE: temp, OUT: path.join(fx.dir, "out"), T: fx.T, REVIEW_RESULT: "success", REVIEWED: "true" };
+    const same = run("bash", ["-e", "-c", taken], D, env);
+    assert.equal(same.status, 0, same.out);
+    assert.match(same.out, new RegExp(`^the review job reviewed the verified tree ${publishJob.head_tree}$`, "m"));
+    assert.match(same.out, /^reviewer: cursor grok-4\.7-xhigh, exit 0, limited false$/m);
+    writeFileSync(path.join(got, ".devos", "reviewed-tree.txt"), `${"0".repeat(40)}\n`);
+    const other = run("bash", ["-e", "-c", taken], D, env);
+    assert.equal(other.status, 1, other.out);
+    assert.match(other.out, /the review job ended success, but it reviewed the tree 0{40}, not the verified tree [0-9a-f]{40}; the review runs again \(review only\)/);
+  } finally {
+    cleanup(fx.dir);
+  }
 });
 
 test("two-jobs.test.mjs S7 production: nothing dispatches devos-deploy from a workflow, publish merges the reviewed commit with its own token, the cycle holds no Vercel credential", () => {

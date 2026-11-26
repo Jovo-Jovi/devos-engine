@@ -702,16 +702,19 @@ jobs:
           REVIEWED: ${{ needs.review.outputs.reviewed }}
         run: |
           got="$GITHUB_WORKSPACE/review-out"
-          head=$(node -p 'require(process.argv[1]).head' "$OUT/verify.json")
-          reviewed=$(head -c 64 "$got/.devos/review-head.txt" 2>/dev/null | tr -cd '0-9a-f')
+          # E85b (PR-102): the tree this job verified, before its own commits; the review job verified the same bundle and
+          # wrote its own commit of that tree, so the trees are what must match.
+          tree=$(node -p 'require(process.argv[1]).head_tree || ""' "$OUT/verify.json")
+          reviewed=$(head -c 64 "$got/.devos/reviewed-tree.txt" 2>/dev/null | tr -cd '0-9a-f')
           if [ "$REVIEW_RESULT" != "success" ] || [ "$REVIEWED" != "true" ] || [ ! -f "$got/.devos/reviewer-run.env" ] || [ ! -f "$got/.devos/reviewer.json" ]; then
             echo "::error title=Dev OS::the review job ended ${REVIEW_RESULT:-unknown} with no review of this attempt; the builder's work is on the branch, so the review runs again (review only)"
             exit 1
           fi
-          if [ "$reviewed" != "$head" ]; then
-            echo "::error title=Dev OS::the review job ended success, but it reviewed ${reviewed:-no commit}, not the verified $head; the review runs again (review only)"
+          if [ -z "$tree" ] || [ "$reviewed" != "$tree" ]; then
+            echo "::error title=Dev OS::the review job ended success, but it reviewed the tree ${reviewed:-none}, not the verified tree ${tree:-none}; the review runs again (review only)"
             exit 1
           fi
+          echo "the review job reviewed the verified tree $tree"
           mkdir -p .devos
           cp "$got/.devos/reviewer.json" .devos/reviewer.json
           # Only the keys verdict.mjs reads, each a plain value (PR-54).
