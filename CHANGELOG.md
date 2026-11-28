@@ -45,6 +45,9 @@ the release.
   every tool's secrets. Every caller picks the secrets by the names in the tool's registry file, and the jobs inside
   take them as four generic keys, so no workflow step names a tool. Your secrets keep their names.
 - A light review can no longer be handed the deep reviewer's key when its own is missing.
+- **The review runs under main's rules (PR-108).** The review tree now holds main's method files, so the reviewer's
+  prompt, its runner, its tool and model, the role kits and the rules its CLI reads are main's, whatever the branch
+  changed. A method fix's own method files are in `.devos/branch-method/` for the reviewer to read and run.
 
 ## 1.13.18 — 2026-11-26
 

@@ -224,7 +224,7 @@
     {
       "path": ".github/workflows/devos-review.yml",
       "stored": "dot-github/workflows/devos-review.yml",
-      "sha256": "c735dd46c6822c5e9a1f4814fbbfd29992bee06694f525e4c93226b5386b7e5a",
+      "sha256": "5f3b3e7390fff26a96ed2df8959ba675bffcf165c39c28d445b200f2a0dcd121",
       "owner": "engine"
     },
     {
@@ -344,7 +344,7 @@
     {
       "path": "devos/prompts/reviewer.md",
       "stored": "devos/prompts/reviewer.md",
-      "sha256": "cce2466ff0d73ee2a4d418d386746dbc1e591bad76b2adaea99ed2da5b1d76b0",
+      "sha256": "2d79b97eb113768c782e786ab63ceff4a29e424d4e261bdb018a62e43d57447e",
       "owner": "engine"
     },
     {
@@ -1718,7 +1718,7 @@
     {
       "path": "docs/method/AUTOMATION.md",
       "stored": "docs/method/AUTOMATION.md",
-      "sha256": "2bdc163d82d86dacea4e79e22dc3579b3608210b92da41711add618c652939c7",
+      "sha256": "15b25db72fe4f52c6a75c12b485932d6bc83ca512f26ebac78a4f299a3402593",
       "owner": "engine"
     },
     {
@@ -1742,7 +1742,7 @@
     {
       "path": "docs/method/PRECEDENTS.md",
       "stored": "docs/method/PRECEDENTS.md",
-      "sha256": "9963fc7df4573ee0e291231d27607e83737f99a0dba11b48061149dbb6c137f8",
+      "sha256": "434f37be61c826853f7e3b501aa08d621f3470c78e622ed74d3848b19d0969a9",
       "owner": "engine"
     },
     {
@@ -1952,7 +1952,7 @@
     {
       "path": "scripts/devos/publish-verify.mjs",
       "stored": "scripts/devos/publish-verify.mjs",
-      "sha256": "cb60eb57f2fe57ed66dfe4603b2eb5be4fd4147a329d01af82e80f1c70948443",
+      "sha256": "c44573dae2cd7ec9ba5648ed4c00c76d9a02e0e667405d65411bb0d7cbf34e52",
       "owner": "engine"
     },
     {

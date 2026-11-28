@@ -28,6 +28,7 @@
 //   review-tree --out <dir> --dest <dir>                         the head's files, and .devos/diff.patch, for the review;
 //           E85f (PR-105): on attempt N > 1, also .devos/diff-since-a<N-1>.patch, what changed since the branch's
 //           "Tnn a<N-1>: review" commit, on the files the branch changes against the base (now or at that review)
+//           E86c (PR-108): under main's method files; a method fix's own are in .devos/branch-method/
 //   take-review --out <dir> --from <dir> --task Tnn --attempt N  copies the review file and fences the reviewer wrote;
 //           PR-94: a fence the head already has changes only with a higher Fence version, and each fence taken is
 //           listed in .devos/fence-changes.txt
@@ -849,13 +850,26 @@ function reviewTree(a) {
     cpSync(path.resolve(String(a.evidence)), path.join(dest, ".devos"), { recursive: true, filter: (src) => { try { const st = lstatSync(src); return st.isDirectory() || st.isFile(); } catch { return false; } } });
     rmSync(path.join(dest, ".devos", "usage"), { recursive: true, force: true });
   }
-  for (const own of ["diff.patch", "diff-stat.txt", "ci-results.json"]) rmSync(path.join(dest, ".devos", own), { recursive: true, force: true });
+  for (const own of ["diff.patch", "diff-stat.txt", "ci-results.json", "branch-method"]) rmSync(path.join(dest, ".devos", own), { recursive: true, force: true });
   if (existsSync(path.join(repo, ".devos", "ci-results.json"))) cpSync(path.join(repo, ".devos", "ci-results.json"), path.join(dest, ".devos", "ci-results.json"));
+  // E86c (PR-108): the review runs under main's rules. Main's method files are laid over the review tree, as over the
+  // decision's workspace: the prompt and its template, the config, the skills, the runner, the tools' files and role
+  // kits, and what the reviewer's CLI reads as its own rules (CLAUDE.md, .claude, .cursor). A branch that changes the
+  // method keeps its own in .devos/branch-method/, at the same paths, for the reviewer to read and run.
+  if (s.method_changed) {
+    for (const rel of OVERLAY) {
+      if (existsSync(path.join(dest, rel))) cpSync(path.join(dest, rel), path.join(dest, ".devos", "branch-method", rel), { recursive: true, verbatimSymlinks: true });
+    }
+  }
+  for (const rel of OVERLAY) {
+    rmSync(path.join(dest, rel), { recursive: true, force: true });
+    if (existsSync(path.join(TRUSTED, rel))) cpSync(path.join(TRUSTED, rel), path.join(dest, rel), { recursive: true, verbatimSymlinks: true });
+  }
   let patch = g(["diff", "--no-ext-diff", "--no-textconv", "--no-color", `${s.main_sha}...${s.head}`], { cwd: repo }).stdout;
   if (patch.length > MAX_PATCH) patch = `${patch.slice(0, MAX_PATCH)}\n\n[the diff is cut here at ${MAX_PATCH} bytes; .devos/diff-stat.txt lists every file]\n`;
   writeFileSync(path.join(dest, ".devos", "diff.patch"), patch);
   writeFileSync(path.join(dest, ".devos", "diff-stat.txt"), g(["diff", "--stat=200", "--no-color", `${s.main_sha}...${s.head}`], { cwd: repo }).stdout);
-  console.log(`review tree: ${s.head} in ${dest}; the diff against main in .devos/diff.patch`);
+  console.log(`review tree: ${s.head} in ${dest}, under main's method files; the diff against main in .devos/diff.patch${s.method_changed ? "; the branch's method files in .devos/branch-method/" : ""}`);
   const since = sinceLastReview(repo, { task: s.task, attempt: Number(s.attempt), head: s.head, base: s.main_sha });
   if (since) {
     let text = since.patch || `No file the branch changes differs from ${s.task} a${Number(s.attempt) - 1}'s review (${since.review}).\n`;

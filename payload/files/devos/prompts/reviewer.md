@@ -34,7 +34,9 @@ publish job takes only your review file and fences, and main's rules decide.
 - `docs/fences/{{TASK}}.md` — the contract. `docs/reports/{{TASK}}.md` — the builder's claim and its
   pasted outputs (latest `## Attempt` section only).
 - The working tree is the task branch at the builder's commit (fetch, never paste: PR-02), with no
-  `.git`. `.devos/logs/*.log` holds full check logs if you need one.
+  `.git`. Its method files (`scripts/devos/`, `scripts/guards/`, `devos/`, `devos.config.json`,
+  `CLAUDE.md`, `.claude/`, `.cursor/`) are main's: you review under main's rules (PR-108).
+  `.devos/logs/*.log` holds full check logs if you need one.
 {{PREV_REVIEW_LINE}}{{PREVIEW_LINE}}{{SCREENS_LINE}}{{SKILLS_BLOCK}}- This attempt was built with `{{BUILDER_MODEL}}` (effort {{BUILDER_EFFORT}}, fast {{BUILDER_FAST}}).
 
 ## Tool use
@@ -98,7 +100,8 @@ publish job takes only your review file and fences, and main's rules decide.
    `docs/requests/issue-*.md` is what the change fixes, that the reproduction in Done-when fails
    before and passes after, that no non-waivable rule is weakened (Boundary gate, human gates, role
    surfaces, secrets never in files, red overrides PASS), that the precedent row was added, and that
-   `docs/method/AUTOMATION.md` describes the change. Its
+   `docs/method/AUTOMATION.md` describes the change. The branch's own method files are in
+   `.devos/branch-method/`, at the same paths: read them there, and run its scripts from there. Its
    PASS always waits for the human; write no next fence.
    **Who fixes what (PR-27):** a cause **inside** the repository (a package script, a config file,
    an environment name the code reads, `.env.example`, a test) is the builder's: FAIL with an attempt focus.

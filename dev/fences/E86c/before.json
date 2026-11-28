@@ -1,0 +1,9 @@
+{
+  "CHANGELOG.md": "9984066af4222ee42a9feae283ddedb5d5ddbc0c5d44e8286d9f5d680bf4299f",
+  "payload/files/devos/prompts/reviewer.md": "cce2466ff0d73ee2a4d418d386746dbc1e591bad76b2adaea99ed2da5b1d76b0",
+  "payload/files/docs/method/AUTOMATION.md": "2bdc163d82d86dacea4e79e22dc3579b3608210b92da41711add618c652939c7",
+  "payload/files/docs/method/PRECEDENTS.md": "9963fc7df4573ee0e291231d27607e83737f99a0dba11b48061149dbb6c137f8",
+  "payload/files/dot-github/workflows/devos-review.yml": "c735dd46c6822c5e9a1f4814fbbfd29992bee06694f525e4c93226b5386b7e5a",
+  "payload/files/scripts/devos/publish-verify.mjs": "cb60eb57f2fe57ed66dfe4603b2eb5be4fd4147a329d01af82e80f1c70948443",
+  "payload/manifest.json": "cdd64f551dbe81e9993e48d942e5f08fa4d092691bd5d6c1cfecf38dc853ffb3"
+}

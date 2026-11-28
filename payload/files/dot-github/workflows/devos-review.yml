@@ -11,8 +11,9 @@
 #
 #   main at the run's commit → the work job's bundle and evidence → the verified tree, the checks and the review plan,
 #   computed with main's publish-verify.mjs and review-mode.mjs as publish computes them (no AI when the bundle is
-#   rejected, the builder did not finish, or the review is kept) → the reviewer's CLI at its pin → the reviewer agent
-#   (plan-agent.sh reviewer: accounts, next models, server retries, the tool's kit) → the artifact.
+#   rejected, the builder did not finish, or the review is kept) → the review tree, under main's method files (PR-108)
+#   → the reviewer's CLI at its pin → the reviewer agent (plan-agent.sh reviewer: accounts, next models, server
+#   retries, the tool's kit) → the artifact.
 name: devos-review
 
 on:
@@ -184,6 +185,9 @@ jobs:
 
       # The attempt's one review (S6): the project's reviewer agent, in the review tree, with its shell and its own keys.
       # It may write anything there; publish takes only docs/reviews/<task>-a<attempt>.md and fences.
+      # E86c (PR-108): the tree's method files are main's (review-tree), so the prompt and its template, the config,
+      # plan-agent.sh and what it runs, the role kits and the CLI's own rules are main's, whatever the branch changed;
+      # a method fix's own are in .devos/branch-method/.
       - name: Reviewer (the project's reviewer agent, its own job, no write token)
         id: reviewer
         if: steps.prep.outputs.reviewed == 'true'
