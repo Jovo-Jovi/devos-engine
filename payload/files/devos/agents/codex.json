@@ -10,6 +10,7 @@
   "effort": "flag",
   "efforts": ["low", "medium", "high", "xhigh"],
   "fast": false,
+  "can": ["headless", "edit", "shell"],
   "parser": "codex",
   "answer": "file",
   "stdin": true,

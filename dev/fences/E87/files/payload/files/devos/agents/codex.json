@@ -1,0 +1,37 @@
+{
+  "$comment": "E86 (PR-106): everything the cycle needs to know about OpenAI's Codex CLI. scripts/devos/tools.mjs reads it; the version comes from tool_versions (PR-93). Codex runs at the effort the developer chose (PR-99).",
+  "id": "codex",
+  "name": "Codex",
+  "label": "Codex",
+  "provider": "openai",
+  "command": "codex",
+  "commands": ["codex"],
+  "install": { "kind": "npm", "package": "@openai/codex" },
+  "effort": "flag",
+  "efforts": ["low", "medium", "high", "xhigh"],
+  "fast": false,
+  "can": ["headless", "edit", "shell"],
+  "parser": "codex",
+  "answer": "file",
+  "stdin": true,
+  "keys": {
+    "secret": "OPENAI_API_KEY",
+    "env": "CODEX_KEY",
+    "cli": "CODEX_API_KEY",
+    "alt": null,
+    "unset": ["OPENAI_API_KEY"],
+    "account": "DEVOS_CODEX_ACCOUNT"
+  },
+  "setup": { "env": {}, "home": [] },
+  "kits": {
+    "builder": { "move": ["AGENTS.md"], "install": [{ "from": "devos/roles/claude-builder/CLAUDE.md", "to": "AGENTS.md" }] },
+    "reviewer": { "move": ["AGENTS.md"], "install": [{ "from": "CLAUDE.md", "to": "AGENTS.md" }] },
+    "planner": { "move": ["AGENTS.md"], "install": [{ "from": "CLAUDE.md", "to": "AGENTS.md" }] }
+  },
+  "run": {
+    "builder": ["exec", "--model", "{model}", "--sandbox", "workspace-write", "-c", "sandbox_workspace_write.network_access=true", "-c", "model_reasoning_effort=\"{effort}\"", "-c", "mcp_servers.context7.url=\"https://mcp.context7.com/mcp\"", "--json", "-o", "{last}", "-"],
+    "reviewer": ["exec", "--model", "{model}", "--sandbox", "workspace-write", "-c", "model_reasoning_effort=\"{effort}\"", "-c", "mcp_servers.context7.url=\"https://mcp.context7.com/mcp\"", "--json", "-o", "{last}", "-"],
+    "planner": ["exec", "--model", "{model}", "--sandbox", "workspace-write", "-c", "model_reasoning_effort=\"{effort}\"", "-c", "mcp_servers.context7.url=\"https://mcp.context7.com/mcp\"", "--json", "-o", "{last}", "-"]
+  },
+  "login": "login-status"
+}

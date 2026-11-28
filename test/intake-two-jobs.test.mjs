@@ -34,7 +34,8 @@ function job(text, name) {
 const steps = (jobText) => jobText.split(/^ {6}- /m).slice(1);
 const READ_ONLY = /^ {4}permissions:\n((?: {6}[a-z-]+: read\n)+) {4}[a-z]/m;
 const CLAUDE = ["secrets.ANTHROPIC_API_KEY", "secrets.ANTHROPIC_API_KEY_2", "secrets.CLAUDE_CODE_OAUTH_TOKEN", "secrets.CLAUDE_CODE_OAUTH_TOKEN_2"];
-const AI_KEYS = [...CLAUDE, "secrets.CURSOR_API_KEY", "secrets.CURSOR_API_KEY_2", "secrets.GEMINI_API_KEY", "secrets.GEMINI_API_KEY_2", "secrets.OPENAI_API_KEY", "secrets.OPENAI_API_KEY_2"].sort();
+// E87 (PR-109): and a project's own tool's, DEVOS_AGENT_KEY.
+const AI_KEYS = [...CLAUDE, "secrets.CURSOR_API_KEY", "secrets.CURSOR_API_KEY_2", "secrets.DEVOS_AGENT_KEY", "secrets.DEVOS_AGENT_KEY_2", "secrets.GEMINI_API_KEY", "secrets.GEMINI_API_KEY_2", "secrets.OPENAI_API_KEY", "secrets.OPENAI_API_KEY_2"].sort();
 
 // ---------- S: devos-intake.yml --------------------------------------------------------------------------------------
 

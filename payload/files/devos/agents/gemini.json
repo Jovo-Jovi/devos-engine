@@ -10,6 +10,7 @@
   "effort": "none",
   "efforts": [],
   "fast": false,
+  "can": ["headless", "edit", "shell"],
   "parser": "gemini",
   "answer": "file",
   "stdin": true,

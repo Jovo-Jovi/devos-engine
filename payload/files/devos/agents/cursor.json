@@ -10,6 +10,7 @@
   "effort": "model",
   "efforts": [],
   "fast": true,
+  "can": ["headless", "edit", "shell"],
   "parser": "cursor",
   "answer": "file",
   "stdin": false,

@@ -20,5 +20,7 @@ const exit = arg("exit");
 if (process.argv.includes("--unavailable")) process.exit(modelUnavailable(out, err, exit) ? 0 : 1);
 if (process.argv.includes("--server")) process.exit(serverError(out, err, exit) ? 0 : 1);
 if (json?.structured_output) process.exit(1);
+// E87 (PR-109): a tool that writes the agent output contract itself says so.
+if (json?.contract && json.limited === true) process.exit(0);
 if (exit === "0" && json && json.is_error !== true) process.exit(1);
 process.exit(looksLikeLimit(out, err) ? 0 : 1);

@@ -173,7 +173,7 @@ test("two-jobs.test.mjs S6b the review job reads only, holds only the reviewer t
   assert.match(call, /^ {4}permissions:\n {6}contents: read\n {4}uses: \.\/\.github\/workflows\/devos-review\.yml$/m);
   assert.deepEqual([...call.matchAll(/^ {6}([A-Z0-9_]+): \$\{\{/gm)].map((m) => m[1]).filter((n) => /KEY|ALT/.test(n)), ["KEY_1", "KEY_2", "ALT_1", "ALT_2", "LKEY_1", "LKEY_2", "LALT_1", "LALT_2"]);
   const names = [...new Set(call.match(/secrets\.[A-Z0-9_]+/g))].sort();
-  assert.deepEqual(names, ["secrets.ANTHROPIC_API_KEY", "secrets.ANTHROPIC_API_KEY_2", "secrets.CLAUDE_CODE_OAUTH_TOKEN", "secrets.CLAUDE_CODE_OAUTH_TOKEN_2", "secrets.CURSOR_API_KEY", "secrets.CURSOR_API_KEY_2", "secrets.GEMINI_API_KEY", "secrets.GEMINI_API_KEY_2", "secrets.OPENAI_API_KEY", "secrets.OPENAI_API_KEY_2"]);
+  assert.deepEqual(names, ["secrets.ANTHROPIC_API_KEY", "secrets.ANTHROPIC_API_KEY_2", "secrets.CLAUDE_CODE_OAUTH_TOKEN", "secrets.CLAUDE_CODE_OAUTH_TOKEN_2", "secrets.CURSOR_API_KEY", "secrets.CURSOR_API_KEY_2", "secrets.DEVOS_AGENT_KEY", "secrets.DEVOS_AGENT_KEY_2", "secrets.GEMINI_API_KEY", "secrets.GEMINI_API_KEY_2", "secrets.OPENAI_API_KEY", "secrets.OPENAI_API_KEY_2"]);
   const review = code(read(path.join(WF, "devos-review.yml")));
   assert.match(review, /^permissions:\n {2}contents: read\n/m);
   assert.match(job(review, "review"), /^ {4}permissions:\n {6}contents: read\n {4}outputs:/m);

@@ -14,7 +14,7 @@
 //        node scripts/devos/agents.mjs tools
 import { existsSync, readFileSync } from "node:fs";
 import { MODEL_ID, MODEL_VARIABLES, P, config, effortsFor, emit, fail, missingChoice, readJson, runChoice, takesEffort, withModelOverrides } from "./lib.mjs";
-import { tool as agentTool, toolIds } from "./tools.mjs";
+import { tool as agentTool, lacking, toolIds } from "./tools.mjs";
 
 // E86 (PR-106): the tools are the registry's (devos/agents/<id>.json).
 const TOOLS = new Set(toolIds());
@@ -146,6 +146,15 @@ export function validate(agents) {
     const usual = agents.pool.find((entry) => entry.default);
     if (!item || item.tool === usual.tool) bad("fallback_builder must name a pool builder whose tool is not the default builder's");
   }
+  // E87 (PR-109): each role's tool can do what the role needs (its devos/agents/<id>.json `can`); the planner is the
+  // reviewer's tool, so a reviewer that fits fits it too.
+  const fits = (label, id, role) => {
+    const gap = lacking(agentTool(id), role);
+    if (gap.length) bad(`${label} is ${agentTool(id).label}, which cannot be the ${role}: it lacks ${gap.join(", ")} (devos/agents/${id}.json \`can\`)`);
+  };
+  fits("reviewer", agents.reviewer.tool, "reviewer");
+  if (agents.reviewer_light != null) fits("reviewer_light", agents.reviewer_light.tool, "reviewer");
+  for (const item of agents.pool) fits(`pool item ${item.id}`, item.tool, "builder");
   // PR-99: a choice the developer has not made stops the run here, before any agent runs.
   const missing = missingChoices(agents);
   if (missing.length > 0) throw missingChoice(missing.map((entry) => entry.key).join(", "), missing.map((entry) => entry.what).join("; "));

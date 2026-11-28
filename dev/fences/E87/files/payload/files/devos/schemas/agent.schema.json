@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$comment": "E86 (PR-106): one agent tool of the registry, devos/agents/<id>.json. scripts/devos/tools.mjs checks the same rules (tools.mjs check) and reads the files; this schema is for editors and for anyone adding a tool.",
+  "title": "DEV_OS agent tool",
+  "type": "object",
+  "required": ["id", "name", "label", "command", "commands", "install", "effort", "efforts", "fast", "can", "parser", "answer", "stdin", "keys", "setup", "kits", "run", "login"],
+  "properties": {
+    "$comment": { "type": "string" },
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,30}$", "description": "The tool's id, as devos.config.json's agents name it; the file is <id>.json." },
+    "name": { "type": "string", "description": "Its short name in the run's notes: \"the Cursor CLI\"." },
+    "label": { "type": "string", "description": "Its full name in prompts: \"Claude Code\"." },
+    "provider": { "type": ["string", "null"], "description": "The AI service it calls, when it is one." },
+    "command": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,40}$", "description": "The CLI's command." },
+    "commands": { "type": "array", "items": { "type": "string" }, "minItems": 1, "description": "Every name the CLI goes by, the command among them: a usage record or a progress line names the tool by any of them." },
+    "install": {
+      "oneOf": [
+        { "type": "object", "required": ["kind", "package"], "properties": { "kind": { "const": "npm" }, "package": { "type": "string" } } },
+        { "type": "object", "required": ["kind", "url", "entry", "bins"], "properties": { "kind": { "const": "checked-package" }, "url": { "type": "string", "pattern": "^https://.*\\{version\\}" }, "entry": { "type": "string" }, "bins": { "type": "array", "items": { "type": "string" }, "minItems": 1 } } },
+        { "type": "object", "required": ["kind"], "properties": { "kind": { "const": "none" } } }
+      ],
+      "description": "An npm package, or a package downloaded from url and checked by the SHA-256 in tool_versions.<id> (PR-93), whose version is always tool_versions.<id>; or none (E87): a command already on the runner, such as node running the tool's own script under devos/agents/<id>/."
+    },
+    "effort": { "enum": ["flag", "model", "none"], "description": "flag: the developer's effort is passed ({effort}); model: the model's name holds it; none: the tool takes none." },
+    "efforts": { "type": "array", "items": { "type": "string" }, "description": "The levels a flag takes; empty otherwise." },
+    "fast": { "type": "boolean", "description": "Whether a pool entry may set fast." },
+    "can": { "type": "array", "items": { "enum": ["headless", "edit", "shell"] }, "uniqueItems": true, "description": "E87 (PR-109): what the tool can do. headless: it runs from a prompt with no person there; edit: it writes files; shell: it runs commands. The builder and the reviewer need all three, a planner headless and edit." },
+    "parser": { "enum": ["claude", "cursor", "codex", "gemini", "contract"], "description": "The output format it writes, which the runner reads; contract (E87): the tool writes the agent output contract itself (scripts/devos/agent-result.mjs)." },
+    "answer": { "enum": ["schema", "file"], "description": "schema: the CLI takes the answer's schema ({schema}); file: the prompt asks for the answer in a file." },
+    "stdin": { "type": "boolean", "description": "true: the prompt goes on standard input; false: the command line names its file ({prompt})." },
+    "keys": {
+      "type": "object",
+      "required": ["secret", "env", "cli", "alt", "unset", "account"],
+      "properties": {
+        "secret": { "type": "string", "description": "The GitHub secret of the first account; <secret>_2 is the second's. A project's own tool uses DEVOS_AGENT_KEY (E87): every AI job's caller names it." },
+        "env": { "type": "string", "description": "The job's names for the two accounts: <env>_1 and <env>_2." },
+        "cli": { "type": "string", "description": "The name the CLI reads its credential from." },
+        "alt": { "type": ["object", "null"], "description": "An alternative credential (Claude Code's API key): secret, env and cli." },
+        "unset": { "type": "array", "items": { "type": "string" }, "description": "Names cleared before an account's credential is set." },
+        "account": { "type": "string", "description": "The repository variable that picks the first account (1 or 2)." }
+      }
+    },
+    "setup": { "type": "object", "required": ["env", "home"], "description": "What the tool needs before it runs: env values and files copied into $HOME." },
+    "kits": { "type": "object", "description": "Per role (builder, reviewer, planner): the files moved aside and the role's files put in their place (role-env.mjs)." },
+    "run": {
+      "type": "object",
+      "required": ["builder", "reviewer", "planner"],
+      "description": "Each role's arguments after the command, with {model}, {effort}, {turns}, {schema}, {last} and {prompt}; models: the arguments that list its models."
+    },
+    "login": { "type": "string", "description": "The local sign-in check (lib/data/tools.json authProbe)." }
+  },
+  "additionalProperties": false
+}

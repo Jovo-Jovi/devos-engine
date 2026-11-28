@@ -48,6 +48,12 @@ the release.
 - **The review runs under main's rules (PR-108).** The review tree now holds main's method files, so the reviewer's
   prompt, its runner, its tool and model, the role kits and the rules its CLI reads are main's, whatever the branch
   changed. A method fix's own method files are in `.devos/branch-method/` for the reviewer to read and run.
+- **Your own agent tool (PR-109).** Add `devos/agents/<id>.json` to use a tool DEV_OS does not ship: any CLI, a
+  multi-provider CLI, or a script that calls an API, as long as it prints the agent output contract (`parser:
+  "contract"`). Its keys are the secrets `DEVOS_AGENT_KEY` and `DEVOS_AGENT_KEY_2`. `devos agents check <id>` checks
+  the file before a run. The manual's §10 *A new agent tool* has the fields and an example.
+- Each tool now says what it can do (`can`), and a role given to a tool that cannot fill it is refused with what it
+  lacks.
 
 ## 1.13.18 — 2026-11-26
 

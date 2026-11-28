@@ -47,6 +47,7 @@ devos profile set <key> <value>
 devos agents detect
 devos agents show
 devos agents import <file>
+devos agents check <id>
 devos install [folder] --key <KEY>
 devos upgrade [--local] [--pre]
 devos remove [folder] [--local]

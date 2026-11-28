@@ -5,6 +5,10 @@
 // role-env.mjs, pins.mjs) read it, so no script names a tool, and a tool that writes one of the known output formats is
 // added by adding its file. It reads the devos/agents/ at the root its own scripts/ folder is in: a trusted job's copy
 // ($T) reads main's. It prints names, never a credential's value.
+// E87 (PR-109): each tool says what it can do (`can`: headless, edit, shell), and each role needs some of it. A project
+// adds its own tool by adding its file (and any files it needs under devos/agents/<id>/): one that writes the agent
+// output contract itself (parser `contract`), run by a command already on the runner (install `none`), with the keys
+// of the secrets DEVOS_AGENT_KEY and DEVOS_AGENT_KEY_2, which every AI job's caller names.
 //   node scripts/devos/tools.mjs ids                                   the tools, one line
 //   node scripts/devos/tools.mjs check                                 every file against the rules below
 //   node scripts/devos/tools.mjs args --tool T --role builder|reviewer|planner|models [--model M] [--effort E]
@@ -12,6 +16,7 @@
 //   node scripts/devos/tools.mjs shell --tool T                        the tool's names, as shell assignments
 //   node scripts/devos/tools.mjs setup --tool T                        its files in $HOME; its env, NAME=value lines
 //   node scripts/devos/tools.mjs install --tool T                      npm <package> | checked-package <url> <entry> <bin>…
+//                                                                      | none <command> (E87: already on the runner)
 //   node scripts/devos/tools.mjs get --tool T <field>                  one field: name, label, command, effort, parser…
 //   node scripts/devos/tools.mjs missing-key --tool T                  the error a run without its key prints
 //   node scripts/devos/tools.mjs of <command>                          the tool a command belongs to (agent → cursor)
@@ -23,7 +28,12 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 export const AGENTS_DIR = path.join(ROOT, "devos", "agents");
 export const ROLES = ["builder", "reviewer", "planner"];
-export const PARSERS = ["claude", "cursor", "codex", "gemini"];
+export const PARSERS = ["claude", "cursor", "codex", "gemini", "contract"];
+/** E87 (PR-109): what a tool can do, and what each role needs of its tool. */
+export const CAPABILITIES = ["headless", "edit", "shell"];
+export const ROLE_NEEDS = { builder: ["headless", "edit", "shell"], reviewer: ["headless", "edit", "shell"], planner: ["headless", "edit"] };
+/** E87 (PR-109): the secret of a project's own tool. The callers name it beside the engine's tools' secrets. */
+export const OWN_SECRET = "DEVOS_AGENT_KEY";
 const ID = /^[a-z][a-z0-9-]{0,30}$/;
 const NAME = /^[A-Z][A-Z0-9_]{0,60}$/;
 const COMMAND = /^[A-Za-z0-9][A-Za-z0-9._-]{0,40}$/;
@@ -62,7 +72,8 @@ export function problems(t, file = "") {
   } else if (inst.kind === "checked-package") {
     if (!/^https:\/\/[^\s]+\{version\}[^\s]*$/.test(String(inst.url ?? ""))) bad("install.url must be an https URL with {version}");
     if (!COMMAND.test(String(inst.entry ?? "")) || !Array.isArray(inst.bins) || !inst.bins.length || !inst.bins.every((b) => COMMAND.test(String(b)))) bad("install.entry and install.bins must be command names");
-  } else bad("install.kind must be npm or checked-package (a download checked by its SHA-256)");
+  } else if (inst.kind !== "none") bad("install.kind must be npm, checked-package (a download checked by its SHA-256) or none (a command already on the runner)");
+  if (!Array.isArray(t.can) || !t.can.every((c) => CAPABILITIES.includes(c)) || new Set(t.can).size !== t.can.length) bad(`can must list what the tool can do, each once: ${CAPABILITIES.join(", ")}`);
   if (!["flag", "model", "none"].includes(t.effort)) bad("effort must be flag, model or none");
   if (!Array.isArray(t.efforts) || (t.effort === "flag") !== t.efforts.length > 0) bad("efforts must list the levels a flag takes, and be empty otherwise");
   if (typeof t.fast !== "boolean") bad("fast must be true or false");
@@ -97,6 +108,12 @@ export const takesEffort = (id) => tool(id)?.effort === "flag";
 export const effortsFor = (id) => (takesEffort(id) ? [...tool(id).efforts] : []);
 export const parserOf = (id) => tool(id)?.parser ?? "";
 
+/** E87 (PR-109): what a tool file lacks for a role (its `can` against ROLE_NEEDS), none when it can fill it. */
+export function lacking(t, role) {
+  const can = Array.isArray(t?.can) ? t.can : [];
+  return (ROLE_NEEDS[role] ?? []).filter((need) => !can.includes(need));
+}
+
 /** The tool a command name belongs to (agent → cursor), or the command's own name. */
 export function toolOf(command) {
   const base = path.basename(String(command ?? "")).replace(/\.(cmd|exe)$/i, "");
@@ -129,10 +146,11 @@ export function slotNames() {
 /**
  * E86b (PR-107): the GitHub secrets each tool's first account is named by, and the alternatives' (Claude Code's API
  * key), each once. Every AI job's caller names exactly these, literally: `secrets.<name>` and `secrets.<name>_2`.
+ * E87 (PR-109): and DEVOS_AGENT_KEY, a project's own tool's, whose file the engine cannot know.
  */
 export function secretNames() {
   const tools = [...load().values()];
-  return { keys: [...new Set(tools.map((t) => t.keys.secret))].sort(), alts: [...new Set(tools.flatMap((t) => (t.keys.alt ? [t.keys.alt.secret] : [])))].sort() };
+  return { keys: [...new Set([...tools.map((t) => t.keys.secret), OWN_SECRET])].sort(), alts: [...new Set(tools.flatMap((t) => (t.keys.alt ? [t.keys.alt.secret] : [])))].sort() };
 }
 
 /** E86b (PR-107): the job outputs that name a role's secrets, `<as>_key` and `<as>_alt`; none for no tool. */
@@ -214,6 +232,7 @@ function main(argv) {
   if (command === "install") {
     const t = need();
     if (t.install.kind === "npm") return console.log(`npm ${t.install.package}`);
+    if (t.install.kind === "none") return console.log(`none ${t.command}`);
     return console.log(`checked-package ${t.install.url} ${t.install.entry} ${t.install.bins.join(" ")}`);
   }
   if (command === "get") {

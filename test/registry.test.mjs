@@ -45,7 +45,7 @@ test("registry.test.mjs (b) every tool file passes the check and has exactly the
     for (const key of schema.required) assert.ok(key in t, `${name}: ${key}`);
     for (const key of Object.keys(t)) assert.ok(key in schema.properties, `${name}: ${key} is not in the schema`);
   }
-  assert.deepEqual(registry.problems({ ...read(path.join(agentsDir, "codex.json")), parser: "other" }, "codex.json"), ["codex.json: parser must be one of claude, cursor, codex, gemini"]);
+  assert.deepEqual(registry.problems({ ...read(path.join(agentsDir, "codex.json")), parser: "other" }, "codex.json"), ["codex.json: parser must be one of claude, cursor, codex, gemini, contract"]);
   assert.deepEqual(registry.problems({ ...read(path.join(agentsDir, "codex.json")), run: { builder: ["{secret}"], reviewer: [], planner: [] } }, "codex.json"), ["codex.json: run.builder: {secret} is not one of {model}, {effort}, {turns}, {schema}, {last}, {prompt}"]);
 });
 

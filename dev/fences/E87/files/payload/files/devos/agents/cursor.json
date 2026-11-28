@@ -1,0 +1,49 @@
+{
+  "$comment": "E86 (PR-106): everything the cycle needs to know about Cursor's CLI (`agent`). scripts/devos/tools.mjs reads it; the version and the SHA-256 of its package come from tool_versions.cursor (PR-93). A Cursor model names its own effort (grok-4.7-high), checked against `agent models`.",
+  "id": "cursor",
+  "name": "Cursor",
+  "label": "Cursor",
+  "provider": "cursor",
+  "command": "agent",
+  "commands": ["agent", "cursor-agent", "cursor"],
+  "install": { "kind": "checked-package", "url": "https://downloads.cursor.com/lab/{version}/linux/x64/agent-cli-package.tar.gz", "entry": "cursor-agent", "bins": ["agent", "cursor-agent"] },
+  "effort": "model",
+  "efforts": [],
+  "fast": true,
+  "can": ["headless", "edit", "shell"],
+  "parser": "cursor",
+  "answer": "file",
+  "stdin": false,
+  "keys": {
+    "secret": "CURSOR_API_KEY",
+    "env": "CURSOR_KEY",
+    "cli": "CURSOR_API_KEY",
+    "alt": null,
+    "unset": [],
+    "account": "DEVOS_CURSOR_ACCOUNT"
+  },
+  "setup": { "env": {}, "home": [] },
+  "kits": {
+    "reviewer": {
+      "move": [".cursor/cli.json", ".cursor/hooks.json", ".cursor/rules"],
+      "install": [
+        { "from": "devos/roles/cursor-reviewer/cli.json", "to": ".cursor/cli.json" },
+        { "from": "devos/roles/cursor-reviewer/rules", "to": ".cursor/rules" }
+      ]
+    },
+    "planner": {
+      "move": [".cursor/cli.json", ".cursor/hooks.json", ".cursor/rules"],
+      "install": [
+        { "from": "devos/roles/cursor-planner/cli.json", "to": ".cursor/cli.json" },
+        { "from": "devos/roles/cursor-planner/rules", "to": ".cursor/rules" }
+      ]
+    }
+  },
+  "run": {
+    "builder": ["-p", "--force", "--trust", "--approve-mcps", "--model", "{model}", "--output-format", "stream-json", "Your instructions for this run are in the file {prompt}. Read all of it first, then follow it exactly: it is your whole task."],
+    "reviewer": ["-p", "--force", "--trust", "--model", "{model}", "--output-format", "stream-json", "Your instructions for this run are in the file {prompt}. Read all of it first, then follow it exactly: it is your whole task."],
+    "planner": ["-p", "--force", "--trust", "--model", "{model}", "--output-format", "stream-json", "Your instructions for this run are in the file {prompt}. Read all of it first, then follow it exactly: it is your whole task."],
+    "models": ["models"]
+  },
+  "login": "version"
+}

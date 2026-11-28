@@ -56,7 +56,8 @@ const CALLS = [
 
 test("keys-by-name.test.mjs (a) every AI job's caller names the registry's secrets literally, by the names resolve gave its tool", () => {
   const names = secretNames();
-  assert.deepEqual(names, { keys: ["CLAUDE_CODE_OAUTH_TOKEN", "CURSOR_API_KEY", "GEMINI_API_KEY", "OPENAI_API_KEY"], alts: ["ANTHROPIC_API_KEY"] });
+  // E87 (PR-109): and DEVOS_AGENT_KEY, a project's own tool's.
+  assert.deepEqual(names, { keys: ["CLAUDE_CODE_OAUTH_TOKEN", "CURSOR_API_KEY", "DEVOS_AGENT_KEY", "GEMINI_API_KEY", "OPENAI_API_KEY"], alts: ["ANTHROPIC_API_KEY"] });
   for (const [file, name, sets] of CALLS) {
     const lines = passed(job(read(file), name));
     for (const [pre, keyVar, altVar] of sets) {

@@ -141,7 +141,15 @@ function gemini(list) {
   return { ...EMPTY, input: Math.max(0, prompt - cached), output, cache_read: cached, cache_write: 0 };
 }
 
-const PARSERS = { claude, cursor, codex, gemini };
+// E87 (PR-109): a tool that writes the agent output contract itself (scripts/devos/agent-result.mjs) gives its usage there.
+function contract(list) {
+  const r = lastResult(list);
+  const u = r?.usage && typeof r.usage === "object" ? r.usage : null;
+  if (!u) return EMPTY;
+  return { ...EMPTY, input: num(u.input_tokens), output: num(u.output_tokens), cache_read: num(u.cache_read_tokens), cache_write: num(u.cache_write_tokens) };
+}
+
+const PARSERS = { claude, cursor, codex, gemini, contract };
 
 /** The usage in one run's output text, for a tool id: read by the format the tool writes (E86, its parser). */
 export function parseUsage(tool, text) {
