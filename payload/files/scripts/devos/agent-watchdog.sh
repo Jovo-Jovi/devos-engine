@@ -40,8 +40,9 @@ report=${DEVOS_WATCHDOG_REPORT:-}
 [ "${1:-}" = "--" ] && shift
 usage_command=${1:-}; usage_model=auto; prev=""
 for a in "$@"; do [ "$prev" = "--model" ] && usage_model=$a; prev=$a; done
-# E85e (PR-104): the progress line names the tool, not its command (Cursor's CLI is `agent`).
-case "$(basename "${usage_command:-}")" in agent) progress_tool=cursor ;; *) progress_tool=$(basename "${usage_command:-agent}") ;; esac
+# E85e (PR-104): the progress line names the tool, not its command (Cursor's CLI is `agent`): the runner's
+# DEVOS_AGENT_TOOL, else the tool whose devos/agents/<id>.json lists the command (E86, PR-106).
+progress_tool=${DEVOS_AGENT_TOOL:-$(node "$(dirname "$0")/tools.mjs" of "${usage_command:-agent}" 2>/dev/null || basename "${usage_command:-agent}")}
 progress="$(cd "$(dirname "$0")" && pwd)/progress.sh"
 
 # A stream kept from an earlier run (another tool) never stands for this one.
@@ -54,9 +55,10 @@ own=$(ps -o sid= -p $$ 2>/dev/null | tr -d ' ')
 # Never 0 (pkill's "this session") and never the watchdog's own session.
 case "$old" in ''|0|*[!0-9]*) ;; *) [ "$old" = "$own" ] || pkill -KILL -s "$old" 2>/dev/null ;; esac
 # PR-90: the slots accounts.sh reads, and every other credential name the cycle has ever held, never reach the agent.
+# E86 (PR-106): every tool's slots are named in its devos/agents/<id>.json (tools.mjs slots); with no list, no run.
+if ! slots=$(node "$(dirname "$0")/tools.mjs" slots); then echo "agent-watchdog: the tools' key names could not be read; no run" >&2; exit 1; fi
 strip=()
-for name in DEVOS_PROGRESS_TOKEN GH_TOKEN GITHUB_TOKEN DEVOS_PAT DEVOS_MEDIA_XAI_KEY VERCEL_TOKEN VERCEL_AUTOMATION_BYPASS_SECRET \
-  CURSOR_KEY_1 CURSOR_KEY_2 CLAUDE_OAUTH_1 CLAUDE_OAUTH_2 CLAUDE_APIKEY_1 CLAUDE_APIKEY_2 CODEX_KEY_1 CODEX_KEY_2 GEMINI_KEY_1 GEMINI_KEY_2; do
+for name in DEVOS_PROGRESS_TOKEN GH_TOKEN GITHUB_TOKEN DEVOS_PAT DEVOS_MEDIA_XAI_KEY VERCEL_TOKEN VERCEL_AUTOMATION_BYPASS_SECRET $slots; do
   strip+=(-u "$name")
 done
 env "${strip[@]}" setsid "$@" < "${DEVOS_STDIN:-/dev/null}" > "$out" 2> "$err" &

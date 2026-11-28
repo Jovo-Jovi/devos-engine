@@ -203,9 +203,10 @@ test("stack.test.mjs (g) the workflows set up the toolchain and install it", () 
   }
   const cycle = ["devos-cycle.yml", "devos-work.yml"].map((f) => readFileSync(path.join(root, "payload", "files", "dot-github", "workflows", f), "utf8")).join("\n");
   assert.equal(countOf(cycle, "run-checks.mjs --install-only"), 1);
-  assert.equal(countOf(cycle, "agent -p --force --trust --approve-mcps --model \"$MODEL\" --output-format stream-json \"$(devos_prompt cursor .devos/builder-prompt.md)\""), 1);
-  assert.equal(countOf(cycle, "agent -p --force --trust --approve-mcps --model \"$MODEL\" --output-format stream-json \"$(devos_prompt cursor .devos/reviewer-prompt.md)\""), 0);
-  assert.equal(countOf(cycle, "DEVOS_STDIN=.devos/builder-prompt.md bash scripts/devos/agent-watchdog.sh \"$left\" 10 .devos/builder.json .devos/builder.err -- \\\n                  claude -p --model \"$MODEL\" --effort \"$EFFORT\" --output-format stream-json --verbose --permission-mode dontAsk"), 1);
+  // E86 (PR-106): every builder runs through run-agent.sh, its command line the registry's; no workflow names a CLI's.
+  assert.equal(countOf(cycle, "bash scripts/devos/run-agent.sh builder \"$builder_tool\""), 1);
+  assert.equal(countOf(cycle, "agent -p "), 0);
+  assert.equal(countOf(cycle, "claude -p "), 0);
   // E85 (PR-101): the review is the reviewer agent's run in the review job.
   assert.equal(countOf(cycle, "--max-turns \"$TURNS\" < .devos/reviewer-prompt.md > .devos/reviewer.json"), 0);
   assert.equal(countOf(readFileSync(path.join(root, "payload", "files", "dot-github", "workflows", "devos-review.yml"), "utf8"), "bash scripts/devos/plan-agent.sh reviewer .devos/reviewer-prompt.md"), 1);

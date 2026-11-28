@@ -191,7 +191,10 @@ jobs:
           FAST_IN: ${{ inputs.fast }}
         run: |
           if [ -n "$BUILDER_NOTE" ]; then echo "$BUILDER_NOTE"; fi
-          if [ "$DEVOS_BUILDER_TOOL" != "cursor" ]; then
+          # E86 (PR-106): how the builder's tool takes an effort is its devos/agents/<id>.json `effort`.
+          EFFORT_KIND=$(node scripts/devos/tools.mjs get --tool "$DEVOS_BUILDER_TOOL" effort) || exit 1
+          export EFFORT_KIND
+          if [ "$EFFORT_KIND" != "model" ]; then
             node --input-type=module - >> "$GITHUB_OUTPUT" <<'EOF'
           import { existsSync, readFileSync } from "node:fs";
           const task = process.env.TASK;
@@ -200,8 +203,8 @@ jobs:
           let effort = raw === "extrahigh" || raw === "xhigh" ? "xhigh" : ["low", "medium", "high", "xhigh"].includes(raw) ? raw : "";
           const input = (process.env.EFFORT_IN || "").toLowerCase();
           if (["low", "medium", "high", "xhigh"].includes(input)) effort = input;
-          // PR-99: Claude Code and Codex build at the fence's effort (the builder's fixed one is written there); none stops.
-          if (!effort && ["claude", "codex"].includes(process.env.DEVOS_BUILDER_TOOL)) {
+          // PR-99: a tool that takes an effort builds at the fence's (the builder's fixed one is written there); none stops.
+          if (!effort && process.env.EFFORT_KIND === "flag") {
             console.log(`::error title=Dev OS::the fence of ${task} names no builder effort; the reviewer writes "- Builder: <pool id> · Effort: <low|medium|high|xhigh> · Fast: <yes|no>" (PR-99)`);
             process.exit(1);
           }
@@ -210,8 +213,12 @@ jobs:
           else
             export DEVOS_BUILDER_FAMILY="$POOL_MODEL"
             . scripts/devos/accounts.sh
-            first=$(devos_accounts cursor | cut -d' ' -f1)
-            if [ -n "$first" ]; then devos_use_cursor "$first"; agent models > .devos/models.txt 2>&1 || true; fi
+            first=$(devos_accounts "$DEVOS_BUILDER_TOOL" | cut -d' ' -f1)
+            if [ -n "$first" ]; then
+              devos_use "$DEVOS_BUILDER_TOOL" "$first"
+              mapfile -d '' list < <(node scripts/devos/tools.mjs args --tool "$DEVOS_BUILDER_TOOL" --role models)
+              "${list[@]}" > .devos/models.txt 2>&1 || true
+            fi
             node scripts/devos/builder-model.mjs --task "$TASK" --effort "${EFFORT_IN:-fence}" --fast "${FAST_IN:-fence}"
           fi
 
@@ -288,13 +295,7 @@ jobs:
         run: |
           . scripts/devos/accounts.sh
           builder_tool="$DEVOS_BUILDER_TOOL"
-          if [ "$builder_tool" = "claude" ]; then
-            accounts=$(devos_accounts claude)
-          elif [ "$builder_tool" = "codex" ] || [ "$builder_tool" = "gemini" ]; then
-            accounts=$(devos_accounts "$builder_tool")
-          else
-            accounts=$(devos_accounts cursor)
-          fi
+          accounts=$(devos_accounts "$builder_tool")
           # Long tasks run in time slices of 72 minutes: a slice that ends while the builder is still
           # changing files is committed and the same attempt continues in a fresh run, up to
           # builder.max_time_slices. The slice number is read back from this attempt's last builder commit.
@@ -317,15 +318,7 @@ jobs:
           [ "$DEVOS_STAGE" -gt "$DEVOS_STAGES" ] && DEVOS_STAGE=$DEVOS_STAGES
           export DEVOS_STAGE DEVOS_STAGES; echo "stage=$DEVOS_STAGE" >> "$GITHUB_OUTPUT"; echo "stages=$DEVOS_STAGES" >> "$GITHUB_OUTPUT"
           [ "$DEVOS_STAGES" -gt 1 ] && echo "stage $DEVOS_STAGE of $DEVOS_STAGES"
-          if [ "$builder_tool" = "claude" ]; then
-            [ -n "$accounts" ] || { echo "::error::set secret CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY (and optionally the _2 pair)"; exit 1; }
-          elif [ "$builder_tool" = "codex" ]; then
-            [ -n "$accounts" ] || { echo "::error::set secret OPENAI_API_KEY (and optionally OPENAI_API_KEY_2)"; exit 1; }
-          elif [ "$builder_tool" = "gemini" ]; then
-            [ -n "$accounts" ] || { echo "::error::set secret GEMINI_API_KEY (and optionally GEMINI_API_KEY_2)"; exit 1; }
-          else
-            [ -n "$accounts" ] || { echo "::error::no Cursor key: set secret CURSOR_API_KEY (and optionally CURSOR_API_KEY_2)"; exit 1; }
-          fi
+          [ -n "$accounts" ] || { echo "::error::$(node scripts/devos/tools.mjs missing-key --tool "$builder_tool")"; exit 1; }
           # Every active module's local names and throwaway keys (PR-17, PR-26).
           for f in .devos/*.env; do [ -f "$f" ] && { set -a; . "$f"; set +a; }; done
           echo "builder: $MODEL (effort ${DEVOS_BUILDER_EFFORT}, fast ${DEVOS_BUILDER_FAST}, from $MODEL_SOURCE) $MODEL_NOTE · $builder_tool accounts in order: $accounts${FALLBACKS:+ · then the models $FALLBACKS}"
@@ -343,109 +336,17 @@ jobs:
           set +e
           # E85e (PR-104): the watchdog prints the builder's progress line every minute, whatever the tool.
           ran_tool="$builder_tool"
-          # PR-64: each model on every account, then the next model (accounts.sh devos_slots). A limit moves to the next
-          # slot; a model the account cannot use moves on at once; with no slot left the attempt is parked until the
-          # earliest reset (builder-status.mjs → quota).
-          first_model="$MODEL"; models="$MODEL $FALLBACKS"; lim=""; outcome=""
-          if [ "$builder_tool" = "codex" ] || [ "$builder_tool" = "gemini" ]; then
-            bash scripts/devos/run-agent.sh builder "$builder_tool" "$MODEL" "$DEVOS_BUILDER_EFFORT" .devos/builder-prompt.md $FALLBACKS || exit 1
-            . .devos/builder-run.env
-            MODEL="${model:-$MODEL}"
-          elif [ "$builder_tool" = "claude" ]; then
-            node scripts/devos/role-env.mjs swap claude-builder || exit 1
-            trap 'node scripts/devos/role-env.mjs restore || exit 1' EXIT
-            EFFORT="$DEVOS_BUILDER_EFFORT"
-            used=""; restarted=""; tries=0; T0=$(date +%s)
-            for slot in $(devos_slots claude $models); do
-              MODEL="${slot%@*}"; acc="${slot##*@}"
-              devos_use_claude "$acc"; used="$acc"
-              while :; do
-                left=$(( 72 - ($(date +%s) - T0) / 60 ))
-                DEVOS_STDIN=.devos/builder-prompt.md bash scripts/devos/agent-watchdog.sh "$left" 10 .devos/builder.json .devos/builder.err -- \
-                  claude -p --model "$MODEL" --effort "$EFFORT" --output-format stream-json --verbose --permission-mode dontAsk --allowedTools "Read,Glob,Grep,Write,Edit,MultiEdit,Bash,Task,Agent,Skill,mcp__context7" --disallowedTools "Bash(git push *),Bash(git commit *),Bash(git checkout *),Bash(git reset *),Bash(gh *),Bash(curl *),Bash(wget *),Bash(pkill *),Bash(killall *)" --mcp-config devos/ci/mcp.claude.json --max-turns 400
-                code=$?
-                why=$(devos_restart "$code")
-                if [ -n "$why" ] && [ -z "$restarted" ] && [ $(( 72 - ($(date +%s) - T0) / 60 )) -ge 25 ]; then
-                  restarted=1; mkdir -p .devos/logs; cp .devos/builder.err .devos/logs/builder-stalled.err
-                  devos_note "Builder: the Claude CLI $why; restarted once."
-                  printf '\n\n**An earlier run of this attempt %s.** Its partial changes are already in the working tree (`git status`). Verify them against the fence and continue from them; do not redo or duplicate them.\n' "$why" >> .devos/builder-prompt.md
-                  continue
-                fi
-                # PR-87: a temporary server error (a 5xx, a dropped connection, "retriable") runs again in place, three times at most.
-                if [ "$code" != "0" ] && pause=$(devos_server_wait "$tries") && [ $(( 72 - ($(date +%s) - T0) / 60 )) -ge 10 ] && devos_server_error .devos/builder.json .devos/builder.err "$code"; then
-                  tries=$(( tries + 1 )); mkdir -p .devos/logs; cp .devos/builder.err ".devos/logs/builder-server-$tries.err"
-                  devos_note "Builder: the Claude CLI stopped on a temporary server error; trying again in $pause s ($tries of 3)."
-                  sleep "$pause"
-                  printf '\n\n**An earlier run of this attempt stopped on a temporary server error.** Its partial changes are already in the working tree (`git status`). Verify them against the fence and continue from them; do not redo or duplicate them.\n' >> .devos/builder-prompt.md
-                  continue
-                fi
-                break
-              done
-              if [ "$code" != "0" ] && devos_limited .devos/builder.json .devos/builder.err "$code"; then
-                lim=$(devos_limit_file claude "$acc" "$(devos_model_index "$MODEL" $models)"); outcome=limited
-                mkdir -p .devos/limits; cat .devos/builder.json .devos/builder.err > "$lim"
-                devos_note "Builder: Claude account $acc reached its usage limit on $MODEL."
-                printf '\n\n**This attempt was started on another Claude account or model, which reached its usage limit.** Its partial changes are already in the working tree (`git status`). Verify them against the fence and continue from them; do not redo or duplicate them.\n' >> .devos/builder-prompt.md
-                continue
-              fi
-              if [ "$code" != "0" ] && devos_unavailable .devos/builder.json .devos/builder.err "$code"; then
-                outcome=unavailable; devos_note "Builder: Claude account $acc cannot use $MODEL; trying the next model."
-                continue
-              fi
-              outcome=ran
-              break
-            done
-          else
-          # PR-29: on a usage limit, the same attempt continues on the other account at once; the
-          # partial work stays in the tree and the second run is told to continue from it.
-          # The watchdog stops a hung CLI inside this step (72 of its 80 minutes), so the work is always
-          # committed and the park/halt comment always posted. A lost connection that makes no progress
-          # for 10 minutes is restarted once in place; a second stall parks the task (builder-status).
-          used=""; restarted=""; tries=0; T0=$(date +%s)
-          for slot in $(devos_slots cursor $models); do
-            MODEL="${slot%@*}"; acc="${slot##*@}"
-            devos_use_cursor "$acc"; used="$acc"
-            while :; do
-              left=$(( 72 - ($(date +%s) - T0) / 60 ))
-              bash scripts/devos/agent-watchdog.sh "$left" 10 .devos/builder.json .devos/builder.err -- \
-                agent -p --force --trust --approve-mcps --model "$MODEL" --output-format stream-json "$(devos_prompt cursor .devos/builder-prompt.md)"
-              code=$?
-              why=$(devos_restart "$code")
-              if [ -n "$why" ] && [ -z "$restarted" ] && [ $(( 72 - ($(date +%s) - T0) / 60 )) -ge 25 ]; then
-                restarted=1; mkdir -p .devos/logs; cp .devos/builder.err .devos/logs/builder-stalled.err
-                devos_note "Builder: the Cursor CLI $why; restarted once."
-                printf '\n\n**An earlier run of this attempt %s.** Its partial changes are already in the working tree (`git status`). Verify them against the fence and continue from them; do not redo or duplicate them.\n' "$why" >> .devos/builder-prompt.md
-                continue
-              fi
-              # PR-87: a temporary server error (a 5xx, a dropped connection, "retriable") runs again in place, three times at most.
-              if [ "$code" != "0" ] && pause=$(devos_server_wait "$tries") && [ $(( 72 - ($(date +%s) - T0) / 60 )) -ge 10 ] && devos_server_error .devos/builder.json .devos/builder.err "$code"; then
-                tries=$(( tries + 1 )); mkdir -p .devos/logs; cp .devos/builder.err ".devos/logs/builder-server-$tries.err"
-                devos_note "Builder: the Cursor CLI stopped on a temporary server error; trying again in $pause s ($tries of 3)."
-                sleep "$pause"
-                printf '\n\n**An earlier run of this attempt stopped on a temporary server error.** Its partial changes are already in the working tree (`git status`). Verify them against the fence and continue from them; do not redo or duplicate them.\n' >> .devos/builder-prompt.md
-                continue
-              fi
-              break
-            done
-            if [ "$code" != "0" ] && devos_limited .devos/builder.json .devos/builder.err "$code"; then
-              lim=$(devos_limit_file cursor "$acc" "$(devos_model_index "$MODEL" $models)"); outcome=limited
-              mkdir -p .devos/limits; cat .devos/builder.json .devos/builder.err > "$lim"
-              devos_note "Builder: Cursor account $acc reached its usage limit on $MODEL."
-              printf '\n\n**This attempt was started on another Cursor account or model, which reached its usage limit.** Its partial changes are already in the working tree (`git status`). Verify them against the fence and continue from them; do not redo or duplicate them.\n' >> .devos/builder-prompt.md
-              continue
-            fi
-            if [ "$code" != "0" ] && devos_unavailable .devos/builder.json .devos/builder.err "$code"; then
-              outcome=unavailable; devos_note "Builder: Cursor account $acc cannot use $MODEL; trying the next model."
-              continue
-            fi
-            outcome=ran
-            break
-          done
-          fi
-          devos_settle "$outcome" "$lim" .devos/builder.err
-          # PR-53, PR-64: a usage limit moves only to the same tool's other account or next model (above); with none
-          # left the attempt is parked until the earliest reset (builder-status.mjs → quota). No other agent is used.
-          node scripts/devos/role-env.mjs restore || exit 1; trap - EXIT
+          # E86 (PR-106): one run for every tool (run-agent.sh): its command line, role files and credential from its
+          # devos/agents/<id>.json. PR-64: each model on every account, then the next model (accounts.sh devos_slots). A
+          # limit moves to the next slot; a model the account cannot use moves on at once; with no slot left the attempt is
+          # parked until the earliest reset (builder-status.mjs → quota). PR-29: the watchdog stops a hung CLI inside this
+          # step (72 of its 80 minutes), so the work is always committed; a lost connection that makes no progress for 10
+          # minutes is restarted once in place, and a second stall parks the task (builder-status). PR-53: a usage limit
+          # moves only to the same tool's other account or next model; no other agent is used.
+          first_model="$MODEL"
+          bash scripts/devos/run-agent.sh builder "$builder_tool" "$MODEL" "$DEVOS_BUILDER_EFFORT" .devos/builder-prompt.md $FALLBACKS || exit 1
+          . .devos/builder-run.env
+          MODEL="${model:-$MODEL}"
           if [ "$MODEL" != "$first_model" ]; then devos_note "Builder: switched to $ran_tool $MODEL (account $used)."
           elif [ "$used" != "${accounts%% *}" ]; then devos_note "Builder: switched to $ran_tool account $used."; fi
           echo "model=$MODEL" >> "$GITHUB_OUTPUT"

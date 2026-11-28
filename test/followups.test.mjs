@@ -77,14 +77,15 @@ test("followups.test.mjs (b) a Claude Code stream with no result counts each mes
 
 test("followups.test.mjs (c) the Claude Code builder runs with stream-json --verbose; the other Claude runs keep json", () => {
   // PR-90: the builder runs in the work job, devos-work.yml.
-  const cycle = read(`${PAYLOAD}/dot-github/workflows/devos-work.yml`);
-  assert.equal(cycle.split("claude -p --model \"$MODEL\" --effort \"$EFFORT\" --output-format stream-json --verbose --permission-mode dontAsk").length - 1, 1);
-  assert.equal(cycle.includes("--output-format stream-json --verbose --permission-mode dontAsk --allowedTools \"Read,Glob,Grep,Write,Edit,MultiEdit,Bash,Task,Agent,Skill,mcp__context7\""), true);
+  // E86 (PR-106): its command line is the registry's, devos/agents/claude.json, which run-agent.sh runs.
+  const claude = JSON.parse(read(`${PAYLOAD}/devos/agents/claude.json`)).run;
+  assert.deepEqual(claude.builder.slice(0, 12), ["-p", "--model", "{model}", "--effort", "{effort}", "--output-format", "stream-json", "--verbose", "--permission-mode", "dontAsk", "--allowedTools", "Read,Glob,Grep,Write,Edit,MultiEdit,Bash,Task,Agent,Skill,mcp__context7"]);
+  for (const role of ["reviewer", "planner"]) assert.equal(claude[role][claude[role].indexOf("--output-format") + 1], "json", role);
   const watchdog = read(`${PAYLOAD}/scripts/devos/agent-watchdog.sh`);
   assert.equal(watchdog.includes("Both streams are read:"), true);
   assert.equal(watchdog.includes("else if (e.type===\"user\"&&Array.isArray(e.message&&e.message.content))"), true);
   const manual = read(`${PAYLOAD}/docs/method/AUTOMATION.md`);
-  assert.equal(manual.includes("| `agent-watchdog.sh` | runs the builder's CLI (Cursor's or Claude Code's) in 72-minute time slices"), true);
+  assert.equal(manual.includes("| `agent-watchdog.sh` | runs the builder's CLI, whatever the tool (PR-106), in 72-minute time slices"), true);
   assert.equal(manual.includes("Claude Code's with `--verbose` too, one line per message and tool call, so both show their last action, PR-89)"), true);
   // E85e (PR-104): the builder's report went with the progress comment; its last action is in the progress line.
   assert.equal(manual.includes("| `builder-report.mjs` |"), false);

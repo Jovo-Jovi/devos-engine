@@ -206,6 +206,8 @@ test("resilience.test.mjs (d) a builder run that meets a 502 runs again in place
   const dir = staged("devos-server-run-");
   try {
     writeFileSync(path.join(dir, "CLAUDE.md"), "# Reviewer\n");
+    // E86 (PR-106): the review runs through plan-agent.sh, on the reviewer the project chose: Codex here.
+    giveAgents(dir, { reviewer: { id: "codex-review", tool: "codex", model: "M1" }, reviewer_light: null });
     repo(dir);
     const built = runAgent(dir, flakyCodex(dir, 2), "builder");
     assert.equal(built.status, 0, `${built.stdout}\n${built.stderr}`);
@@ -218,11 +220,17 @@ test("resilience.test.mjs (d) a builder run that meets a 502 runs again in place
 
     rmSync(path.join(dir, "seen.txt"));
     rmSync(path.join(dir, ".devos", "accounts.md"));
-    const reviewed = runAgent(dir, flakyCodex(dir, 9), "reviewer");
+    writeFileSync(path.join(dir, ".devos", "reviewer-prompt.md"), "go\n");
+    const reviewed = spawnSync("bash", ["scripts/devos/plan-agent.sh", "reviewer", ".devos/reviewer-prompt.md", "devos/schemas/verdict.schema.json", ".devos/reviewer.json", "high", "10"], {
+      cwd: dir,
+      encoding: "utf8",
+      windowsHide: true,
+      env: { ...process.env, PATH: `${flakyCodex(dir, 9)}${path.delimiter}${process.env.PATH ?? ""}`, CODEX_KEY_1: "k1", DEVOS_SERVER_WAIT: "0", DEVOS_SEEN: path.join(dir, "seen.txt") },
+    });
     assert.equal(reviewed.status, 0, `${reviewed.stdout}\n${reviewed.stderr}`);
     assert.equal(readFileSync(path.join(dir, "seen.txt"), "utf8"), "run\nrun\nrun\nrun\n");
     assert.match(readFileSync(path.join(dir, ".devos", "reviewer-run.env"), "utf8"), /^code=1$/m);
-    assert.match(readFileSync(path.join(dir, ".devos", "accounts.md"), "utf8"), /Reviewer: the Codex CLI stopped on a temporary server error; trying again in 0 s \(3 of 3\)\./);
+    assert.match(readFileSync(path.join(dir, ".devos", "accounts.md"), "utf8"), /reviewer: the codex CLI stopped on a temporary server error; trying again in 0 s \(3 of 3\)\./);
   } finally {
     rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
@@ -233,12 +241,13 @@ test("resilience.test.mjs (e) every builder, review and planning run of the cycl
   // PR-90: the builder runs in the work job (devos-work.yml); E85 (PR-101): the review in the review job, through
   // plan-agent.sh, whose retry is counted below.
   const cycle = `${read(`${PAYLOAD}/dot-github/workflows/devos-cycle.yml`)}\n${read(`${PAYLOAD}/dot-github/workflows/devos-work.yml`)}\n${read(`${PAYLOAD}/dot-github/workflows/devos-review.yml`)}`;
-  assert.equal(count(cycle, "pause=$(devos_server_wait \"$tries\")"), 2);
-  assert.equal(count(cycle, "devos_server_error .devos/builder.json .devos/builder.err \"$code\""), 2);
-  assert.equal(count(cycle, "devos_server_error .devos/reviewer.json .devos/reviewer.err \"$rc\""), 0);
+  // E86 (PR-106): every builder's retry is run-agent.sh's, whatever the tool; no workflow has a loop of its own.
+  assert.equal(count(cycle, "devos_server_wait"), 0);
+  assert.equal(count(cycle, "devos_server_error"), 0);
   assert.equal(count(cycle, "bash scripts/devos/plan-agent.sh reviewer "), 1);
-  assert.ok(cycle.indexOf("devos_server_error .devos/builder.json") < cycle.indexOf("devos_limited .devos/builder.json"));
-  assert.equal(count(read(`${PAYLOAD}/scripts/devos/run-agent.sh`), "pause=$(devos_server_wait \"$tries\")"), 2);
+  const runner = read(`${PAYLOAD}/scripts/devos/run-agent.sh`);
+  assert.equal(count(runner, "pause=$(devos_server_wait \"$tries\")"), 1);
+  assert.ok(runner.indexOf("devos_server_error \"$out\" \"$err\" \"$code\"") < runner.indexOf("devos_limited \"$out\" \"$err\" \"$code\""));
   assert.equal(count(read(`${PAYLOAD}/scripts/devos/plan-agent.sh`), "pause=$(devos_server_wait \"$tries\")"), 1);
   assert.equal(read(`${PAYLOAD}/scripts/devos/accounts.sh`).includes('devos_server_error() { node "${DEVOS_SCRIPTS:-scripts/devos}/limit-check.mjs" --server'), true);
 });

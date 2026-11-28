@@ -1,52 +1,15 @@
 #!/usr/bin/env node
-// Swap a tool into the other role's kit, then restore its own config byte for byte (PR-42).
-// Usage: node scripts/devos/role-env.mjs swap cursor-reviewer|cursor-planner|claude-builder|codex-builder|codex-reviewer|gemini-builder|gemini-reviewer
+// Swap a tool into the other role's kit, then restore its own config byte for byte (PR-42). E86 (PR-106): each tool's
+// kits are in its devos/agents/<id>.json `kits` (tools.mjs); a role a tool has no kit for leaves the tree as it is.
+// Usage: node scripts/devos/role-env.mjs swap <tool> builder|reviewer|planner
 //        node scripts/devos/role-env.mjs restore
 import { execFileSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { P } from "./lib.mjs";
+import { ROLES, toolIds, tool as toolFile } from "./tools.mjs";
 
 const STASH = ".devos/role-stash";
-const KITS = {
-  "cursor-reviewer": {
-    move: [".cursor/cli.json", ".cursor/hooks.json", ".cursor/rules"],
-    install: [
-      { from: "devos/roles/cursor-reviewer/cli.json", to: ".cursor/cli.json" },
-      { from: "devos/roles/cursor-reviewer/rules", to: ".cursor/rules" },
-    ],
-  },
-  "cursor-planner": {
-    move: [".cursor/cli.json", ".cursor/hooks.json", ".cursor/rules"],
-    install: [
-      { from: "devos/roles/cursor-planner/cli.json", to: ".cursor/cli.json" },
-      { from: "devos/roles/cursor-planner/rules", to: ".cursor/rules" },
-    ],
-  },
-  "claude-builder": {
-    move: [".claude/settings.json", "CLAUDE.md"],
-    install: [
-      { from: "devos/roles/claude-builder/settings.json", to: ".claude/settings.json" },
-      { from: "devos/roles/claude-builder/CLAUDE.md", to: "CLAUDE.md" },
-    ],
-  },
-  "codex-builder": {
-    move: ["AGENTS.md"],
-    install: [{ from: "devos/roles/claude-builder/CLAUDE.md", to: "AGENTS.md" }],
-  },
-  "codex-reviewer": {
-    move: ["AGENTS.md"],
-    install: [{ from: "CLAUDE.md", to: "AGENTS.md" }],
-  },
-  "gemini-builder": {
-    move: ["GEMINI.md"],
-    install: [{ from: "devos/roles/claude-builder/CLAUDE.md", to: "GEMINI.md" }],
-  },
-  "gemini-reviewer": {
-    move: ["GEMINI.md"],
-    install: [{ from: "CLAUDE.md", to: "GEMINI.md" }],
-  },
-};
 
 function markerPath() {
   return P(STASH, "manifest.json");
@@ -61,12 +24,15 @@ function moveAside(rel, moved) {
   moved.push({ rel, destRel });
 }
 
-function swap(kit) {
-  const spec = KITS[kit];
-  if (!spec) {
-    console.error(`role-env: unknown kit ${kit}`);
+function swap(id, role) {
+  const t = toolFile(id);
+  if (!t || !ROLES.includes(role)) {
+    console.error(`role-env: no tool ${id || "named"} or no role ${role || "named"}; swap <tool> ${ROLES.join("|")}`);
     process.exit(1);
   }
+  const spec = t.kits?.[role];
+  if (!spec) return;
+  const kit = `${id}-${role}`;
   if (existsSync(markerPath())) {
     const current = JSON.parse(readFileSync(markerPath(), "utf8"));
     if (current.kit === kit) return;
@@ -96,7 +62,9 @@ function restore() {
   rmSync(P(STASH), { recursive: true, force: true });
   let status = "";
   try {
-    status = execFileSync("git", ["status", "--porcelain", "--", ".cursor", ".claude", "CLAUDE.md", "AGENTS.md", "GEMINI.md"], {
+    // The top folder or file of every path any tool's kit swaps (.claude, .cursor, CLAUDE.md, AGENTS.md, GEMINI.md).
+    const watched = [...new Set(toolIds().flatMap((id) => Object.values(toolFile(id).kits ?? {}).flatMap((kit) => [...kit.move, ...kit.install.map((item) => item.to)])).map((rel) => rel.split("/")[0]))].sort();
+    status = execFileSync("git", ["status", "--porcelain", "--", ...watched], {
       cwd: P("."),
       encoding: "utf8",
     });
@@ -112,10 +80,9 @@ function restore() {
 }
 
 const command = process.argv[2];
-const kit = process.argv[3] ?? "";
-if (command === "swap") swap(kit);
+if (command === "swap") swap(process.argv[3] ?? "", process.argv[4] ?? "");
 else if (command === "restore") restore();
 else {
-  console.error("usage: role-env.mjs swap cursor-reviewer|cursor-planner|claude-builder|codex-builder|codex-reviewer|gemini-builder|gemini-reviewer | restore");
+  console.error(`usage: role-env.mjs swap <tool> ${ROLES.join("|")} | restore`);
   process.exit(2);
 }

@@ -329,7 +329,8 @@ test("cheaper-reviews.test.mjs (e) the manual, the precedent and the changelog n
   assert.match(manual, /`notice --task X --attempt N`/);
   assert.match(manual, /each \*\*required\*\* file is read whole/);
   const precedents = read(path.join(PAYLOAD, "docs", "method", "PRECEDENTS.md"));
-  assert.match(precedents, /\*\*Live maximum: PR-105\.\*\*/);
+  // PR-105 stays; a later task moves the live maximum past it (E86: PR-106).
+  assert.ok(Number(precedents.match(/\*\*Live maximum: PR-(\d+)\.\*\*/)?.[1]) >= 105);
   assert.equal(precedents.split("\n").filter((line) => line.startsWith("| PR-105 |")).length, 1);
   assert.match(read(path.join(root, "CHANGELOG.md")).split("\n## ")[1], /^1\.14\.0-rc\.1 — Unreleased[\s\S]*PR-105/);
   for (const name of ["blueprint", "intake", "reviewer"]) assert.match(read(path.join(PAYLOAD, "devos", "prompts", `${name}.md`)), /add `- Topics: <topic> · <topic>`[^\n]*\(PR-105\)/, name);

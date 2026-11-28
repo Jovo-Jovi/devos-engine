@@ -13,6 +13,7 @@
 // Emits: model, effort, fast, source, note
 import { existsSync, readFileSync } from "node:fs";
 import { P, emit } from "./lib.mjs";
+import { tool as agentTool } from "./tools.mjs";
 
 const arg = (n, d = "") => { const i = process.argv.indexOf(`--${n}`); return i >= 0 ? (process.argv[i + 1] ?? d) : d; };
 const EFFORTS = ["low", "medium", "high", "xhigh"];
@@ -62,7 +63,7 @@ export function effortLabel(tool, model, effort) {
   if (named) return `${named}, from the model name`;
   const given = String(effort ?? "").trim();
   if (given) return given;
-  if (tool === "cursor") return "none: the model name names none";
+  if (agentTool(tool)?.effort === "model") return "none: the model name names none";
   return tool ? `none: ${tool} takes no effort` : "none";
 }
 

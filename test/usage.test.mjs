@@ -6,6 +6,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
 import { costOf, makeRecord, parseUsage, summary, toolOf } from "../payload/files/scripts/devos/usage.mjs";
+import { configWithAgents } from "./chosen-agents.mjs";
 
 // Git 2.47 and later run their automatic maintenance in the background after a commit or a fetch, and it can still be
 // writing into .git while a test removes its folder (ENOTEMPTY on the CI runner). Every git this file starts runs
@@ -166,7 +167,7 @@ test("usage.test.mjs (d) report counts every file once and writes docs/USAGE.md"
   }
 });
 
-test("usage.test.mjs (e) the watchdog records every builder run, and run-agent every reviewer run", { skip: skipWindows }, () => {
+test("usage.test.mjs (e) the watchdog records every builder run, and plan-agent every reviewer run", { skip: skipWindows }, () => {
   const dir = project();
   try {
     const bin = path.join(dir, "bin");
@@ -186,12 +187,14 @@ test("usage.test.mjs (e) the watchdog records every builder run, and run-agent e
     writeFileSync(path.join(dir, ".devos", "reviewer-prompt.md"), "review\n");
     // The reviewer's kit for Codex is the project's own CLAUDE.md (PR-45), restored from git afterwards.
     writeFileSync(path.join(dir, "CLAUDE.md"), "project reviewer rules\n");
+    // E86 (PR-106): the review runs through plan-agent.sh, on the reviewer the project chose: Codex here.
+    writeFileSync(path.join(dir, "devos.config.json"), configWithAgents(readFileSync(path.join(dir, "devos", "engine.defaults.json"), "utf8"), { reviewer: { id: "codex-review", tool: "codex", model: "gpt-5.5" }, reviewer_light: null }));
     git(["init", "-q", "-b", "main"], dir);
     git(["config", "user.email", "devos@example.com"], dir);
     git(["config", "user.name", "devos"], dir);
     git(["add", "-A"], dir);
     git(["commit", "-q", "-m", "init"], dir);
-    const reviewed = spawnSync("bash", ["scripts/devos/run-agent.sh", "reviewer", "codex", "gpt-5.5", "high", ".devos/reviewer-prompt.md"], { cwd: dir, encoding: "utf8", windowsHide: true, env: { ...env, CODEX_KEY_1: "present" } });
+    const reviewed = spawnSync("bash", ["scripts/devos/plan-agent.sh", "reviewer", ".devos/reviewer-prompt.md", "devos/schemas/verdict.schema.json", ".devos/reviewer.json", "high", "10"], { cwd: dir, encoding: "utf8", windowsHide: true, env: { ...env, CODEX_KEY_1: "present" } });
     assert.equal(reviewed.status, 0, reviewed.stdout + reviewed.stderr);
     assert.deepEqual(lines(path.join(dir, ".devos", "usage", "pending.jsonl")).map(brief), [
       ["builder", "T04", 1, "cursor", "grok-4.7", 4000, 900, 120000, 0, null, true],
@@ -254,7 +257,8 @@ test("usage.test.mjs (g) every agent call in the workflows is recorded", () => {
   assert.equal(count(cycle, "node \"$T/usage.mjs\" flush --task \"$TASK\""), 2);
   assert.equal(count(cycle, "node \"$T/usage.mjs\" report --write"), 1);
   assert.equal(count(cycle, "publish-verify.mjs\" usage --in \"$W/evidence/usage/pending.jsonl\""), 1);
-  assert.equal(count(read("scripts/devos/run-agent.sh"), "usage.mjs record --stage reviewer"), 1);
+  // E86 (PR-106): run-agent.sh runs only the builder, which the watchdog records; every review is plan-agent.sh's.
+  assert.equal(count(read("scripts/devos/run-agent.sh"), "usage.mjs record"), 0);
   // PR-53: intake and revise run through plan-agent.sh, which records every planning run under its stage.
   const intake = read("dot-github/workflows/devos-intake.yml");
   assert.equal(count(intake, "claude -p"), 0);

@@ -11,6 +11,7 @@
 import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { parserOf, toolOf as registryToolOf } from "./tools.mjs";
 
 // PR-90: DEVOS_ROOT, as lib.mjs reads it.
 const ROOT = process.env.DEVOS_ROOT ? path.resolve(process.env.DEVOS_ROOT) : path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -19,7 +20,6 @@ const DIR = path.join(ROOT, "docs", "usage");
 const SUMMARY = path.join(ROOT, "docs", "USAGE.md");
 const PRICES = path.join(ROOT, "devos", "prices.json");
 export const STAGES = ["blueprint", "intake", "revise", "builder", "reviewer", "doctor", "supervisor", "media"];
-const TOOLS = { claude: "claude", agent: "cursor", "cursor-agent": "cursor", cursor: "cursor", codex: "codex", gemini: "gemini" };
 
 function flag(name, fallback = "") {
   const index = process.argv.indexOf(`--${name}`);
@@ -143,9 +143,9 @@ function gemini(list) {
 
 const PARSERS = { claude, cursor, codex, gemini };
 
-/** The usage in one run's output text, for a tool id (claude, cursor, codex, gemini). */
+/** The usage in one run's output text, for a tool id: read by the format the tool writes (E86, its parser). */
 export function parseUsage(tool, text) {
-  const parse = PARSERS[tool];
+  const parse = PARSERS[parserOf(tool)];
   if (!parse) return { ...EMPTY };
   try {
     return parse(objects(text));
@@ -154,10 +154,8 @@ export function parseUsage(tool, text) {
   }
 }
 
-export function toolOf(command) {
-  const base = path.basename(String(command ?? "")).replace(/\.(cmd|exe)$/i, "");
-  return TOOLS[base] ?? base;
-}
+/** The tool a command belongs to (agent → cursor), from the registry's commands (E86, PR-106). */
+export const toolOf = registryToolOf;
 
 function readOutput(out) {
   if (!out) return "";

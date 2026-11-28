@@ -6,7 +6,11 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
 import { validate } from "../payload/files/scripts/devos/agents.mjs";
-import { cliArgs, normalize } from "../payload/files/scripts/devos/agent-cli.mjs";
+import { normalize } from "../payload/files/scripts/devos/agent-cli.mjs";
+// E86 (PR-106): the command lines are the registry's (devos/agents/<id>.json), with the prompt argument the runner
+// appended before.
+import { render, tool as registryTool } from "../payload/files/scripts/devos/tools.mjs";
+const cliArgs = ({ tool, role, model, effort, last }) => render(tool, role, { model, effort, last });
 import { looksLikeLimit } from "../payload/files/scripts/devos/limits.mjs";
 import { blueprintEnv } from "../lib/init.mjs";
 import { checkRoster } from "../lib/roster.mjs";
@@ -70,7 +74,7 @@ test("cycle-tools.test.mjs (a) validate accepts codex and gemini", () => {
       pool: [poolItem("glm")],
       policy: "reviewer-picks",
     }),
-    /agents: pool item tool must be cursor, claude, codex or gemini/,
+    /agents: pool item tool must be claude, codex, cursor or gemini/,
   );
 });
 
@@ -114,7 +118,7 @@ test("cycle-tools.test.mjs (c) codex builder arguments", () => {
     "-c", "sandbox_workspace_write.network_access=true",
     "-c", "model_reasoning_effort=\"low\"",
     "-c", "mcp_servers.context7.url=\"https://mcp.context7.com/mcp\"",
-    "--json", "-o", "last.md",
+    "--json", "-o", "last.md", "-",
   ]);
   // PR-99: an effort Codex does not take, or none, stops the run: never "high" in its place.
   assert.throws(() => cliArgs({ tool: "codex", role: "builder", model: "M", effort: "max", last: "last.md" }),
@@ -128,12 +132,12 @@ test("cycle-tools.test.mjs (d) codex reviewer arguments", () => {
     "codex", "exec", "--model", "M", "--sandbox", "workspace-write",
     "-c", "model_reasoning_effort=\"xhigh\"",
     "-c", "mcp_servers.context7.url=\"https://mcp.context7.com/mcp\"",
-    "--json", "-o", "last.md",
+    "--json", "-o", "last.md", "-",
   ]);
 });
 
 test("cycle-tools.test.mjs (e) gemini arguments", () => {
-  const expected = ["gemini", "--model", "M", "--approval-mode", "yolo", "--output-format", "json", "-p"];
+  const expected = ["gemini", "--model", "M", "--approval-mode", "yolo", "--output-format", "json", "-p", "Follow the instructions given on standard input exactly."];
   assert.deepEqual(cliArgs({ tool: "gemini", role: "builder", model: "M", effort: "low", last: "last.md" }), expected);
   assert.deepEqual(cliArgs({ tool: "gemini", role: "reviewer", model: "M", effort: "max", last: "last.md" }), expected);
 });
@@ -201,15 +205,18 @@ test("cycle-tools.test.mjs (i) codex and gemini kits restore the original file",
     repo(dir);
     const role = path.join(dir, "scripts", "devos", "role-env.mjs");
     const run = (args) => spawnSync(process.execPath, [role, ...args], { cwd: dir, encoding: "utf8", windowsHide: true });
+    // E86 (PR-106): a kit is the tool's kits.<role> in devos/agents/<tool>.json; a plan swaps in the reviewer's files.
     const kits = [
-      ["codex-builder", agents, path.join(dir, "devos", "roles", "claude-builder", "CLAUDE.md")],
-      ["codex-reviewer", agents, path.join(dir, "CLAUDE.md")],
-      ["gemini-builder", gemini, path.join(dir, "devos", "roles", "claude-builder", "CLAUDE.md")],
-      ["gemini-reviewer", gemini, path.join(dir, "CLAUDE.md")],
+      ["codex", "builder", agents, path.join(dir, "devos", "roles", "claude-builder", "CLAUDE.md")],
+      ["codex", "reviewer", agents, path.join(dir, "CLAUDE.md")],
+      ["codex", "planner", agents, path.join(dir, "CLAUDE.md")],
+      ["gemini", "builder", gemini, path.join(dir, "devos", "roles", "claude-builder", "CLAUDE.md")],
+      ["gemini", "reviewer", gemini, path.join(dir, "CLAUDE.md")],
+      ["gemini", "planner", gemini, path.join(dir, "CLAUDE.md")],
     ];
-    for (const [kit, dest, source] of kits) {
+    for (const [tool, role, dest, source] of kits) {
       const original = readFileSync(dest);
-      const swapped = run(["swap", kit]);
+      const swapped = run(["swap", tool, role]);
       assert.equal(swapped.status, 0, swapped.stderr);
       assert.deepEqual(readFileSync(dest), readFileSync(source));
       const restored = run(["restore"]);
@@ -237,7 +244,7 @@ test("cycle-tools.test.mjs (j) accounts for codex and gemini", { skip: skipWindo
       "export GEMINI_KEY_1=a GEMINI_KEY_2=b DEVOS_GEMINI_ACCOUNT=2",
       "echo \"gemini=$(devos_accounts gemini)\"",
       "export CODEX_KEY_1=one",
-      "devos_use_codex 1",
+      "devos_use codex 1",
       "if [ \"$CODEX_API_KEY\" = \"$CODEX_KEY_1\" ] && [ -z \"${OPENAI_API_KEY+x}\" ]; then echo use=ok; else echo use=bad; fi",
       "export CURSOR_KEY_1=c",
       "unset CURSOR_KEY_2 || true",
@@ -315,6 +322,12 @@ test("cycle-tools.test.mjs (l) gemini reviewer sees its kit and policy", { skip:
   const home = mkdtempSync(path.join(tmpdir(), "devos-home-"));
   try {
     stage(dir);
+    // E86 (PR-106): a review runs through plan-agent.sh, on the reviewer the developer chose.
+    const template = readFileSync(path.join(root, "payload", "templates", "devos", "project.json"), "utf8");
+    const agents = { reviewer: { id: "gem", tool: "gemini", model: "M" }, reviewer_light: null, pool: [{ id: "g", tool: "gemini", model: "M", default: true, note: "" }], policy: "reviewer-picks", raise_on_retry: true };
+    writeFileSync(path.join(dir, "devos", "project.json"), `${JSON.stringify({ ...JSON.parse(template.replaceAll("__PROJECT_KEY__", "DEMO")), agents }, null, 2)}\n`);
+    const written = spawnSync(process.execPath, ["scripts/devos/config.mjs", "--write"], { cwd: dir, encoding: "utf8", windowsHide: true });
+    assert.equal(written.status, 0, written.stderr);
     writeFileSync(path.join(dir, "CLAUDE.md"), "project reviewer rules\n");
     repo(dir);
     const bin = path.join(dir, "bin");
@@ -333,7 +346,7 @@ test("cycle-tools.test.mjs (l) gemini reviewer sees its kit and policy", { skip:
     ].join("\n"), { mode: 0o755 });
     mkdirSync(path.join(dir, ".devos"));
     writeFileSync(path.join(dir, ".devos", "reviewer-prompt.md"), "review\n");
-    const result = spawnSync("bash", ["scripts/devos/run-agent.sh", "reviewer", "gemini", "M", "high", ".devos/reviewer-prompt.md"], {
+    const result = spawnSync("bash", ["scripts/devos/plan-agent.sh", "reviewer", ".devos/reviewer-prompt.md", "devos/schemas/verdict.schema.json", ".devos/reviewer.json", "", "80"], {
       cwd: dir,
       encoding: "utf8",
       windowsHide: true,
@@ -377,10 +390,11 @@ test("cycle-tools.test.mjs (m) the cycle workflow keeps the proven commands and 
   const text = ["devos-cycle.yml", "devos-work.yml", "devos-review.yml"].map((f) => readFileSync(path.join(root, "payload", "files", "dot-github", "workflows", f), "utf8")).join("\n");
   // PR-53: one run per builder tool; no other agent takes over on a usage limit.
   // PR-71: an agent gets only where its prompt is, never the prompt itself, on its command line.
-  assert.equal(countOf(text, "agent -p --force --trust --approve-mcps --model \"$MODEL\" --output-format stream-json \"$(devos_prompt cursor .devos/builder-prompt.md)\""), 1);
-  // PR-101: the review is the reviewer agent's run through plan-agent.sh, in the review job; no workflow runs a review CLI.
-  assert.equal(countOf(text, "agent -p --force --trust --approve-mcps --model \"$MODEL\" --output-format stream-json \"$(devos_prompt cursor .devos/reviewer-prompt.md)\""), 0);
-  assert.equal(countOf(text, "DEVOS_STDIN=.devos/builder-prompt.md bash scripts/devos/agent-watchdog.sh \"$left\" 10 .devos/builder.json .devos/builder.err -- \\\n                  claude -p --model \"$MODEL\" --effort \"$EFFORT\" --output-format stream-json --verbose --permission-mode dontAsk"), 1);
+  // E86 (PR-106): no workflow names a CLI's command line: every builder runs through run-agent.sh with the registry's.
+  assert.equal(countOf(text, "agent -p "), 0);
+  assert.equal(countOf(text, "claude -p "), 0);
+  assert.deepEqual(render("cursor", "builder", { model: "M", prompt: ".devos/builder-prompt.md" }), ["agent", "-p", "--force", "--trust", "--approve-mcps", "--model", "M", "--output-format", "stream-json", "Your instructions for this run are in the file .devos/builder-prompt.md. Read all of it first, then follow it exactly: it is your whole task."]);
+  assert.deepEqual(render("claude", "builder", { model: "M", effort: "high" }).slice(0, 12), ["claude", "-p", "--model", "M", "--effort", "high", "--output-format", "stream-json", "--verbose", "--permission-mode", "dontAsk", "--allowedTools"]);
   assert.equal(countOf(text, "--max-turns \"$TURNS\" < .devos/reviewer-prompt.md > .devos/reviewer.json"), 0);
   assert.equal(countOf(text, "bash scripts/devos/plan-agent.sh reviewer .devos/reviewer-prompt.md"), 1);
   // No agent that can run a command gets its prompt as an argument anywhere in the payload. The doctor and the
@@ -389,17 +403,19 @@ test("cycle-tools.test.mjs (m) the cycle workflow keeps the proven commands and 
   const carried = scripts(path.join(root, "payload", "files")).filter((file) => /\$\(cat [^)]*(prompt|"\$p")[^)]*\)/.test(readFileSync(file, "utf8")));
   assert.deepEqual(carried.map((file) => path.basename(file)).sort(), ["devos-doctor.yml", "devos-supervisor.yml"]);
   for (const file of carried) assert.match(readFileSync(file, "utf8"), /--allowedTools "Read,Glob,Grep" --disallowedTools "Bash,/, file);
-  assert.equal(countOf(text, "why=$(devos_restart \"$code\")"), 2);
+  assert.equal(countOf(text, "why=$(devos_restart \"$code\")"), 0);
+  assert.equal(countOf(readFileSync(path.join(root, "payload", "files", "scripts", "devos", "run-agent.sh"), "utf8"), "devos_restart \"$code\""), 1);
   assert.equal(countOf(text, "bash scripts/devos/run-agent.sh builder"), 1);
   assert.equal(countOf(text, "bash scripts/devos/run-agent.sh reviewer"), 0);
   // PR-93: Codex and Gemini CLI (and Claude Code) at the version devos.config.json pins, by install-agent.sh (E85).
   assert.equal(countOf(text, "bash scripts/devos/install-agent.sh \"$DEVOS_BUILDER_TOOL\""), 1);
   assert.equal(countOf(text, "bash scripts/devos/install-agent.sh \"$TOOL\""), 1);
   const installer = readFileSync(path.join(root, "payload", "files", "scripts", "devos", "install-agent.sh"), "utf8");
-  assert.equal(installer.includes("  claude|codex|gemini)\n    spec=$(node \"$here/pins.mjs\" \"$tool\")\n    npm install -g \"$spec\"\n    ;;"), true);
-  assert.equal(countOf(text, "--mcp-config devos/ci/mcp.claude.json"), 1);
+  assert.equal(installer.includes("  npm)\n    spec=$(node \"$here/pins.mjs\" \"$tool\")\n    npm install -g \"$spec\"\n    ;;"), true, installer);
+  const claude = JSON.stringify(registryTool("claude").run.builder);
+  assert.equal(countOf(claude, "--mcp-config\",\"devos/ci/mcp.claude.json"), 1);
   assert.equal(countOf(text, "--strict-mcp-config --mcp-config /opt/devos-tools/mcp.json"), 0);
-  assert.equal(countOf(text, "Skill,mcp__context7\""), 1);
+  assert.equal(countOf(claude, "Skill,mcp__context7\""), 1);
   assert.equal(countOf(text, "Skill,mcp__context7,mcp__devos,"), 0);
   assert.equal(countOf(text, "cp devos/ci/mcp.ci.json .cursor/mcp.json"), 1);
   for (const name of ["OPENAI_API_KEY", "OPENAI_API_KEY_2", "GEMINI_API_KEY", "GEMINI_API_KEY_2"]) {
@@ -628,12 +644,12 @@ test("cycle-tools.test.mjs (t) an agent reads its prompt on standard input, and 
     assert.equal(readFileSync(path.join(dir, ".devos", "accounts.md"), "utf8").includes("- Builder: the Codex CLI was stopped by a signal (exit 143), most likely by a command it ran that stops processes by name; restarted once.\n"), true);
     const shell = (script) => spawnSync("bash", ["-c", `. scripts/devos/accounts.sh; ${script}`], { cwd: dir, encoding: "utf8", windowsHide: true }).stdout;
     assert.deepEqual(shell("for c in 0 1 124 125 126 137 143; do printf '%s=%s\\n' \"$c\" \"$(devos_restart \"$c\")\"; done").split("\n").filter(Boolean).map((line) => line.split("=")[1] !== ""), [false, false, false, true, true, true, true]);
-    assert.deepEqual(shell("for t in cursor codex gemini claude; do printf '%s|' \"$(devos_prompt \"$t\" .devos/x.md)\"; done").split("|"), [
+    // E86 (PR-106): how each tool takes its prompt is its registry file's: on standard input, or one argument naming it.
+    assert.deepEqual(["cursor", "codex", "gemini", "claude"].map((t) => registryTool(t).stdin), [false, true, true, true]);
+    assert.deepEqual(["cursor", "codex", "gemini"].map((t) => render(t, "builder", { model: "M", effort: "high", last: "l.md", prompt: ".devos/x.md" }).at(-1)), [
       "Your instructions for this run are in the file .devos/x.md. Read all of it first, then follow it exactly: it is your whole task.",
       "-",
       "Follow the instructions given on standard input exactly.",
-      "",
-      "",
     ]);
   } finally {
     rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });

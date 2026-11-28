@@ -32,6 +32,14 @@ the release.
   it. A line that passed stays passed unless the diff touches what proved it. Every check still runs again.
 - **Each run says what it used (PR-105).** Publish's last notice names each stage's tool, model, minutes and tokens for
   the attempt, and the cost where it is known.
+- **One file per agent tool, one runner for every tool (PR-106).** Claude Code, Cursor, Codex and Gemini are each
+  described by one file, `devos/agents/<id>.json`: install, command line per role, effort, output format, key names
+  and role files. The builder of every tool now runs through the same runner and watchdog, and the work job's builder
+  step lost its two per-tool loops (about 100 lines). Every tool calls exactly what it called before; a test records each command
+  line, credential and install against the last version and fails on any difference.
+- A builder run without its key now names the tool and both accounts' secrets for every tool, as Cursor's did.
+- A review or planning run can no longer hang on its progress line. A stop that reached the line's watcher while it
+  was starting could be lost, and the run then waited until the job's time limit.
 
 ## 1.13.18 — 2026-11-26
 

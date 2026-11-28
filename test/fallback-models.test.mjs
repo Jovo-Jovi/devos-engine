@@ -237,23 +237,35 @@ test("fallback-models.test.mjs (e) a review that no slot can run ends limited wh
     // The reviewer's kit for Codex is the project's CLAUDE.md (role-env.mjs), which devos init writes.
     writeFileSync(path.join(dir, "CLAUDE.md"), "# Reviewer\n");
     repo(dir);
-    const bin = fakeCodex(dir, { "M1@k1": "limit", "M1@k2": "limit", "M2@k1": "unavailable", "M2@k2": "unavailable" });
-    const result = runAgent(dir, bin, "reviewer", ["M1", "M2"]);
+    // E86 (PR-106): a review runs through plan-agent.sh, on the reviewer the developer chose; the run's contract says
+    // whether it ended limited (agent-result.mjs), which the review job reads.
+    const review = (models) => {
+      withAgents(dir, { reviewer: { ...reviewer, light_effort: "medium", fallback_models: models.slice(1) }, pool: [builder], policy: "always-default", raise_on_retry: true });
+      writeFileSync(path.join(dir, ".devos", "reviewer-prompt.md"), "go\n");
+      return spawnSync("bash", ["scripts/devos/plan-agent.sh", "reviewer", ".devos/reviewer-prompt.md", "devos/schemas/verdict.schema.json", ".devos/reviewer.json", "high", "10"], {
+        cwd: dir,
+        encoding: "utf8",
+        windowsHide: true,
+        env: { ...process.env, PATH: `${path.join(dir, "bin")}${path.delimiter}${process.env.PATH ?? ""}`, CODEX_KEY_1: "k1", CODEX_KEY_2: "k2", DEVOS_SEEN: path.join(dir, "seen.txt") },
+      });
+    };
+    fakeCodex(dir, { "M1@k1": "limit", "M1@k2": "limit", "M2@k1": "unavailable", "M2@k2": "unavailable" });
+    const result = review(["M1", "M2"]);
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+    assert.deepEqual(readFileSync(path.join(dir, "seen.txt"), "utf8").trim().split("\n"), ["M1@k1", "M1@k2", "M2@k1", "M2@k2"]);
     const env = readFileSync(path.join(dir, ".devos", "reviewer-run.env"), "utf8");
     assert.match(env, /^used=2$/m);
     assert.match(env, /^model=M2$/m);
     assert.doesNotMatch(env, /^code=0$/m);
-    const limited = (json, err) => spawnSync(process.execPath, ["scripts/devos/limit-check.mjs", "--json", json, "--err", err, "--exit", "1"], { cwd: dir, windowsHide: true }).status;
-    assert.equal(limited(".devos/reviewer.json", ".devos/reviewer.err"), 0);
-    assert.match(readFileSync(path.join(dir, ".devos", "reviewer.err"), "utf8"), /resets in 45m\ndevos: no model of this agent could run; an earlier one reached its usage limit \(\.devos\/limits\/codex-2\.txt\)\n$/);
+    assert.equal(JSON.parse(readFileSync(path.join(dir, ".devos", "reviewer.json"), "utf8")).limited, true);
+    assert.equal(existsSync(path.join(dir, ".devos", "limits", "codex-2.txt")), true);
 
     rmSync(path.join(dir, ".devos", "limits"), { recursive: true, force: true });
     writeFileSync(path.join(dir, "seen.txt"), "");
-    const none = fakeCodex(dir, { "M1@k1": "unavailable", "M1@k2": "unavailable" });
-    const failed = runAgent(dir, none, "reviewer", ["M1"]);
+    fakeCodex(dir, { "M1@k1": "unavailable", "M1@k2": "unavailable" });
+    const failed = review(["M1"]);
     assert.equal(failed.status, 0, `${failed.stdout}\n${failed.stderr}`);
-    assert.equal(limited(".devos/reviewer.json", ".devos/reviewer.err"), 1);
+    assert.equal(JSON.parse(readFileSync(path.join(dir, ".devos", "reviewer.json"), "utf8")).limited, false);
     assert.equal(existsSync(path.join(dir, ".devos", "limits")), false);
   } finally {
     rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
@@ -321,18 +333,16 @@ test("fallback-models.test.mjs (g) a parked builder waits for the earliest reset
 test("fallback-models.test.mjs (h) every builder and reviewer run of the cycle tries the slots, and the builder reports the model it used", () => {
   const count = (needle) => workflow.split(needle).length - 1;
   assert.equal(count("FALLBACKS: ${{ inputs.builder_fallbacks }}"), 1);
-  assert.equal(count("models=\"$MODEL $FALLBACKS\""), 1);
-  // E85 (PR-101): the review's slots are plan-agent.sh's (below), in the review job.
+  // E86 (PR-106): every builder's slots are run-agent.sh's, whatever the tool; the review's are plan-agent.sh's (below).
+  assert.equal(count("models=\"$MODEL $FALLBACKS\""), 0);
   assert.equal(count("models=\"$MODEL $rev_fallbacks\""), 0);
-  assert.equal(count("for slot in $(devos_slots claude $models); do"), 1);
-  // PR-90 (D11): the builder's Claude and Cursor runs.
-  assert.equal(count("for slot in $(devos_slots cursor $models); do"), 1);
-  assert.equal(count("MODEL=\"${slot%@*}\"; acc=\"${slot##*@}\""), 2);
-  assert.equal(count("$(devos_limit_file "), 2);
-  assert.equal(count("devos_unavailable .devos/"), 2);
-  assert.equal(count("devos_settle \"$outcome\" \"$lim\" .devos/builder.err"), 1);
-  assert.equal(count("devos_settle \"$outcome\" \"$lim\" .devos/reviewer.err"), 0);
-  assert.equal(count(".devos/builder-prompt.md $FALLBACKS || exit 1"), 1);
+  assert.equal(count("$(devos_slots"), 0);
+  assert.equal(count("$(devos_limit_file "), 0);
+  assert.equal(count("devos_settle"), 0);
+  const runner = readFileSync(path.join(root, "payload", "files", "scripts", "devos", "run-agent.sh"), "utf8");
+  assert.equal(runner.split("devos_settle \"$outcome\" \"$lim\" \"$err\"").length - 1, 1);
+  assert.equal(runner.split("$(devos_limit_file ").length - 1, 1);
+  assert.equal(count("bash scripts/devos/run-agent.sh builder \"$builder_tool\" \"$MODEL\" \"$DEVOS_BUILDER_EFFORT\" .devos/builder-prompt.md $FALLBACKS || exit 1"), 1);
   assert.equal(count(".devos/reviewer-prompt.md $rev_fallbacks || exit 1"), 0);
   assert.equal(count("echo \"model=$MODEL\" >> \"$GITHUB_OUTPUT\""), 1);
   assert.equal(count("${{ steps.builder.outputs.model || steps.bm.outputs.model }}"), 1);

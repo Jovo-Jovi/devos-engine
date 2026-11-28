@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -23,7 +23,9 @@ function project(url) {
   mkdirSync(path.join(dir, "scripts", "devos"), { recursive: true });
   mkdirSync(path.join(dir, "devos"));
   mkdirSync(path.join(dir, "docs"));
-  for (const file of ["report.mjs", "lib.mjs"]) copyFileSync(path.join(scripts, file), path.join(dir, "scripts", "devos", file));
+  // lib.mjs reads the tools' efforts from the registry (E86): the copy has it, as every install does.
+  for (const file of ["report.mjs", "lib.mjs", "tools.mjs"]) copyFileSync(path.join(scripts, file), path.join(dir, "scripts", "devos", file));
+  cpSync(path.join(scripts, "..", "..", "devos", "agents"), path.join(dir, "devos", "agents"), { recursive: true });
   writeFileSync(path.join(dir, "devos.config.json"), JSON.stringify({ project: "DEMO-SHOP", registry: { url } }));
   writeFileSync(path.join(dir, "devos", "engine.lock.json"), JSON.stringify({ engine_version: "0.2.9" }));
   writeFileSync(path.join(dir, "devos", "answers.json"), JSON.stringify({ contract_version: "0-draft-3" }));

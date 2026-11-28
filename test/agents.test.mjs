@@ -129,8 +129,12 @@ test("agents.test.mjs pool choice, reviewer model, builder family and workflow l
 
     // PR-90: the cycle runs in devos-cycle.yml and the jobs it calls, devos-work.yml and (E85, PR-101) devos-review.yml.
     const workflow = ["devos-cycle.yml", "devos-work.yml", "devos-review.yml"].map((f) => readFileSync(path.join(root, "payload", "files", "dot-github", "workflows", f), "utf8")).join("\n");
-    assert.equal(workflow.includes('agent -p --force --trust --approve-mcps --model "$MODEL" --output-format stream-json'), true);
-    assert.equal(workflow.includes("claude -p"), true);
+    // E86 (PR-106): the builder's command lines are the registry's, run by run-agent.sh for every tool.
+    const registry = (id) => JSON.parse(readFileSync(path.join(root, "payload", "files", "devos", "agents", `${id}.json`), "utf8"));
+    assert.deepEqual(registry("cursor").run.builder.slice(0, 8), ["-p", "--force", "--trust", "--approve-mcps", "--model", "{model}", "--output-format", "stream-json"]);
+    assert.equal(registry("claude").command, "claude");
+    assert.equal(registry("claude").run.builder[0], "-p");
+    assert.equal(workflow.includes("claude -p"), false);
     assert.equal(workflow.includes("arrives in E12"), false);
     assert.equal(workflow.includes("VERDICT:"), false);
     // PR-53: no other agent takes over on a usage limit, no fallback model, and only the chosen agents' CLIs.
@@ -140,9 +144,12 @@ test("agents.test.mjs pool choice, reviewer model, builder family and workflow l
     assert.equal(workflow.includes('next --after "$rev_id"'), false);
     // E85 (PR-101): the review is the project's reviewer agent's run, its model and next models from agents.mjs.
     assert.equal(workflow.includes('bash scripts/devos/plan-agent.sh reviewer .devos/reviewer-prompt.md devos/schemas/verdict.schema.json .devos/reviewer.json "$EFFORT" "${TURNS:-80}"'), true);
-    const restoreAt = workflow.indexOf("role-env.mjs restore || exit 1; trap - EXIT");
+    // The builder's kit is restored before the step reads what changed: run-agent.sh restores it before it returns.
+    const runAt = workflow.indexOf("bash scripts/devos/run-agent.sh builder");
     const changedAt = workflow.indexOf('echo "changed=$(git status --porcelain');
-    assert.equal(restoreAt >= 0 && changedAt > restoreAt, true);
+    assert.equal(runAt >= 0 && changedAt > runAt, true);
+    const runner = readFileSync(path.join(root, "payload", "files", "scripts", "devos", "run-agent.sh"), "utf8");
+    assert.equal(runner.includes("node scripts/devos/role-env.mjs restore || exit 1"), true);
     // PR-101: the review job runs the reviewer agent through plan-agent.sh, which swaps the tool's reviewer kit itself.
     assert.equal(workflow.includes("a method fix is always a deep review, by the project's own reviewer agent"), true);
     assert.equal(workflow.includes("role-env.mjs swap cursor-reviewer"), false);

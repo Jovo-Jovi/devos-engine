@@ -393,6 +393,12 @@ export const LOCAL = {
     ".github/workflows/devos-review.yml": "E85",
     "scripts/devos/install-agent.sh": "E85",
     "scripts/devos/agent-result.mjs": "E85",
+    "scripts/devos/tools.mjs": "E86",
+    "devos/agents/claude.json": "E86",
+    "devos/agents/cursor.json": "E86",
+    "devos/agents/codex.json": "E86",
+    "devos/agents/gemini.json": "E86",
+    "devos/schemas/agent.schema.json": "E86",
   },
   removed: {
     ".cursor/rules/10-security-data.mdc": "E03",

@@ -209,7 +209,7 @@ test("review-job.test.mjs (e) install-agent.sh installs each tool exactly as the
     ], cursor.err);
     assert.equal(readFileSync(path.join(dir, "github-path"), "utf8"), `${home}/.local/bin\n`);
     const unknown = run("muse");
-    assert.deepEqual([unknown.status, unknown.err.trim()], [2, "install-agent: no tool 'muse'; one of cursor, claude, codex, gemini"]);
+    assert.deepEqual([unknown.status, unknown.err.trim()], [2, 'install-agent: no tool "muse"; one of claude, codex, cursor, gemini (devos/agents/)']);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

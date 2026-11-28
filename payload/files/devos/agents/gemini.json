@@ -1,0 +1,42 @@
+{
+  "$comment": "E86 (PR-106): everything the cycle needs to know about Google's Gemini CLI. scripts/devos/tools.mjs reads it; the version comes from tool_versions (PR-93). Gemini takes no effort.",
+  "id": "gemini",
+  "name": "Gemini",
+  "label": "Gemini",
+  "provider": "google",
+  "command": "gemini",
+  "commands": ["gemini"],
+  "install": { "kind": "npm", "package": "@google/gemini-cli" },
+  "effort": "none",
+  "efforts": [],
+  "fast": false,
+  "parser": "gemini",
+  "answer": "file",
+  "stdin": true,
+  "keys": {
+    "secret": "GEMINI_API_KEY",
+    "env": "GEMINI_KEY",
+    "cli": "GEMINI_API_KEY",
+    "alt": null,
+    "unset": [],
+    "account": "DEVOS_GEMINI_ACCOUNT"
+  },
+  "setup": {
+    "env": { "GEMINI_CLI_TRUST_WORKSPACE": "true" },
+    "home": [
+      { "from": "devos/roles/gemini/policy.toml", "to": ".gemini/policies/devos.toml" },
+      { "from": "devos/roles/gemini/settings.json", "to": ".gemini/settings.json" }
+    ]
+  },
+  "kits": {
+    "builder": { "move": ["GEMINI.md"], "install": [{ "from": "devos/roles/claude-builder/CLAUDE.md", "to": "GEMINI.md" }] },
+    "reviewer": { "move": ["GEMINI.md"], "install": [{ "from": "CLAUDE.md", "to": "GEMINI.md" }] },
+    "planner": { "move": ["GEMINI.md"], "install": [{ "from": "CLAUDE.md", "to": "GEMINI.md" }] }
+  },
+  "run": {
+    "builder": ["--model", "{model}", "--approval-mode", "yolo", "--output-format", "json", "-p", "Follow the instructions given on standard input exactly."],
+    "reviewer": ["--model", "{model}", "--approval-mode", "yolo", "--output-format", "json", "-p", "Follow the instructions given on standard input exactly."],
+    "planner": ["--model", "{model}", "--approval-mode", "yolo", "--output-format", "json", "-p", "Follow the instructions given on standard input exactly."]
+  },
+  "login": "version"
+}

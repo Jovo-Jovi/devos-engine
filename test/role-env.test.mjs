@@ -32,7 +32,7 @@ test("role-env.test.mjs swaps a role kit and restores the original bytes", () =>
     const role = path.join(dir, "scripts", "devos", "role-env.mjs");
     const run = (args) => spawnSync(process.execPath, [role, ...args], { cwd: dir, encoding: "utf8", windowsHide: true });
 
-    const swapped = run(["swap", "cursor-reviewer"]);
+    const swapped = run(["swap", "cursor", "reviewer"]);
     assert.equal(swapped.status, 0, swapped.stderr);
     const cli = JSON.parse(readFileSync(path.join(dir, ".cursor", "cli.json"), "utf8"));
     assert.equal(cli.permissions.allow.includes("Write(docs/reviews/**)"), true);
@@ -42,7 +42,7 @@ test("role-env.test.mjs swaps a role kit and restores the original bytes", () =>
     assert.equal(git(["status", "--porcelain"], dir).stdout, "");
     const originalCli = readFileSync(path.join(dir, ".cursor", "cli.json"));
 
-    const claude = run(["swap", "claude-builder"]);
+    const claude = run(["swap", "claude", "builder"]);
     assert.equal(claude.status, 0, claude.stderr);
     const settings = JSON.parse(readFileSync(path.join(dir, ".claude", "settings.json"), "utf8"));
     const deny = settings.permissions.deny;
@@ -54,7 +54,7 @@ test("role-env.test.mjs swaps a role kit and restores the original bytes", () =>
     }
     assert.equal(run(["restore"]).status, 0);
 
-    assert.equal(run(["swap", "cursor-reviewer"]).status, 0);
+    assert.equal(run(["swap", "cursor", "reviewer"]).status, 0);
     const stashed = path.join(dir, ".devos", "role-stash", "orig", ".cursor", "cli.json");
     writeFileSync(stashed, "{\"tampered\":true}\n");
     const failed = run(["restore"]);

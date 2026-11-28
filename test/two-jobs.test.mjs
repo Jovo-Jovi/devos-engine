@@ -409,8 +409,8 @@ test("two-jobs.test.mjs U1 with every stored key set, the agent's process sees e
     git(["init", "-q"], dir);
     const S = path.join(PAYLOAD, "scripts", "devos");
     const keys = { CURSOR_KEY_1: "c1", CURSOR_KEY_2: "c2", CLAUDE_OAUTH_1: "o1", CLAUDE_OAUTH_2: "o2", CLAUDE_APIKEY_1: "a1", CLAUDE_APIKEY_2: "a2", CODEX_KEY_1: "x1", CODEX_KEY_2: "x2", GEMINI_KEY_1: "g1", GEMINI_KEY_2: "g2", DEVOS_PAT: "p", GH_TOKEN: "g", GITHUB_TOKEN: "t", DEVOS_PROGRESS_TOKEN: "pr", DEVOS_MEDIA_XAI_KEY: "m", VERCEL_TOKEN: "v" };
-    for (const [use, name, value] of [["devos_use_cursor 2", "CURSOR_API_KEY", "c2"], ["devos_use_claude 1", "CLAUDE_CODE_OAUTH_TOKEN", "o1"], ["devos_use_codex 1", "CODEX_API_KEY", "x1"], ["devos_use_gemini 2", "GEMINI_API_KEY", "g2"]]) {
-      const r = spawnSync("bash", ["-c", `. "${S}/accounts.sh"; ${use}; bash "${S}/agent-watchdog.sh" 5 5 out.txt err.txt -- env`], { cwd: dir, env: { PATH: process.env.PATH, HOME: dir, DEVOS_WATCHDOG_TICK: "1", DEVOS_WATCHDOG_UNIT: "1", ...keys }, encoding: "utf8" });
+    for (const [use, name, value] of [["devos_use cursor 2", "CURSOR_API_KEY", "c2"], ["devos_use claude 1", "CLAUDE_CODE_OAUTH_TOKEN", "o1"], ["devos_use codex 1", "CODEX_API_KEY", "x1"], ["devos_use gemini 2", "GEMINI_API_KEY", "g2"]]) {
+      const r = spawnSync("bash", ["-c", `. "${S}/accounts.sh"; ${use}; bash "${S}/agent-watchdog.sh" 5 5 out.txt err.txt -- env`], { cwd: dir, env: { PATH: process.env.PATH, HOME: dir, DEVOS_SCRIPTS: S, DEVOS_WATCHDOG_TICK: "1", DEVOS_WATCHDOG_UNIT: "1", ...keys }, encoding: "utf8" });
       assert.equal(r.status, 0, r.stderr);
       const seen = readFileSync(path.join(dir, "out.txt"), "utf8").split("\n").filter((l) => /(KEY(_\d)?|TOKEN|_PAT|OAUTH_\d|APIKEY_\d|SECRET)$/.test(l.split("=")[0]));
       assert.deepEqual(seen, [`${name}=${value}`], use);

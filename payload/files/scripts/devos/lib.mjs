@@ -4,6 +4,7 @@ import { readFileSync, writeFileSync, existsSync, appendFileSync, mkdirSync, rea
 import { execFileSync } from "node:child_process";
 import { join, dirname, relative, resolve, isAbsolute } from "node:path";
 import { fileURLToPath } from "node:url";
+import { effortsFor as registryEffortsFor, takesEffort as registryTakesEffort, toolIds } from "./tools.mjs";
 
 // PR-90: the cycle's publish job runs these scripts from its checkout of main over a workspace it built itself
 // (DEVOS_ROOT): the rules come from main, the data from the verified branch. Unset, the scripts' own repository.
@@ -115,7 +116,8 @@ export function isHumanGate(row) {
 // PR-99: every model and effort a run uses is the developer's own choice in devos/project.json; the engine has none
 // to fall back on. A tool that takes an effort flag gets one on every run: Claude Code (low to max) and Codex (low to
 // xhigh). Cursor names its effort in the model id; Gemini takes none.
-export const EFFORT_LEVELS = { claude: ["low", "medium", "high", "xhigh", "max"], codex: ["low", "medium", "high", "xhigh"] };
+// E86 (PR-106): a tool takes an effort when its devos/agents/<id>.json says `"effort": "flag"`, at the levels it lists.
+export const EFFORT_LEVELS = Object.fromEntries(toolIds().filter((id) => registryTakesEffort(id)).map((id) => [id, registryEffortsFor(id)]));
 export const takesEffort = (tool) => Object.hasOwn(EFFORT_LEVELS, tool);
 export const effortsFor = (tool) => EFFORT_LEVELS[tool] ?? [];
 // The runs of the reviewer agent and the effort each uses: light reviews at the light effort, gates at the gate

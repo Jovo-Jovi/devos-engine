@@ -103,7 +103,8 @@ test("hygiene.test.mjs (c) the workflows install every tool at its pin, and ever
   assert.equal(count(all["devos-work.yml"], 'bash scripts/devos/install-agent.sh "$DEVOS_BUILDER_TOOL"'), 1);
   assert.equal(count(all["devos-review.yml"], 'bash scripts/devos/install-agent.sh "$TOOL"'), 1);
   assert.equal(count(all["devos-intake.yml"], 'bash scripts/devos/install-agent.sh "$tool"'), 2);
-  assert.equal(count(all["install-agent.sh"], 'spec=$(node "$here/pins.mjs" "$tool")'), 1);
+  // E86 (PR-106): once per kind of install the registry names (an npm package, a checked package).
+  assert.equal(count(all["install-agent.sh"], 'spec=$(node "$here/pins.mjs" "$tool")'), 2);
   // The work job reads every pin from main's checkout, before the task branch is checked out: firebase-tools, installed
   // after it, takes the pin read then.
   const workText = all["devos-work.yml"];
@@ -114,12 +115,14 @@ test("hygiene.test.mjs (c) the workflows install every tool at its pin, and ever
   assert.equal(count(workText, "PINNED_FIREBASE: ${{ steps.pins.outputs.firebase }}"), 1);
   assert.equal(count(workText, 'npm install -g "$PINNED_FIREBASE"'), 1);
   assert.equal(count(all["review-user.sh"], 'spec=$(node "$(dirname "$0")/pins.mjs" claude)'), 1);
-  // Cursor's agent package: its version's download, checked against the pinned SHA-256 before it is unpacked.
+  // Cursor's agent package: its version's download, checked against the pinned SHA-256 before it is unpacked. E86
+  // (PR-106): the download is the registry's (devos/agents/cursor.json), installed as any checked package is.
   const installer = all["install-agent.sh"];
-  const cursor = installer.slice(installer.indexOf("  cursor)\n"), installer.indexOf("  *)\n", installer.indexOf("  cursor)\n")));
+  const cursor = installer.slice(installer.indexOf("  checked-package)\n"), installer.indexOf("  *)\n", installer.indexOf("  checked-package)\n")));
+  assert.deepEqual(JSON.parse(read(path.join(payload, "devos", "agents", "cursor.json"))).install, { kind: "checked-package", url: "https://downloads.cursor.com/lab/{version}/linux/x64/agent-cli-package.tar.gz", entry: "cursor-agent", bins: ["agent", "cursor-agent"] });
   for (const line of [
-    'spec=$(node "$here/pins.mjs" cursor)',
-    'curl -fsSL --retry 3 --retry-delay 2 -o "$pkg" "https://downloads.cursor.com/lab/$version/linux/x64/agent-cli-package.tar.gz"',
+    'spec=$(node "$here/pins.mjs" "$tool")',
+    'curl -fsSL --retry 3 --retry-delay 2 -o "$pkg" "${url//\\{version\\}/$version}"',
     'echo "${spec#* }  $pkg" | sha256sum -c -',
     'tar --strip-components=1 -xzf "$pkg" -C "$dir"',
   ]) assert.equal(count(cursor, line), 1, line);

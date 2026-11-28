@@ -1,0 +1,500 @@
+{
+  "builder": {
+    "claude": {
+      "exit": 0,
+      "calls": [
+        {
+          "cmd": "claude",
+          "argv": [
+            "-p",
+            "--model",
+            "claude-opus-5-5",
+            "--effort",
+            "high",
+            "--output-format",
+            "stream-json",
+            "--verbose",
+            "--permission-mode",
+            "dontAsk",
+            "--allowedTools",
+            "Read,Glob,Grep,Write,Edit,MultiEdit,Bash,Task,Agent,Skill,mcp__context7",
+            "--disallowedTools",
+            "Bash(git push *),Bash(git commit *),Bash(git checkout *),Bash(git reset *),Bash(gh *),Bash(curl *),Bash(wget *),Bash(pkill *),Bash(killall *)",
+            "--mcp-config",
+            "devos/ci/mcp.claude.json",
+            "--max-turns",
+            "400"
+          ],
+          "stdin": "You are the BUILDER surface (Claude Code, claude-opus-5-5, effort high) for DEMO under the Dev OS v2 method,",
+          "env": {
+            "CLAUDE_CODE_OAUTH_TOKEN": "o1"
+          },
+          "kit": {
+            "CLAUDE.md": "72b408e966760a66",
+            ".claude/settings.json": "ef630e998fee65ac",
+            ".cursor/cli.json": "7736d0a3ca20bc25",
+            ".cursor/rules": "00-project.mdc:81c64fec351aa4d9,10-security-data.mdc:ac12357fa063571b,20-bilingual-rtl.mdc:fac4cefdc04c0a78,30-vocabulary.mdc:c2234bc7f4fd6ee4,40-environment.mdc:7a6a74da7abde199,50-report-halt.mdc:bbdce9edb77aa3dc,60-mcp-tools.mdc:d803cb44294eb848,70-supabase.mdc:c57ca510c3ed05cd,71-r2.mdc:716cb733be07786b,72-firebase.mdc:aa02ac86111a344b"
+          }
+        }
+      ]
+    },
+    "cursor": {
+      "exit": 0,
+      "calls": [
+        {
+          "cmd": "agent",
+          "argv": [
+            "-p",
+            "--force",
+            "--trust",
+            "--approve-mcps",
+            "--model",
+            "grok-4.7-high",
+            "--output-format",
+            "stream-json",
+            "Your instructions for this run are in the file .devos/builder-prompt.md. Read all of it first, then follow it exactly: it is your whole task."
+          ],
+          "stdin": "",
+          "env": {
+            "CURSOR_API_KEY": "c1"
+          },
+          "kit": {
+            "CLAUDE.md": "4ba550aa030bedeb",
+            ".claude/settings.json": "30220933e61813f1",
+            ".cursor/cli.json": "7736d0a3ca20bc25",
+            ".cursor/rules": "00-project.mdc:81c64fec351aa4d9,10-security-data.mdc:ac12357fa063571b,20-bilingual-rtl.mdc:fac4cefdc04c0a78,30-vocabulary.mdc:c2234bc7f4fd6ee4,40-environment.mdc:7a6a74da7abde199,50-report-halt.mdc:bbdce9edb77aa3dc,60-mcp-tools.mdc:d803cb44294eb848,70-supabase.mdc:c57ca510c3ed05cd,71-r2.mdc:716cb733be07786b,72-firebase.mdc:aa02ac86111a344b"
+          }
+        }
+      ]
+    },
+    "codex": {
+      "exit": 0,
+      "calls": [
+        {
+          "cmd": "codex",
+          "argv": [
+            "exec",
+            "--model",
+            "gpt-5.5-codex",
+            "--sandbox",
+            "workspace-write",
+            "-c",
+            "sandbox_workspace_write.network_access=true",
+            "-c",
+            "model_reasoning_effort=\"high\"",
+            "-c",
+            "mcp_servers.context7.url=\"https://mcp.context7.com/mcp\"",
+            "--json",
+            "-o",
+            ".devos/builder-last.md",
+            "-"
+          ],
+          "stdin": "You are the BUILDER surface (Codex, gpt-5.5-codex, effort high) for DEMO under the Dev OS v2 method,",
+          "env": {
+            "CODEX_API_KEY": "x1"
+          },
+          "kit": {
+            "CLAUDE.md": "4ba550aa030bedeb",
+            "AGENTS.md": "72b408e966760a66",
+            ".claude/settings.json": "30220933e61813f1",
+            ".cursor/cli.json": "7736d0a3ca20bc25",
+            ".cursor/rules": "00-project.mdc:81c64fec351aa4d9,10-security-data.mdc:ac12357fa063571b,20-bilingual-rtl.mdc:fac4cefdc04c0a78,30-vocabulary.mdc:c2234bc7f4fd6ee4,40-environment.mdc:7a6a74da7abde199,50-report-halt.mdc:bbdce9edb77aa3dc,60-mcp-tools.mdc:d803cb44294eb848,70-supabase.mdc:c57ca510c3ed05cd,71-r2.mdc:716cb733be07786b,72-firebase.mdc:aa02ac86111a344b"
+          }
+        }
+      ]
+    },
+    "gemini": {
+      "exit": 0,
+      "calls": [
+        {
+          "cmd": "gemini",
+          "argv": [
+            "--model",
+            "gemini-3.1-pro",
+            "--approval-mode",
+            "yolo",
+            "--output-format",
+            "json",
+            "-p",
+            "Follow the instructions given on standard input exactly."
+          ],
+          "stdin": "You are the BUILDER surface (Gemini, gemini-3.1-pro, effort high) for DEMO under the Dev OS v2 method,",
+          "env": {
+            "GEMINI_API_KEY": "g1",
+            "GEMINI_CLI_TRUST_WORKSPACE": "true"
+          },
+          "kit": {
+            "CLAUDE.md": "4ba550aa030bedeb",
+            "GEMINI.md": "72b408e966760a66",
+            ".claude/settings.json": "30220933e61813f1",
+            ".cursor/cli.json": "7736d0a3ca20bc25",
+            ".cursor/rules": "00-project.mdc:81c64fec351aa4d9,10-security-data.mdc:ac12357fa063571b,20-bilingual-rtl.mdc:fac4cefdc04c0a78,30-vocabulary.mdc:c2234bc7f4fd6ee4,40-environment.mdc:7a6a74da7abde199,50-report-halt.mdc:bbdce9edb77aa3dc,60-mcp-tools.mdc:d803cb44294eb848,70-supabase.mdc:c57ca510c3ed05cd,71-r2.mdc:716cb733be07786b,72-firebase.mdc:aa02ac86111a344b",
+            "<home>/.gemini/settings.json": "4ae9a642ea28968a",
+            "<home>/.gemini/policies/devos.toml": "a0ecab77f3cb0599"
+          }
+        }
+      ]
+    }
+  },
+  "reviewer": {
+    "claude": {
+      "exit": 0,
+      "calls": [
+        {
+          "cmd": "claude",
+          "argv": [
+            "-p",
+            "--model",
+            "claude-opus-5-5",
+            "--effort",
+            "high",
+            "--output-format",
+            "json",
+            "--json-schema",
+            "{\n  \"type\": \"object\",\n  \"additionalProperties\": false,\n  \"required\": [\"verdict\", \"task\", \"attempt\", \"review_file\", \"classification\", \"fence_defect\", \"fence_written\", \"summary\"],\n  \"properties\": {\n    \"verdict\": { \"type\": \"string\", \"enum\": [\"PASS\", \"FAIL\"] },\n    \"task\": { \"type\": \"string\", \"pattern\": \"^T[0-9]{2}$\" },\n    \"attempt\": { \"type\": \"integer\", \"minimum\": 1 },\n    \"review_file\": { \"type\": \"string\", \"description\": \"docs/reviews/Tnn-aN.md\" },\n    \"classification\": {\n      \"type\": \"array\",\n      \"items\": { \"type\": \"string\", \"enum\": [\"HARD FAILURE\", \"DOC CORRECTION\", \"CARRY-FORWARD\", \"FENCE DEFECT\", \"SETUP\", \"NONE\"] }\n    },\n    \"fence_defect\": { \"type\": \"boolean\", \"description\": \"true when a FAIL or HALT was caused by the fence itself (PR-09)\" },\n    \"fence_written\": {\n      \"type\": [\"string\", \"null\"],\n      \"description\": \"path of the next fence (PASS) or the reissued fence (FAIL), or null when none was written\"\n    },\n    \"carry_forwards\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"additionalProperties\": false,\n        \"required\": [\"item\", \"owner\"],\n        \"properties\": { \"item\": { \"type\": \"string\" }, \"owner\": { \"type\": \"string\" } }\n      }\n    },\n    \"human_attention\": { \"type\": [\"string\", \"null\"], \"description\": \"what the human must look at or decide, if anything\" },\n    \"summary\": { \"type\": \"string\", \"description\": \"two or three sentences for the PR comment\" }\n  }\n}",
+            "--permission-mode",
+            "dontAsk",
+            "--max-turns",
+            "80",
+            "--mcp-config",
+            "devos/ci/mcp.claude.json",
+            "--allowedTools",
+            "Read,Glob,Grep,Write,Edit,Bash,Task,Agent,Skill,mcp__context7,WebFetch(domain:nextjs.org),WebFetch(domain:cursor.com),WebFetch(domain:code.claude.com)",
+            "--disallowedTools",
+            "Bash(git push *),Bash(git commit *),Bash(git checkout *),Bash(git reset *),Bash(gh *),Bash(curl *),Bash(wget *),Bash(pkill *),Bash(killall *)"
+          ],
+          "stdin": "# The reviewer prompt",
+          "env": {
+            "CLAUDE_CODE_OAUTH_TOKEN": "o1"
+          },
+          "kit": {
+            "CLAUDE.md": "4ba550aa030bedeb",
+            ".claude/settings.json": "30220933e61813f1",
+            ".cursor/cli.json": "7736d0a3ca20bc25",
+            ".cursor/rules": "00-project.mdc:81c64fec351aa4d9,10-security-data.mdc:ac12357fa063571b,20-bilingual-rtl.mdc:fac4cefdc04c0a78,30-vocabulary.mdc:c2234bc7f4fd6ee4,40-environment.mdc:7a6a74da7abde199,50-report-halt.mdc:bbdce9edb77aa3dc,60-mcp-tools.mdc:d803cb44294eb848,70-supabase.mdc:c57ca510c3ed05cd,71-r2.mdc:716cb733be07786b,72-firebase.mdc:aa02ac86111a344b"
+          }
+        }
+      ]
+    },
+    "cursor": {
+      "exit": 0,
+      "calls": [
+        {
+          "cmd": "agent",
+          "argv": [
+            "-p",
+            "--force",
+            "--trust",
+            "--model",
+            "grok-4.7-high",
+            "--output-format",
+            "stream-json",
+            "Your instructions for this run are in the file .devos/reviewer-answer-prompt.md. Read all of it first, then follow it exactly: it is your whole task."
+          ],
+          "stdin": "",
+          "env": {
+            "CURSOR_API_KEY": "c1"
+          },
+          "kit": {
+            "CLAUDE.md": "4ba550aa030bedeb",
+            ".claude/settings.json": "30220933e61813f1",
+            ".cursor/cli.json": "f1e495ef50f24370",
+            ".cursor/rules": "00-reviewer.mdc:94187326af495960"
+          }
+        }
+      ]
+    },
+    "codex": {
+      "exit": 0,
+      "calls": [
+        {
+          "cmd": "codex",
+          "argv": [
+            "exec",
+            "--model",
+            "gpt-5.5-codex",
+            "--sandbox",
+            "workspace-write",
+            "-c",
+            "model_reasoning_effort=\"high\"",
+            "-c",
+            "mcp_servers.context7.url=\"https://mcp.context7.com/mcp\"",
+            "--json",
+            "-o",
+            ".devos/reviewer.last",
+            "-"
+          ],
+          "stdin": "# The reviewer prompt",
+          "env": {
+            "CODEX_API_KEY": "x1"
+          },
+          "kit": {
+            "CLAUDE.md": "4ba550aa030bedeb",
+            "AGENTS.md": "4ba550aa030bedeb",
+            ".claude/settings.json": "30220933e61813f1",
+            ".cursor/cli.json": "7736d0a3ca20bc25",
+            ".cursor/rules": "00-project.mdc:81c64fec351aa4d9,10-security-data.mdc:ac12357fa063571b,20-bilingual-rtl.mdc:fac4cefdc04c0a78,30-vocabulary.mdc:c2234bc7f4fd6ee4,40-environment.mdc:7a6a74da7abde199,50-report-halt.mdc:bbdce9edb77aa3dc,60-mcp-tools.mdc:d803cb44294eb848,70-supabase.mdc:c57ca510c3ed05cd,71-r2.mdc:716cb733be07786b,72-firebase.mdc:aa02ac86111a344b"
+          }
+        }
+      ]
+    },
+    "gemini": {
+      "exit": 0,
+      "calls": [
+        {
+          "cmd": "gemini",
+          "argv": [
+            "--model",
+            "gemini-3.1-pro",
+            "--approval-mode",
+            "yolo",
+            "--output-format",
+            "json",
+            "-p",
+            "Follow the instructions given on standard input exactly."
+          ],
+          "stdin": "# The reviewer prompt",
+          "env": {
+            "GEMINI_API_KEY": "g1",
+            "GEMINI_CLI_TRUST_WORKSPACE": "true"
+          },
+          "kit": {
+            "CLAUDE.md": "4ba550aa030bedeb",
+            "GEMINI.md": "4ba550aa030bedeb",
+            ".claude/settings.json": "30220933e61813f1",
+            ".cursor/cli.json": "7736d0a3ca20bc25",
+            ".cursor/rules": "00-project.mdc:81c64fec351aa4d9,10-security-data.mdc:ac12357fa063571b,20-bilingual-rtl.mdc:fac4cefdc04c0a78,30-vocabulary.mdc:c2234bc7f4fd6ee4,40-environment.mdc:7a6a74da7abde199,50-report-halt.mdc:bbdce9edb77aa3dc,60-mcp-tools.mdc:d803cb44294eb848,70-supabase.mdc:c57ca510c3ed05cd,71-r2.mdc:716cb733be07786b,72-firebase.mdc:aa02ac86111a344b",
+            "<home>/.gemini/settings.json": "4ae9a642ea28968a",
+            "<home>/.gemini/policies/devos.toml": "a0ecab77f3cb0599"
+          }
+        }
+      ]
+    }
+  },
+  "planner": {
+    "claude": {
+      "exit": 0,
+      "calls": [
+        {
+          "cmd": "claude",
+          "argv": [
+            "-p",
+            "--model",
+            "claude-opus-5-5",
+            "--effort",
+            "high",
+            "--output-format",
+            "json",
+            "--json-schema",
+            "{\n  \"type\": \"object\",\n  \"additionalProperties\": false,\n  \"required\": [\"decision\", \"summary\"],\n  \"properties\": {\n    \"decision\": { \"type\": \"string\", \"enum\": [\"accept\", \"needs-info\", \"reject\", \"out-of-scope-revision\", \"revised\"] },\n    \"od\": { \"type\": [\"string\", \"null\"], \"description\": \"the OD id drafted, e.g. OD-09\" },\n    \"tasks\": { \"type\": \"array\", \"items\": { \"type\": \"string\", \"pattern\": \"^T[0-9]{2}$\" } },\n    \"fence_written\": { \"type\": [\"string\", \"null\"] },\n    \"questions\": { \"type\": \"array\", \"items\": { \"type\": \"string\" }, \"maxItems\": 3 },\n    \"summary\": { \"type\": \"string\", \"description\": \"two to five sentences for the issue or PR comment\" }\n  }\n}",
+            "--permission-mode",
+            "dontAsk",
+            "--max-turns",
+            "120",
+            "--allowedTools",
+            "Read,Glob,Grep,Write,Edit,Bash,Task,Agent,Skill",
+            "--disallowedTools",
+            "Bash(git push *),Bash(git commit *),Bash(git checkout *),Bash(git reset *),Bash(gh *),Bash(curl *),Bash(wget *),Bash(pkill *),Bash(killall *)"
+          ],
+          "stdin": "# The intake prompt",
+          "env": {
+            "CLAUDE_CODE_OAUTH_TOKEN": "o1"
+          },
+          "kit": {
+            "CLAUDE.md": "4ba550aa030bedeb",
+            ".claude/settings.json": "30220933e61813f1",
+            ".cursor/cli.json": "7736d0a3ca20bc25",
+            ".cursor/rules": "00-project.mdc:81c64fec351aa4d9,10-security-data.mdc:ac12357fa063571b,20-bilingual-rtl.mdc:fac4cefdc04c0a78,30-vocabulary.mdc:c2234bc7f4fd6ee4,40-environment.mdc:7a6a74da7abde199,50-report-halt.mdc:bbdce9edb77aa3dc,60-mcp-tools.mdc:d803cb44294eb848,70-supabase.mdc:c57ca510c3ed05cd,71-r2.mdc:716cb733be07786b,72-firebase.mdc:aa02ac86111a344b"
+          }
+        }
+      ]
+    },
+    "cursor": {
+      "exit": 0,
+      "calls": [
+        {
+          "cmd": "agent",
+          "argv": [
+            "-p",
+            "--force",
+            "--trust",
+            "--model",
+            "grok-4.7-high",
+            "--output-format",
+            "stream-json",
+            "Your instructions for this run are in the file .devos/intake-answer-prompt.md. Read all of it first, then follow it exactly: it is your whole task."
+          ],
+          "stdin": "",
+          "env": {
+            "CURSOR_API_KEY": "c1"
+          },
+          "kit": {
+            "CLAUDE.md": "4ba550aa030bedeb",
+            ".claude/settings.json": "30220933e61813f1",
+            ".cursor/cli.json": "1f114d1c05f25651",
+            ".cursor/rules": "00-planner.mdc:804516ea093a1c6f"
+          }
+        }
+      ]
+    },
+    "codex": {
+      "exit": 0,
+      "calls": [
+        {
+          "cmd": "codex",
+          "argv": [
+            "exec",
+            "--model",
+            "gpt-5.5-codex",
+            "--sandbox",
+            "workspace-write",
+            "-c",
+            "model_reasoning_effort=\"high\"",
+            "-c",
+            "mcp_servers.context7.url=\"https://mcp.context7.com/mcp\"",
+            "--json",
+            "-o",
+            ".devos/intake.last",
+            "-"
+          ],
+          "stdin": "# The intake prompt",
+          "env": {
+            "CODEX_API_KEY": "x1"
+          },
+          "kit": {
+            "CLAUDE.md": "4ba550aa030bedeb",
+            "AGENTS.md": "4ba550aa030bedeb",
+            ".claude/settings.json": "30220933e61813f1",
+            ".cursor/cli.json": "7736d0a3ca20bc25",
+            ".cursor/rules": "00-project.mdc:81c64fec351aa4d9,10-security-data.mdc:ac12357fa063571b,20-bilingual-rtl.mdc:fac4cefdc04c0a78,30-vocabulary.mdc:c2234bc7f4fd6ee4,40-environment.mdc:7a6a74da7abde199,50-report-halt.mdc:bbdce9edb77aa3dc,60-mcp-tools.mdc:d803cb44294eb848,70-supabase.mdc:c57ca510c3ed05cd,71-r2.mdc:716cb733be07786b,72-firebase.mdc:aa02ac86111a344b"
+          }
+        }
+      ]
+    },
+    "gemini": {
+      "exit": 0,
+      "calls": [
+        {
+          "cmd": "gemini",
+          "argv": [
+            "--model",
+            "gemini-3.1-pro",
+            "--approval-mode",
+            "yolo",
+            "--output-format",
+            "json",
+            "-p",
+            "Follow the instructions given on standard input exactly."
+          ],
+          "stdin": "# The intake prompt",
+          "env": {
+            "GEMINI_API_KEY": "g1",
+            "GEMINI_CLI_TRUST_WORKSPACE": "true"
+          },
+          "kit": {
+            "CLAUDE.md": "4ba550aa030bedeb",
+            "GEMINI.md": "4ba550aa030bedeb",
+            ".claude/settings.json": "30220933e61813f1",
+            ".cursor/cli.json": "7736d0a3ca20bc25",
+            ".cursor/rules": "00-project.mdc:81c64fec351aa4d9,10-security-data.mdc:ac12357fa063571b,20-bilingual-rtl.mdc:fac4cefdc04c0a78,30-vocabulary.mdc:c2234bc7f4fd6ee4,40-environment.mdc:7a6a74da7abde199,50-report-halt.mdc:bbdce9edb77aa3dc,60-mcp-tools.mdc:d803cb44294eb848,70-supabase.mdc:c57ca510c3ed05cd,71-r2.mdc:716cb733be07786b,72-firebase.mdc:aa02ac86111a344b",
+            "<home>/.gemini/settings.json": "4ae9a642ea28968a",
+            "<home>/.gemini/policies/devos.toml": "a0ecab77f3cb0599"
+          }
+        }
+      ]
+    }
+  },
+  "install": {
+    "claude": {
+      "exit": 0,
+      "calls": [
+        {
+          "cmd": "npm",
+          "argv": [
+            "install",
+            "-g",
+            "@anthropic-ai/claude-code@2.1.310"
+          ],
+          "stdin": ""
+        }
+      ],
+      "links": [],
+      "github_path": ""
+    },
+    "cursor": {
+      "exit": 0,
+      "calls": [
+        {
+          "cmd": "curl",
+          "argv": [
+            "-fsSL",
+            "--retry",
+            "3",
+            "--retry-delay",
+            "2",
+            "-o",
+            "<project>/.devos/cursor-agent.tar.gz",
+            "https://downloads.cursor.com/lab/2026.11.05-86047df/linux/x64/agent-cli-package.tar.gz"
+          ],
+          "stdin": ""
+        },
+        {
+          "cmd": "sha256sum",
+          "argv": [
+            "-c",
+            "-"
+          ],
+          "stdin": "170b77786cbf4c93064d64fff12b71a178b968730561c64afc2e8e752535442e  <project>/.devos/cursor-agent.tar.gz"
+        },
+        {
+          "cmd": "tar",
+          "argv": [
+            "--strip-components=1",
+            "-xzf",
+            "<project>/.devos/cursor-agent.tar.gz",
+            "-C",
+            "<project>/home/.local/share/cursor-agent/versions/2026.11.05-86047df"
+          ],
+          "stdin": ""
+        }
+      ],
+      "links": [
+        "agent",
+        "cursor-agent"
+      ],
+      "github_path": "<home>/.local/bin\n"
+    },
+    "codex": {
+      "exit": 0,
+      "calls": [
+        {
+          "cmd": "npm",
+          "argv": [
+            "install",
+            "-g",
+            "@openai/codex@0.164.0"
+          ],
+          "stdin": ""
+        }
+      ],
+      "links": [],
+      "github_path": ""
+    },
+    "gemini": {
+      "exit": 0,
+      "calls": [
+        {
+          "cmd": "npm",
+          "argv": [
+            "install",
+            "-g",
+            "@google/gemini-cli@0.65.0"
+          ],
+          "stdin": ""
+        }
+      ],
+      "links": [],
+      "github_path": ""
+    }
+  }
+}

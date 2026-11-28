@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
-import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -36,7 +36,9 @@ function write(dir, file, text) {
  */
 function project(url = "") {
   const dir = mkdtempSync(path.join(tmpdir(), "devos-history-"));
-  for (const file of ["report.mjs", "lib.mjs"]) write(dir, `scripts/devos/${file}`, readFileSync(path.join(scripts, file), "utf8"));
+  // lib.mjs reads the tools' efforts from the registry (E86): the copy has it, as every install does.
+  for (const file of ["report.mjs", "lib.mjs", "tools.mjs"]) write(dir, `scripts/devos/${file}`, readFileSync(path.join(scripts, file), "utf8"));
+  for (const name of readdirSync(path.join(scripts, "..", "..", "devos", "agents"))) write(dir, `devos/agents/${name}`, readFileSync(path.join(scripts, "..", "..", "devos", "agents", name), "utf8"));
   write(dir, "devos.config.json", JSON.stringify({ project: "DEMO-SHOP", registry: { url } }));
   write(dir, "devos/answers.json", JSON.stringify({ registry_link: true, contract_version: "2" }));
   write(dir, ".gitignore", ".devos/\n");

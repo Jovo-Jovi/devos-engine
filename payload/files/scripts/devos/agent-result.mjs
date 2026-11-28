@@ -17,9 +17,10 @@
 //        [--err <file>] [--last <file>] [--answer <file>] [--code <exit>] [--limited true] --out <file>
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
-import { normalize } from "./agent-cli.mjs";
+import { NORMALIZED, normalize } from "./agent-cli.mjs";
 import { earliestNotBefore, parseJsonLoose } from "./limits.mjs";
 import { parseUsage } from "./usage.mjs";
+import { parserOf } from "./tools.mjs";
 
 export const CONTRACT = 1;
 const RESULT_MAX = 8000;
@@ -28,10 +29,12 @@ const count = (value) => (Number.isFinite(value) ? value : 0);
 
 /** The tool's final object, in the runner's result shape (PR-45), or null when it gave none. */
 function finalObject(tool, rawText, lastText) {
-  if (tool === "codex" || tool === "gemini") {
+  // E86 (PR-106): by the format the tool writes (its devos/agents/<id>.json parser).
+  const parser = parserOf(tool);
+  if (NORMALIZED[parser]) {
     try { return normalize({ tool, rawText, lastText }); } catch { return null; }
   }
-  if (tool === "claude" || tool === "cursor") {
+  if (parser) {
     const value = parseJsonLoose(String(rawText ?? ""));
     return value && typeof value === "object" && !Array.isArray(value) ? value : null;
   }

@@ -14,8 +14,11 @@
 //        node scripts/devos/agents.mjs tools
 import { existsSync, readFileSync } from "node:fs";
 import { MODEL_ID, MODEL_VARIABLES, P, config, effortsFor, emit, fail, missingChoice, readJson, runChoice, takesEffort, withModelOverrides } from "./lib.mjs";
+import { tool as agentTool, toolIds } from "./tools.mjs";
 
-const TOOLS = new Set(["cursor", "claude", "codex", "gemini"]);
+// E86 (PR-106): the tools are the registry's (devos/agents/<id>.json).
+const TOOLS = new Set(toolIds());
+const TOOL_LIST = (() => { const ids = toolIds(); return ids.length < 2 ? ids.join("") : `${ids.slice(0, -1).join(", ")} or ${ids.at(-1)}`; })();
 const POLICIES = new Set(["reviewer-picks", "always-default"]);
 const EFFORTS = ["low", "medium", "high", "xhigh"];
 // PR-99: a Cursor model id that names its effort (grok-4.7-high, grok-4.7-fast) needs no effort beside it; `auto` is
@@ -25,7 +28,7 @@ const PINNED = /-(low|medium|high|xhigh)(?:-fast)?$|-fast(?:-(low|medium|high|xh
 /** PR-99: whether a pool builder needs an effort chosen: one fixed for every task, or `fence`. */
 export function builderNeedsEffort(item) {
   if (takesEffort(item.tool)) return true;
-  return item.tool === "cursor" && item.model !== "auto" && !PINNED.test(item.model);
+  return agentTool(item.tool)?.effort === "model" && item.model !== "auto" && !PINNED.test(item.model);
 }
 
 /** PR-99: the choices the agents lack, each `{ key, what }`; none when every model and effort is chosen. */
@@ -78,7 +81,7 @@ function isAgent(value, label, efforts = []) {
   if (typeof value.id !== "string" || typeof value.tool !== "string" || typeof value.model !== "string") {
     return `${label} must have id, tool and model`;
   }
-  if (!TOOLS.has(value.tool)) return `${label}.tool must be cursor, claude, codex or gemini`;
+  if (!TOOLS.has(value.tool)) return `${label}.tool must be ${TOOL_LIST}`;
   if (!hasKeys(value, ["id", "tool", "model"], ["fallback_models", "provider", ...efforts])) {
     return `${label} must have id, tool and model, and may have fallback_models${efforts.length ? `, ${efforts.join(", ")}` : ""} and provider`;
   }
@@ -123,12 +126,12 @@ export function validate(agents) {
     if (typeof item.id !== "string" || typeof item.model !== "string" || typeof item.note !== "string") {
       bad("pool item must have id, tool, model, default and note");
     }
-    if (!TOOLS.has(item.tool)) bad("pool item tool must be cursor, claude, codex or gemini");
+    if (!TOOLS.has(item.tool)) bad(`pool item tool must be ${TOOL_LIST}`);
     if (Object.hasOwn(item, "provider") && !PROVIDER.test(String(item.provider))) bad("pool item provider must be a provider id (letters, digits, - and _)");
     if (typeof item.default !== "boolean") bad("pool item default must be boolean");
     if (Object.hasOwn(item, "effort") && !EFFORTS.includes(item.effort) && item.effort !== "fence") bad("pool item effort must be low, medium, high, xhigh or fence");
-    if (Object.hasOwn(item, "fast") && (item.fast !== true || !EFFORTS.includes(item.effort) || item.tool !== "cursor")) {
-      bad("pool item fast is true, only with a fixed effort, and only for cursor");
+    if (Object.hasOwn(item, "fast") && (item.fast !== true || !EFFORTS.includes(item.effort) || agentTool(item.tool)?.fast !== true)) {
+      bad(`pool item fast is true, only with a fixed effort, and only for ${toolIds().filter((id) => agentTool(id).fast).join(", ")}`);
     }
     const listError = fallbackError(item, `pool item ${item.id}`);
     if (listError) bad(listError);

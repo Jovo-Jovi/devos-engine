@@ -1,11 +1,10 @@
 #!/usr/bin/env node
-// Codex and Gemini command lines, and their output in the runner's result shape (PR-45).
-// The prompt is not an argument: run-agent.sh appends it.
-//   node scripts/devos/agent-cli.mjs args --tool T --role builder|reviewer --model M --effort E --last <file>
+// The output of a tool whose format is not the runner's result shape (PR-45: Codex's events, Gemini's JSON), turned
+// into it. E86 (PR-106): which format a tool writes is its devos/agents/<id>.json `parser`; its command line is there
+// too (tools.mjs args). A tool whose output is already the result shape (Claude Code, Cursor) is left as it is.
 //   node scripts/devos/agent-cli.mjs normalize --tool T --raw <f> --last <f> --out <f>
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-
-const EFFORTS = new Set(["low", "medium", "high", "xhigh"]);
+import { parserOf } from "./tools.mjs";
 
 function flag(name) {
   const index = process.argv.indexOf(`--${name}`);
@@ -20,24 +19,6 @@ function resultObject(isError, result, input, output) {
     result,
     usage: { input_tokens: input, output_tokens: output },
   };
-}
-
-export function cliArgs({ tool, role, model, effort, last }) {
-  // PR-99: Codex runs at the effort the developer chose; there is no effort of the engine's to fall back on.
-  if (tool === "codex" && !EFFORTS.has(effort)) {
-    throw new Error(`devos: Codex ${model} runs at low, medium, high or xhigh, not ${effort ? `"${effort}"` : "no effort"}; choose its effort in devos/project.json (PR-99)`);
-  }
-  const E = effort;
-  if (tool === "codex") {
-    const args = ["codex", "exec", "--model", model, "--sandbox", "workspace-write"];
-    if (role === "builder") args.push("-c", "sandbox_workspace_write.network_access=true");
-    args.push("-c", `model_reasoning_effort="${E}"`, "-c", "mcp_servers.context7.url=\"https://mcp.context7.com/mcp\"", "--json", "-o", last);
-    return args;
-  }
-  if (tool === "gemini") {
-    return ["gemini", "--model", model, "--approval-mode", "yolo", "--output-format", "json", "-p"];
-  }
-  throw new Error(`agent-cli: unknown tool ${tool}`);
 }
 
 function normalizeCodex(rawText, lastText) {
@@ -101,26 +82,21 @@ function normalizeGemini(rawText) {
   return resultObject(isError, result, input, output);
 }
 
+/** The formats this file turns into the result shape. */
+export const NORMALIZED = { codex: normalizeCodex, gemini: normalizeGemini };
+
+/** A run's output in the result shape, by the format the tool writes. */
 export function normalize({ tool, rawText, lastText }) {
-  if (tool === "codex") return normalizeCodex(rawText, lastText);
-  if (tool === "gemini") return normalizeGemini(rawText);
-  throw new Error(`agent-cli: unknown tool ${tool}`);
+  const parse = NORMALIZED[parserOf(tool)];
+  if (!parse) throw new Error(`agent-cli: ${tool} writes no format this file reads`);
+  return parse(rawText, lastText);
 }
 
 function main() {
   const command = process.argv[2];
-  if (command === "args") {
-    const args = cliArgs({
-      tool: flag("tool"),
-      role: flag("role"),
-      model: flag("model"),
-      effort: flag("effort"),
-      last: flag("last"),
-    });
-    for (const item of args) process.stdout.write(`${item}\0`);
-    return;
-  }
   if (command === "normalize") {
+    // A tool whose output is the result shape already is left as it is.
+    if (!NORMALIZED[parserOf(flag("tool"))]) return;
     const raw = flag("raw");
     const stream = `${raw}.stream.jsonl`;
     const rawText = existsSync(stream) ? readFileSync(stream, "utf8") : readFileSync(raw, "utf8");
@@ -130,7 +106,7 @@ function main() {
     writeFileSync(flag("out"), `${JSON.stringify(out)}\n`);
     return;
   }
-  console.error("usage: agent-cli.mjs args --tool --role --model --effort --last | normalize --tool --raw <f> --last <f> --out <f>");
+  console.error("usage: agent-cli.mjs normalize --tool T --raw <f> --last <f> --out <f>");
   process.exit(2);
 }
 

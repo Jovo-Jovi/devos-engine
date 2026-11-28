@@ -10,6 +10,7 @@ import { P, parsePhases, waitsOnTaskPr, isMethodRow, taskAfter, config, fail } f
 import { poolText } from "./agents.mjs";
 import { motionCounts } from "./screens.mjs";
 import { skillsBlock } from "./skills.mjs";
+import { tool as agentTool } from "./tools.mjs";
 
 function screensLine(screens) {
   const manifestPath = P(".devos/screens/motion.json");
@@ -37,7 +38,7 @@ function commonVars(cfg, rows) {
       ? "\n**This run continues an earlier one that stopped (usage limit or no decision).** Its partial files are already in the tree on this branch (`git diff --stat origin/main...HEAD`). Read them, verify them against the repository, and complete them. Do not start over, renumber, or duplicate what is there: task ids already added on this branch stand, and the next free id below applies only to tasks you still add.\n"
       : "",
     // PR-54: the builder's tool by its name (the runner passes the pool pick's tool).
-    BUILDER_TOOL: { cursor: "Cursor", claude: "Claude Code", codex: "Codex", gemini: "Gemini" }[env.DEVOS_BUILDER_TOOL] || env.DEVOS_BUILDER_TOOL || "the builder agent",
+    BUILDER_TOOL: agentTool(env.DEVOS_BUILDER_TOOL)?.label || env.DEVOS_BUILDER_TOOL || "the builder agent",
     // PR-99: the builder as the run kept it; else the developer's default builder, at the fence's effort.
     // E85c (PR-103): the review job names the attempt's model DEVOS_BUILT_MODEL, never the developer's DEVOS_BUILDER_MODEL,
     // which config() makes the default builder's model.
