@@ -108,7 +108,9 @@ jobs:
 
   # The planner (untrusted, PR-92): the reviewer agent with its shell, only its own keys and a token that reads. It
   # writes the plan on intake/issue-N and hands it over as a git bundle with its decision; it pushes nothing.
-  intake:
+  # E86b (PR-107): main's code names the planner's tool and its secrets, so the planner's own job
+  # (devos-intake-planner.yml) is handed only that tool's keys.
+  intake-resolve:
     if: >-
       vars.DEVOS_PAUSED != 'true' && (
         github.event_name == 'workflow_dispatch' || (
@@ -123,9 +125,32 @@ jobs:
         )
       )
     runs-on: ubuntu-latest
-    # A planning run reads the whole document set at high effort; the method's first one took
-    # 26 minutes. 90 leaves room for bigger requests (PR-20).
-    timeout-minutes: 90
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      tool: ${{ steps.pt.outputs.tool }}
+      key: ${{ steps.pt.outputs.planner_key }}
+      alt: ${{ steps.pt.outputs.planner_alt }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: The planner's tool, and the names of its secrets
+        id: pt
+        run: |
+          tool=$(GITHUB_OUTPUT=/dev/null node scripts/devos/agents.mjs reviewer --mode deep | sed -n 's/^reviewer_tool=//p')
+          [ -n "$tool" ] || { echo "::error title=Dev OS::devos.config.json names no reviewer agent to plan with"; exit 1; }
+          echo "tool=$tool" >> "$GITHUB_OUTPUT"
+          node scripts/devos/tools.mjs secrets --tool "$tool" --as planner | tee -a "$GITHUB_OUTPUT"
+
+  # The planner (devos-intake-planner.yml): the project's reviewer agent with only its tool's keys and a read-only token.
+  intake:
+    needs: intake-resolve
     concurrency:
       group: devos-intake-${{ inputs.issue || github.event.issue.number }}
       cancel-in-progress: false
@@ -134,162 +159,26 @@ jobs:
       issues: read
       pull-requests: read
       actions: read
-    outputs:
-      base_sha: ${{ steps.req.outputs.base_sha }}
-      resume: ${{ steps.req.outputs.resume }}
-      not_before: ${{ steps.pack.outputs.not_before }}
-    env:
-      ISSUE: ${{ inputs.issue || github.event.issue.number }}
-      REPO: ${{ github.repository }}
-      BR: intake/issue-${{ inputs.issue || github.event.issue.number }}
-      RESUME: ${{ (github.event_name == 'workflow_dispatch' && inputs.resume) || (github.event_name == 'issue_comment' && startsWith(github.event.comment.body, '/devos intake resume')) }}
-      # PR-63: a role's model from a repository variable (same tool); unset = the configured model.
-      DEVOS_REVIEWER_MODEL: ${{ vars.DEVOS_REVIEWER_MODEL }}
-      DEVOS_REVIEWER_LIGHT_MODEL: ${{ vars.DEVOS_REVIEWER_LIGHT_MODEL }}
-      DEVOS_BUILDER_MODEL: ${{ vars.DEVOS_BUILDER_MODEL }}
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          ref: main
-          fetch-depth: 0
-          persist-credentials: false
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version: 22
-      # E85 (PR-101): the planner is the project's reviewer agent, on its own tool, in a job with no write token.
-      - name: The planner's CLI, at its pin (PR-93)
-        id: pt
-        run: |
-          tool=$(node scripts/devos/agents.mjs reviewer --mode deep | sed -n 's/^reviewer_tool=//p')
-          echo "tool=$tool" >> "$GITHUB_OUTPUT"
-          bash scripts/devos/install-agent.sh "$tool"
-      - name: The request, as it stood at the event, and the plan's branch
-        id: req
-        env:
-          GH_TOKEN: ${{ github.token }}
-          EVENT: ${{ github.event_name }}
-          EV_TITLE: ${{ github.event.issue.title }}
-          EV_BODY: ${{ github.event.issue.body }}
-          EV_AUTHOR_ASSOC: ${{ github.event.issue.author_association }}
-          EV_LABELS: ${{ toJSON(github.event.issue.labels.*.name) }}
-          EV_COMMENT: ${{ github.event.comment.body }}
-          EV_COMMENT_AT: ${{ github.event.comment.created_at }}
-          EV_COMMENT_ID: ${{ github.event.comment.id }}
-        run: |
-          node scripts/devos/intake-request.mjs --out .devos
-          MODE=$(node -e 'console.log(require("./.devos/request.json").mode)')
-          BASE=$(node -e 'console.log(require("./.devos/request.json").base)')
-          git config user.name "devos-runner"
-          git config user.email "devos-runner@users.noreply.github.com"
-          base_sha=$(git rev-parse "origin/$BASE")
-          if [ "$RESUME" = "true" ] && git rev-parse --verify --quiet "origin/$BR" >/dev/null; then
-            git checkout -B "$BR" "origin/$BR"
-            git merge --no-edit "$base_sha" || { git merge --abort; echo "::error::$BR conflicts with $BASE; comment /devos intake to plan afresh"; exit 1; }
-            echo "Continuing the partial plan on $BR."
-          else
-            git checkout -B "$BR" "$base_sha"
-            RESUME=false
-          fi
-          # PR-92: what runs in this job is main's. Its method files are laid over the plan branch's in the working tree
-          # (never staged or committed).
-          for p in .github scripts/devos scripts/guards devos devos.config.json CLAUDE.md CLAUDE.local.md .claude .cursor .mcp.json; do
-            rm -rf -- "$p"
-            if git cat-file -e "origin/main:$p" 2>/dev/null; then git archive origin/main -- "$p" | tar -x; fi
-          done
-          { echo "MODE=$MODE"; echo "BASE=$BASE"; echo "BASE_SHA=$base_sha"; echo "RESUME=$RESUME"; } >> "$GITHUB_ENV"
-          { echo "base_sha=$base_sha"; echo "resume=$RESUME"; } >> "$GITHUB_OUTPUT"
-          wc -l .devos/request.md
-          if [ "$MODE" = "method" ]; then
-            # PR-28: a method fix is diagnosed from the logs of the runs it links (read with this job's read token).
-            mkdir -p .devos/runlogs
-            for id in $(grep -oE 'actions/runs/[0-9]+' .devos/request.md | sed 's#.*/##' | sort -u | head -n 5); do
-              gh run view "$id" --repo "$REPO" --log-failed 2>/dev/null | tail -n 400 > ".devos/runlogs/$id.log" || true
-              gh run view "$id" --repo "$REPO" --json name,displayTitle,conclusion,event,headBranch,createdAt,url,jobs \
-                --jq '{name,displayTitle,conclusion,event,headBranch,createdAt,url,failed:[.jobs[]|select(.conclusion=="failure")|{name,steps:[.steps[]|select(.conclusion=="failure")|.name]}]}' \
-                > ".devos/runlogs/$id.json" 2>/dev/null || true
-              echo "run $id: $(wc -l < ".devos/runlogs/$id.log") log lines"
-            done
-            gh run list --repo "$REPO" --status failure --limit 10 \
-              --json databaseId,workflowName,displayTitle,headBranch,createdAt,url > .devos/runlogs/recent-failures.json || true
-          fi
-      - name: Reviewer — plan the request
-        env:
-          PLANNER_TOOL: ${{ steps.pt.outputs.tool }}
-          # E85: the run gets only its tool's keys. The job names the AI tools' keys and no PAT or publishing secret.
-          CLAUDE_OAUTH_1: ${{ steps.pt.outputs.tool == 'claude' && secrets.CLAUDE_CODE_OAUTH_TOKEN || '' }}
-          CLAUDE_APIKEY_1: ${{ steps.pt.outputs.tool == 'claude' && secrets.ANTHROPIC_API_KEY || '' }}
-          CLAUDE_OAUTH_2: ${{ steps.pt.outputs.tool == 'claude' && secrets.CLAUDE_CODE_OAUTH_TOKEN_2 || '' }}
-          CLAUDE_APIKEY_2: ${{ steps.pt.outputs.tool == 'claude' && secrets.ANTHROPIC_API_KEY_2 || '' }}
-          CURSOR_KEY_1: ${{ steps.pt.outputs.tool == 'cursor' && secrets.CURSOR_API_KEY || '' }}
-          CURSOR_KEY_2: ${{ steps.pt.outputs.tool == 'cursor' && secrets.CURSOR_API_KEY_2 || '' }}
-          CODEX_KEY_1: ${{ steps.pt.outputs.tool == 'codex' && secrets.OPENAI_API_KEY || '' }}
-          CODEX_KEY_2: ${{ steps.pt.outputs.tool == 'codex' && secrets.OPENAI_API_KEY_2 || '' }}
-          GEMINI_KEY_1: ${{ steps.pt.outputs.tool == 'gemini' && secrets.GEMINI_API_KEY || '' }}
-          GEMINI_KEY_2: ${{ steps.pt.outputs.tool == 'gemini' && secrets.GEMINI_API_KEY_2 || '' }}
-          DEVOS_CLAUDE_ACCOUNT: ${{ vars.DEVOS_CLAUDE_ACCOUNT || '1' }}
-          DEVOS_CURSOR_ACCOUNT: ${{ vars.DEVOS_CURSOR_ACCOUNT || '1' }}
-          DEVOS_ACCOUNT_SWITCH: ${{ vars.DEVOS_ACCOUNT_SWITCH || 'auto' }}
-          DEVOS_ISSUE: ${{ inputs.issue || github.event.issue.number }}
-        run: |
-          # PR-99: every request, small or not, and a method request, is planned at the reviewer's own effort.
-          kind=intake; [ "$MODE" = "method" ] && kind=method
-          eff_line=$(GITHUB_OUTPUT=/dev/null node scripts/devos/agents.mjs effort --kind "$kind") || exit 1
-          EFFORT=$(printf '%s\n' "$eff_line" | sed -n 's/^effort=//p')
-          echo "$MODE at effort $EFFORT (resume: $RESUME)"
-          DEVOS_INTAKE_RESUME="$RESUME" node scripts/devos/render-prompt.mjs "$MODE" - - --out .devos/intake-prompt.md
-          DEVOS_INTAKE_RESUME=true node scripts/devos/render-prompt.mjs "$MODE" - - --out .devos/intake-resume-prompt.md
-          # PR-29, PR-53: on a usage limit the planning continues at once on the other Claude account, from the partial
-          # plan the first run left in the tree (rendered as a resume).
-          TASK="intake-$ISSUE" bash scripts/devos/plan-agent.sh intake .devos/intake-prompt.md devos/schemas/intake.schema.json \
-            .devos/intake.json "$EFFORT" 120 .devos/intake-resume-prompt.md
-      - name: Guards — intake surface and ledger structure (advisory; publish decides)
-        continue-on-error: true
-        run: |
-          node scripts/devos/guard-surfaces.mjs intake
-          node scripts/guards/run-all.mjs --only phases,secrets
-      # The plan as a bundle of intake/issue-N (one ref), the planner's decision (its claim) and its usage lines; no raw
-      # agent stream (D9).
-      - name: Pack the plan
-        id: pack
-        if: always() && steps.req.outcome == 'success'
-        run: |
-          mkdir -p "$RUNNER_TEMP/planned"
-          git add -A -- docs
-          # Always one commit, empty when the planner wrote nothing: publish decides from what the plan holds (PR-92).
-          git commit -q --allow-empty -m "Intake #$ISSUE: the planner's work"
-          excl=("^$BASE_SHA"); git rev-parse --verify --quiet "origin/$BR" >/dev/null && excl+=("^origin/$BR")
-          git bundle create "$RUNNER_TEMP/planned/plan.bundle" "refs/heads/$BR" "${excl[@]}" || echo "no plan to hand over"
-          node -e '
-            const fs = require("fs"); let r = {};
-            const read = (f) => { try { return fs.readFileSync(f, "utf8"); } catch { return ""; } };
-            try { r = JSON.parse(read(".devos/intake.json")); } catch {}
-            const s = r.structured_output || {};
-            const limited = Boolean(r.limited) || (!s.decision && /usage limit|limit reached|hit your|rate.?limit|overloaded/i.test(read(".devos/intake.raw").slice(-4000) + read(".devos/intake.err").slice(-4000)));
-            fs.writeFileSync(process.env.RUNNER_TEMP + "/planned/decision.json", JSON.stringify({ decision: s.decision || (limited ? "limit" : "error"), summary: s.summary || "", questions: s.questions || [], tasks: s.tasks || [], od: s.od || "", tool: r.tool || "claude", duration_ms: r.duration_ms ?? null, num_turns: r.num_turns ?? null, usage: r.usage || {} }));'
-          if [ "$(node -e 'console.log(require(process.env.RUNNER_TEMP + "/planned/decision.json").decision)')" = "limit" ]; then
-            # Only a reset time the limit states is handed over; with none, publish backs off (PR-31).
-            NB=$(node --input-type=module -e '
-              import { earliestNotBefore, parseResetTime, readText } from "./scripts/devos/limits.mjs";
-              const text = readText(".devos/intake.raw") + "\n" + readText(".devos/intake.err");
-              console.log(parseResetTime(text, new Date()) ? earliestNotBefore(process.env.PLANNER_TOOL || "claude", text, 60) : "");')
-            echo "not_before=$NB" >> "$GITHUB_OUTPUT"
-          fi
-          if [ -f .devos/usage/pending.jsonl ]; then cp .devos/usage/pending.jsonl "$RUNNER_TEMP/planned/usage.jsonl"; fi
-      - name: Hand the plan over
-        if: always() && steps.pack.outcome == 'success'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: devos-intake-${{ inputs.issue || github.event.issue.number }}-plan
-          path: ${{ runner.temp }}/planned/
-          retention-days: 7
-          if-no-files-found: warn
+    uses: ./.github/workflows/devos-intake-planner.yml
+    with:
+      stage: intake
+      tool: ${{ needs.intake-resolve.outputs.tool }}
+      issue: ${{ format('{0}', inputs.issue || github.event.issue.number) }}
+      resume: ${{ (github.event_name == 'workflow_dispatch' && inputs.resume) || (github.event_name == 'issue_comment' && startsWith(github.event.comment.body, '/devos intake resume')) }}
+    secrets:
+      # E86b (PR-107): by the names main's registry gives the planner's tool, each named literally (never secrets[…]).
+      KEY_1: ${{ (needs.intake-resolve.outputs.key == 'CLAUDE_CODE_OAUTH_TOKEN' && secrets.CLAUDE_CODE_OAUTH_TOKEN) || (needs.intake-resolve.outputs.key == 'CURSOR_API_KEY' && secrets.CURSOR_API_KEY) || (needs.intake-resolve.outputs.key == 'GEMINI_API_KEY' && secrets.GEMINI_API_KEY) || (needs.intake-resolve.outputs.key == 'OPENAI_API_KEY' && secrets.OPENAI_API_KEY) || '' }}
+      KEY_2: ${{ (needs.intake-resolve.outputs.key == 'CLAUDE_CODE_OAUTH_TOKEN' && secrets.CLAUDE_CODE_OAUTH_TOKEN_2) || (needs.intake-resolve.outputs.key == 'CURSOR_API_KEY' && secrets.CURSOR_API_KEY_2) || (needs.intake-resolve.outputs.key == 'GEMINI_API_KEY' && secrets.GEMINI_API_KEY_2) || (needs.intake-resolve.outputs.key == 'OPENAI_API_KEY' && secrets.OPENAI_API_KEY_2) || '' }}
+      ALT_1: ${{ (needs.intake-resolve.outputs.alt == 'ANTHROPIC_API_KEY' && secrets.ANTHROPIC_API_KEY) || '' }}
+      ALT_2: ${{ (needs.intake-resolve.outputs.alt == 'ANTHROPIC_API_KEY' && secrets.ANTHROPIC_API_KEY_2) || '' }}
 
   # The trusted half (PR-92): main's code only (trusted/), GitHub's own actions pinned by commit, no AI and no branch code.
   # It decides where the plan goes from its own reading of the event, checks the bundle against main's surfaces, and only
   # then pushes it, opens the pull request (it always waits for your merge) and posts devos/verdict.
   intake-publish:
-    needs: intake
-    if: always() && needs.intake.result != 'skipped' && needs.intake.result != 'cancelled'
+    needs: [intake-resolve, intake]
+    # E86b (PR-107): also when the planner could not be named (intake-resolve failed), so the request is told.
+    if: always() && needs.intake-resolve.result != 'skipped' && needs.intake-resolve.result != 'cancelled' && needs.intake.result != 'cancelled'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -660,113 +549,59 @@ jobs:
             gh pr comment "$PR" --repo "$REPO" --body "Dev OS: revising $task with your note. Run: $RUN_URL"
           fi
 
-  revise:
+  # E86b (PR-107): main's code names the planner's tool and its secrets, so the planner's own job
+  # (devos-intake-planner.yml) is handed only that tool's keys.
+  revise-resolve:
     needs: revise-prep
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      tool: ${{ steps.pt.outputs.tool }}
+      key: ${{ steps.pt.outputs.planner_key }}
+      alt: ${{ steps.pt.outputs.planner_alt }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: The planner's tool, and the names of its secrets
+        id: pt
+        run: |
+          tool=$(GITHUB_OUTPUT=/dev/null node scripts/devos/agents.mjs reviewer --mode deep | sed -n 's/^reviewer_tool=//p')
+          [ -n "$tool" ] || { echo "::error title=Dev OS::devos.config.json names no reviewer agent to plan with"; exit 1; }
+          echo "tool=$tool" >> "$GITHUB_OUTPUT"
+          node scripts/devos/tools.mjs secrets --tool "$tool" --as planner | tee -a "$GITHUB_OUTPUT"
+
+  # The planner (devos-intake-planner.yml) reissues the fence, with only its tool's keys (E86b, PR-107).
+  revise:
+    needs: [revise-prep, revise-resolve]
     # PR-92: not in the cycle's concurrency group (a job waiting there is cancelled by the next cycle run, silently). A
     # cycle run that moves the branch meanwhile makes publish reject the fence, and the PR is told.
     permissions:
       contents: read
-    env:
-      PR: ${{ github.event.issue.number }}
-      REPO: ${{ github.repository }}
-      TASK: ${{ needs.revise-prep.outputs.task }}
-      BR: ${{ needs.revise-prep.outputs.branch }}
-      DEVOS_REVISE_UNIT: ${{ needs.revise-prep.outputs.unit }}
-      # PR-63: a role's model from a repository variable (same tool); unset = the configured model.
-      DEVOS_REVIEWER_MODEL: ${{ vars.DEVOS_REVIEWER_MODEL }}
-      DEVOS_REVIEWER_LIGHT_MODEL: ${{ vars.DEVOS_REVIEWER_LIGHT_MODEL }}
-      DEVOS_BUILDER_MODEL: ${{ vars.DEVOS_BUILDER_MODEL }}
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          ref: ${{ needs.revise-prep.outputs.branch }}
-          fetch-depth: 0
-          persist-credentials: false
-      # PR-92: what runs in this job is main's, never the branch's (a method fix's branch holds the builder's scripts):
-      # main's method files are laid over the branch in the working tree before anything runs, never staged or committed.
-      - name: Main's method files over the branch
-        run: |
-          echo "REMOTE_HEAD=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
-          for p in .github scripts/devos scripts/guards devos devos.config.json CLAUDE.md CLAUDE.local.md .claude .cursor .mcp.json; do
-            rm -rf -- "$p"
-            if git cat-file -e "origin/main:$p" 2>/dev/null; then git archive origin/main -- "$p" | tar -x; fi
-          done
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version: 22
-      # E85 (PR-101): the planner is the project's reviewer agent, on its own tool, in a job with no write token.
-      - name: The planner's CLI, at its pin (PR-93)
-        id: pt
-        run: |
-          tool=$(node scripts/devos/agents.mjs reviewer --mode deep | sed -n 's/^reviewer_tool=//p')
-          echo "tool=$tool" >> "$GITHUB_OUTPUT"
-          bash scripts/devos/install-agent.sh "$tool"
-      - name: Work out the next attempt and save the note
-        id: n
-        env:
-          NOTE: ${{ github.event.comment.body }}
-        run: |
-          git config user.name "devos-runner"
-          git config user.email "devos-runner@users.noreply.github.com"
-          last=$( { ls docs/reviews/ 2>/dev/null | sed -n "s/^${TASK}-a\([0-9]*\)\.md$/\1/p"; git log --format=%s | sed -n "s/^${TASK} a\([0-9]*\):.*/\1/p"; echo 0; } | sort -n | tail -1)
-          echo "attempt=$(( last + 1 ))" >> "$GITHUB_OUTPUT"
-          mkdir -p .devos
-          printf '%s\n' "${NOTE#/devos revise}" > .devos/revision.md
-      - name: Reviewer — reissue the fence with the revision
-        env:
-          # E85: the run gets only its tool's keys. The job names the AI tools' keys and no PAT or publishing secret.
-          CLAUDE_OAUTH_1: ${{ steps.pt.outputs.tool == 'claude' && secrets.CLAUDE_CODE_OAUTH_TOKEN || '' }}
-          CLAUDE_APIKEY_1: ${{ steps.pt.outputs.tool == 'claude' && secrets.ANTHROPIC_API_KEY || '' }}
-          CLAUDE_OAUTH_2: ${{ steps.pt.outputs.tool == 'claude' && secrets.CLAUDE_CODE_OAUTH_TOKEN_2 || '' }}
-          CLAUDE_APIKEY_2: ${{ steps.pt.outputs.tool == 'claude' && secrets.ANTHROPIC_API_KEY_2 || '' }}
-          CURSOR_KEY_1: ${{ steps.pt.outputs.tool == 'cursor' && secrets.CURSOR_API_KEY || '' }}
-          CURSOR_KEY_2: ${{ steps.pt.outputs.tool == 'cursor' && secrets.CURSOR_API_KEY_2 || '' }}
-          CODEX_KEY_1: ${{ steps.pt.outputs.tool == 'codex' && secrets.OPENAI_API_KEY || '' }}
-          CODEX_KEY_2: ${{ steps.pt.outputs.tool == 'codex' && secrets.OPENAI_API_KEY_2 || '' }}
-          GEMINI_KEY_1: ${{ steps.pt.outputs.tool == 'gemini' && secrets.GEMINI_API_KEY || '' }}
-          GEMINI_KEY_2: ${{ steps.pt.outputs.tool == 'gemini' && secrets.GEMINI_API_KEY_2 || '' }}
-          DEVOS_CLAUDE_ACCOUNT: ${{ vars.DEVOS_CLAUDE_ACCOUNT || '1' }}
-          DEVOS_CURSOR_ACCOUNT: ${{ vars.DEVOS_CURSOR_ACCOUNT || '1' }}
-          DEVOS_ACCOUNT_SWITCH: ${{ vars.DEVOS_ACCOUNT_SWITCH || 'auto' }}
-          ATTEMPT: ${{ steps.n.outputs.attempt }}
-        run: |
-          # PR-99: a revision is planned at the reviewer's own effort.
-          eff_line=$(GITHUB_OUTPUT=/dev/null node scripts/devos/agents.mjs effort --kind revise) || exit 1
-          EFFORT=$(printf '%s\n' "$eff_line" | sed -n 's/^effort=//p')
-          node scripts/devos/render-prompt.mjs revise "$TASK" "$ATTEMPT" --out .devos/revise-prompt.md
-          # PR-53: the project's reviewer agent reissues the fence; a usage limit switches only to the other Claude account.
-          bash scripts/devos/plan-agent.sh revise .devos/revise-prompt.md devos/schemas/intake.schema.json .devos/revise.json "$EFFORT" 60
-      - name: Guard — revise surface (advisory; publish decides)
-        continue-on-error: true
-        run: node scripts/devos/guard-surfaces.mjs revise
-      - name: Pack the fence
-        id: pack
-        if: always() && steps.n.outcome == 'success'
-        run: |
-          mkdir -p "$RUNNER_TEMP/planned"
-          git add -A -- "docs/fences/$TASK.md"
-          git commit -q -m "$TASK: the planner's fence" || true
-          git bundle create "$RUNNER_TEMP/planned/plan.bundle" "refs/heads/$BR" "^$REMOTE_HEAD" || echo "no fence to hand over"
-          node -e '
-            const fs = require("fs"); let r = {};
-            try { r = JSON.parse(fs.readFileSync(".devos/revise.json", "utf8")); } catch {}
-            const s = r.structured_output || {};
-            fs.writeFileSync(process.env.RUNNER_TEMP + "/planned/decision.json", JSON.stringify({ decision: s.decision || "error", summary: s.summary || "" }));'
-          if [ -f .devos/usage/pending.jsonl ]; then cp .devos/usage/pending.jsonl "$RUNNER_TEMP/planned/usage.jsonl"; fi
-      - name: Hand the fence over
-        if: always() && steps.pack.outcome == 'success'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: devos-revise-${{ github.event.issue.number }}-${{ github.run_attempt }}-plan
-          path: ${{ runner.temp }}/planned/
-          retention-days: 7
-          if-no-files-found: warn
+    uses: ./.github/workflows/devos-intake-planner.yml
+    with:
+      stage: revise
+      tool: ${{ needs.revise-resolve.outputs.tool }}
+      task: ${{ needs.revise-prep.outputs.task }}
+      branch: ${{ needs.revise-prep.outputs.branch }}
+      unit: ${{ needs.revise-prep.outputs.unit }}
+    secrets:
+      # E86b (PR-107): by the names main's registry gives the planner's tool, each named literally (never secrets[…]).
+      KEY_1: ${{ (needs.revise-resolve.outputs.key == 'CLAUDE_CODE_OAUTH_TOKEN' && secrets.CLAUDE_CODE_OAUTH_TOKEN) || (needs.revise-resolve.outputs.key == 'CURSOR_API_KEY' && secrets.CURSOR_API_KEY) || (needs.revise-resolve.outputs.key == 'GEMINI_API_KEY' && secrets.GEMINI_API_KEY) || (needs.revise-resolve.outputs.key == 'OPENAI_API_KEY' && secrets.OPENAI_API_KEY) || '' }}
+      KEY_2: ${{ (needs.revise-resolve.outputs.key == 'CLAUDE_CODE_OAUTH_TOKEN' && secrets.CLAUDE_CODE_OAUTH_TOKEN_2) || (needs.revise-resolve.outputs.key == 'CURSOR_API_KEY' && secrets.CURSOR_API_KEY_2) || (needs.revise-resolve.outputs.key == 'GEMINI_API_KEY' && secrets.GEMINI_API_KEY_2) || (needs.revise-resolve.outputs.key == 'OPENAI_API_KEY' && secrets.OPENAI_API_KEY_2) || '' }}
+      ALT_1: ${{ (needs.revise-resolve.outputs.alt == 'ANTHROPIC_API_KEY' && secrets.ANTHROPIC_API_KEY) || '' }}
+      ALT_2: ${{ (needs.revise-resolve.outputs.alt == 'ANTHROPIC_API_KEY' && secrets.ANTHROPIC_API_KEY_2) || '' }}
 
   revise-publish:
     needs: [revise-prep, revise]
-    if: always() && needs.revise-prep.result == 'success' && needs.revise.result != 'skipped' && needs.revise.result != 'cancelled'
+    # E86b (PR-107): also when the planner could not be named (revise-resolve failed, so revise is skipped): the PR is told.
+    if: always() && needs.revise-prep.result == 'success' && needs.revise.result != 'cancelled'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     # Not in the cycle's concurrency group: a job waiting there is cancelled by the next cycle run queued, silently. A

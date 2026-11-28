@@ -1,0 +1,321 @@
+# The planners (E86b, PR-107): intake plans a request and revise reissues a fence, each the untrusted half of its
+# two jobs (PR-92). Called by devos-intake.yml only, so that GitHub hands the planner's job only the secrets passed
+# here: its tool's keys, which the caller chose by name from main's registry. Its token only reads, and it holds no PAT
+# and no publishing secret. What it makes is handed to its publish job in devos-intake.yml as an artifact; the request's
+# event is the caller's (`github.event`).
+name: devos-intake-planner
+
+on:
+  workflow_call:
+    inputs:
+      stage:
+        description: "intake or revise"
+        type: string
+        required: true
+      tool:
+        description: "The planner's tool, which main's config names (the project's reviewer agent, PR-53)"
+        type: string
+        required: true
+      issue:
+        description: "intake: the request's issue number"
+        type: string
+        default: ""
+      resume:
+        description: "intake: continue the partial plan already on intake/issue-N"
+        type: boolean
+        default: false
+      task:
+        description: "revise: the task whose fence is reissued"
+        type: string
+        default: ""
+      branch:
+        description: "revise: the task's or the unit's branch"
+        type: string
+        default: ""
+      unit:
+        description: "revise: the unit's branch, when the revision is of a unit's last task"
+        type: string
+        default: ""
+    secrets:
+      KEY_1:
+        required: false
+      KEY_2:
+        required: false
+      ALT_1:
+        required: false
+      ALT_2:
+        required: false
+    outputs:
+      base_sha:
+        value: ${{ jobs.intake.outputs.base_sha }}
+      resume:
+        value: ${{ jobs.intake.outputs.resume }}
+      not_before:
+        value: ${{ jobs.intake.outputs.not_before }}
+
+permissions:
+  contents: read
+
+jobs:
+  intake:
+    if: inputs.stage == 'intake'
+    runs-on: ubuntu-latest
+    # A planning run reads the whole document set at high effort; the method's first one took
+    # 26 minutes. 90 leaves room for bigger requests (PR-20).
+    timeout-minutes: 90
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
+      actions: read
+    outputs:
+      base_sha: ${{ steps.req.outputs.base_sha }}
+      resume: ${{ steps.req.outputs.resume }}
+      not_before: ${{ steps.pack.outputs.not_before }}
+    env:
+      ISSUE: ${{ inputs.issue }}
+      REPO: ${{ github.repository }}
+      BR: intake/issue-${{ inputs.issue }}
+      RESUME: ${{ inputs.resume }}
+      # PR-63: a role's model from a repository variable (same tool); unset = the configured model.
+      DEVOS_REVIEWER_MODEL: ${{ vars.DEVOS_REVIEWER_MODEL }}
+      DEVOS_REVIEWER_LIGHT_MODEL: ${{ vars.DEVOS_REVIEWER_LIGHT_MODEL }}
+      DEVOS_BUILDER_MODEL: ${{ vars.DEVOS_BUILDER_MODEL }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      # E85 (PR-101): the planner is the project's reviewer agent, on its own tool, in a job with no write token.
+      - name: The planner's CLI, at its pin (PR-93)
+        id: pt
+        env:
+          TOOL: ${{ inputs.tool }}
+        run: |
+          # E86b (PR-107): the tool the caller named, whose keys this job holds; main's config still names it.
+          tool=$(node scripts/devos/agents.mjs reviewer --mode deep | sed -n 's/^reviewer_tool=//p')
+          [ "$tool" = "$TOOL" ] || { echo "::error title=Dev OS::the planner is $tool now, but this job holds the keys of $TOOL; run it again"; exit 1; }
+          echo "tool=$tool" >> "$GITHUB_OUTPUT"
+          bash scripts/devos/install-agent.sh "$tool"
+      - name: The request, as it stood at the event, and the plan's branch
+        id: req
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          EV_TITLE: ${{ github.event.issue.title }}
+          EV_BODY: ${{ github.event.issue.body }}
+          EV_AUTHOR_ASSOC: ${{ github.event.issue.author_association }}
+          EV_LABELS: ${{ toJSON(github.event.issue.labels.*.name) }}
+          EV_COMMENT: ${{ github.event.comment.body }}
+          EV_COMMENT_AT: ${{ github.event.comment.created_at }}
+          EV_COMMENT_ID: ${{ github.event.comment.id }}
+        run: |
+          node scripts/devos/intake-request.mjs --out .devos
+          MODE=$(node -e 'console.log(require("./.devos/request.json").mode)')
+          BASE=$(node -e 'console.log(require("./.devos/request.json").base)')
+          git config user.name "devos-runner"
+          git config user.email "devos-runner@users.noreply.github.com"
+          base_sha=$(git rev-parse "origin/$BASE")
+          if [ "$RESUME" = "true" ] && git rev-parse --verify --quiet "origin/$BR" >/dev/null; then
+            git checkout -B "$BR" "origin/$BR"
+            git merge --no-edit "$base_sha" || { git merge --abort; echo "::error::$BR conflicts with $BASE; comment /devos intake to plan afresh"; exit 1; }
+            echo "Continuing the partial plan on $BR."
+          else
+            git checkout -B "$BR" "$base_sha"
+            RESUME=false
+          fi
+          # PR-92: what runs in this job is main's. Its method files are laid over the plan branch's in the working tree
+          # (never staged or committed).
+          for p in .github scripts/devos scripts/guards devos devos.config.json CLAUDE.md CLAUDE.local.md .claude .cursor .mcp.json; do
+            rm -rf -- "$p"
+            if git cat-file -e "origin/main:$p" 2>/dev/null; then git archive origin/main -- "$p" | tar -x; fi
+          done
+          { echo "MODE=$MODE"; echo "BASE=$BASE"; echo "BASE_SHA=$base_sha"; echo "RESUME=$RESUME"; } >> "$GITHUB_ENV"
+          { echo "base_sha=$base_sha"; echo "resume=$RESUME"; } >> "$GITHUB_OUTPUT"
+          wc -l .devos/request.md
+          if [ "$MODE" = "method" ]; then
+            # PR-28: a method fix is diagnosed from the logs of the runs it links (read with this job's read token).
+            mkdir -p .devos/runlogs
+            for id in $(grep -oE 'actions/runs/[0-9]+' .devos/request.md | sed 's#.*/##' | sort -u | head -n 5); do
+              gh run view "$id" --repo "$REPO" --log-failed 2>/dev/null | tail -n 400 > ".devos/runlogs/$id.log" || true
+              gh run view "$id" --repo "$REPO" --json name,displayTitle,conclusion,event,headBranch,createdAt,url,jobs \
+                --jq '{name,displayTitle,conclusion,event,headBranch,createdAt,url,failed:[.jobs[]|select(.conclusion=="failure")|{name,steps:[.steps[]|select(.conclusion=="failure")|.name]}]}' \
+                > ".devos/runlogs/$id.json" 2>/dev/null || true
+              echo "run $id: $(wc -l < ".devos/runlogs/$id.log") log lines"
+            done
+            gh run list --repo "$REPO" --status failure --limit 10 \
+              --json databaseId,workflowName,displayTitle,headBranch,createdAt,url > .devos/runlogs/recent-failures.json || true
+          fi
+      - name: Reviewer — plan the request
+        env:
+          PLANNER_TOOL: ${{ steps.pt.outputs.tool }}
+          # E86b (PR-107): only the planner's tool's keys, which the caller chose by name; accounts.sh makes them its
+          # account slots. The job holds no PAT and no publishing secret.
+          DEVOS_KEY_1: ${{ secrets.KEY_1 }}
+          DEVOS_KEY_2: ${{ secrets.KEY_2 }}
+          DEVOS_ALT_1: ${{ secrets.ALT_1 }}
+          DEVOS_ALT_2: ${{ secrets.ALT_2 }}
+          DEVOS_CLAUDE_ACCOUNT: ${{ vars.DEVOS_CLAUDE_ACCOUNT || '1' }}
+          DEVOS_CURSOR_ACCOUNT: ${{ vars.DEVOS_CURSOR_ACCOUNT || '1' }}
+          DEVOS_ACCOUNT_SWITCH: ${{ vars.DEVOS_ACCOUNT_SWITCH || 'auto' }}
+          DEVOS_ISSUE: ${{ inputs.issue }}
+        run: |
+          # PR-99: every request, small or not, and a method request, is planned at the reviewer's own effort.
+          kind=intake; [ "$MODE" = "method" ] && kind=method
+          eff_line=$(GITHUB_OUTPUT=/dev/null node scripts/devos/agents.mjs effort --kind "$kind") || exit 1
+          EFFORT=$(printf '%s\n' "$eff_line" | sed -n 's/^effort=//p')
+          echo "$MODE at effort $EFFORT (resume: $RESUME)"
+          DEVOS_INTAKE_RESUME="$RESUME" node scripts/devos/render-prompt.mjs "$MODE" - - --out .devos/intake-prompt.md
+          DEVOS_INTAKE_RESUME=true node scripts/devos/render-prompt.mjs "$MODE" - - --out .devos/intake-resume-prompt.md
+          # PR-29, PR-53: on a usage limit the planning continues at once on the other Claude account, from the partial
+          # plan the first run left in the tree (rendered as a resume).
+          TASK="intake-$ISSUE" bash scripts/devos/plan-agent.sh intake .devos/intake-prompt.md devos/schemas/intake.schema.json \
+            .devos/intake.json "$EFFORT" 120 .devos/intake-resume-prompt.md
+      - name: Guards — intake surface and ledger structure (advisory; publish decides)
+        continue-on-error: true
+        run: |
+          node scripts/devos/guard-surfaces.mjs intake
+          node scripts/guards/run-all.mjs --only phases,secrets
+      # The plan as a bundle of intake/issue-N (one ref), the planner's decision (its claim) and its usage lines; no raw
+      # agent stream (D9).
+      - name: Pack the plan
+        id: pack
+        if: always() && steps.req.outcome == 'success'
+        run: |
+          mkdir -p "$RUNNER_TEMP/planned"
+          git add -A -- docs
+          # Always one commit, empty when the planner wrote nothing: publish decides from what the plan holds (PR-92).
+          git commit -q --allow-empty -m "Intake #$ISSUE: the planner's work"
+          excl=("^$BASE_SHA"); git rev-parse --verify --quiet "origin/$BR" >/dev/null && excl+=("^origin/$BR")
+          git bundle create "$RUNNER_TEMP/planned/plan.bundle" "refs/heads/$BR" "${excl[@]}" || echo "no plan to hand over"
+          node -e '
+            const fs = require("fs"); let r = {};
+            const read = (f) => { try { return fs.readFileSync(f, "utf8"); } catch { return ""; } };
+            try { r = JSON.parse(read(".devos/intake.json")); } catch {}
+            const s = r.structured_output || {};
+            const limited = Boolean(r.limited) || (!s.decision && /usage limit|limit reached|hit your|rate.?limit|overloaded/i.test(read(".devos/intake.raw").slice(-4000) + read(".devos/intake.err").slice(-4000)));
+            fs.writeFileSync(process.env.RUNNER_TEMP + "/planned/decision.json", JSON.stringify({ decision: s.decision || (limited ? "limit" : "error"), summary: s.summary || "", questions: s.questions || [], tasks: s.tasks || [], od: s.od || "", tool: r.tool || "claude", duration_ms: r.duration_ms ?? null, num_turns: r.num_turns ?? null, usage: r.usage || {} }));'
+          if [ "$(node -e 'console.log(require(process.env.RUNNER_TEMP + "/planned/decision.json").decision)')" = "limit" ]; then
+            # Only a reset time the limit states is handed over; with none, publish backs off (PR-31).
+            NB=$(node --input-type=module -e '
+              import { earliestNotBefore, parseResetTime, readText } from "./scripts/devos/limits.mjs";
+              const text = readText(".devos/intake.raw") + "\n" + readText(".devos/intake.err");
+              console.log(parseResetTime(text, new Date()) ? earliestNotBefore(process.env.PLANNER_TOOL || "claude", text, 60) : "");')
+            echo "not_before=$NB" >> "$GITHUB_OUTPUT"
+          fi
+          if [ -f .devos/usage/pending.jsonl ]; then cp .devos/usage/pending.jsonl "$RUNNER_TEMP/planned/usage.jsonl"; fi
+      - name: Hand the plan over
+        if: always() && steps.pack.outcome == 'success'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: devos-intake-${{ inputs.issue }}-plan
+          path: ${{ runner.temp }}/planned/
+          retention-days: 7
+          if-no-files-found: warn
+
+  revise:
+    if: inputs.stage == 'revise'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    # PR-92: not in the cycle's concurrency group (a job waiting there is cancelled by the next cycle run, silently). A
+    # cycle run that moves the branch meanwhile makes publish reject the fence, and the PR is told.
+    permissions:
+      contents: read
+    env:
+      PR: ${{ github.event.issue.number }}
+      REPO: ${{ github.repository }}
+      TASK: ${{ inputs.task }}
+      BR: ${{ inputs.branch }}
+      DEVOS_REVISE_UNIT: ${{ inputs.unit }}
+      # PR-63: a role's model from a repository variable (same tool); unset = the configured model.
+      DEVOS_REVIEWER_MODEL: ${{ vars.DEVOS_REVIEWER_MODEL }}
+      DEVOS_REVIEWER_LIGHT_MODEL: ${{ vars.DEVOS_REVIEWER_LIGHT_MODEL }}
+      DEVOS_BUILDER_MODEL: ${{ vars.DEVOS_BUILDER_MODEL }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ inputs.branch }}
+          fetch-depth: 0
+          persist-credentials: false
+      # PR-92: what runs in this job is main's, never the branch's (a method fix's branch holds the builder's scripts):
+      # main's method files are laid over the branch in the working tree before anything runs, never staged or committed.
+      - name: Main's method files over the branch
+        run: |
+          echo "REMOTE_HEAD=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          for p in .github scripts/devos scripts/guards devos devos.config.json CLAUDE.md CLAUDE.local.md .claude .cursor .mcp.json; do
+            rm -rf -- "$p"
+            if git cat-file -e "origin/main:$p" 2>/dev/null; then git archive origin/main -- "$p" | tar -x; fi
+          done
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      # E85 (PR-101): the planner is the project's reviewer agent, on its own tool, in a job with no write token.
+      - name: The planner's CLI, at its pin (PR-93)
+        id: pt
+        env:
+          TOOL: ${{ inputs.tool }}
+        run: |
+          # E86b (PR-107): the tool the caller named, whose keys this job holds; main's config still names it.
+          tool=$(node scripts/devos/agents.mjs reviewer --mode deep | sed -n 's/^reviewer_tool=//p')
+          [ "$tool" = "$TOOL" ] || { echo "::error title=Dev OS::the planner is $tool now, but this job holds the keys of $TOOL; run it again"; exit 1; }
+          echo "tool=$tool" >> "$GITHUB_OUTPUT"
+          bash scripts/devos/install-agent.sh "$tool"
+      - name: Work out the next attempt and save the note
+        id: n
+        env:
+          NOTE: ${{ github.event.comment.body }}
+        run: |
+          git config user.name "devos-runner"
+          git config user.email "devos-runner@users.noreply.github.com"
+          last=$( { ls docs/reviews/ 2>/dev/null | sed -n "s/^${TASK}-a\([0-9]*\)\.md$/\1/p"; git log --format=%s | sed -n "s/^${TASK} a\([0-9]*\):.*/\1/p"; echo 0; } | sort -n | tail -1)
+          echo "attempt=$(( last + 1 ))" >> "$GITHUB_OUTPUT"
+          mkdir -p .devos
+          printf '%s\n' "${NOTE#/devos revise}" > .devos/revision.md
+      - name: Reviewer — reissue the fence with the revision
+        env:
+          # E86b (PR-107): only the planner's tool's keys, which the caller chose by name; accounts.sh makes them its
+          # account slots. The job holds no PAT and no publishing secret.
+          DEVOS_KEY_1: ${{ secrets.KEY_1 }}
+          DEVOS_KEY_2: ${{ secrets.KEY_2 }}
+          DEVOS_ALT_1: ${{ secrets.ALT_1 }}
+          DEVOS_ALT_2: ${{ secrets.ALT_2 }}
+          DEVOS_CLAUDE_ACCOUNT: ${{ vars.DEVOS_CLAUDE_ACCOUNT || '1' }}
+          DEVOS_CURSOR_ACCOUNT: ${{ vars.DEVOS_CURSOR_ACCOUNT || '1' }}
+          DEVOS_ACCOUNT_SWITCH: ${{ vars.DEVOS_ACCOUNT_SWITCH || 'auto' }}
+          ATTEMPT: ${{ steps.n.outputs.attempt }}
+        run: |
+          # PR-99: a revision is planned at the reviewer's own effort.
+          eff_line=$(GITHUB_OUTPUT=/dev/null node scripts/devos/agents.mjs effort --kind revise) || exit 1
+          EFFORT=$(printf '%s\n' "$eff_line" | sed -n 's/^effort=//p')
+          node scripts/devos/render-prompt.mjs revise "$TASK" "$ATTEMPT" --out .devos/revise-prompt.md
+          # PR-53: the project's reviewer agent reissues the fence; a usage limit switches only to the other Claude account.
+          bash scripts/devos/plan-agent.sh revise .devos/revise-prompt.md devos/schemas/intake.schema.json .devos/revise.json "$EFFORT" 60
+      - name: Guard — revise surface (advisory; publish decides)
+        continue-on-error: true
+        run: node scripts/devos/guard-surfaces.mjs revise
+      - name: Pack the fence
+        id: pack
+        if: always() && steps.n.outcome == 'success'
+        run: |
+          mkdir -p "$RUNNER_TEMP/planned"
+          git add -A -- "docs/fences/$TASK.md"
+          git commit -q -m "$TASK: the planner's fence" || true
+          git bundle create "$RUNNER_TEMP/planned/plan.bundle" "refs/heads/$BR" "^$REMOTE_HEAD" || echo "no fence to hand over"
+          node -e '
+            const fs = require("fs"); let r = {};
+            try { r = JSON.parse(fs.readFileSync(".devos/revise.json", "utf8")); } catch {}
+            const s = r.structured_output || {};
+            fs.writeFileSync(process.env.RUNNER_TEMP + "/planned/decision.json", JSON.stringify({ decision: s.decision || "error", summary: s.summary || "" }));'
+          if [ -f .devos/usage/pending.jsonl ]; then cp .devos/usage/pending.jsonl "$RUNNER_TEMP/planned/usage.jsonl"; fi
+      - name: Hand the fence over
+        if: always() && steps.pack.outcome == 'success'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: devos-revise-${{ github.event.issue.number }}-${{ github.run_attempt }}-plan
+          path: ${{ runner.temp }}/planned/
+          retention-days: 7
+          if-no-files-found: warn

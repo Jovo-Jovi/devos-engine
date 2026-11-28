@@ -1,0 +1,23 @@
+{
+  ".github/actionlint.yaml": "eac1cb4d65c1616c6b22a8a0e772aed896f3a47a9885d6a693383fc1a12c1775",
+  "CHANGELOG.md": "2e83c7227fb92063f548b8abd2f4032e6a26ec435e5af7fd27d6cf57543ecb04",
+  "payload/files/docs/method/AUTOMATION.md": "f9872cd81e1e342f633a24bec6038032cdb8fc866063d21cde1e9af9c007e2ac",
+  "payload/files/docs/method/PRECEDENTS.md": "b2224440f5143f9930fc31c701fc831d87a41814ea9bc153e1d9bf6d8a4e1c17",
+  "payload/files/dot-github/workflows/devos-cycle.yml": "f3f4b2aea718d3342630e1ab6d7cc4a6717c23671bc6dce7f80dea758ebf0607",
+  "payload/files/dot-github/workflows/devos-intake.yml": "8b3329f66021352961833ff7c4c431a5a3cf04e6055fc32db9de1de71ef0c3d4",
+  "payload/files/dot-github/workflows/devos-review.yml": "3f93d3313f4db814975e4c7828f194857a87cf2ee2f6066f02554e9aab36b8e8",
+  "payload/files/dot-github/workflows/devos-work.yml": "7fbe2bcd27d4e16c4ee80eea9c4db1e7f7d5d6476c55591c30988273f1686edc",
+  "payload/files/scripts/devos/accounts.sh": "dee86e570c5fb6e42e41976a1df16d45ae349c6497a6317a57d19577cba15eb7",
+  "payload/files/scripts/devos/agent-watchdog.sh": "2fd3bd01f4583209d2d5750136d881e69b9a2c62571ad84956ff129e097cc102",
+  "payload/files/scripts/devos/tools.mjs": "e61e1e32601912974571cc917c808f00c3676ed34fab13b698d9d5262424d158",
+  "payload/manifest.json": "ebe957fa64bfa4c4a8f5a080919a8490ef7b5bba997ffe47ab045c949f2f80d1",
+  "test/adopt-files.test.mjs": "8af9fbf4f0259c9fdd02be442ac384b177b89e0a9ed6b7091a5f653d4488d3f5",
+  "test/agent-calls.mjs": "7240ec187b588942812218eef9287fd901c15dcf48ef72e860d0b79b5fe59aca",
+  "test/followups.test.mjs": "2a399f696bf0163853c1fbf3d61e55e9a82fa8927aaa631cac7367452e81571f",
+  "test/hygiene.test.mjs": "2150e5c39712ceeabfcb18b08a95a8a8484ac393a0a5c6b9b8c3483cc5ed274e",
+  "test/intake-two-jobs.test.mjs": "97a9a64066059ac6e6d0802feb2efe9e424f5c44117cd6bb0a4732e3c2940c7b",
+  "test/progress.test.mjs": "4a872e299cd80c8fc2ae74a2dc298642ee21d27f1c7a6d1375aa80b579edceac",
+  "test/two-jobs.test.mjs": "7abd17ce6470eb35795bf163a2ea029dd5d97ad0d77f16657f5288e48ac4ed92",
+  "test/usage.test.mjs": "5cc10673e0c5e01e4f0d234a6b8b452008d9021f898ec85d3742ba8ea0a4cad8",
+  "tools/sources.mjs": "495ca745b8756617c2248d848032e4ed41513ce52d136f359bffac084933d0cf"
+}

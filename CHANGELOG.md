@@ -40,6 +40,11 @@ the release.
 - A builder run without its key now names the tool and both accounts' secrets for every tool, as Cursor's did.
 - A review or planning run can no longer hang on its progress line. A stop that reached the line's watcher while it
   was starting could be lost, and the run then waited until the job's time limit.
+- **Each AI job gets only its tool's keys, chosen by name (PR-107).** The planners (intake and revise) now run in their
+  own workflow, `devos-intake-planner.yml`, which is handed only the planner tool's keys: before, their job named
+  every tool's secrets. Every caller picks the secrets by the names in the tool's registry file, and the jobs inside
+  take them as four generic keys, so no workflow step names a tool. Your secrets keep their names.
+- A light review can no longer be handed the deep reviewer's key when its own is missing.
 
 ## 1.13.18 — 2026-11-26
 

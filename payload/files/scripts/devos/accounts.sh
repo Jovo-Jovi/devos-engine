@@ -18,12 +18,22 @@
 
 # E86 (PR-106): devos_tool <tool> → the tool's names from its registry file, as devos_t_* variables (id, name, label,
 # command, stdin, answer, effort, env, cli, alt_env, alt_cli, unset, account). Names only: no value is read or printed.
+# E86b (PR-107): a job's keys come in generic, DEVOS_KEY_1, DEVOS_KEY_2, DEVOS_ALT_1 and DEVOS_ALT_2, which the calling
+# job chose by the secrets' names. They become this tool's account slots (<env>_1, <env>_2, <alt_env>_1, <alt_env>_2)
+# and are cleared, so nothing started from here sees them.
 devos_tool() {
   [ -n "${1:-}" ] || { echo "accounts: no tool named" >&2; return 1; }
   [ "${devos_t_id:-}" = "$1" ] && return 0
-  local names
+  local names n v
   names=$(node "${DEVOS_SCRIPTS:-scripts/devos}/tools.mjs" shell --tool "$1") || return 1
   eval "$names"
+  for n in 1 2; do
+    eval "v=\"\${DEVOS_KEY_$n:-}\""
+    if [ -n "$v" ]; then export "${devos_t_env}_$n=$v"; fi
+    eval "v=\"\${DEVOS_ALT_$n:-}\""
+    if [ -n "$v" ] && [ -n "$devos_t_alt_env" ]; then export "${devos_t_alt_env}_$n=$v"; fi
+  done
+  unset DEVOS_KEY_1 DEVOS_KEY_2 DEVOS_ALT_1 DEVOS_ALT_2
 }
 
 # devos_accounts <tool> → the account numbers to try, in order, that have a credential.

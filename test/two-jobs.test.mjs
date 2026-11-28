@@ -65,15 +65,14 @@ test("two-jobs.test.mjs S1 work reads, holds no write token, no PAT, no producti
   for (const bad of ["DEVOS_PAT", "GH_TOKEN", "github.token", "VERCEL_", "SUPABASE_ACCESS", "SUPABASE_DB_PASSWORD", "FIREBASE_", "R2_", "DEVOS_BACKUP_PASSPHRASE", "toJSON(secrets)", "secrets["]) {
     assert.equal(work.includes(bad), false, `devos-work.yml names ${bad}`);
   }
-  // The caller passes the builder tool's keys, each under its own tool's condition, and the media key only when main's
-  // fence names media.
-  const passed = caller.slice(caller.indexOf("    secrets:\n")).split("\n").slice(1).filter(Boolean);
+  // The caller passes the builder tool's keys, each only when resolve named that secret for the builder (E86b, PR-107:
+  // by name, from main's registry), and the media key only when main's fence names media.
+  const passed = caller.slice(caller.indexOf("    secrets:\n")).split("\n").slice(1).filter((l) => l.trim() && !l.trim().startsWith("#"));
   assert.deepEqual(passed.map((l) => l.trim().split(":")[0]), ["KEY_1", "KEY_2", "ALT_1", "ALT_2", "MEDIA_KEY"]);
-  for (const line of passed.slice(0, 4)) {
+  for (const [i, line] of passed.slice(0, 4).entries()) {
     for (const ref of line.match(/secrets\.[A-Z0-9_]+/g)) {
-      const tool = { CURSOR: "cursor", CLAUDE: "claude", ANTHROPIC: "claude", OPENAI: "codex", GEMINI: "gemini" }[ref.slice(8).split("_")[0]];
-      assert.ok(tool, ref);
-      assert.ok(line.includes(`builder_tool == '${tool}' && ${ref}`), `${ref} passed only when the builder is ${tool}`);
+      const name = ref.slice(8).replace(/_2$/, "");
+      assert.ok(line.includes(`(needs.resolve.outputs.builder_${i < 2 ? "key" : "alt"} == '${name}' && ${ref})`), `${ref} passed only when the builder's secret is ${name}`);
     }
   }
   assert.equal(passed[4].trim(), "MEDIA_KEY: ${{ needs.resolve.outputs.media == 'true' && secrets.DEVOS_MEDIA_XAI_KEY || '' }}");
@@ -224,7 +223,8 @@ test("two-jobs.test.mjs S6c no AI call runs in a job that holds a write token, t
     }
   }
   // The AI jobs: the builder, the review, the two planners, and the two deferred second opinions.
-  assert.deepEqual(checked.sort(), ["devos-doctor.yml:doctor", "devos-intake.yml:intake", "devos-intake.yml:revise", "devos-review.yml:review", "devos-supervisor.yml:supervise", "devos-work.yml:work"]);
+  // E86b (PR-107): the planners run in devos-intake-planner.yml.
+  assert.deepEqual(checked.sort(), ["devos-doctor.yml:doctor", "devos-intake-planner.yml:intake", "devos-intake-planner.yml:revise", "devos-review.yml:review", "devos-supervisor.yml:supervise", "devos-work.yml:work"]);
 });
 
 test("two-jobs.test.mjs S6d the review job hands publish its review file and fences, and the two jobs agree on the verified tree, never on a commit (E85b)", { skip: windows && "the steps are bash" }, () => {

@@ -106,10 +106,12 @@ test("followups.test.mjs (d) the shipped method names no client and cites no oth
   assert.equal(handbook.includes("It supersedes Dev OS v1: v1's mechanics\nstand,"), true);
   // "The reference project" is the handbook's case study only.
   assert.equal(read(`${PAYLOAD}/docs/method/PRECEDENTS.md`).includes("added to the method's own test project to try more backend services (2026-10-13)"), true);
-  assert.equal(read(`${PAYLOAD}/dot-github/workflows/devos-intake.yml`).includes("the method's first one took\n    # 26 minutes."), true);
+  // E86b (PR-107): with the planner's job, in devos-intake-planner.yml.
+  assert.equal(read(`${PAYLOAD}/dot-github/workflows/devos-intake-planner.yml`).includes("the method's first one took\n    # 26 minutes."), true);
   const pr26 = read(`${PAYLOAD}/docs/method/PRECEDENTS.md`).split("\n").find((line) => line.startsWith("| PR-26 |"));
   assert.equal(pr26.includes("reference project"), false);
   assert.equal(read(`${PAYLOAD}/dot-github/workflows/devos-intake.yml`).includes("reference project"), false);
+  assert.equal(read(`${PAYLOAD}/dot-github/workflows/devos-intake-planner.yml`).includes("reference project"), false);
   const fullstack = read(`${PAYLOAD}/docs/method/FULLSTACK_MODULE.md`);
   assert.equal(fullstack.includes("it is what a new project adopts when it stores data (the fit research of the\nblueprint, `devos/prompts/blueprint.md`)."), true);
   assert.equal(fullstack.includes("step 5"), false);

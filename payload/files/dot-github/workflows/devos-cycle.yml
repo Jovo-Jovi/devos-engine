@@ -105,6 +105,13 @@ jobs:
       # E85 (PR-101): the reviewer tools, so the review job is handed only their keys.
       review_tool: ${{ steps.ag.outputs.review_tool }}
       light_tool: ${{ steps.ag.outputs.light_tool }}
+      # E86b (PR-107): the names of the secrets each role's tool reads (its registry file's keys), for the callers.
+      builder_key: ${{ steps.ag.outputs.builder_key }}
+      builder_alt: ${{ steps.ag.outputs.builder_alt }}
+      review_key: ${{ steps.ag.outputs.review_key }}
+      review_alt: ${{ steps.ag.outputs.review_alt }}
+      light_key: ${{ steps.ag.outputs.light_key }}
+      light_alt: ${{ steps.ag.outputs.light_alt }}
       media: ${{ steps.media.outputs.media }}
       # PR-91: where the task is built (base, base_sha, a new unit), or what the run does instead (accept, waiting).
       build: ${{ steps.place.outputs.build }}
@@ -265,11 +272,17 @@ jobs:
           # PR-76: a task whose PR has the devos:fallback-builder label is built by agents.fallback_builder.
           labels=$(gh pr list --repo "$REPO" --head "$BR" --state open --json labels --jq '[.[0].labels[]?.name] | join(",")' 2>/dev/null || true)
           case ",$labels," in *",devos:fallback-builder,"*) export DEVOS_FALLBACK_BUILDER=true ;; esac
-          node scripts/devos/agents.mjs pick --task "$TASK"
+          picked=$(node scripts/devos/agents.mjs pick --task "$TASK") || exit 1
+          printf '%s\n' "$picked"
+          builder=$(printf '%s\n' "$picked" | sed -n 's/^builder_tool=//p' | tail -1)
           deep=$(GITHUB_OUTPUT=/dev/null node scripts/devos/agents.mjs reviewer --mode deep | sed -n 's/^reviewer_tool=//p')
           light=$(GITHUB_OUTPUT=/dev/null node scripts/devos/agents.mjs reviewer --mode light | sed -n 's/^reviewer_tool=//p')
           [ "$light" = "$deep" ] && light=""
           { echo "review_tool=$deep"; echo "light_tool=$light"; } >> "$GITHUB_OUTPUT"
+          # E86b (PR-107): the names of each role's secrets, from main's registry; the callers below pass only those.
+          { node scripts/devos/tools.mjs secrets --tool "$builder" --as builder
+            node scripts/devos/tools.mjs secrets --tool "$deep" --as review
+            node scripts/devos/tools.mjs secrets --tool "$light" --as light; } | tee -a "$GITHUB_OUTPUT"
       # PR-90: the media key goes to the work job only when the fence names media (PR-81): main's, or the open unit's,
       # which only the reviewer writes (PR-91). The task branch cannot ask for it.
       - name: Does the fence name media
@@ -309,10 +322,11 @@ jobs:
       builder_fallbacks: ${{ needs.resolve.outputs.builder_fallbacks }}
       builder_note: ${{ needs.resolve.outputs.builder_note }}
     secrets:
-      KEY_1: ${{ (needs.resolve.outputs.builder_tool == 'cursor' && secrets.CURSOR_API_KEY) || (needs.resolve.outputs.builder_tool == 'claude' && secrets.CLAUDE_CODE_OAUTH_TOKEN) || (needs.resolve.outputs.builder_tool == 'codex' && secrets.OPENAI_API_KEY) || (needs.resolve.outputs.builder_tool == 'gemini' && secrets.GEMINI_API_KEY) || '' }}
-      KEY_2: ${{ (needs.resolve.outputs.builder_tool == 'cursor' && secrets.CURSOR_API_KEY_2) || (needs.resolve.outputs.builder_tool == 'claude' && secrets.CLAUDE_CODE_OAUTH_TOKEN_2) || (needs.resolve.outputs.builder_tool == 'codex' && secrets.OPENAI_API_KEY_2) || (needs.resolve.outputs.builder_tool == 'gemini' && secrets.GEMINI_API_KEY_2) || '' }}
-      ALT_1: ${{ needs.resolve.outputs.builder_tool == 'claude' && secrets.ANTHROPIC_API_KEY || '' }}
-      ALT_2: ${{ needs.resolve.outputs.builder_tool == 'claude' && secrets.ANTHROPIC_API_KEY_2 || '' }}
+      # E86b (PR-107): chosen by the names resolve read from main's registry, each named literally (never secrets[…]).
+      KEY_1: ${{ (needs.resolve.outputs.builder_key == 'CLAUDE_CODE_OAUTH_TOKEN' && secrets.CLAUDE_CODE_OAUTH_TOKEN) || (needs.resolve.outputs.builder_key == 'CURSOR_API_KEY' && secrets.CURSOR_API_KEY) || (needs.resolve.outputs.builder_key == 'GEMINI_API_KEY' && secrets.GEMINI_API_KEY) || (needs.resolve.outputs.builder_key == 'OPENAI_API_KEY' && secrets.OPENAI_API_KEY) || '' }}
+      KEY_2: ${{ (needs.resolve.outputs.builder_key == 'CLAUDE_CODE_OAUTH_TOKEN' && secrets.CLAUDE_CODE_OAUTH_TOKEN_2) || (needs.resolve.outputs.builder_key == 'CURSOR_API_KEY' && secrets.CURSOR_API_KEY_2) || (needs.resolve.outputs.builder_key == 'GEMINI_API_KEY' && secrets.GEMINI_API_KEY_2) || (needs.resolve.outputs.builder_key == 'OPENAI_API_KEY' && secrets.OPENAI_API_KEY_2) || '' }}
+      ALT_1: ${{ (needs.resolve.outputs.builder_alt == 'ANTHROPIC_API_KEY' && secrets.ANTHROPIC_API_KEY) || '' }}
+      ALT_2: ${{ (needs.resolve.outputs.builder_alt == 'ANTHROPIC_API_KEY' && secrets.ANTHROPIC_API_KEY_2) || '' }}
       MEDIA_KEY: ${{ needs.resolve.outputs.media == 'true' && secrets.DEVOS_MEDIA_XAI_KEY || '' }}
 
   # E85 (PR-101): the review, at the builder's trust level, in its own workflow so that GitHub hands it only the reviewer
@@ -347,14 +361,15 @@ jobs:
       review_tool: ${{ needs.resolve.outputs.review_tool }}
       light_tool: ${{ needs.resolve.outputs.light_tool }}
     secrets:
-      KEY_1: ${{ (needs.resolve.outputs.review_tool == 'cursor' && secrets.CURSOR_API_KEY) || (needs.resolve.outputs.review_tool == 'claude' && secrets.CLAUDE_CODE_OAUTH_TOKEN) || (needs.resolve.outputs.review_tool == 'codex' && secrets.OPENAI_API_KEY) || (needs.resolve.outputs.review_tool == 'gemini' && secrets.GEMINI_API_KEY) || '' }}
-      KEY_2: ${{ (needs.resolve.outputs.review_tool == 'cursor' && secrets.CURSOR_API_KEY_2) || (needs.resolve.outputs.review_tool == 'claude' && secrets.CLAUDE_CODE_OAUTH_TOKEN_2) || (needs.resolve.outputs.review_tool == 'codex' && secrets.OPENAI_API_KEY_2) || (needs.resolve.outputs.review_tool == 'gemini' && secrets.GEMINI_API_KEY_2) || '' }}
-      ALT_1: ${{ needs.resolve.outputs.review_tool == 'claude' && secrets.ANTHROPIC_API_KEY || '' }}
-      ALT_2: ${{ needs.resolve.outputs.review_tool == 'claude' && secrets.ANTHROPIC_API_KEY_2 || '' }}
-      LKEY_1: ${{ (needs.resolve.outputs.light_tool == 'cursor' && secrets.CURSOR_API_KEY) || (needs.resolve.outputs.light_tool == 'claude' && secrets.CLAUDE_CODE_OAUTH_TOKEN) || (needs.resolve.outputs.light_tool == 'codex' && secrets.OPENAI_API_KEY) || (needs.resolve.outputs.light_tool == 'gemini' && secrets.GEMINI_API_KEY) || '' }}
-      LKEY_2: ${{ (needs.resolve.outputs.light_tool == 'cursor' && secrets.CURSOR_API_KEY_2) || (needs.resolve.outputs.light_tool == 'claude' && secrets.CLAUDE_CODE_OAUTH_TOKEN_2) || (needs.resolve.outputs.light_tool == 'codex' && secrets.OPENAI_API_KEY_2) || (needs.resolve.outputs.light_tool == 'gemini' && secrets.GEMINI_API_KEY_2) || '' }}
-      LALT_1: ${{ needs.resolve.outputs.light_tool == 'claude' && secrets.ANTHROPIC_API_KEY || '' }}
-      LALT_2: ${{ needs.resolve.outputs.light_tool == 'claude' && secrets.ANTHROPIC_API_KEY_2 || '' }}
+      # E86b (PR-107): chosen by the names resolve read from main's registry, each named literally (never secrets[…]).
+      KEY_1: ${{ (needs.resolve.outputs.review_key == 'CLAUDE_CODE_OAUTH_TOKEN' && secrets.CLAUDE_CODE_OAUTH_TOKEN) || (needs.resolve.outputs.review_key == 'CURSOR_API_KEY' && secrets.CURSOR_API_KEY) || (needs.resolve.outputs.review_key == 'GEMINI_API_KEY' && secrets.GEMINI_API_KEY) || (needs.resolve.outputs.review_key == 'OPENAI_API_KEY' && secrets.OPENAI_API_KEY) || '' }}
+      KEY_2: ${{ (needs.resolve.outputs.review_key == 'CLAUDE_CODE_OAUTH_TOKEN' && secrets.CLAUDE_CODE_OAUTH_TOKEN_2) || (needs.resolve.outputs.review_key == 'CURSOR_API_KEY' && secrets.CURSOR_API_KEY_2) || (needs.resolve.outputs.review_key == 'GEMINI_API_KEY' && secrets.GEMINI_API_KEY_2) || (needs.resolve.outputs.review_key == 'OPENAI_API_KEY' && secrets.OPENAI_API_KEY_2) || '' }}
+      ALT_1: ${{ (needs.resolve.outputs.review_alt == 'ANTHROPIC_API_KEY' && secrets.ANTHROPIC_API_KEY) || '' }}
+      ALT_2: ${{ (needs.resolve.outputs.review_alt == 'ANTHROPIC_API_KEY' && secrets.ANTHROPIC_API_KEY_2) || '' }}
+      LKEY_1: ${{ (needs.resolve.outputs.light_key == 'CLAUDE_CODE_OAUTH_TOKEN' && secrets.CLAUDE_CODE_OAUTH_TOKEN) || (needs.resolve.outputs.light_key == 'CURSOR_API_KEY' && secrets.CURSOR_API_KEY) || (needs.resolve.outputs.light_key == 'GEMINI_API_KEY' && secrets.GEMINI_API_KEY) || (needs.resolve.outputs.light_key == 'OPENAI_API_KEY' && secrets.OPENAI_API_KEY) || '' }}
+      LKEY_2: ${{ (needs.resolve.outputs.light_key == 'CLAUDE_CODE_OAUTH_TOKEN' && secrets.CLAUDE_CODE_OAUTH_TOKEN_2) || (needs.resolve.outputs.light_key == 'CURSOR_API_KEY' && secrets.CURSOR_API_KEY_2) || (needs.resolve.outputs.light_key == 'GEMINI_API_KEY' && secrets.GEMINI_API_KEY_2) || (needs.resolve.outputs.light_key == 'OPENAI_API_KEY' && secrets.OPENAI_API_KEY_2) || '' }}
+      LALT_1: ${{ (needs.resolve.outputs.light_alt == 'ANTHROPIC_API_KEY' && secrets.ANTHROPIC_API_KEY) || '' }}
+      LALT_2: ${{ (needs.resolve.outputs.light_alt == 'ANTHROPIC_API_KEY' && secrets.ANTHROPIC_API_KEY_2) || '' }}
 
   # The trusted job (PR-90). It checks out only main, runs only main's scripts (trusted/), uses only GitHub's own actions
   # pinned by commit, and never runs the branch's code, a project script, a dependency, a hook or another action. Every

@@ -399,6 +399,7 @@ export const LOCAL = {
     "devos/agents/codex.json": "E86",
     "devos/agents/gemini.json": "E86",
     "devos/schemas/agent.schema.json": "E86",
+    ".github/workflows/devos-intake-planner.yml": "E86b",
   },
   removed: {
     ".cursor/rules/10-security-data.mdc": "E03",

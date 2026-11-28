@@ -260,7 +260,8 @@ test("usage.test.mjs (g) every agent call in the workflows is recorded", () => {
   // E86 (PR-106): run-agent.sh runs only the builder, which the watchdog records; every review is plan-agent.sh's.
   assert.equal(count(read("scripts/devos/run-agent.sh"), "usage.mjs record"), 0);
   // PR-53: intake and revise run through plan-agent.sh, which records every planning run under its stage.
-  const intake = read("dot-github/workflows/devos-intake.yml");
+  // E86b (PR-107): the planners run in devos-intake-planner.yml.
+  const intake = read("dot-github/workflows/devos-intake-planner.yml");
   assert.equal(count(intake, "claude -p"), 0);
   for (const stage of ["intake", "revise"]) assert.equal(count(intake, `bash scripts/devos/plan-agent.sh ${stage} `), 1, stage);
   assert.equal(count(read("scripts/devos/plan-agent.sh"), 'usage.mjs record --stage "$stage"'), 1);

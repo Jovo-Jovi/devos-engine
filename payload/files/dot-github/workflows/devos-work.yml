@@ -183,8 +183,11 @@ jobs:
         id: bm
         if: env.REVIEW_ONLY != 'true'
         env:
-          CURSOR_KEY_1: ${{ inputs.builder_tool == 'cursor' && secrets.KEY_1 || '' }}
-          CURSOR_KEY_2: ${{ inputs.builder_tool == 'cursor' && secrets.KEY_2 || '' }}
+          # E86b (PR-107): the keys as the caller chose them by name; accounts.sh makes them the tool's account slots.
+          DEVOS_KEY_1: ${{ secrets.KEY_1 }}
+          DEVOS_KEY_2: ${{ secrets.KEY_2 }}
+          DEVOS_ALT_1: ${{ secrets.ALT_1 }}
+          DEVOS_ALT_2: ${{ secrets.ALT_2 }}
           POOL_MODEL: ${{ inputs.builder_model }}
           BUILDER_NOTE: ${{ inputs.builder_note }}
           EFFORT_IN: ${{ inputs.effort }}
@@ -271,16 +274,11 @@ jobs:
         env:
           # Only the chosen builder tool's keys reach this job (the caller passes them as KEY_1, KEY_2, ALT_1, ALT_2).
           # The watchdog gives the agent the one credential of the account in use, and nothing else (PR-90).
-          CURSOR_KEY_1: ${{ inputs.builder_tool == 'cursor' && secrets.KEY_1 || '' }}
-          CURSOR_KEY_2: ${{ inputs.builder_tool == 'cursor' && secrets.KEY_2 || '' }}
-          CLAUDE_OAUTH_1: ${{ inputs.builder_tool == 'claude' && secrets.KEY_1 || '' }}
-          CLAUDE_APIKEY_1: ${{ inputs.builder_tool == 'claude' && secrets.ALT_1 || '' }}
-          CLAUDE_OAUTH_2: ${{ inputs.builder_tool == 'claude' && secrets.KEY_2 || '' }}
-          CLAUDE_APIKEY_2: ${{ inputs.builder_tool == 'claude' && secrets.ALT_2 || '' }}
-          CODEX_KEY_1: ${{ inputs.builder_tool == 'codex' && secrets.KEY_1 || '' }}
-          CODEX_KEY_2: ${{ inputs.builder_tool == 'codex' && secrets.KEY_2 || '' }}
-          GEMINI_KEY_1: ${{ inputs.builder_tool == 'gemini' && secrets.KEY_1 || '' }}
-          GEMINI_KEY_2: ${{ inputs.builder_tool == 'gemini' && secrets.KEY_2 || '' }}
+          # E86b (PR-107): the keys as the caller chose them by name; accounts.sh makes them the tool's account slots.
+          DEVOS_KEY_1: ${{ secrets.KEY_1 }}
+          DEVOS_KEY_2: ${{ secrets.KEY_2 }}
+          DEVOS_ALT_1: ${{ secrets.ALT_1 }}
+          DEVOS_ALT_2: ${{ secrets.ALT_2 }}
           MODEL: ${{ steps.bm.outputs.model }}
           # PR-64: the builder's next models (its fallback_models), tried after MODEL on every account.
           FALLBACKS: ${{ inputs.builder_fallbacks }}

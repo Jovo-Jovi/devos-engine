@@ -3,7 +3,8 @@
 // (plan-agent.sh), and its install (install-agent.sh): the command it runs, its arguments, the first line it reads on
 // standard input, the credential it is given, and the role files beside it. test/fixtures/agent-calls.json holds what
 // `next` @ 3ecf68a did before E86; registry.test.mjs checks that the registry does exactly the same.
-//   node test/agent-calls.mjs [<repository root>]   prints the record of that checkout as JSON
+//   node test/agent-calls.mjs [<repository root>] [--generic]   prints the record of that checkout as JSON (--generic:
+//   the jobs' keys as DEVOS_KEY_N and DEVOS_ALT_N, as the workflows pass them since E86b)
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
@@ -23,7 +24,15 @@ const KEYS = {
   codex: { CODEX_KEY_1: "x1", CODEX_KEY_2: "x2" },
   gemini: { GEMINI_KEY_1: "g1", GEMINI_KEY_2: "g2" },
 };
-const SEEN_ENV = ["CLAUDE_CODE_OAUTH_TOKEN", "ANTHROPIC_API_KEY", "CURSOR_API_KEY", "CODEX_API_KEY", "OPENAI_API_KEY", "GEMINI_API_KEY", "GEMINI_CLI_TRUST_WORKSPACE"];
+// E86b (PR-107): the same keys as the jobs pass them now, generic, chosen by the caller by the secrets' names.
+const GENERIC = {
+  claude: { DEVOS_KEY_1: "o1", DEVOS_ALT_1: "a1", DEVOS_KEY_2: "o2", DEVOS_ALT_2: "a2" },
+  cursor: { DEVOS_KEY_1: "c1", DEVOS_KEY_2: "c2" },
+  codex: { DEVOS_KEY_1: "x1", DEVOS_KEY_2: "x2" },
+  gemini: { DEVOS_KEY_1: "g1", DEVOS_KEY_2: "g2" },
+};
+// The credentials a CLI may see. The generic names never reach one, so a record that shows one is not the base's.
+const SEEN_ENV = ["CLAUDE_CODE_OAUTH_TOKEN", "ANTHROPIC_API_KEY", "CURSOR_API_KEY", "CODEX_API_KEY", "OPENAI_API_KEY", "GEMINI_API_KEY", "GEMINI_CLI_TRUST_WORKSPACE", "DEVOS_KEY_1", "DEVOS_KEY_2", "DEVOS_ALT_1", "DEVOS_ALT_2"];
 const KIT_FILES = ["CLAUDE.md", "AGENTS.md", "GEMINI.md", ".claude/settings.json", ".cursor/cli.json", ".cursor/mcp.json", ".cursor/rules", "<home>/.gemini/settings.json", "<home>/.gemini/policies/devos.toml"];
 const FAST = { DEVOS_PROGRESS_EVERY: "60", DEVOS_WATCHDOG_TICK: "1", DEVOS_WATCHDOG_UNIT: "1", DEVOS_REPORT_EVERY: "60" };
 // What each stand-in prints: one successful run in its CLI's own format.
@@ -127,17 +136,21 @@ function run(p, script, env) {
   });
 }
 
-/** The record of one checkout: { builder, reviewer, planner, install } by tool. */
-export function agentCalls(root) {
+/**
+ * The record of one checkout: { builder, reviewer, planner, install } by tool. `generic`: the jobs' keys come as
+ * DEVOS_KEY_N and DEVOS_ALT_N (E86b), not as the tool's account slots.
+ */
+export function agentCalls(root, { generic = false } = {}) {
   const out = { builder: {}, reviewer: {}, planner: {}, install: {} };
   for (const tool of TOOLS) {
+    const keys = generic ? GENERIC[tool] : KEYS[tool];
     // The work job's builder step, run as written.
     let p = project(root, tool);
     try {
       for (const name of ["claude", "agent", "codex", "gemini"]) stand(p.fakes, name, p.calls);
       const step = stepRun(path.join(p.dir, ".github", "workflows", "devos-work.yml"), "Builder (the project's builder agent)");
       const r = run(p, step, {
-        ...KEYS[tool], TASK: "T01", ATTEMPT: "1", DEVOS_BUILDER_TOOL: tool, MODEL: MODELS[tool], FALLBACKS: "",
+        ...keys, TASK: "T01", ATTEMPT: "1", DEVOS_BUILDER_TOOL: tool, MODEL: MODELS[tool], FALLBACKS: "",
         DEVOS_BUILDER_MODEL: MODELS[tool], DEVOS_BUILDER_EFFORT: "high", DEVOS_BUILDER_FAST: "no", MODEL_SOURCE: "pool", MODEL_NOTE: "",
         DEVOS_USAGE_STAGE: "builder", GITHUB_OUTPUT: path.join(p.dir, ".devos", "gh-output"),
       });
@@ -152,7 +165,7 @@ export function agentCalls(root) {
         for (const name of ["claude", "agent", "codex", "gemini"]) stand(p.fakes, name, p.calls);
         writeFileSync(path.join(p.dir, ".devos", `${stage}-prompt.md`), `# The ${stage} prompt\n\nDo it.\n`);
         const r = run(p, `bash scripts/devos/plan-agent.sh ${stage} .devos/${stage}-prompt.md devos/schemas/${schema}.schema.json .devos/${stage}.json "${EFFORT[tool]}" ${turns}`, {
-          ...KEYS[tool], DEVOS_AGENT_MODE: "deep", TASK: "T01",
+          ...keys, DEVOS_AGENT_MODE: "deep", TASK: "T01",
         });
         out[role][tool] = { exit: r.status, calls: readCalls(p, p.dir, p.home) };
       } finally {
@@ -177,6 +190,7 @@ export function agentCalls(root) {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
-  const root = path.resolve(process.argv[2] ?? path.join(HERE, ".."));
-  process.stdout.write(`${JSON.stringify(agentCalls(root), null, 2)}\n`);
+  const args = process.argv.slice(2);
+  const root = path.resolve(args.find((a) => !a.startsWith("--")) ?? path.join(HERE, ".."));
+  process.stdout.write(`${JSON.stringify(agentCalls(root, { generic: args.includes("--generic") }), null, 2)}\n`);
 }

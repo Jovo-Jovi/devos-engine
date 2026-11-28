@@ -7,3 +7,7 @@ paths:
       - 'could not read reusable workflow file for "\./\.github/workflows/devos-work\.yml"'
       # E85 (PR-101): the review job's workflow, called the same way.
       - 'could not read reusable workflow file for "\./\.github/workflows/devos-review\.yml"'
+  # E86b (PR-107): the planners' workflow, called the same way by intake and revise.
+  payload/files/dot-github/workflows/devos-intake.yml:
+    ignore:
+      - 'could not read reusable workflow file for "\./\.github/workflows/devos-intake-planner\.yml"'

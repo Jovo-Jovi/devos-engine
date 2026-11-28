@@ -16,6 +16,8 @@ const SCRIPTS = path.join(PAYLOAD, "scripts", "devos");
 const read = (file) => readFileSync(file, "utf8").replaceAll("\r\n", "\n");
 const code = (text) => text.split("\n").filter((l) => !/^\s*#/.test(l)).join("\n");
 const intake = code(read(path.join(PAYLOAD, "dot-github", "workflows", "devos-intake.yml")));
+// E86b (PR-107): the planners' jobs, which devos-intake.yml calls with only the planner tool's keys.
+const planners = code(read(path.join(PAYLOAD, "dot-github", "workflows", "devos-intake-planner.yml")));
 const windows = process.platform === "win32";
 const load = (name) => import(pathToFileURL(path.join(SCRIPTS, name)).href);
 const { parsePhases } = await load("lib.mjs");
@@ -36,17 +38,21 @@ const AI_KEYS = [...CLAUDE, "secrets.CURSOR_API_KEY", "secrets.CURSOR_API_KEY_2"
 
 // ---------- S: devos-intake.yml --------------------------------------------------------------------------------------
 
-test("intake-two-jobs.test.mjs S1 the planners read only, hold only the AI tools' keys, run the reviewer's tool, and write nothing to GitHub", () => {
+test("intake-two-jobs.test.mjs S1 the planners read only, hold only their tool's keys, run the reviewer's tool, and write nothing to GitHub", () => {
   for (const name of ["intake", "revise"]) {
-    const j = job(intake, name);
+    // E86b (PR-107): the caller names the AI tools' secrets, to pass the planner tool's alone; its token only reads.
+    const caller = job(intake, name);
+    assert.match(caller, READ_ONLY, `${name}: its caller's token only reads`);
+    assert.deepEqual([...new Set(caller.match(/secrets\.[A-Z0-9_]+/g))].sort(), AI_KEYS, name);
+    assert.match(caller, /^ {4}uses: \.\/\.github\/workflows\/devos-intake-planner\.yml$/m, name);
+    const j = job(planners, name);
     assert.match(j, READ_ONLY, `${name}: its token only reads`);
-    // E85 (PR-101): the reviewer's tool plans, with its own keys; no PAT, no publishing secret, no dynamic secret.
-    assert.deepEqual([...new Set(j.match(/secrets\.[A-Z0-9_]+/g))].sort(), AI_KEYS, name);
-    assert.equal(/DEVOS_PAT|toJSON\(secrets\)|secrets\[/.test(j), false, name);
-    assert.match(j, /tool=\$\(node scripts\/devos\/agents\.mjs reviewer --mode deep[^\n]*\n {10}echo "tool=\$tool" >> "\$GITHUB_OUTPUT"\n {10}bash scripts\/devos\/install-agent\.sh "\$tool"/);
+    // E85 (PR-101): the reviewer's tool plans, with its own keys, generic (E86b); no PAT, no publishing secret, no dynamic secret.
+    assert.deepEqual([...new Set(j.match(/secrets\.[A-Z0-9_]+/g))].sort(), ["secrets.ALT_1", "secrets.ALT_2", "secrets.KEY_1", "secrets.KEY_2"], name);
+    assert.equal(/DEVOS_PAT|toJSON\(secrets\)|secrets\[/.test(j + caller), false, name);
+    assert.match(j, /tool=\$\(node scripts\/devos\/agents\.mjs reviewer --mode deep[^\n]*\n {10}\[ "\$tool" = "\$TOOL" \] \|\| \{[^\n]*\n {10}echo "tool=\$tool" >> "\$GITHUB_OUTPUT"\n {10}bash scripts\/devos\/install-agent\.sh "\$tool"/);
     assert.equal(j.includes('if [ "$tool" != "claude" ]; then'), false, name);
-    for (const tool of ["claude", "cursor", "codex", "gemini"]) assert.ok(j.includes(`\${{ steps.pt.outputs.tool == '${tool}' && secrets.`), `${name}: ${tool}`);
-    for (const line of j.split("\n")) {
+    for (const line of (j + caller).split("\n")) {
       assert.equal(/\bgh (pr|issue) (comment|create|edit|merge)|gh api -X|gh workflow run|git push|statuses\//.test(line), false, `${name}: ${line.trim()}`);
     }
   }
@@ -89,7 +95,8 @@ test("intake-two-jobs.test.mjs S3 only the publish jobs post devos/verdict; noth
 });
 
 test("intake-two-jobs.test.mjs S4 M1: who can start a plan, and the comment reaches a shell only through the environment", () => {
-  const plan = job(intake, "intake");
+  // E86b (PR-107): who may start a plan is decided where it starts, at intake-resolve, which the planner needs.
+  const plan = job(intake, "intake-resolve");
   assert.match(plan, /contains\(fromJSON\('\["OWNER","MEMBER","COLLABORATOR"\]'\), github\.event\.issue\.author_association\) &&/);
   assert.equal(/devos:acceptance|\/devos revise/.test(plan + job(intake, "intake-ack")), false);
   assert.match(job(intake, "intake-refuse"), /!contains\(fromJSON\('\["OWNER","MEMBER","COLLABORATOR"\]'\), github\.event\.issue\.author_association\)/);
@@ -101,24 +108,26 @@ test("intake-two-jobs.test.mjs S4 M1: who can start a plan, and the comment reac
   assert.match(prep, /\[ "\$same" = "true" \] \|\|/);
   // One revision of a unit at a time: its last task's row must be ticked on the unit.
   assert.ok(prep.includes('grep -qE "^\\| $task \\|.*\\| \\[x\\] \\|"'));
-  for (const line of intake.split("\n").filter((l) => l.includes("github.event.comment.body") || l.includes("github.event.issue.body"))) {
-    assert.match(line.trim(), /^(startsWith\(github\.event\.comment\.body|\(github\.event_name == 'issue_comment' && startsWith\(github\.event\.comment\.body|github\.event_name == 'issue_comment' && github\.event\.issue\.pull_request|RESUME: |EV_COMMENT: \$\{\{ github\.event\.comment\.body \}\}$|EV_BODY: \$\{\{ github\.event\.issue\.body \}\}$|NOTE: \$\{\{ github\.event\.comment\.body \}\}$)/, line.trim());
+  assert.match(job(intake, "intake"), /^ {4}needs: intake-resolve$/m);
+  for (const line of (intake + planners).split("\n").filter((l) => l.includes("github.event.comment.body") || l.includes("github.event.issue.body"))) {
+    assert.match(line.trim(), /^(startsWith\(github\.event\.comment\.body|\(github\.event_name == 'issue_comment' && startsWith\(github\.event\.comment\.body|github\.event_name == 'issue_comment' && github\.event\.issue\.pull_request|RESUME: |resume: \$\{\{ \(github\.event_name == 'workflow_dispatch' && inputs\.resume\) \|\| \(github\.event_name == 'issue_comment' && startsWith\(github\.event\.comment\.body, '\/devos intake resume'\)\) \}\}$|EV_COMMENT: \$\{\{ github\.event\.comment\.body \}\}$|EV_BODY: \$\{\{ github\.event\.issue\.body \}\}$|NOTE: \$\{\{ github\.event\.comment\.body \}\}$)/, line.trim());
   }
 });
 
 test("intake-two-jobs.test.mjs S5 what a planner runs is main's; a revision commits only its fence; publish scrubs and explains", () => {
   const overlay = 'for p in .github scripts/devos scripts/guards devos devos.config.json CLAUDE.md CLAUDE.local.md .claude .cursor .mcp.json; do\n            rm -rf -- "$p"\n            if git cat-file -e "origin/main:$p" 2>/dev/null; then git archive origin/main -- "$p" | tar -x; fi\n          done';
   // intake checks out main itself; before it switches to a plan branch, nothing of a branch runs.
-  const planner = job(intake, "intake");
+  const planner = job(planners, "intake");
   assert.match(planner, /uses: actions\/checkout@[0-9a-f]{40} # v6\.0\.2\n\s+with:\n\s+ref: main\n/);
   assert.ok(planner.indexOf(overlay) > planner.indexOf('git checkout -B "$BR" "$base_sha"') && planner.indexOf(overlay) < planner.indexOf("render-prompt.mjs"));
   // revise checks out the task's or the unit's branch: main's files are laid over it before any script runs.
-  const revise = job(intake, "revise");
+  const revise = job(planners, "revise");
   const first = Math.min(...["agents.mjs", "render-prompt.mjs", "plan-agent.sh", "guard-surfaces.mjs", "lib.mjs"].map((x) => revise.indexOf(x)).filter((i) => i >= 0));
   assert.ok(revise.includes(overlay) && revise.indexOf(overlay) < first);
   assert.match(revise, /git add -A -- "docs\/fences\/\$TASK\.md"/);
-  assert.match(revise, /DEVOS_REVISE_UNIT: \$\{\{ needs\.revise-prep\.outputs\.unit \}\}/);
-  assert.equal(/concurrency:/.test(revise) || /concurrency:/.test(job(intake, "revise-publish")), false);
+  assert.match(revise, /DEVOS_REVISE_UNIT: \$\{\{ inputs\.unit \}\}/);
+  assert.match(job(intake, "revise"), /^ {6}unit: \$\{\{ needs\.revise-prep\.outputs\.unit \}\}$/m);
+  assert.equal(/concurrency:/.test(revise) || /concurrency:/.test(job(intake, "revise")) || /concurrency:/.test(job(intake, "revise-publish")), false);
   const rp = job(intake, "revise-publish");
   assert.ok(rp.indexOf('[ "$(gh pr view "$PR" --repo "$REPO" --json state --jq .state)" != "OPEN" ]') < rp.indexOf('node "$T/publish-verify.mjs" push --out "$OUT"'));
   assert.match(rp, /--head "task\/\$TASK" --base "\$UNIT" --state merged[^\n]*\n\s+gh api -X DELETE "repos\/\$REPO\/git\/refs\/heads\/task\/\$TASK"/);
@@ -495,6 +504,6 @@ test("intake-two-jobs.test.mjs the manual, the precedent and the changelog name 
   // The live maximum moves on with each later precedent (PR-97 at E73).
   assert.ok(Number(/\*\*Live maximum: PR-(\d+)\.\*\*/.exec(read(path.join(root, "payload/files/docs/method/PRECEDENTS.md")))?.[1]) >= 92);
   has("payload/files/docs/method/AUTOMATION.md", "| `intake-request.mjs` | the request a planning run works from (PR-92)");
-  has("payload/files/docs/method/AUTOMATION.md", "`intake-ack`, `intake-refuse`, `intake` (the planner, read-only), `intake-publish`");
+  has("payload/files/docs/method/AUTOMATION.md", "`intake-ack`, `intake-refuse`, `intake-resolve`, `intake` (the planner, `devos-intake-planner.yml`), `intake-publish`");
   has("CHANGELOG.md", "- **Planning works the same way (PR-92).**");
 });

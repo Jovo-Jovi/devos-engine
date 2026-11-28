@@ -126,6 +126,23 @@ export function slotNames() {
   return [...load().values()].flatMap((t) => [t.keys.env, ...(t.keys.alt ? [t.keys.alt.env] : [])]).flatMap((n) => [`${n}_1`, `${n}_2`]);
 }
 
+/**
+ * E86b (PR-107): the GitHub secrets each tool's first account is named by, and the alternatives' (Claude Code's API
+ * key), each once. Every AI job's caller names exactly these, literally: `secrets.<name>` and `secrets.<name>_2`.
+ */
+export function secretNames() {
+  const tools = [...load().values()];
+  return { keys: [...new Set(tools.map((t) => t.keys.secret))].sort(), alts: [...new Set(tools.flatMap((t) => (t.keys.alt ? [t.keys.alt.secret] : [])))].sort() };
+}
+
+/** E86b (PR-107): the job outputs that name a role's secrets, `<as>_key` and `<as>_alt`; none for no tool. */
+export function secretLines(id, as) {
+  if (!/^[a-z][a-z0-9_]{0,30}$/.test(String(as))) throw new Error("tools: --as names the role, such as builder");
+  const t = id ? tool(id) : null;
+  if (id && !t) throw new Error(`tools: no tool "${id}"; one of ${toolIds().join(", ")} (devos/agents/)`);
+  return [`${as}_key=${t?.keys.secret ?? ""}`, `${as}_alt=${t?.keys.alt?.secret ?? ""}`];
+}
+
 /** The text a run without the tool's key stops with. */
 export function missingKey(id) {
   const t = tool(id);
@@ -209,7 +226,8 @@ function main(argv) {
   if (command === "missing-key") { need(); return console.log(missingKey(id)); }
   if (command === "of") return console.log(toolOf(argv[1] ?? ""));
   if (command === "slots") return console.log(slotNames().join(" "));
-  throw new Error("usage: tools.mjs ids | check | args --tool T --role R [--model --effort --turns --schema --last --prompt] | shell --tool T | setup --tool T | install --tool T | get --tool T <field> | missing-key --tool T | of <command> | slots");
+  if (command === "secrets") return console.log(secretLines(flag(argv, "tool") ?? "", flag(argv, "as") ?? "").join("\n"));
+  throw new Error("usage: tools.mjs ids | check | args --tool T --role R [--model --effort --turns --schema --last --prompt] | shell --tool T | setup --tool T | install --tool T | get --tool T <field> | missing-key --tool T | of <command> | slots | secrets --tool T --as ROLE");
 }
 
 const self = (() => {

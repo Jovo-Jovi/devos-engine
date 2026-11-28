@@ -145,7 +145,14 @@ test("progress.test.mjs (e) the supervisor's second opinion prints its line ever
     assert.ok(Date.now() - started < 15000, "the step ends with its second opinion");
     const lines = run.stdout.split("\n").filter((line) => line.startsWith("supervisor · "));
     assert.ok(lines.length >= 2, run.stdout);
-    assert.equal(lines[0], "supervisor · claude claude-opus-5-5 · effort high · 1 min · running");
+    // E86b: any first minute from 1 on, as (b): each line also waits for node to start, so on a loaded runner the first
+    // can say 2 (E86 a1's remote check).
+    const minutes = lines.map((line) => {
+      const m = /^supervisor · claude claude-opus-5-5 · effort high · (\d+) min · running$/.exec(line);
+      assert.ok(m, line);
+      return Number(m[1]);
+    });
+    assert.ok(minutes[0] >= 1 && minutes.every((n, i) => i === 0 || n > minutes[i - 1]), run.stdout);
     assert.equal(JSON.parse(readFileSync(path.join(dir, ".devos", "supervisor", "claude.json"), "utf8")).type, "result");
     const doctor = stepRun("devos-doctor.yml", "Second opinion — Claude Code (read-only, its own user, no shell)");
     assert.equal(doctor.includes('DEVOS_PROGRESS_STAGE=doctor DEVOS_PROGRESS_TOOL=claude DEVOS_PROGRESS_MODEL="$MODEL" DEVOS_PROGRESS_EFFORT="$EFFORT" \\\n  bash scripts/devos/progress.sh watch running & watcher=$!'), true);

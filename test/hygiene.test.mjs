@@ -102,7 +102,9 @@ test("hygiene.test.mjs (c) the workflows install every tool at its pin, and ever
   assert.deepEqual([pins("devos-intake.yml", "claude"), pins("devos-supervisor.yml", "claude"), pins("devos-deploy.yml", "vercel"), pins("vercel-deploy.sh", "vercel")], [0, 0, 1, 1]);
   assert.equal(count(all["devos-work.yml"], 'bash scripts/devos/install-agent.sh "$DEVOS_BUILDER_TOOL"'), 1);
   assert.equal(count(all["devos-review.yml"], 'bash scripts/devos/install-agent.sh "$TOOL"'), 1);
-  assert.equal(count(all["devos-intake.yml"], 'bash scripts/devos/install-agent.sh "$tool"'), 2);
+  // E86b (PR-107): the planners' CLI is installed in their own workflow, devos-intake-planner.yml.
+  assert.equal(count(all["devos-intake-planner.yml"], 'bash scripts/devos/install-agent.sh "$tool"'), 2);
+  assert.equal(count(all["devos-intake.yml"], "install-agent.sh"), 0);
   // E86 (PR-106): once per kind of install the registry names (an npm package, a checked package).
   assert.equal(count(all["install-agent.sh"], 'spec=$(node "$here/pins.mjs" "$tool")'), 2);
   // The work job reads every pin from main's checkout, before the task branch is checked out: firebase-tools, installed

@@ -206,16 +206,12 @@ jobs:
           DEVOS_BUILDER_EFFORT: ${{ steps.prep.outputs.builder_effort }}
           DEVOS_BUILDER_FAST: ${{ steps.prep.outputs.builder_fast }}
           # Only this review's tool's keys, as accounts.sh names them (KEY_* the deep reviewer's tool, LKEY_* the light's).
-          CURSOR_KEY_1: ${{ steps.prep.outputs.tool == 'cursor' && (steps.prep.outputs.light == 'true' && secrets.LKEY_1 || secrets.KEY_1) || '' }}
-          CURSOR_KEY_2: ${{ steps.prep.outputs.tool == 'cursor' && (steps.prep.outputs.light == 'true' && secrets.LKEY_2 || secrets.KEY_2) || '' }}
-          CLAUDE_OAUTH_1: ${{ steps.prep.outputs.tool == 'claude' && (steps.prep.outputs.light == 'true' && secrets.LKEY_1 || secrets.KEY_1) || '' }}
-          CLAUDE_OAUTH_2: ${{ steps.prep.outputs.tool == 'claude' && (steps.prep.outputs.light == 'true' && secrets.LKEY_2 || secrets.KEY_2) || '' }}
-          CLAUDE_APIKEY_1: ${{ steps.prep.outputs.tool == 'claude' && (steps.prep.outputs.light == 'true' && secrets.LALT_1 || secrets.ALT_1) || '' }}
-          CLAUDE_APIKEY_2: ${{ steps.prep.outputs.tool == 'claude' && (steps.prep.outputs.light == 'true' && secrets.LALT_2 || secrets.ALT_2) || '' }}
-          CODEX_KEY_1: ${{ steps.prep.outputs.tool == 'codex' && (steps.prep.outputs.light == 'true' && secrets.LKEY_1 || secrets.KEY_1) || '' }}
-          CODEX_KEY_2: ${{ steps.prep.outputs.tool == 'codex' && (steps.prep.outputs.light == 'true' && secrets.LKEY_2 || secrets.KEY_2) || '' }}
-          GEMINI_KEY_1: ${{ steps.prep.outputs.tool == 'gemini' && (steps.prep.outputs.light == 'true' && secrets.LKEY_1 || secrets.KEY_1) || '' }}
-          GEMINI_KEY_2: ${{ steps.prep.outputs.tool == 'gemini' && (steps.prep.outputs.light == 'true' && secrets.LKEY_2 || secrets.KEY_2) || '' }}
+          # E86b (PR-107): the keys as the caller chose them by name, the light reviewer's when it reviews and never
+          # the other reviewer's in their place; accounts.sh makes them the tool's account slots.
+          DEVOS_KEY_1: ${{ (steps.prep.outputs.light == 'true' && secrets.LKEY_1) || (steps.prep.outputs.light != 'true' && secrets.KEY_1) || '' }}
+          DEVOS_KEY_2: ${{ (steps.prep.outputs.light == 'true' && secrets.LKEY_2) || (steps.prep.outputs.light != 'true' && secrets.KEY_2) || '' }}
+          DEVOS_ALT_1: ${{ (steps.prep.outputs.light == 'true' && secrets.LALT_1) || (steps.prep.outputs.light != 'true' && secrets.ALT_1) || '' }}
+          DEVOS_ALT_2: ${{ (steps.prep.outputs.light == 'true' && secrets.LALT_2) || (steps.prep.outputs.light != 'true' && secrets.ALT_2) || '' }}
         run: |
           node scripts/devos/render-prompt.mjs reviewer "$TASK" "$ATTEMPT" --out .devos/reviewer-prompt.md
           # E85e (PR-104): plan-agent.sh prints a progress line every minute, with this review file's size.

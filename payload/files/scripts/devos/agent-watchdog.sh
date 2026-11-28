@@ -58,7 +58,8 @@ case "$old" in ''|0|*[!0-9]*) ;; *) [ "$old" = "$own" ] || pkill -KILL -s "$old"
 # E86 (PR-106): every tool's slots are named in its devos/agents/<id>.json (tools.mjs slots); with no list, no run.
 if ! slots=$(node "$(dirname "$0")/tools.mjs" slots); then echo "agent-watchdog: the tools' key names could not be read; no run" >&2; exit 1; fi
 strip=()
-for name in DEVOS_PROGRESS_TOKEN GH_TOKEN GITHUB_TOKEN DEVOS_PAT DEVOS_MEDIA_XAI_KEY VERCEL_TOKEN VERCEL_AUTOMATION_BYPASS_SECRET $slots; do
+# E86b (PR-107): and the generic names a job's keys arrive under (DEVOS_KEY_N, DEVOS_ALT_N).
+for name in DEVOS_PROGRESS_TOKEN GH_TOKEN GITHUB_TOKEN DEVOS_PAT DEVOS_MEDIA_XAI_KEY VERCEL_TOKEN VERCEL_AUTOMATION_BYPASS_SECRET DEVOS_KEY_1 DEVOS_KEY_2 DEVOS_ALT_1 DEVOS_ALT_2 $slots; do
   strip+=(-u "$name")
 done
 env "${strip[@]}" setsid "$@" < "${DEVOS_STDIN:-/dev/null}" > "$out" 2> "$err" &
